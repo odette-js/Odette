@@ -106,7 +106,7 @@ application.scope(function (app) {
                 module.name = attrs.name;
                 module.application = opts.application;
                 module.handlers = _.Collection();
-                _.reqres(this);
+                _.messenger(this);
                 Box.apply(this, arguments);
                 return module;
             },

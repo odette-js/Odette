@@ -1,4 +1,4 @@
-application.scope().module('DOMM', function (module, app, _) {
+application.scope().module('Node', function (module, app, _) {
     var blank, sizzleDoc = document,
         eq = _.eq,
         uniqueId = _.uniqueId,
@@ -12,6 +12,7 @@ application.scope().module('DOMM', function (module, app, _) {
         isString = _.isString,
         isObject = _.isObject,
         isNumber = _.isNumber,
+        wrap = _.wrap,
         merge = _.merge,
         remove = _.splice,
         extend = _.extend,
@@ -36,6 +37,7 @@ application.scope().module('DOMM', function (module, app, _) {
         __delegateCountString = '__delegateCount',
         removeQueueString = 'removeQueue',
         addQueueString = 'addQueue',
+        CLASSNAME = 'className',
         BOOLEAN_TRUE = !0,
         BOOLEAN_FALSE = !1,
         getComputed = window.getComputedStyle,
@@ -71,142 +73,6 @@ application.scope().module('DOMM', function (module, app, _) {
          */
         isWindows = function () {
             return ua.match(/IEMobile/i);
-        },
-        ELID_STRING = '__elid__',
-        __privateDataCache__ = {},
-        elementData = {
-            make: function (el) {
-                var elId = el[ELID_STRING] = uniqueId('elid');
-                var ret = __privateDataCache__[elId] = __privateDataCache__[elId] || {
-                    dataset: {},
-                    queued: {},
-                    handlers: {},
-                    events: {}
-                };
-                return ret;
-            },
-            get: function (el) {
-                var id = el[ELID_STRING];
-                var ret = id ? (__privateDataCache__[id] = __privateDataCache__[id] || this.make(el)) : this.make(el);
-                return ret;
-            },
-            remove: function (el) {
-                var id = el[ELID_STRING];
-                __privateDataCache__[id] = el[ELID_STRING] = void 0;
-                return id;
-            }
-        },
-        internalListAddRemove = function (keymaker, itemmaker) {
-            return function (setto) {
-                return function (base, items, subdata_, dirtifier) {
-                    var ret, subdata;
-                    if (items && items.length) {
-                        subdata = subdata_ || this.get(base);
-                        ret = !subdata.loaded && this.load(base, subdata);
-                        subdata.dirty = !dirtifier;
-                        // each item that i was passed
-                        duff(gapSplit(items), function (item) {
-                            var listitem, key = keymaker(item),
-                                index = subdata.hash[item];
-                            // do i have you?
-                            if (index === blank) {
-                                // lets make you
-                                listitem = itemmaker(subdata, key);
-                                // do i want you after you have been made?
-                                if (listitem) {
-                                    index = subdata.hash[item] = subdata.list.length;
-                                    subdata.list.push(listitem);
-                                }
-                            }
-                            // are you made and did i want you?
-                            if (index + 1) {
-                                listitem = subdata.list[index];
-                                setto(listitem, index, key, subdata);
-                            }
-                        });
-                    }
-                };
-            };
-        },
-        listAddRemove = function (datastorage, propertyname, getter, setter, keymaker, itemmaker) {
-            var madewithkey = internalListAddRemove(keymaker, itemmaker);
-            return {
-                add: madewithkey(function (listitem, index, key, subdata) {
-                    listitem.flag = BOOLEAN_TRUE;
-                }),
-                remove: madewithkey(function (listitem, index, key, subdata) {
-                    listitem.flag = BOOLEAN_FALSE;
-                }),
-                toggle: madewithkey(function (listitem, index, key, subdata) {
-                    listitem.flag = !listitem.flag;
-                }),
-                load: function (base, subdata_) {
-                    var subdata = subdata_ || this.get(base);
-                    // don't call this function again
-                    subdata.loaded = true;
-                    // load all of the base data
-                    this.add(base, getter(base), subdata, true);
-                },
-                unload: function (base, subdata_) {
-                    var subdata = subdata_ || this.get(base);
-                    // check to make sure it has at least been loaded
-                    if (subdata.loaded && subdata.dirty) {
-                        setter(base, subdata.list);
-                        this.reset();
-                    }
-                },
-                // requires base object that data is tied to
-                get: function (base) {
-                    var data = datastorage.get(base),
-                        queued = data.queued;
-                    queued[propertyname] = queued[propertyname] || this.reset();
-                    return queued[propertyname];
-                },
-                // requires subdata
-                reset: function (queued) {
-                    return {
-                        loaded: false,
-                        dirty: false,
-                        list: [],
-                        hash: {}
-                    };
-                }
-            };
-        },
-        getClassName = function (el) {
-            var className = el.className;
-            if (!isString(className)) {
-                className = el.getAttribute('class') || '';
-            }
-            return className;
-        },
-        setClassName = function (el, val) {
-            var value = val.join('');
-            if (isString(el.className)) {
-                el.className = value;
-            } else {
-                el.setAttribute('class', value);
-            }
-        },
-        queuedata = {
-            className: listAddRemove(elementData, 'className', getClassName, setClassName, function (item) {
-                return item;
-            }, function (subdata, item) {
-                return item ? {
-                    valueOf: function () {
-                        return item;
-                    },
-                    toString: function () {
-                        var adding = this.flag,
-                            classname = adding ? item : '',
-                            value = (adding && !subdata.firstAdded ? '' : ' ');
-                        if (classname) {
-                            subdata.firstAdded = true;
-                        }
-                        return value + classname;
-                    }
-                } : false;
-            })
         },
         /**
          * @func
@@ -304,6 +170,93 @@ application.scope().module('DOMM', function (module, app, _) {
                 return _.DOMM(sel, ctx || doc);
             };
         },
+        setAttribute = function (el, key, val) {
+            if (val === true) {
+                val = '';
+            }
+            val = stringify(val);
+            val += '';
+            el.setAttribute(key, val);
+        },
+        getAttribute = function (el, key, val) {
+            var converted;
+            val = el.getAttribute(key);
+            if (val === '') {
+                val = BOOLEAN_TRUE;
+            }
+            if (isString(val)) {
+                if (val[0] === '{' || val[0] === '[') {
+                    val = JSON.parse(val);
+                } else {
+                    converted = +val;
+                    if (converted === converted) {
+                        val = converted;
+                    } else {
+                        // if for whatever reason you have a function
+                        if (val[val.length - 1] === '}') {
+                            if (val.slice(0, 8) === 'function') {
+                                val = new Function.constructor('return ' + val);
+                            }
+                        }
+                    }
+                }
+            } else {
+                if (isBlank(val)) {
+                    val = BOOLEAN_FALSE;
+                }
+            }
+            return val;
+        },
+        /**
+         * @private
+         * @func
+         */
+        attributeInterface = function (el, key, val) {
+            // set or remove if not undefined
+            // undefined fills in the gap by returning some value, which is never undefined
+            if (val !== blank) {
+                if (!val && val !== 0) {
+                    el.removeAttribute(key);
+                } else {
+                    setAttribute(el, key, val);
+                }
+            } else {
+                return getAttribute(el, key, val);
+            }
+        },
+        getClassName = function (el, key) {
+            var className = el[CLASSNAME];
+            if (!isString(className)) {
+                className = getAttribute(el, 'class');
+            }
+            return (className || '').split(' ');
+        },
+        setClassName = function (el, key, val) {
+            var value = val.join('');
+            if (isString(el[CLASSNAME])) {
+                el[CLASSNAME] = value;
+            } else {
+                setAttribute(el, 'class', value);
+            }
+        },
+        queuedata = {
+            className: app.module('Storage').message.request('make:list', {
+                // storage: nodeData,
+                name: CLASSNAME,
+                get: getClassName,
+                set: setClassName,
+                key: function (item) {
+                    return item;
+                }
+            }),
+            data: app.module('Storage').message.request('make:nested', {
+                // storage: nodeData,
+                name: 'dataset',
+                get: attributeInterface,
+                set: attributeInterface,
+                categoryKey: _.camelCase
+            })
+        },
         triggerEventWrapper = function (attr, api) {
             attr = attr || api;
             return function (fn, fn2) {
@@ -371,28 +324,18 @@ application.scope().module('DOMM', function (module, app, _) {
          * @private
          * @func
          */
-        getClass = function (el) {
-            var className = el.className;
-            if (!isString(className)) {
-                className = el.getAttribute('class') || '';
-            }
-            return gapSplit(className);
-        },
         changeClass = function (el, remove, add) {
             var subdata = queuedata.className.get(el);
             queuedata.className.remove(el, remove, subdata);
             queuedata.className.add(el, add, subdata);
-            queuedata.className.unload(el, subdata);
         },
         removeClass = function (el, remove) {
             var subdata = queuedata.className.get(el);
             queuedata.className.remove(el, remove, subdata);
-            queuedata.className.unload(el, subdata);
         },
         addClass = function (el, add) {
             var subdata = queuedata.className.get(el);
             queuedata.className.add(el, add, subdata);
-            queuedata.className.unload(el, subdata);
         },
         eventNameProperties = function (str) {},
         /**
@@ -2663,7 +2606,7 @@ application.scope().module('DOMM', function (module, app, _) {
         resetAttrs: function (el) {
             var data = elementData.get(el);
             each(data.backup, function (key, val) {
-                _.attributeInterface(el, unCamelCase(key), val);
+                attributeInterface(el, unCamelCase(key), val);
             });
         },
         elementData: elementData,

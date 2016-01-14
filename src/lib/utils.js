@@ -1289,8 +1289,8 @@ application.scope('dev', function (app) {
             }
             return rez;
         },
-        resultOf = function (item, ctx, args) {
-            return _.isFunction(item) ? item.apply(ctx, args || []) : item;
+        resultOf = function (item, ctx, arg) {
+            return isFunction(item) ? item.call(ctx, arg) : item;
         },
         maths = Math,
         mathArray = function (method) {

@@ -1,8 +1,6 @@
 application.scope(function (app) {
     var _ = app._,
-        // factories = app.factories,
-        // Events = factories.Events,
-        // extendFrom = app.extendFrom,
+        resultOf = _.resultOf,
         basicData = function (basic) {
             return function () {
                 return basic;
@@ -24,7 +22,7 @@ application.scope(function (app) {
             constructor: function (parent) {
                 var hash = {};
                 this._getHash = function (key, args) {
-                    return _.resultOf(hash[key], args);
+                    return resultOf(hash[key], args);
                 };
                 this._setHash = function (key, val) {
                     hash[key] = val;
@@ -65,11 +63,9 @@ application.scope(function (app) {
                 });
                 return messenger.parent;
             }
-        }, true);
-    _.exports({
-        reqres: function (obj) {
+        }, true),
+        messenger = _.messenger = function (obj) {
             return new Messenger(obj);
-        }
-    });
-    _.reqres(app);
+        };
+    messenger(app);
 });

@@ -1476,8 +1476,8 @@ application.scope('dev', function (app) {
             }
             return rez;
         },
-        resultOf = function (item, ctx, args) {
-            return _.isFunction(item) ? item.apply(ctx, args || []) : item;
+        resultOf = function (item, ctx, arg) {
+            return isFunction(item) ? item.call(ctx, arg) : item;
         },
         maths = Math,
         mathArray = function (method) {
@@ -3235,9 +3235,7 @@ application.scope(function (app) {
 });
 application.scope(function (app) {
     var _ = app._,
-        // factories = app.factories,
-        // Events = factories.Events,
-        // extendFrom = app.extendFrom,
+        resultOf = _.resultOf,
         basicData = function (basic) {
             return function () {
                 return basic;
@@ -3259,7 +3257,7 @@ application.scope(function (app) {
             constructor: function (parent) {
                 var hash = {};
                 this._getHash = function (key, args) {
-                    return _.resultOf(hash[key], args);
+                    return resultOf(hash[key], args);
                 };
                 this._setHash = function (key, val) {
                     hash[key] = val;
@@ -3300,13 +3298,11 @@ application.scope(function (app) {
                 });
                 return messenger.parent;
             }
-        }, true);
-    _.exports({
-        reqres: function (obj) {
+        }, true),
+        messenger = _.messenger = function (obj) {
             return new Messenger(obj);
-        }
-    });
-    _.reqres(app);
+        };
+    messenger(app);
 });
 application.scope(function (app) {
     var blank, _ = app._,
@@ -3349,6 +3345,7 @@ application.scope(function (app) {
         ATTRIBUTES = 'attributes',
         DISPATCH_EVENT = 'dispatchEvent',
         EVENT_REMOVE = '_removeEventList',
+        ATTRIBUTE_HISTORY = '_attributeHistory',
         BOOLEAN_FALSE = !1,
         BOOLEAN_TRUE = !0,
         CHILDREN = 'children',
@@ -3383,7 +3380,8 @@ application.scope(function (app) {
                     // build new attributes
                     newAttributes = extend(attrs, attributes),
                     // stale attributes
-                    ret = model[ATTRIBUTES] || {};
+                    ret = model[ATTRIBUTES] || {},
+                    history = model[ATTRIBUTE_HISTORY] = {};
                 // set id and let parent know what your new id is
                 this[DISPATCH_EVENT]('before:reset');
                 model._setId(attributes[idAttr]);
@@ -3443,27 +3441,44 @@ application.scope(function (app) {
                 var model = this,
                     didChange = BOOLEAN_FALSE,
                     attrs = model[ATTRIBUTES],
+                    history = model[ATTRIBUTE_HISTORY],
                     oldValue = attrs[key],
                     previousAttrsObject = model[PREVIOUS_ATTRIBUTES] = model[PREVIOUS_ATTRIBUTES] || {};
                 if (!_.isEqual(oldValue, newValue)) {
-                    didChange = BOOLEAN_TRUE;
                     previousAttrsObject[key] = oldValue;
+                    history[key] = oldValue;
                     attrs[key] = newValue;
+                    didChange = BOOLEAN_TRUE;
                 }
                 return didChange;
+            },
+            digester: function (fn) {
+                var model = this;
+                model[CHANGE_COUNTER] = model[CHANGE_COUNTER] || 0;
+                model[CHANGE_COUNTER]++;
+                ret = fn();
+                model[CHANGE_COUNTER]--;
+                // this event should only ever exist here
+                if (!model[CHANGE_COUNTER]) {
+                    model[DISPATCH_EVENT]('digest', model[PREVIOUS_ATTRIBUTES]);
+                    model[PREVIOUS_ATTRIBUTES] = {};
+                }
+                return ret;
             },
             set: function (key, value) {
                 var changedList = [],
                     model = this,
-                    compiled = {},
-                    _changeCounter = model[CHANGE_COUNTER] = model[CHANGE_COUNTER] || 0;
+                    compiled = {};
                 intendedObject(key, value, function (key, value) {
                     if (model._set(key, value)) {
                         changedList.push(key);
+                        compiled[key] = value;
                     }
                 });
-                if (changedList[LENGTH]) {
-                    model[CHANGE_COUNTER]++;
+                if (!changedList[LENGTH]) {
+                    return model;
+                }
+                model.digester(function () {
                     duff(changedList, function (name) {
                         model[DISPATCH_EVENT](CHANGED_STRING + ':' + name, {
                             key: name,
@@ -3471,14 +3486,9 @@ application.scope(function (app) {
                             value: model.get(name)
                         });
                     });
-                    model[DISPATCH_EVENT](CHANGED_STRING, model[PREVIOUS_ATTRIBUTES]);
-                    model[CHANGE_COUNTER]--;
-                }
-                // this event should only ever exist here
-                if (!model[CHANGE_COUNTER]) {
-                    model[DISPATCH_EVENT]('digest', model[PREVIOUS_ATTRIBUTES]);
-                    model[PREVIOUS_ATTRIBUTES] = {};
-                }
+                    model[DISPATCH_EVENT](CHANGED_STRING, compiled);
+                    return model;
+                });
                 return model;
             },
             /**
@@ -3991,7 +4001,7 @@ application.scope(function (app) {
                 module.name = attrs.name;
                 module.application = opts.application;
                 module.handlers = _.Collection();
-                _.reqres(this);
+                _.messenger(this);
                 Box.apply(this, arguments);
                 return module;
             },
@@ -4068,6 +4078,225 @@ application.scope(function (app) {
             return module.getExports();
         },
         module: moduleHandler
+    });
+});
+application.scope().module('Storage', function (module, app, _, factories) {
+    var ELID_STRING = '__uniqueid__',
+        __privateDataCache__ = {},
+        datastorage = {
+            make: function (el) {
+                var elId = el[ELID_STRING] = uniqueId('id');
+                var ret = __privateDataCache__[elId] = __privateDataCache__[elId] || {};
+                return ret;
+            },
+            get: function (el) {
+                var id = el[ELID_STRING];
+                var ret = id ? (__privateDataCache__[id] = __privateDataCache__[id] || this.make(el)) : this.make(el);
+                return ret;
+            },
+            remove: function (el) {
+                var id = el[ELID_STRING];
+                __privateDataCache__[id] = el[ELID_STRING] = void 0;
+                return id;
+            }
+        },
+        internalListAddRemove = function (keymaker, itemmaker) {
+            return function (setto) {
+                return function (base, item, subdata_, dirtifier) {
+                    var ret, subdata;
+                    if (!item) {
+                        return;
+                    }
+                    subdata = subdata_ || this.get(base);
+                    ret = !subdata.loaded && this.load(base, subdata);
+                    // each item that i was passed
+                    // duff(gapSplit(items), function (item) {
+                    var listitem, key = keymaker(item),
+                        index = subdata.hash[item];
+                    // do i have you?
+                    if (index === blank) {
+                        // lets make you
+                        listitem = itemmaker(subdata, key);
+                        // do i want you after you have been made?
+                        if (listitem) {
+                            index = subdata.hash[item] = subdata.list.length;
+                            subdata.list.push(listitem);
+                        }
+                    }
+                    // are you made and did i want you?
+                    if (index + 1) {
+                        listitem = subdata.list[index];
+                        setto(listitem, index, key, subdata);
+                        subdata.dirty = !dirtifier;
+                    }
+                };
+            };
+        },
+        createNewJoinable = function (subdata, item) {
+            return item ? {
+                valueOf: function () {
+                    return item;
+                },
+                toString: function () {
+                    var adding = this.flag,
+                        listitem = adding ? item : '',
+                        value = (!adding || !subdata.notTheFirst ? '' : ' ');
+                    if (listitem) {
+                        subdata.notTheFirst = BOOLEAN_TRUE;
+                    }
+                    return value + listitem;
+                }
+            } : BOOLEAN_FALSE;
+        },
+        listAddRemove = function (opts) {
+            var datastorage = opts.storage || datastorage,
+                propertyname = opts.name,
+                getter = opts.get,
+                setter = opts.set,
+                keymaker = opts.key,
+                itemmaker = opts.item,
+                madewithkey = internalListAddRemove(keymaker, itemmaker);
+            return {
+                name: propertyname,
+                add: madewithkey(function (listitem, index, key, subdata) {
+                    listitem.flag = BOOLEAN_TRUE;
+                }),
+                remove: madewithkey(function (listitem, index, key, subdata) {
+                    listitem.flag = BOOLEAN_FALSE;
+                }),
+                toggle: madewithkey(function (listitem, index, key, subdata) {
+                    listitem.flag = !listitem.flag;
+                }),
+                load: function (base, subdata_) {
+                    var listManager = this,
+                        subdata = subdata_ || listManager.get(base);
+                    // don't call listManager function again
+                    subdata.loaded = true;
+                    // load all of the base data
+                    duff(getter(base, propertyname), function (item) {
+                        listManager.add(base, item, subdata, true);
+                    });
+                },
+                unload: function (base, subdata_) {
+                    var subdata = subdata_ || this.get(base);
+                    // check to make sure it has at least been loaded
+                    if (subdata.loaded && subdata.dirty) {
+                        setter(base, this.name, subdata.list);
+                        this.reset();
+                    }
+                },
+                isDirty: function (base) {
+                    return this.get(base).dirty;
+                },
+                // requires base object that data is tied to
+                get: function (base) {
+                    var data = datastorage.get(base);
+                    data[propertyname] = data[propertyname] || this.reset();
+                    return data[propertyname];
+                },
+                // requires subdata
+                reset: function () {
+                    return {
+                        loaded: false,
+                        dirty: false,
+                        list: [],
+                        hash: {}
+                    };
+                }
+            };
+        },
+        nestedList = function (opts) {
+            var propertyname = opts.name,
+                categoryKey = opts.categoryKey,
+                storageGet = {
+                    get: function (base) {
+                        return api.where(base).underspace;
+                    }
+                },
+                api = {
+                    add: function (base, category_, dataset) {
+                        var item, data = dataset || this.where(base);
+                        var category = categoryKey(category_);
+                        if (!data[category]) {
+                            item = this.make(base, category, data);
+                            data._byId[category] = item;
+                            data._items.push(item);
+                            item.load(base);
+                        }
+                        return item;
+                    },
+                    remove: function (base, category_, dataset) {
+                        var data = dataset || this.where(base);
+                        var category = categoryKey(category_);
+                        data[category] = void 0;
+                    },
+                    load: function (base, dataset) {
+                        var categoryManager = this,
+                            data = dataset || categoryManager.where(base);
+                        duff(base.attributes, function (value) {
+                            categoryManager.add(base, value.localName, data);
+                        });
+                    },
+                    upsert: function (base, category, additem, addremove) {
+                        var data = this.where(base),
+                            list = this.get(base, category) || this.add(base, category, data),
+                            wasdirty = list.isDirty(base);
+                        list[addremove ? 'add' : 'remove'](base, additem);
+                        if (wasdirty !== list.isDirty(base)) {
+                            data.dirtyList.push(list);
+                            data.isDirty++;
+                        }
+                    },
+                    get: function (base, category) {
+                        return this.where(base)._byId[category];
+                    },
+                    unload: function (base) {
+                        var data = this.where(base);
+                        duff(data.dirtyList, function (item) {
+                            if (!item.isDirty(base)) {
+                                return;
+                            }
+                            item.unload(base);
+                        });
+                        data.dirtyList = [];
+                        return this;
+                    },
+                    where: function (base) {
+                        var data = datastorage.get(base);
+                        data[propertyname] = data[propertyname] || this.reset();
+                        return data[propertyname];
+                    },
+                    reset: function () {
+                        return {
+                            dirtyList: [],
+                            loaded: false,
+                            _byId: {},
+                            _items: [],
+                            underspace: {}
+                        };
+                    },
+                    make: function (base, category, dataset) {
+                        var collection = listAddRemove({
+                            storage: storageGet,
+                            get: attributeInterface,
+                            name: category,
+                            item: createNewJoinable,
+                            set: function (el, key, value_) {
+                                attributeInterface(el, key, value_.join('') || BOOLEAN_FALSE);
+                            },
+                            key: function (item) {
+                                return (+item === +item) ? +item : item;
+                            }
+                        });
+                        return collection;
+                    }
+                };
+            return api;
+        };
+    module.reqres.setHandlers({
+        'make:nested': nestedList,
+        'make:list': listAddRemove,
+        storage: datastorage
     });
 });
 application.scope().module('Looper', function (module, app, _, extendFrom, factories) {
@@ -4876,7 +5105,7 @@ application.scope().module('Associator', function (module, app, _) {
         associator: _.Associator()
     });
 });
-application.scope().module('DOMM', function (module, app, _) {
+application.scope().module('Node', function (module, app, _) {
     var blank, sizzleDoc = document,
         eq = _.eq,
         uniqueId = _.uniqueId,
@@ -4890,6 +5119,7 @@ application.scope().module('DOMM', function (module, app, _) {
         isString = _.isString,
         isObject = _.isObject,
         isNumber = _.isNumber,
+        wrap = _.wrap,
         merge = _.merge,
         remove = _.splice,
         extend = _.extend,
@@ -4914,6 +5144,7 @@ application.scope().module('DOMM', function (module, app, _) {
         __delegateCountString = '__delegateCount',
         removeQueueString = 'removeQueue',
         addQueueString = 'addQueue',
+        CLASSNAME = 'className',
         BOOLEAN_TRUE = !0,
         BOOLEAN_FALSE = !1,
         getComputed = window.getComputedStyle,
@@ -4949,142 +5180,6 @@ application.scope().module('DOMM', function (module, app, _) {
          */
         isWindows = function () {
             return ua.match(/IEMobile/i);
-        },
-        ELID_STRING = '__elid__',
-        __privateDataCache__ = {},
-        elementData = {
-            make: function (el) {
-                var elId = el[ELID_STRING] = uniqueId('elid');
-                var ret = __privateDataCache__[elId] = __privateDataCache__[elId] || {
-                    dataset: {},
-                    queued: {},
-                    handlers: {},
-                    events: {}
-                };
-                return ret;
-            },
-            get: function (el) {
-                var id = el[ELID_STRING];
-                var ret = id ? (__privateDataCache__[id] = __privateDataCache__[id] || this.make(el)) : this.make(el);
-                return ret;
-            },
-            remove: function (el) {
-                var id = el[ELID_STRING];
-                __privateDataCache__[id] = el[ELID_STRING] = void 0;
-                return id;
-            }
-        },
-        internalListAddRemove = function (keymaker, itemmaker) {
-            return function (setto) {
-                return function (base, items, subdata_, dirtifier) {
-                    var ret, subdata;
-                    if (items && items.length) {
-                        subdata = subdata_ || this.get(base);
-                        ret = !subdata.loaded && this.load(base, subdata);
-                        subdata.dirty = !dirtifier;
-                        // each item that i was passed
-                        duff(gapSplit(items), function (item) {
-                            var listitem, key = keymaker(item),
-                                index = subdata.hash[item];
-                            // do i have you?
-                            if (index === blank) {
-                                // lets make you
-                                listitem = itemmaker(subdata, key);
-                                // do i want you after you have been made?
-                                if (listitem) {
-                                    index = subdata.hash[item] = subdata.list.length;
-                                    subdata.list.push(listitem);
-                                }
-                            }
-                            // are you made and did i want you?
-                            if (index + 1) {
-                                listitem = subdata.list[index];
-                                setto(listitem, index, key, subdata);
-                            }
-                        });
-                    }
-                };
-            };
-        },
-        listAddRemove = function (datastorage, propertyname, getter, setter, keymaker, itemmaker) {
-            var madewithkey = internalListAddRemove(keymaker, itemmaker);
-            return {
-                add: madewithkey(function (listitem, index, key, subdata) {
-                    listitem.flag = BOOLEAN_TRUE;
-                }),
-                remove: madewithkey(function (listitem, index, key, subdata) {
-                    listitem.flag = BOOLEAN_FALSE;
-                }),
-                toggle: madewithkey(function (listitem, index, key, subdata) {
-                    listitem.flag = !listitem.flag;
-                }),
-                load: function (base, subdata_) {
-                    var subdata = subdata_ || this.get(base);
-                    // don't call this function again
-                    subdata.loaded = true;
-                    // load all of the base data
-                    this.add(base, getter(base), subdata, true);
-                },
-                unload: function (base, subdata_) {
-                    var subdata = subdata_ || this.get(base);
-                    // check to make sure it has at least been loaded
-                    if (subdata.loaded && subdata.dirty) {
-                        setter(base, subdata.list);
-                        this.reset();
-                    }
-                },
-                // requires base object that data is tied to
-                get: function (base) {
-                    var data = datastorage.get(base),
-                        queued = data.queued;
-                    queued[propertyname] = queued[propertyname] || this.reset();
-                    return queued[propertyname];
-                },
-                // requires subdata
-                reset: function (queued) {
-                    return {
-                        loaded: false,
-                        dirty: false,
-                        list: [],
-                        hash: {}
-                    };
-                }
-            };
-        },
-        getClassName = function (el) {
-            var className = el.className;
-            if (!isString(className)) {
-                className = el.getAttribute('class') || '';
-            }
-            return className;
-        },
-        setClassName = function (el, val) {
-            var value = val.join('');
-            if (isString(el.className)) {
-                el.className = value;
-            } else {
-                el.setAttribute('class', value);
-            }
-        },
-        queuedata = {
-            className: listAddRemove(elementData, 'className', getClassName, setClassName, function (item) {
-                return item;
-            }, function (subdata, item) {
-                return item ? {
-                    valueOf: function () {
-                        return item;
-                    },
-                    toString: function () {
-                        var adding = this.flag,
-                            classname = adding ? item : '',
-                            value = (adding && !subdata.firstAdded ? '' : ' ');
-                        if (classname) {
-                            subdata.firstAdded = true;
-                        }
-                        return value + classname;
-                    }
-                } : false;
-            })
         },
         /**
          * @func
@@ -5182,6 +5277,93 @@ application.scope().module('DOMM', function (module, app, _) {
                 return _.DOMM(sel, ctx || doc);
             };
         },
+        setAttribute = function (el, key, val) {
+            if (val === true) {
+                val = '';
+            }
+            val = stringify(val);
+            val += '';
+            el.setAttribute(key, val);
+        },
+        getAttribute = function (el, key, val) {
+            var converted;
+            val = el.getAttribute(key);
+            if (val === '') {
+                val = BOOLEAN_TRUE;
+            }
+            if (isString(val)) {
+                if (val[0] === '{' || val[0] === '[') {
+                    val = JSON.parse(val);
+                } else {
+                    converted = +val;
+                    if (converted === converted) {
+                        val = converted;
+                    } else {
+                        // if for whatever reason you have a function
+                        if (val[val.length - 1] === '}') {
+                            if (val.slice(0, 8) === 'function') {
+                                val = new Function.constructor('return ' + val);
+                            }
+                        }
+                    }
+                }
+            } else {
+                if (isBlank(val)) {
+                    val = BOOLEAN_FALSE;
+                }
+            }
+            return val;
+        },
+        /**
+         * @private
+         * @func
+         */
+        attributeInterface = function (el, key, val) {
+            // set or remove if not undefined
+            // undefined fills in the gap by returning some value, which is never undefined
+            if (val !== blank) {
+                if (!val && val !== 0) {
+                    el.removeAttribute(key);
+                } else {
+                    setAttribute(el, key, val);
+                }
+            } else {
+                return getAttribute(el, key, val);
+            }
+        },
+        getClassName = function (el, key) {
+            var className = el[CLASSNAME];
+            if (!isString(className)) {
+                className = getAttribute(el, 'class');
+            }
+            return (className || '').split(' ');
+        },
+        setClassName = function (el, key, val) {
+            var value = val.join('');
+            if (isString(el[CLASSNAME])) {
+                el[CLASSNAME] = value;
+            } else {
+                setAttribute(el, 'class', value);
+            }
+        },
+        queuedata = {
+            className: app.module('Storage').message.request('make:list', {
+                // storage: nodeData,
+                name: CLASSNAME,
+                get: getClassName,
+                set: setClassName,
+                key: function (item) {
+                    return item;
+                }
+            }),
+            data: app.module('Storage').message.request('make:nested', {
+                // storage: nodeData,
+                name: 'dataset',
+                get: attributeInterface,
+                set: attributeInterface,
+                categoryKey: _.camelCase
+            })
+        },
         triggerEventWrapper = function (attr, api) {
             attr = attr || api;
             return function (fn, fn2) {
@@ -5249,28 +5431,18 @@ application.scope().module('DOMM', function (module, app, _) {
          * @private
          * @func
          */
-        getClass = function (el) {
-            var className = el.className;
-            if (!isString(className)) {
-                className = el.getAttribute('class') || '';
-            }
-            return gapSplit(className);
-        },
         changeClass = function (el, remove, add) {
             var subdata = queuedata.className.get(el);
             queuedata.className.remove(el, remove, subdata);
             queuedata.className.add(el, add, subdata);
-            queuedata.className.unload(el, subdata);
         },
         removeClass = function (el, remove) {
             var subdata = queuedata.className.get(el);
             queuedata.className.remove(el, remove, subdata);
-            queuedata.className.unload(el, subdata);
         },
         addClass = function (el, add) {
             var subdata = queuedata.className.get(el);
             queuedata.className.add(el, add, subdata);
-            queuedata.className.unload(el, subdata);
         },
         eventNameProperties = function (str) {},
         /**
@@ -7541,7 +7713,7 @@ application.scope().module('DOMM', function (module, app, _) {
         resetAttrs: function (el) {
             var data = elementData.get(el);
             each(data.backup, function (key, val) {
-                _.attributeInterface(el, unCamelCase(key), val);
+                attributeInterface(el, unCamelCase(key), val);
             });
         },
         elementData: elementData,
@@ -7564,211 +7736,59 @@ application.scope().module('DOMM', function (module, app, _) {
         }
     });
 });
-application.scope().module('Element', function (module, app, _, $) {
-    var factories = _.factories,
-        each = _.each,
-        duff = _.duff,
-        BOOLEAN_TRUE = !0,
-        BOOLEAN_FALSE = !1,
-        isUnitlessNumber = {
-            columnCount: BOOLEAN_TRUE,
-            columns: BOOLEAN_TRUE,
-            fontWeight: BOOLEAN_TRUE,
-            lineHeight: BOOLEAN_TRUE,
-            opacity: BOOLEAN_TRUE,
-            zIndex: BOOLEAN_TRUE,
-            zoom: BOOLEAN_TRUE,
-            animationIterationCount: BOOLEAN_TRUE,
-            boxFlex: BOOLEAN_TRUE,
-            boxFlexGroup: BOOLEAN_TRUE,
-            boxOrdinalGroup: BOOLEAN_TRUE,
-            flex: BOOLEAN_TRUE,
-            flexGrow: BOOLEAN_TRUE,
-            flexPositive: BOOLEAN_TRUE,
-            flexShrink: BOOLEAN_TRUE,
-            flexNegative: BOOLEAN_TRUE,
-            flexOrder: BOOLEAN_TRUE,
-            lineClamp: BOOLEAN_TRUE,
-            order: BOOLEAN_TRUE,
-            orphans: BOOLEAN_TRUE,
-            tabSize: BOOLEAN_TRUE,
-            widows: BOOLEAN_TRUE,
-            // SVG-related properties
-            fillOpacity: BOOLEAN_TRUE,
-            stopOpacity: BOOLEAN_TRUE,
-            strokeDashoffset: BOOLEAN_TRUE,
-            strokeOpacity: BOOLEAN_TRUE,
-            strokeWidth: BOOLEAN_TRUE
-        },
-        timeBasedCss = {
-            transitionDuration: BOOLEAN_TRUE,
-            animationDuration: BOOLEAN_TRUE,
-            transitionDelay: BOOLEAN_TRUE,
-            animationDelay: BOOLEAN_TRUE
-        },
-
-        /**
-        * Support style names that may come passed in prefixed by adding permutations
-        * of vendor prefixes.
-        */
-        prefixes = ['Webkit', 'ms', 'Moz', 'O'],
-
-
-        /**
-        * Most style properties can be unset by doing .style[prop] = '' but IE8
-        * doesn't like doing that with shorthand properties so for the properties that
-        * IE8 breaks on, which are listed here, we instead unset each of the
-        * individual properties. See http://bugs.jquery.com/ticket/12385.
-        * The 4-value 'clock' properties like margin, padding, border-width seem to
-        * behave without any problems. Curiously, list-style works too without any
-        * special prodding.
-        */
-        shorthandPropertyExpansions = {
-            background: {
-                backgroundAttachment: BOOLEAN_TRUE,
-                backgroundColor: BOOLEAN_TRUE,
-                backgroundImage: BOOLEAN_TRUE,
-                backgroundPositionX: BOOLEAN_TRUE,
-                backgroundPositionY: BOOLEAN_TRUE,
-                backgroundRepeat: BOOLEAN_TRUE
-            },
-            backgroundPosition: {
-                backgroundPositionX: BOOLEAN_TRUE,
-                backgroundPositionY: BOOLEAN_TRUE
-            },
-            border: {
-                borderWidth: BOOLEAN_TRUE,
-                borderStyle: BOOLEAN_TRUE,
-                borderColor: BOOLEAN_TRUE
-            },
-            borderBottom: {
-                borderBottomWidth: BOOLEAN_TRUE,
-                borderBottomStyle: BOOLEAN_TRUE,
-                borderBottomColor: BOOLEAN_TRUE
-            },
-            borderLeft: {
-                borderLeftWidth: BOOLEAN_TRUE,
-                borderLeftStyle: BOOLEAN_TRUE,
-                borderLeftColor: BOOLEAN_TRUE
-            },
-            borderRight: {
-                borderRightWidth: BOOLEAN_TRUE,
-                borderRightStyle: BOOLEAN_TRUE,
-                borderRightColor: BOOLEAN_TRUE
-            },
-            borderTop: {
-                borderTopWidth: BOOLEAN_TRUE,
-                borderTopStyle: BOOLEAN_TRUE,
-                borderTopColor: BOOLEAN_TRUE
-            },
-            font: {
-                fontStyle: BOOLEAN_TRUE,
-                fontVariant: BOOLEAN_TRUE,
-                fontWeight: BOOLEAN_TRUE,
-                fontSize: BOOLEAN_TRUE,
-                lineHeight: BOOLEAN_TRUE,
-                fontFamily: BOOLEAN_TRUE
-            },
-            outline: {
-            outlineWidth: BOOLEAN_TRUE,
-            outlineStyle: BOOLEAN_TRUE,
-            outlineColor: BOOLEAN_TRUE
-            }
-        },
-
-        CSSProperty = {
-            isUnitlessNumber: isUnitlessNumber,
-            shorthandPropertyExpansions: shorthandPropertyExpansions
-        },
-        convertStyleType = function (key, value) {
-            if (value === +value) {
-                if (timeBasedCss[n]) {
-                    value += 'ms';
-                }
-                if (!isUnitlessNumber[n]) {
-                    value += 'px';
-                }
-            }
-            return value;
-        },
-        isNode = function (object) {
-          return !!(object && (_.isFunction(Node) ? _.isInstance(object, Node) : _.isObject(object) && _.isNumber(object.nodeType) && _.isString(object.nodeName)));
-        },
-        isWin = function (obj) {
-            return obj && obj === obj.window;
-        },
-        /**
-         * @private
-         * @func
-         */
-        isDoc = function (obj) {
-            return obj && isNumber(obj.nodeType) && obj.nodeType === obj.DOCUMENT_NODE;
-        },
-        isFrag = function (frag) {
-            return frag && frag.nodeType === sizzleDoc.DOCUMENT_FRAGMENT_NODE;
-        },
-        styles = function (el, css_) {
-            _.each(css_, function (key_, value) {
-                var key = _.camelCase(key_);
-                el.style[key] = convertStyleType(key, value);
-            });
-        },
-        Element = factories.Element = _.extendFrom.Model('Element', {
-            constructor: function (el, skip) {
-                var element = this;
-                element._el = el;
-                element._validated = !skip;
-                element.validate();
-                element.apply();
-                return element;
-            },
-            apply: function () {
-                var element = this;
-                _.each(element._queue, function (key, value) {});
-                element._queue = {};
-                return element;
-            },
-            validate: function () {
-                var element = this;
-                var el = element._el;
-                element._isNode = isNode(el);
-                element._isDoc = element._isNode ? BOOLEAN_FALSE : isDoc(el);
-                element._isWin = element._isNode || element._isDoc ? BOOLEAN_FALSE : isWin(el);
-                element._isFrag = element._isNode || element._isDoc || element._isWin ? BOOLEAN_FALSE : isFrag(el);
-                element._isValid =  element._isWin || element._isNode || element._isDoc || element._isFrag;
-            },
-            valid: function (type, preventRevalidation) {
-                var element = this;
-                if (!element._validated && !preventRevalidation) {
-                    element.validate();
-                }
-                return this['_is' + type];
-            },
-            style: function (css) {
-                var element = this;
-                if (element.valid('DOM')) {
-                    styles(element._el, css);
-                }
-                return element;
-            }
-        }, BOOLEAN_TRUE);
-        /**
-         * @param {string} prefix vendor-specific prefix, eg: Webkit
-         * @param {string} key style name, eg: transitionDuration
-         * @return {string} style name prefixed with `prefix`, properly camelCased, eg:
-         * WebkitTransitionDuration
-         */
-        function prefixKey(prefix, key) {
-          return prefix + key.charAt(0).toUpperCase() + key.substring(1);
-        }
-        // Using Object.keys here, or else the vanilla for-in loop makes IE8 go into an
-        // infinite loop, because it iterates over the newly added props too.
-        each(isUnitlessNumber, function (truth, prop) {
-            duff(prefixes, function (prefix) {
-                isUnitlessNumber[prefixKey(prefix, prop)] = isUnitlessNumber[prop];
-            });
-        });
-});
+// application.scope().module('Node', function (module, app, _, factories) {
+//     var blank, BOOLEAN_TRUE = !0,
+//         BOOLEAN_FALSE = !1,
+//         isBlank = _.isBlank,
+//         uniqueId = _.uniqueId,
+//         isString = _.isString,
+//         isArray = _.isArray,
+//         duff = _.duff,
+//         gapSplit = _.gapSplit,
+//         stringify = _.stringify,
+//         intendedObject = _.intendedObject,
+//         Node = factories.Collection.extend('Node', {
+//             constructor: function (el) {
+//                 var node = this;
+//                 node._el = el;
+//                 node.load(el);
+//                 return this;
+//             },
+//             load: function () {
+//                 queuedata[CLASSNAME].load(this._el);
+//                 queuedata.data.load(this._el);
+//             },
+//             apply: function () {
+//                 var node = this,
+//                     el = node._el;
+//                 queuedata[CLASSNAME].unload(el);
+//                 queuedata.data.unload(el);
+//                 return node;
+//             },
+//             data: function (key, passedValue, addremoveDefault_) {
+//                 var el = this._el,
+//                     addremoveDefault = !!addremoveDefault_,
+//                     dataset = queuedata.data.where(el);
+//                 intendedObject(key, passedValue, function (key, value, wasanobject) {
+//                     if (wasanobject) {
+//                         addremoveDefault = !!passedValue;
+//                     }
+//                     intendedObject(value, blank, function (value, addremove, object) {
+//                         if (!object) {
+//                             queuedata.data.singleton(el, key, value);
+//                         } else {
+//                             if (isArray(object)) {
+//                                 value = addremove;
+//                                 addremove = addremoveDefault;
+//                             }
+//                             queuedata.data.upsert(el, key, value, addremove);
+//                         }
+//                     });
+//                 });
+//                 return this;
+//             }
+//         }, BOOLEAN_TRUE);
+// });
 application.scope().module('View', function (module, app, _, $) {
     var blank, each = _.each,
         isFn = _.isFn,
