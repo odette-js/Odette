@@ -458,32 +458,12 @@ application.scope(function (app) {
                     }
                     i--;
                 }
-                // if (!evnt.isStopped()) {
-                //     origin._eventDispatcher(evnt);
-                // }
                 while (origin && origin._eventDispatcher && !evnt.isStopped()) {
                     origin._eventDispatcher(evnt);
                     origin = !evnt.isStopped() && evnt.bubbles && origin[PARENT];
                 }
                 evnt.finished();
                 return evnt;
-                // var evnt =
-                // var evnt, box = makeValidEvent(this),
-                //     originalBox = box,
-                //     currentEventArray = getCurrentEventList(originalBox),
-                //     methodName = upCase(camelCase('on:' + name, ':')),
-                //     childMethodName = upCase(camelCase('on:child:' + name, ':')),
-                //     onMethod = isFunction(box[methodName]);
-                // if (onMethod || getEventList(box, name).length || overrideEventCreation(options)) {
-                //     evnt = box._createEvent(name, data);
-                //     evnt.originalStack = BOOLEAN_TRUE;
-                //     evnt.onMethodName = methodName;
-                //     while (box && box[internalEventsString] && box._eventDispatcher && !evnt.isStopped()) {
-                //         box._eventDispatcher(evnt);
-                //         box = !evnt.isStopped() && evnt.bubbles && box[PARENT];
-                //     }
-                //     evnt.originalStack = BOOLEAN_FALSE;
-                // }
             },
             _remove: function (model) {
                 var parent = this;

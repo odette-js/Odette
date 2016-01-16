@@ -5,8 +5,10 @@ application.scope(function (app) {
         isObject = _.isObject,
         isNumber = _.isNumber,
         isFunction = _.isFunction,
-        lengthString = 'length',
-        itemsString = '_items',
+        isInstance = _.isInstance,
+        LENGTH = 'length',
+        ITEMS = '_items',
+        BY_ID = '_byId',
         previousString = '_previous',
         each = _.each,
         duff = _.duff,
@@ -25,6 +27,9 @@ application.scope(function (app) {
         sort = _.sort,
         bindTo = _.bindTo,
         isArrayLike = _.isArrayLike,
+        registry = function () {
+            return this[BY_ID];
+        },
         eachCall = function (array, method) {
             return duff(array, function (item) {
                 _.result(item, method);
@@ -78,10 +83,10 @@ application.scope(function (app) {
         },
         addAll = doToEverything(add),
         addAt = function (list, item, index) {
-            var len = list[lengthString],
+            var len = list[LENGTH],
                 lastIdx = len || 0;
             splice(list, index || 0, 0, item);
-            return len !== list[lengthString];
+            return len !== list[LENGTH];
         },
         range = function (start, stop, step, inclusive) {
             var length, range, idx;
@@ -323,7 +328,7 @@ application.scope(function (app) {
                     }
                 });
                 if (len > (last || 0)) {
-                    collection[lengthString] = len;
+                    collection[LENGTH] = len;
                 }
             }
         }),
@@ -372,7 +377,7 @@ application.scope(function (app) {
          */
         // Create a reducing function iterating left or right.
         createReduce = function (dir) {
-            // Optimized iterator function as using arguments[lengthString]
+            // Optimized iterator function as using arguments[LENGTH]
             // in the main function will deoptimize the, see #1991.
             var iterator = function (obj, iteratee, memo, keys, index, length) {
                 var currentKey;
@@ -411,10 +416,8 @@ application.scope(function (app) {
          */
         filter = function (obj, iteratee, context) {
             var isArrayResult = isArrayLike(obj),
-                bound = bindTo(iteratee, context),
-                runCount = 0;
+                bound = bindTo(iteratee, context);
             return foldl(obj, function (memo, item, key, all) {
-                runCount++;
                 if (bound(item, key, all)) {
                     if (isArrayResult) {
                         memo.push(item);
@@ -425,100 +428,21 @@ application.scope(function (app) {
                 return memo;
             }, isArrayResult ? [] : {});
         },
-        unwrapper = function (fn) {
-            return function (args) {
-                args[0] = args[0][itemsString];
-                return fn.call(this, args);
-            };
-        },
-        unwrapInstance = function (instance_) {
-            var instance = instance_;
-            if (_.isInstance(instance, _.Collection)) {
-                instance = instance.un();
-            }
-            return instance;
-        },
-        unwrapAll = function (fn) {
-            return function (args) {
-                duff(args, function (arg, idx, args) {
-                    args[idx] = unwrapInstance(arg);
-                });
-                return fn.call(this, args);
-            };
-        },
         unwrap = function () {
-            return this[itemsString];
+            return this[ITEMS];
         },
         applyToSelf = function (fn) {
             return function () {
-                return fn.apply(this, this[itemsString]);
+                return fn.apply(this, this[ITEMS]);
             };
         },
         lengthFn = function () {
-            return this[itemsString][lengthString];
+            return this[ITEMS][LENGTH];
         },
-        wrappedCollectionMethods = _.extend(wrap({
-            each: duff,
-            duff: duff,
-            forEach: duff,
-            eachRev: duffRev,
-            duffRev: duffRev,
-            forEachRev: duffRev
-        }, function (fn, val) {
-            return function (iterator) {
-                fn(this[itemsString], iterator, this);
-                return this;
-            };
-        }), wrap(gapSplit('addAll removeAll'), function (name) {
-            return function () {
-                // unshiftContext
-                var args = toArray(arguments);
-                args.unshift(this);
-                // unwrapAll
-                duff(args, function (arg, idx, args) {
-                    if (arg instanceof Collection) {
-                        arg = arg.un();
-                    }
-                    args[idx] = arg;
-                });
-                // custom
-                _[name].apply(_, args);
-                return this;
-            };
-        }), wrap(gapSplit('sort unshift push cycle uncycle reverse count countTo countFrom eachCall eachRevCall'), function (name) {
-            return function () {
-                // unshiftContext
-                var args = toArray(arguments);
-                args.unshift(this[itemsString]);
-                // unwrapper
-                // custom
-                _[name].apply(_, args);
-                return this;
-            };
-        }), wrap(gapSplit('has add addAt remove removeAt pop shift indexOf find findLast findWhere findLastWhere posit foldr foldl reduce'), function (name) {
-            return function () {
-                // unshiftContext
-                var args = toArray(arguments);
-                args.unshift(this[itemsString]);
-                // custom
-                return _[name].apply(_, args);
-            };
-        }), wrap(gapSplit('merge eq map filter pluck where whereNot'), function (name) {
-            // always responds with an array
-            return function () {
-                // unshiftContext
-                var args = toArray(arguments);
-                args.unshift(this[itemsString]);
-                // unwrapper
-                // custom
-                return new Collection(_[name].apply(_, args));
-            };
-        })),
         ret = _.exports({
             eachCall: eachCall,
             eachRevCall: eachRevCall,
             closest: closest,
-            // map: map,
             filter: filter,
             reduce: foldl,
             foldl: foldl,
@@ -541,9 +465,6 @@ application.scope(function (app) {
             where: where,
             findWhere: findWhere,
             findLastWhere: findLastWhere,
-            // finder: finder,
-            // find: find,
-            // findLast: findLast,
             eq: eq,
             posit: posit,
             range: range,
@@ -555,35 +476,88 @@ application.scope(function (app) {
             duffRev: duffRev,
             unshiftContext: unshiftContext,
             flatten: flatten
-            // ,
-            // between: between
         }),
-        BY_ID = '_byId',
+        wrappedCollectionMethods = _.extend(wrap({
+            each: duff,
+            duff: duff,
+            forEach: duff,
+            eachRev: duffRev,
+            duffRev: duffRev,
+            forEachRev: duffRev
+        }, function (fn, val) {
+            return function (iterator) {
+                fn(this[ITEMS], iterator, this);
+                return this;
+            };
+        }), wrap(gapSplit('addAll removeAll'), function (name) {
+            return function () {
+                // unshiftContext
+                var args = toArray(arguments);
+                args.unshift(this);
+                // unwrapAll
+                duff(args, function (arg, idx, args) {
+                    if (isInstance(arg, Collection)) {
+                        arg = arg.unwrap();
+                    }
+                    args[idx] = arg;
+                });
+                // custom
+                _[name].apply(_, args);
+                return this;
+            };
+        }), wrap(gapSplit('sort unshift push cycle uncycle reverse count countTo countFrom eachCall eachRevCall flatten'), function (name) {
+            return function () {
+                // unshiftContext
+                var args = toArray(arguments);
+                args.unshift(this[ITEMS]);
+                // unwrapper
+                // custom
+                _[name].apply(_, args);
+                return this;
+            };
+        }), wrap(gapSplit('has add addAt remove removeAt pop shift indexOf find findLast findWhere findLastWhere posit foldr foldl reduce'), function (name) {
+            return function () {
+                // unshiftContext
+                var args = toArray(arguments);
+                args.unshift(this[ITEMS]);
+                // custom
+                return _[name].apply(_, args);
+            };
+        }), wrap(gapSplit('merge eq map filter pluck where whereNot'), function (name) {
+            // always responds with an array
+            return function () {
+                // unshiftContext
+                var args = toArray(arguments);
+                args.unshift(this[ITEMS]);
+                // unwrapper
+                // custom
+                return new Collection(_[name].apply(_, args));
+            };
+        })),
         Collection = extendFrom.Model('Collection', _.extend({
-            un: unwrap,
             unwrap: unwrap,
-            len: lengthFn,
+            registry: registry,
             length: lengthFn,
             range: recreateSelf(range),
-            flatten: recreateSelf(applyToSelf(flatten)),
+            // flatten: recreateSelf(applyToSelf(flatten)),
             index: function (number) {
-                return this[itemsString][number || 0];
+                return this[ITEMS][number || 0];
             },
             first: recreateSelf(function () {
-                return [this[itemsString][0]];
+                return [this[ITEMS][0]];
             }),
             last: recreateSelf(function () {
                 var len = this.length();
                 if (len) {
-                    return [this[itemsString][len - 1]];
+                    return [this[ITEMS][len - 1]];
                 }
             }),
             concat: recreateSelf(function () {
                 var args = [],
-                    base = this[itemsString];
+                    base = this[ITEMS];
                 // this allows us to mix collections with regular arguments
                 return base.concat.apply(base, map(arguments, function (arg) {
-                    return _.Collection(arg)[itemsString];
+                    return _.Collection(arg)[ITEMS];
                 }));
             }),
             constructor: function (arr) {
@@ -594,7 +568,7 @@ application.scope(function (app) {
                 if (arr !== blank && !isArrayLike(arr)) {
                     arr = [arr];
                 }
-                collection[itemsString] = arr || [];
+                collection[ITEMS] = arr || [];
                 return collection;
             },
             toString: function () {
@@ -602,7 +576,7 @@ application.scope(function (app) {
             },
             toJSON: function () {
                 // subtle distinction here
-                return map(this[itemsString], function (item) {
+                return map(this[ITEMS], function (item) {
                     var ret;
                     if (isObject(item) && _.isFunction(item.toJSON)) {
                         ret = item.toJSON();
@@ -613,7 +587,7 @@ application.scope(function (app) {
                 });
             },
             join: function (delimiter) {
-                return this[itemsString].join(delimiter);
+                return this[ITEMS].join(delimiter);
             },
             get: function (id) {
                 this[BY_ID] = this[BY_ID] || {};
@@ -652,14 +626,14 @@ application.scope(function (app) {
                 var box = this,
                     byid = this[BY_ID] = this[BY_ID] || {},
                     item = box[BY_ID][id];
-                if (item !== void 0) {
+                if (item !== blank && id !== blank) {
                     box[BY_ID][id] = blank;
                 }
                 return item;
             },
             mambo: function (fn) {
                 var collection = this;
-                externalMambo(collection[itemsString], function () {
+                externalMambo(collection[ITEMS], function () {
                     fn(collection);
                 });
                 return collection;

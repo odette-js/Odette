@@ -1,6 +1,8 @@
 application.scope(function (app) {
     var _ = app._,
-        resultOf = _.resultOf,
+        result = _.result,
+        isFunction = _.isFunction,
+        intendedObject = _.intendedObject,
         basicData = function (basic) {
             return function () {
                 return basic;
@@ -21,8 +23,8 @@ application.scope(function (app) {
         Messenger = _.extendFrom.Events('Messenger', {
             constructor: function (parent) {
                 var hash = {};
-                this._getHash = function (key, args) {
-                    return resultOf(hash[key], args);
+                this._getHash = function (key, arg) {
+                    return result(hash, key, arg);
                 };
                 this._setHash = function (key, val) {
                     hash[key] = val;
@@ -46,20 +48,17 @@ application.scope(function (app) {
                 parent.message = this;
                 return this;
             },
-            request: function (key, args) {
-                return this._getHash(key, args);
+            request: function (key, arg) {
+                return this._getHash(key, arg);
             },
             reply: function (key, handler) {
-                if (!_.isFunction(handler)) {
-                    handler = basicData(handler);
-                }
-                this._setHash(key, handler);
-                return this.parent;
-            },
-            replies: function (obj) {
                 var messenger = this;
-                _.each(obj, function (val, key) {
-                    messenger._setHash(key, val);
+                _.intendedObject(key, handler, function (key, handler_) {
+                    var handler = handler_;
+                    if (!isFunction(handler_)) {
+                        handler = basicData(handler_);
+                    }
+                    messenger._setHash(key, handler);
                 });
                 return messenger.parent;
             }

@@ -5,10 +5,10 @@ application.scope('dev', function (app) {
         fn = Function,
         array = Array,
         string = String,
-        toStringString = 'toString',
+        TO_STRING = 'toString',
         PROTOTYPE_STRING = 'prototype',
         constructorString = 'constructor',
-        lengthString = 'length',
+        LENGTH = 'length',
         CONSTRUCTOR_ID = '__constructorId',
         CONSTRUCTOR_KEY = '__constructor__',
         stringProto = string[PROTOTYPE_STRING],
@@ -17,11 +17,14 @@ application.scope('dev', function (app) {
         // shiftArray = arrayProto.shift,
         funcProto = fn[PROTOTYPE_STRING],
         nativeKeys = object.keys,
+        NULL = null,
         BOOLEAN_TRUE = !0,
         BOOLEAN_FALSE = !1,
+        STRING_TRUE = BOOLEAN_TRUE + '',
+        STRING_FALSE = BOOLEAN_FALSE + '',
         hasEnumBug = !{
-            toString: null
-        }.propertyIsEnumerable(toStringString),
+            toString: NULL
+        }.propertyIsEnumerable(TO_STRING),
         /**
          * @func
          */
@@ -59,15 +62,6 @@ application.scope('dev', function (app) {
         /**
          * @func
          */
-        isNegative1 = function (num) {
-            return (num === -1);
-        },
-        /**
-         * @func
-         */
-        listHas = function (list, item) {
-            return (!isNegative1(indexOf(list, item)));
-        },
         /**
          * @func
          */
@@ -78,7 +72,7 @@ application.scope('dev', function (app) {
          * @func
          */
         indexOfNaN = function (array, fromIndex, fromRight) {
-            var length = array[lengthString],
+            var length = array[LENGTH],
                 index = fromIndex + (fromRight ? 0 : -1);
             while ((fromRight ? index-- : ++index < length)) {
                 var other = array[index];
@@ -94,7 +88,7 @@ application.scope('dev', function (app) {
             }
             if (array) {
                 var index = (fromIndex || 0) - 1,
-                    length = array[lengthString];
+                    length = array[LENGTH];
                 while (++index < length) {
                     if (array[index] === value) {
                         return index;
@@ -231,14 +225,8 @@ application.scope('dev', function (app) {
          * @func
          */
         isString = isWrap('string'),
-        /**
-         * @func
-         */
-        // isBlank = isWrap('undefined', function (thing) {
-        //     return thing === null;
-        // }),
         isNull = function (thing) {
-            return thing === null;
+            return thing === NULL;
         },
         isBlank = function (thing) {
             return thing === void 0 || isNull(thing);
@@ -273,9 +261,9 @@ application.scope('dev', function (app) {
          * @func
          */
         isEmpty = function (obj) {
-            return !keys(obj)[lengthString];
+            return !keys(obj)[LENGTH];
         },
-        nonEnumerableProps = gapSplit('valueOf isPrototypeOf ' + toStringString + ' propertyIsEnumerable hasOwnProperty toLocaleString'),
+        nonEnumerableProps = gapSplit('valueOf isPrototypeOf ' + TO_STRING + ' propertyIsEnumerable hasOwnProperty toLocaleString'),
         /**
          * @func
          */
@@ -283,7 +271,7 @@ application.scope('dev', function (app) {
             var i = 0,
                 result = {},
                 objKeys = keys(obj),
-                length = getLength(objKeys);
+                length = objKeys[LENGTH];
             for (; i < length; i++) {
                 result[obj[objKeys[i]]] = objKeys[i];
             }
@@ -293,7 +281,7 @@ application.scope('dev', function (app) {
          * @func
          */
         collectNonEnumProps = function (obj, keys) {
-            var nonEnumIdx = nonEnumerableProps[lengthString];
+            var nonEnumIdx = nonEnumerableProps[LENGTH];
             var constructor = obj.constructor;
             var proto = (isFunction(constructor) && constructor.prototype) || ObjProto;
             // Constructor is a special case.
@@ -344,19 +332,6 @@ application.scope('dev', function (app) {
         nowish = function () {
             return +(new Date());
         },
-        allKeys = function (obj) {
-            var key, keys = [];
-            if (isObject(obj)) {
-                for (key in obj) {
-                    keys.push(key);
-                }
-                // Ahem, IE < 9.
-                if (hasEnumBug) {
-                    collectNonEnumProps(obj, keys);
-                }
-            }
-            return keys;
-        },
         /**
          * @func
          */
@@ -370,7 +345,7 @@ application.scope('dev', function (app) {
                 base = args.shift();
             }
             base = base || {};
-            length = getLength(args);
+            length = args[LENGTH];
             if (length) {
                 for (; index < length; index++) {
                     merge(base, args[index], deep);
@@ -380,10 +355,10 @@ application.scope('dev', function (app) {
         },
         merge = function (obj1, obj2, deep) {
             var key, val, attach, i = 0,
-                keys = allKeys(obj2),
-                l = getLength(keys);
+                keysResult = keys(obj2),
+                l = keysResult[LENGTH];
             for (; i < l; i++) {
-                key = keys[i];
+                key = keysResult[i];
                 // ignore undefined
                 if (obj2[key] !== blank) {
                     attach = BOOLEAN_FALSE;
@@ -418,35 +393,16 @@ application.scope('dev', function (app) {
         // Related: http://people.mozilla.org/~jorendorff/es6-draft.html#sec-tolength
         // Avoids a very nasty iOS 8 JIT bug on ARM-64. #2094
         MAX_ARRAY_INDEX = Math.pow(2, 53) - 1,
-        getLength = property('length'),
         /**
          * @func
          */
         isArrayLike = function (collection) {
-            var length = !!collection && getLength(collection);
+            var length = collection && collection[LENGTH];
             return isArray(collection) || (isNumber(length) && !isString(collection) && length >= 0 && length <= MAX_ARRAY_INDEX && !isFunction(collection));
         },
         /**
          * @func
          */
-        // each = function (obj, iteratee, context, direction) {
-        //     var length, objKeys, i = 0,
-        //         args = [obj, iteratee, context, direction];
-        //     if (obj) {
-        //         if (!isArrayLike(obj)) {
-        //             args[0] = objKeys = keys(obj);
-        //             length = getLength(objKeys);
-        //             iteratee = bind(iteratee, context);
-        //             args[2] = null;
-        //             args[1] = function (idx, key, all) {
-        //                 // gives you the key, use that to get the value
-        //                 return iteratee(obj[key], key, obj);
-        //             };
-        //         }
-        //         duff.apply(this, args);
-        //     }
-        //     return obj;
-        // },
         eachProxy = function (fn) {
             return function (obj_, iteratee_, context_, direction_) {
                 var ret, obj = obj_,
@@ -458,15 +414,16 @@ application.scope('dev', function (app) {
                 if (obj) {
                     if (!isArrayLike(obj)) {
                         list = keys(obj);
-                        iteratee = bindTo(iterator, context);
-                        context = null;
+                        iteratee = bind(iterator, context);
+                        context = NULL;
                         iterator = function (key, idx, list) {
                             // gives you the key, use that to get the value
                             return iteratee(obj[key], key, obj);
                         };
                     }
-                    return fn(list, iterator, context, direction);
+                    ret = fn(list, iterator, context, direction);
                 }
+                return ret;
             };
         },
         /**
@@ -474,8 +431,8 @@ application.scope('dev', function (app) {
          */
         createPredicateIndexFinder = function (dir) {
             return eachProxy(function (array, predicate, context, index_) {
-                var length = getLength(array),
-                    callback = bindTo(predicate, context),
+                var length = array[LENGTH],
+                    callback = bind(predicate, context),
                     index = index_ || (dir > 0 ? 0 : length - 1);
                 for (; index >= 0 && index < length; index += dir) {
                     if (callback(array[index], index, array)) {
@@ -488,7 +445,6 @@ application.scope('dev', function (app) {
         /**
          * @func
          */
-        // Returns the first index on an array-like that passes a predicate test
         findIndex = createPredicateIndexFinder(1),
         /**
          * @func
@@ -498,7 +454,7 @@ application.scope('dev', function (app) {
          * @func
          */
         validKey = function (key) {
-            return key !== -1 && key !== blank && key !== null && key !== BOOLEAN_FALSE && key !== BOOLEAN_TRUE;
+            return key !== -1 && key !== blank && key !== NULL && key !== BOOLEAN_FALSE && key !== BOOLEAN_TRUE;
         },
         finder = function (findHelper) {
             return function (obj, predicate, context) {
@@ -510,12 +466,10 @@ application.scope('dev', function (app) {
         },
         find = finder(findIndex),
         findLast = finder(findLastIndex),
-        bind = function (fn, ctx) {
-            return fn.bind(ctx);
-        },
-        bindTo = function (fn, ctx) {
+        bind = function (fn_, ctx) {
+            var fn = fn_;
             if (ctx && isObject(ctx)) {
-                fn = bind(fn, ctx);
+                fn = fn_.bind(ctx);
             }
             return fn;
         },
@@ -523,32 +477,38 @@ application.scope('dev', function (app) {
             var iterations, val, i, leftover, deltaFn;
             if (values && isFunction(process)) {
                 i = 0;
-                val = values[lengthString];
+                val = values[LENGTH];
                 leftover = val % 8;
                 iterations = Math.floor(val / 8);
-                deltaFn = function () {
-                    i += direction;
-                };
                 if (direction < 0) {
                     i = val - 1;
                 }
                 direction = direction || 1;
-                process = bindTo(process, context);
+                process = bind(process, context);
                 if (leftover > 0) {
                     do {
-                        deltaFn(process(values[i], i, values));
+                        process(values[i], i, values);
+                        i += direction;
                     } while (--leftover > 0);
                 }
                 if (iterations) {
                     do {
-                        deltaFn(process(values[i], i, values));
-                        deltaFn(process(values[i], i, values));
-                        deltaFn(process(values[i], i, values));
-                        deltaFn(process(values[i], i, values));
-                        deltaFn(process(values[i], i, values));
-                        deltaFn(process(values[i], i, values));
-                        deltaFn(process(values[i], i, values));
-                        deltaFn(process(values[i], i, values));
+                        process(values[i], i, values);
+                        i += direction;
+                        process(values[i], i, values);
+                        i += direction;
+                        process(values[i], i, values);
+                        i += direction;
+                        process(values[i], i, values);
+                        i += direction;
+                        process(values[i], i, values);
+                        i += direction;
+                        process(values[i], i, values);
+                        i += direction;
+                        process(values[i], i, values);
+                        i += direction;
+                        process(values[i], i, values);
+                        i += direction;
                     } while (--iterations > 0);
                 }
             }
@@ -560,10 +520,10 @@ application.scope('dev', function (app) {
         parseBool = function (thing) {
             var ret, thingMod = thing + '';
             thingMod = thingMod.trim();
-            if (thingMod === BOOLEAN_FALSE + '') {
+            if (thingMod === STRING_FALSE + '') {
                 ret = BOOLEAN_FALSE;
             }
-            if (thingMod === BOOLEAN_TRUE + '') {
+            if (thingMod === STRING_TRUE + '') {
                 ret = BOOLEAN_TRUE;
             }
             if (ret === blank) {
@@ -580,40 +540,6 @@ application.scope('dev', function (app) {
         pI = function (num) {
             return parseInt(num, 10) || 0;
         },
-        // math = Math,
-        // mathMix = function (method) {
-        //     return function (arr) {
-        //         return math[method].apply(math, arr);
-        //     };
-        // },
-        // random = function () {
-        //     return math.random();
-        // },
-        // mathMixCaller = function (method) {
-        //     return function (num) {
-        //         math[method](num);
-        //     };
-        // },
-        // mathMixComparer = function (method) {
-        //     return function (num, num2) {
-        //         math[method](num, num2);
-        //     };
-        // },
-        // min = mathMix('min'),
-        // max = mathMix('max'),
-        // abs = mathMixCaller('abs'),
-        // acos = mathMixCaller('acos'),
-        // asin = mathMixCaller('asin'),
-        // atan = mathMixCaller('atan'),
-        // ceil = mathMixCaller('ceil'),
-        // cos = mathMixCaller('cos'),
-        // exp = mathMixCaller('exp'),
-        // floor = mathMixCaller('floor'),
-        // log = mathMixCaller('log'),
-        // round = mathMixCaller('round'),
-        // sin = mathMixCaller('sin'),
-        // sqrt = mathMixCaller('sqrt'),
-        // tan = mathMixCaller('tan'),
         /**
          * @func
          */
@@ -725,81 +651,6 @@ application.scope('dev', function (app) {
         /**
          * @func
          */
-        // camelCase = (function () {
-        //     var cached = {};
-        //     return function (str, splitter) {
-        //         var i, s, val;
-        //         if (splitter === undefined) {
-        //             splitter = '-';
-        //         }
-        //         if (!cached[splitter]) {
-        //             cached[splitter] = {};
-        //         }
-        //         val = cached[splitter][str];
-        //         if (!val && isString(str)) {
-        //             if (str[0] === '-') {
-        //                 str = slice(str, 1);
-        //             }
-        //             s = split(str, splitter);
-        //             for (i = getLength(s) - 1; i >= 1; i--) {
-        //                 if (s[i]) {
-        //                     s[i] = upCase(s[i]);
-        //                 }
-        //             }
-        //             val = join(s, '');
-        //         }
-        //         cached[splitter][str] = val;
-        //         cached[splitter][val] = val;
-        //         return val;
-        //     };
-        // }()),
-        /**
-         * @func
-         */
-        // upCase = function (s) {
-        //     return s[0].toUpperCase() + slice(s, 1);
-        // },
-        // cacheable = function (fn) {
-        //     var cache = {};
-        //     return function (input) {
-        //         if (!has(cache, input)) {
-        //             cache[input] = fn.apply(this, arguments);
-        //         }
-        //         return cache[input];
-        //     };
-        // },
-        // categoricallyCacheable = function (fn) {
-        //     return function () {};
-        // },
-        /**
-         * @func
-         */
-        // unCamelCase = (function () {
-        //     var cached = {};
-        //     return function (str, splitter) {
-        //         var val;
-        //         if (!splitter) {
-        //             splitter = '-';
-        //         }
-        //         if (!cached[splitter]) {
-        //             cached[splitter] = {};
-        //         }
-        //         val = cached[splitter][str];
-        //         if (!val) {
-        //             if (str) {
-        //                 val = str.replace(/([a-z])([A-Z])/g, '$1' + splitter + '$2').replace(/[A-Z]/g, function (s) {
-        //                     return s.toLowerCase();
-        //                 });
-        //             }
-        //         }
-        //         cached[splitter][str] = val;
-        //         cached[splitter][val] = val;
-        //         return val;
-        //     };
-        // }()),
-        /**
-         * @func
-         */
         // Internal recursive comparison function for `isEqual`.
         eq = function (a, b, aStack, bStack) {
             // Identical objects are equal. `0 === -0`, but they aren't identical.
@@ -808,7 +659,7 @@ application.scope('dev', function (app) {
                 return a !== 0 || 1 / a === 1 / b;
             }
             // A strict comparison is necessary because `null == undefined`.
-            if (a === null || a === blank || b === blank || b === null) {
+            if (a === NULL || a === blank || b === blank || b === NULL) {
                 return a === b;
             }
             // Unwrap any wrapped objects.
@@ -855,7 +706,7 @@ application.scope('dev', function (app) {
             // It's done here since we only need them for objects and arrays comparison.
             // aStack = aStack || [];
             // bStack = bStack || [];
-            var length = aStack[lengthString];
+            var length = aStack[LENGTH];
             while (length--) {
                 // Linear search. Performance is inversely proportional to the number of
                 // unique nested structures.
@@ -869,8 +720,8 @@ application.scope('dev', function (app) {
             // Recursively compare objects and arrays.
             if (areArrays) {
                 // Compare array lengths to determine if a deep comparison is necessary.
-                length = a[lengthString];
-                if (length !== b[lengthString]) {
+                length = a[LENGTH];
+                if (length !== b[LENGTH]) {
                     return BOOLEAN_FALSE;
                 }
                 // Deep compare the contents, ignoring non-numeric properties.
@@ -883,9 +734,9 @@ application.scope('dev', function (app) {
                 // Deep compare objects.
                 var objKeys = keys(a),
                     key;
-                length = objKeys[lengthString];
+                length = objKeys[LENGTH];
                 // Ensure that both objects contain the same number of properties before comparing deep equality.
-                if (keys(b)[lengthString] !== length) return BOOLEAN_FALSE;
+                if (keys(b)[LENGTH] !== length) return BOOLEAN_FALSE;
                 while (length--) {
                     // Deep compare each member
                     key = objKeys[length];
@@ -939,14 +790,8 @@ application.scope('dev', function (app) {
         /**
          * @func
          */
-        unshift = function (thing) {
-            var ret, items = [];
-            duff(arguments, function (arg, idx) {
-                if (idx) {
-                    items.push(arg);
-                }
-            });
-            return [].unshift.apply(thing, items);
+        unshift = function (thing, items) {
+            return [].unshift.apply(thing, toArray(items));
         },
         /**
          * @func
@@ -954,17 +799,6 @@ application.scope('dev', function (app) {
         exports = function (obj) {
             return extend(_, obj);
         },
-        mix = function () {},
-        // cachable = function (fn) {
-        //     var cache = {};
-        //     return function () {
-        //         var key = JSON.stringify(arguments);
-        //         if (!cache[key]) {
-        //             cache[key] = JSON.stringify(fn.apply(this, arguments));
-        //         }
-        //         return JSON.parse(cache[key]);
-        //     };
-        // },
         /**
          * @func
          */
@@ -984,27 +818,13 @@ application.scope('dev', function (app) {
         /**
          * @func
          */
-        // returnBuild = function (obj, array, def) {
-        //     var attach, last, depth = obj;
-        //     duff(gapSplit(array), function (key, idx) {
-        //         last = key;
-        //         if (!isObject(depth[key])) {
-        //             if (def[idx] === blank) {
-        //                 depth[key] = {};
-        //             } else {
-        //                 depth[key] = def[idx];
-        //             }
-        //             attach = 1;
-        //         }
-        //         depth = depth[key];
-        //     });
-        //     return depth;
-        // },
         log = function (type, args) {
             if (!_.isFunction(console[type])) {
                 type = 'log';
             }
-            console[type].apply(console, args);
+            if (console[type]) {
+                console[type].apply(console, args);
+            }
         },
         /**
          * @func
@@ -1030,7 +850,7 @@ application.scope('dev', function (app) {
                     args = arguments,
                     callNow = immediate && !timeout,
                     later = function () {
-                        timeout = null;
+                        timeout = NULL;
                         if (!immediate) {
                             func.apply(context, args);
                         }
@@ -1048,7 +868,7 @@ application.scope('dev', function (app) {
         },
         map = function (objs, iteratee, context) {
             var collection = returnDismorphicBase(objs);
-            var bound = bindTo(iteratee, context);
+            var bound = bind(iteratee, context);
             each(objs, function (item, index) {
                 collection[index] = bound(item, index, objs);
             });
@@ -1056,7 +876,7 @@ application.scope('dev', function (app) {
         },
         toArray = function (obj) {
             var array = [];
-            each(obj, function (value, key) {
+            each(obj, function (value) {
                 array.push(value);
             });
             return array;
@@ -1090,13 +910,6 @@ application.scope('dev', function (app) {
         /**
          * @func
          */
-        pngString = function () {
-            return "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGP6zwAAAgcBApocMXEAAAAASUVORK5CYII=";
-        },
-        /**
-         * @func
-         */
-        // this should really be it's own factory
         stringifyQuery = function (obj) {
             var val, n, base = obj.url,
                 query = [];
@@ -1108,7 +921,7 @@ application.scope('dev', function (app) {
                         query.push(n + '=' + val);
                     }
                 }
-                if (query[lengthString]) {
+                if (query[LENGTH]) {
                     base += '?';
                 }
                 base += query.join('&');
@@ -1190,17 +1003,10 @@ application.scope('dev', function (app) {
                 each(obj, reverseParams(fn), ctx);
             } else {
                 if (ctx) {
-                    fn = bindTo(fn, ctx);
+                    fn = bind(fn, ctx);
                 }
                 fn(key, value);
             }
-        },
-        /**
-         * @func
-         */
-        /** wrapper for advisibility to be calculated by outside framework */
-        adVisibility = function (adObj) {
-            adObj.set(app.modules.visibility(adObj.el));
         },
         /**
          * @func
@@ -1227,67 +1033,13 @@ application.scope('dev', function (app) {
             mult = Math.pow(base || 10, power);
             return (parseInt((mult * val), 10) / mult);
         },
-        /**
-         * @func
-         */
-        cssTemplater = function (str, obj) {
-            str += '';
-            each(obj, function (key, val) {
-                str = str.split('\\\\' + key + '\\\\').join(val);
-            });
-            return str;
-        },
-        png = pngString,
-        /**
-         * @func
-         */
-        simpleObject = function (key, value) {
-            var obj = {};
-            obj[key] = value;
-            return obj;
-        },
-        objCondense = function () {
-            var skip = 0,
-                obj = {};
-            duff(arguments, function (arg, idx, args) {
-                if (!skip) {
-                    skip++;
-                    if (isString(arg)) {
-                        skip++;
-                        obj[arg] = args[idx + 1];
-                    }
-                    if (isObject(arg)) {
-                        extend(obj, arg);
-                    }
-                }
-                skip--;
-            });
-            return obj;
-        },
         reverseParams = function (iteratorFn) {
             return function (value, key, third) {
                 iteratorFn(key, value, third);
             };
         },
-        /**
-         * @func
-         */
-        rip = function (list, ripped) {
-            var obj = {};
-            duff(gapSplit(list), function (val, key) {
-                obj[val] = ripped[val];
-            });
-            return obj;
-        },
-        result = function (obj, str, args) {
-            var rez = obj;
-            if (isObject(obj)) {
-                rez = obj[str];
-                if (isFunction(rez)) {
-                    rez = obj[str].apply(obj, args || []);
-                }
-            }
-            return rez;
+        result = function (obj, str, arg) {
+            return isFunction(obj[str]) ? obj[str](arg) : obj[str];
         },
         resultOf = function (item, ctx, arg) {
             return isFunction(item) ? item.call(ctx, arg) : item;
@@ -1344,22 +1096,14 @@ application.scope('dev', function (app) {
     _ = app._ = {
         noop: function () {},
         monthNames: gapSplit('january feburary march april may june july august september october november december'),
-        possibleEvents: gapSplit('context timings impression impression_image delivered_impression viewable_impression asset_impression goal timer expanded_time auto_expand auto_contract auto_close auto_video_play auto_video_stop counter'),
-        possibleInteractions: gapSplit('click hover_count hover_time expand contract close open_panel exit video_play video_stop'),
         weekdays: gapSplit('sunday monday tuesday wednesday thursday friday saturday'),
-        ignoreAssetTags: gapSplit('script link style meta title head'),
         constructorWrapper: constructorWrapper,
         stringifyQuery: stringifyQuery,
         intendedObject: intendedObject,
         ensureFunction: ensureFunction,
-        objectCondense: objCondense,
         parseDecimal: parseDecimal,
-        adVisibility: adVisibility,
         getReference: getReference,
-        cssTemplater: cssTemplater,
-        simpleObject: simpleObject,
         isArrayLike: isArrayLike,
-        objCondense: objCondense,
         isInstance: isInstance,
         hasEnumBug: hasEnumBug,
         roundFloat: roundFloat,
@@ -1367,10 +1111,8 @@ application.scope('dev', function (app) {
         factories: factories,
         listSlice: listSlice,
         fullClone: fullClone,
-        pngString: pngString,
         parseBool: parseBool,
         stringify: stringify,
-        getLen: getLength,
         splitGen: splitGen,
         gapSplit: gapSplit,
         uniqueId: uniqueId,
@@ -1388,8 +1130,6 @@ application.scope('dev', function (app) {
         gapJoin: gapJoin,
         isArray: isArray,
         isEmpty: isEmpty,
-        modules: {},
-        listHas: listHas,
         isBlank: isBlank,
         isUndefined: isBlank,
         splice: splice,
@@ -1406,8 +1146,8 @@ application.scope('dev', function (app) {
         fetch: fetch,
         split: split,
         clone: clone,
-        isObject: isObject,
         isNaN: isNaN,
+        isObject: isObject,
         isNumber: isNumber,
         isFinite: isFinite,
         isString: isString,
@@ -1417,27 +1157,21 @@ application.scope('dev', function (app) {
         exports: exports,
         slice: slice,
         bind: bind,
-        bindTo: bindTo,
         duff: duff,
         sort: sort,
         join: join,
         wrap: wrap,
         isFunction: isFunction,
         uuid: uuid,
-        allKeys: allKeys,
         keys: keys,
         once: once,
         each: each,
         push: push,
         pop: pop,
-        len: getLength,
         has: has,
-        rip: rip,
-        png: png,
         negate: negate,
         pI: pI,
         math: {},
-        resultOf: resultOf,
         createPredicateIndexFinder: createPredicateIndexFinder,
         findIndex: findIndex,
         findLastIndex: findLastIndex,

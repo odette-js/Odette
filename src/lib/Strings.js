@@ -7,8 +7,7 @@ application.scope(function (app) {
         isString = _.isString,
         slice = _.slice,
         split = _.split,
-        getLength = _.len,
-        lengthString = 'length',
+        LENGTH = 'length',
         falseBool = false,
         has = _.has,
         join = _.join,
@@ -52,7 +51,7 @@ application.scope(function (app) {
             };
         },
         deprefix = function (str, prefix, unUpcase) {
-            var nuStr = str.slice(getLength(prefix)),
+            var nuStr = str.slice(prefix[LENGTH]),
                 first = nuStr[0];
             if (unUpcase) {
                 first = nuStr[0].toLowerCase();
@@ -95,7 +94,7 @@ application.scope(function (app) {
                         str = slice(str, 1);
                     }
                     s = split(str, splitter);
-                    for (i = getLength(s) - 1; i >= 1; i--) {
+                    for (i = s[LENGTH] - 1; i >= 1; i--) {
                         if (s[i]) {
                             s[i] = upCase(s[i]);
                         }
@@ -132,10 +131,10 @@ application.scope(function (app) {
                 str += '';
                 // make sure there is no trailing whitespace
                 str = str.trim();
-                i = str[lengthString];
+                i = str[LENGTH];
                 // work from the back
                 while (str[--i]) {
-                    // for (i = str[lengthString] - 1; i >= 0; i--) {
+                    // for (i = str[LENGTH] - 1; i >= 0; i--) {
                     unit.unshift(str[i]);
                     unitStr = unit.join('');
                     if (indexOf(unitList, unitStr) >= 0) {

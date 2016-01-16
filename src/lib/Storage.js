@@ -1,6 +1,7 @@
 application.scope().module('Storage', function (module, app, _, factories) {
     var ELID_STRING = '__uniqueid__',
         __privateDataCache__ = {},
+        uniqueId = _.uniqueId,
         datastorage = {
             make: function (el) {
                 var elId = el[ELID_STRING] = uniqueId('id');
@@ -211,7 +212,7 @@ application.scope().module('Storage', function (module, app, _, factories) {
                 };
             return api;
         };
-    module.reqres.setHandlers({
+    module.message.reply({
         'make:nested': nestedList,
         'make:list': listAddRemove,
         storage: datastorage

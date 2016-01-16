@@ -1,6 +1,7 @@
 application.scope().module('Node', function (module, app, _) {
     var blank, sizzleDoc = document,
         eq = _.eq,
+        elementData = app.module('Storage').message.request('storage'),
         uniqueId = _.uniqueId,
         extendFrom = _.extendFrom,
         factories = _.factories,
@@ -8,6 +9,7 @@ application.scope().module('Node', function (module, app, _) {
         each = _.each,
         duff = _.duff,
         find = _.find,
+        posit = _.posit,
         foldl = _.foldl,
         isString = _.isString,
         isObject = _.isObject,
@@ -25,9 +27,7 @@ application.scope().module('Node', function (module, app, _) {
         toArray = _.toArray,
         duffRev = _.duffRev,
         indexOf = _.indexOf,
-        listHas = _.listHas,
         gapSplit = _.gapSplit,
-        // dataCache = _.associator,
         camelCase = _.camelCase,
         unCamelCase = _.unCamelCase,
         objCondense = _.objCondense,
@@ -104,14 +104,14 @@ application.scope().module('Node', function (module, app, _) {
             return ret;
         },
         hasWebP = (function () {
-            var len = 4,
+            var countdown = 4,
                 result = BOOLEAN_TRUE,
                 queue = [],
                 emptyqueue = function (fn) {
                     return function () {
-                        len--;
+                        countdown--;
                         fn();
-                        if (!len) {
+                        if (!countdown) {
                             duff(queue, function (item) {
                                 item(result);
                             });
@@ -133,7 +133,7 @@ application.scope().module('Node', function (module, app, _) {
                 img.src = "data:image/webp;base64," + val;
             });
             return function (cb) {
-                if (!len || !result) {
+                if (!countdown || !result) {
                     cb(result);
                 } else {
                     queue.push(cb);
@@ -459,7 +459,7 @@ application.scope().module('Node', function (module, app, _) {
                     return val;
                 },
                 addPrefix = function (list, prefix) {
-                    if (!_.listHas(list, __prefix)) {
+                    if (!posit(list, __prefix)) {
                         list.push(__prefix);
                     }
                 };
@@ -916,62 +916,62 @@ application.scope().module('Node', function (module, app, _) {
                 parent.appendChild(element);
             }
             // temp && tempParent.removeChild(element);
-            return !!_.posit(_.Sizzle(selector, parent), element);
+            return !!posit(_.Sizzle(selector, parent), element);
         },
-        setAttribute = function (el, key, val) {
-            if (val === true) {
-                val = '';
-            }
-            val = _.stringify(val);
-            val += '';
-            el.setAttribute(key, val);
-        },
-        getAttribute = function (el, key, val) {
-            var converted;
-            val = el.getAttribute(key);
-            if (val === '') {
-                val = BOOLEAN_TRUE;
-            }
-            if (isString(val)) {
-                if (val[0] === '{' || val[0] === '[') {
-                    val = JSON.parse(val);
-                } else {
-                    converted = +val;
-                    if (converted === converted) {
-                        val = converted;
-                    } else {
-                        // if for whatever reason you have a function
-                        if (val[val.length - 1] === '}') {
-                            if (val.slice(0, 8) === 'function') {
-                                val = new Function.constructor('return ' + val);
-                            }
-                        }
-                    }
-                }
-            } else {
-                if (isBlank(val)) {
-                    val = BOOLEAN_FALSE;
-                }
-            }
-            return val;
-        },
+        // setAttribute = function (el, key, val) {
+        //     if (val === true) {
+        //         val = '';
+        //     }
+        //     val = _.stringify(val);
+        //     val += '';
+        //     el.setAttribute(key, val);
+        // },
+        // getAttribute = function (el, key, val) {
+        //     var converted;
+        //     val = el.getAttribute(key);
+        //     if (val === '') {
+        //         val = BOOLEAN_TRUE;
+        //     }
+        //     if (isString(val)) {
+        //         if (val[0] === '{' || val[0] === '[') {
+        //             val = JSON.parse(val);
+        //         } else {
+        //             converted = +val;
+        //             if (converted === converted) {
+        //                 val = converted;
+        //             } else {
+        //                 // if for whatever reason you have a function
+        //                 if (val[val.length - 1] === '}') {
+        //                     if (val.slice(0, 8) === 'function') {
+        //                         val = new Function.constructor('return ' + val);
+        //                     }
+        //                 }
+        //             }
+        //         }
+        //     } else {
+        //         if (isBlank(val)) {
+        //             val = BOOLEAN_FALSE;
+        //         }
+        //     }
+        //     return val;
+        // },
         /**
          * @private
          * @func
          */
-        attributeInterface = function (el, key, val) {
-            // set or remove if not undefined
-            // undefined fills in the gap by returning some value, which is never undefined
-            if (val !== blank) {
-                if (!val && val !== 0) {
-                    el.removeAttribute(key);
-                } else {
-                    setAttribute(el, key, val);
-                }
-            } else {
-                return getAttribute(el, key, val);
-            }
-        },
+        // attributeInterface = function (el, key, val) {
+        //     // set or remove if not undefined
+        //     // undefined fills in the gap by returning some value, which is never undefined
+        //     if (val !== blank) {
+        //         if (!val && val !== 0) {
+        //             el.removeAttribute(key);
+        //         } else {
+        //             setAttribute(el, key, val);
+        //         }
+        //     } else {
+        //         return getAttribute(el, key, val);
+        //     }
+        // },
         /**
          * @private
          * @func
@@ -1061,7 +1061,7 @@ application.scope().module('Node', function (module, app, _) {
                         var parent = el.parentNode,
                             idx = (indexOf(parent.children, el) + idxChange),
                             item = parent.children[idx];
-                        if (item && !_.listHas(list, item)) {
+                        if (item && !posit(list, item)) {
                             _.add(collected, item);
                         }
                     });
@@ -1233,13 +1233,9 @@ application.scope().module('Node', function (module, app, _) {
             if (isString(args[0]) || isBlank(args[0])) {
                 selector = args.shift();
             }
-            // if (isFunction(args[0])) {
-            //     args[0] = [args[0]];
-            // }
             if (isFunction(args[0])) {
                 fn = _.bind(fn, domm);
                 fun = args[0];
-                // duff(args[0], function (fun) {
                 duff(gapSplit(name), function (nme) {
                     var split = eventToNamespace(nme),
                         captures = BOOLEAN_FALSE,
@@ -1392,6 +1388,7 @@ application.scope().module('Node', function (module, app, _) {
             });
             return obj;
         }({
+            ready: 'DOMContentLoaded',
             deviceorientation: 'deviceorientation mozOrientation',
             fullscreenalter: 'webkitfullscreenchange mozfullscreenchange fullscreenchange MSFullscreenChange',
             hover: 'mouseenter mouseleave',
@@ -1716,7 +1713,7 @@ application.scope().module('Node', function (module, app, _) {
                 if (isObject(filtr)) {
                     if (isDom(filtr)) {
                         filter = function (el) {
-                            return !!_.posit(items, el);
+                            return !!posit(items, el);
                         };
                     } else {
                         filter = _.matches(filtr);
