@@ -23,7 +23,7 @@ application.scope(function (app) {
         gapSplit = _.gapSplit,
         getLength = _.getLen,
         sort = _.sort,
-        bindTo = _.bindTo,
+        bind = _.bind,
         isArrayLike = _.isArrayLike,
         eachCall = function (array, method) {
             return duff(array, function (item) {
@@ -411,7 +411,7 @@ application.scope(function (app) {
          */
         filter = function (obj, iteratee, context) {
             var isArrayResult = isArrayLike(obj),
-                bound = bindTo(iteratee, context),
+                bound = bind(iteratee, context),
                 runCount = 0;
             return foldl(obj, function (memo, item, key, all) {
                 runCount++;

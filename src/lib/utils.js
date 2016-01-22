@@ -458,7 +458,7 @@ application.scope('dev', function (app) {
                 if (obj) {
                     if (!isArrayLike(obj)) {
                         list = keys(obj);
-                        iteratee = bindTo(iterator, context);
+                        iteratee = bind(iterator, context);
                         context = null;
                         iterator = function (key, idx, list) {
                             // gives you the key, use that to get the value
@@ -475,7 +475,7 @@ application.scope('dev', function (app) {
         createPredicateIndexFinder = function (dir) {
             return eachProxy(function (array, predicate, context, index_) {
                 var length = getLength(array),
-                    callback = bindTo(predicate, context),
+                    callback = bind(predicate, context),
                     index = index_ || (dir > 0 ? 0 : length - 1);
                 for (; index >= 0 && index < length; index += dir) {
                     if (callback(array[index], index, array)) {
@@ -510,12 +510,12 @@ application.scope('dev', function (app) {
         },
         find = finder(findIndex),
         findLast = finder(findLastIndex),
-        bind = function (fn, ctx) {
-            return fn.bind(ctx);
-        },
-        bindTo = function (fn, ctx) {
+        bind = function (fn_, ctx) {
+            var fn = fn_;
+            // return fn.bind(ctx);
             if (ctx && isObject(ctx)) {
-                fn = bind(fn, ctx);
+                // fn = bind(fn, ctx);
+                fn = fn_.bind(ctx);
             }
             return fn;
         },
@@ -533,22 +533,31 @@ application.scope('dev', function (app) {
                     i = val - 1;
                 }
                 direction = direction || 1;
-                process = bindTo(process, context);
+                process = bind(process, context);
                 if (leftover > 0) {
                     do {
-                        deltaFn(process(values[i], i, values));
+                        process(values[i], i, values);
+                        i += direction;
                     } while (--leftover > 0);
                 }
                 if (iterations) {
                     do {
-                        deltaFn(process(values[i], i, values));
-                        deltaFn(process(values[i], i, values));
-                        deltaFn(process(values[i], i, values));
-                        deltaFn(process(values[i], i, values));
-                        deltaFn(process(values[i], i, values));
-                        deltaFn(process(values[i], i, values));
-                        deltaFn(process(values[i], i, values));
-                        deltaFn(process(values[i], i, values));
+                        process(values[i], i, values);
+                        i += direction;
+                        process(values[i], i, values);
+                        i += direction;
+                        process(values[i], i, values);
+                        i += direction;
+                        process(values[i], i, values);
+                        i += direction;
+                        process(values[i], i, values);
+                        i += direction;
+                        process(values[i], i, values);
+                        i += direction;
+                        process(values[i], i, values);
+                        i += direction;
+                        process(values[i], i, values);
+                        i += direction;
                     } while (--iterations > 0);
                 }
             }
@@ -1048,7 +1057,7 @@ application.scope('dev', function (app) {
         },
         map = function (objs, iteratee, context) {
             var collection = returnDismorphicBase(objs);
-            var bound = bindTo(iteratee, context);
+            var bound = bind(iteratee, context);
             each(objs, function (item, index) {
                 collection[index] = bound(item, index, objs);
             });
@@ -1190,7 +1199,7 @@ application.scope('dev', function (app) {
                 each(obj, reverseParams(fn), ctx);
             } else {
                 if (ctx) {
-                    fn = bindTo(fn, ctx);
+                    fn = bind(fn, ctx);
                 }
                 fn(key, value);
             }
@@ -1417,7 +1426,7 @@ application.scope('dev', function (app) {
         exports: exports,
         slice: slice,
         bind: bind,
-        bindTo: bindTo,
+        bind: bind,
         duff: duff,
         sort: sort,
         join: join,
