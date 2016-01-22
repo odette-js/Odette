@@ -51,6 +51,7 @@ application.scope(function (app) {
                 namespace.shift();
             }
             name = namespace.join('.');
+            module = parent.children.get(name);
             // module = parent.submodules[name];
             if (!module) {
                 parentIsModule = _.isInstance(parent, Module);
@@ -71,6 +72,7 @@ application.scope(function (app) {
                     });
                     parent.children.add(module);
                 }
+                parent.children.register(name, module);
                 // parent.registerModule(name, module);
             }
             if (!module.hasInitialized && _.isFunction(fn)) {
@@ -106,7 +108,7 @@ application.scope(function (app) {
                 module.name = attrs.name;
                 module.application = opts.application;
                 module.handlers = _.Collection();
-                _.reqres(this);
+                _.messenger(this);
                 Box.apply(this, arguments);
                 return module;
             },

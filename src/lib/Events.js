@@ -33,11 +33,11 @@ application.scope(function (app) {
         PARENT = 'parent',
         internalEventsString = '_events',
         EVENT_REMOVE = '_removeEventList',
-        currentEventString = '_currentEventList',
+        CURRENT_EVENTS = '_currentEventList',
         internalListeningToString = '_listeningTo',
         modifiedTriggerString = 'alter:',
         iPISString = 'immediatePropagationIsStopped',
-        seriDataStr = 'serializedData',
+        SERIALIZED_DATA = 'serializedData',
         BOOLEAN_FALSE = !1,
         BOOLEAN_TRUE = !0,
         iterateOverObject = function (box, ctx, key, value, iterator, firstarg, allowNonFn) {
@@ -48,7 +48,7 @@ application.scope(function (app) {
                     return duff(gapSplit(evnts), function (eventName) {
                         var namespace = eventName.split(':')[0];
                         iterator(box, eventName, {
-                            disabled: !1,
+                            disabled: BOOLEAN_FALSE,
                             namespace: namespace,
                             name: eventName,
                             handler: fn,
@@ -116,9 +116,9 @@ application.scope(function (app) {
             return list;
         },
         getCurrentEventList = function (box) {
-            var list = box[currentEventString];
+            var list = box[CURRENT_EVENTS];
             if (!list) {
-                list = box[currentEventString] = [];
+                list = box[CURRENT_EVENTS] = [];
             }
             return list;
         },
@@ -211,21 +211,21 @@ application.scope(function (app) {
                 return this.propagationIsStopped || this.immediatePropagationIsStopped;
             },
             data: function (arg) {
-                var ret = this[seriDataStr];
+                var ret = this[SERIALIZED_DATA];
                 if (arguments[LENGTH]) {
-                    ret = this[seriDataStr] = _.parse(_.stringify((arg === void 0 || arg === null) ? {} : arg));
+                    ret = this[SERIALIZED_DATA] = _.parse(_.stringify((arg === blank || arg === NULL) ? {} : arg));
                 }
-                this[seriDataStr] = ret;
-                ret = this[seriDataStr];
+                this[SERIALIZED_DATA] = ret;
+                ret = this[SERIALIZED_DATA];
                 return ret;
             },
             get: function (key) {
-                return this[seriDataStr][key];
+                return this[SERIALIZED_DATA][key];
             },
             set: function (key, value) {
                 var evnt = this;
                 intendedObject(key, value, function (key, value) {
-                    evnt[seriDataStr][key] = value;
+                    evnt[SERIALIZED_DATA][key] = value;
                 });
                 return this;
             },
@@ -311,7 +311,7 @@ application.scope(function (app) {
             },
             _makeValid: function () {
                 var model = this;
-                model[currentEventString] = model[currentEventString] || [];
+                model[CURRENT_EVENTS] = model[CURRENT_EVENTS] || [];
                 model[internalEventsString] = model[internalEventsString] || {};
                 model[EVENT_REMOVE] = model[EVENT_REMOVE] || [];
                 return model;
@@ -408,13 +408,13 @@ application.scope(function (app) {
                     currentEventArray = getCurrentEventList(box),
                     list = getEventList(box, name),
                     ret = isFunction(box[evnt.methodName]) && box[evnt.methodName](evnt);
-                    anotherRet = evnt[iPISString] || !!_.find(list, function (obj) {
-                        var gah;
-                        currentEventArray.push(obj);
-                        obj.fn(evnt);
-                        gah = currentEventArray.pop(name);
-                        return evnt[iPISString];
-                    });
+                anotherRet = evnt[iPISString] || !!_.find(list, function (obj) {
+                    var gah;
+                    currentEventArray.push(obj);
+                    obj.fn(evnt);
+                    gah = currentEventArray.pop(name);
+                    return evnt[iPISString];
+                });
                 if (!currentEventArray[LENGTH] && box[EVENT_REMOVE][LENGTH] && box[EVENT_REMOVE][LENGTH]) {
                     duffRev(box[EVENT_REMOVE], removeEvent);
                     box[EVENT_REMOVE] = [];

@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 // dependencies
 var express = require('express');
 var path = require('path');
@@ -35,4 +37,5 @@ app.use(function (err, req, res, next) {
     }
 });
 app.listen(settings.http.port);
+console.log("\nListening on :".concat(settings.http.port)); // Was going to have node automatically open default browser to proper location, but it requires an external package, so not worth it.
 module.exports = app;

@@ -39,6 +39,7 @@ application.scope(function (app) {
         ATTRIBUTES = 'attributes',
         DISPATCH_EVENT = 'dispatchEvent',
         EVENT_REMOVE = '_removeEventList',
+        ATTRIBUTE_HISTORY = '_attributeHistory',
         BOOLEAN_FALSE = !1,
         BOOLEAN_TRUE = !0,
         CHILDREN = 'children',
@@ -73,7 +74,8 @@ application.scope(function (app) {
                     // build new attributes
                     newAttributes = extend(attrs, attributes),
                     // stale attributes
-                    ret = model[ATTRIBUTES] || {};
+                    ret = model[ATTRIBUTES] || {},
+                    history = model[ATTRIBUTE_HISTORY] = {};
                 // set id and let parent know what your new id is
                 this[DISPATCH_EVENT]('before:reset');
                 model._setId(attributes[idAttr]);
@@ -133,27 +135,44 @@ application.scope(function (app) {
                 var model = this,
                     didChange = BOOLEAN_FALSE,
                     attrs = model[ATTRIBUTES],
+                    history = model[ATTRIBUTE_HISTORY],
                     oldValue = attrs[key],
                     previousAttrsObject = model[PREVIOUS_ATTRIBUTES] = model[PREVIOUS_ATTRIBUTES] || {};
                 if (!_.isEqual(oldValue, newValue)) {
-                    didChange = BOOLEAN_TRUE;
                     previousAttrsObject[key] = oldValue;
+                    history[key] = oldValue;
                     attrs[key] = newValue;
+                    didChange = BOOLEAN_TRUE;
                 }
                 return didChange;
+            },
+            digester: function (fn) {
+                var model = this;
+                model[CHANGE_COUNTER] = model[CHANGE_COUNTER] || 0;
+                model[CHANGE_COUNTER]++;
+                ret = fn();
+                model[CHANGE_COUNTER]--;
+                // this event should only ever exist here
+                if (!model[CHANGE_COUNTER]) {
+                    model[DISPATCH_EVENT]('digest', model[PREVIOUS_ATTRIBUTES]);
+                    model[PREVIOUS_ATTRIBUTES] = {};
+                }
+                return ret;
             },
             set: function (key, value) {
                 var changedList = [],
                     model = this,
-                    compiled = {},
-                    _changeCounter = model[CHANGE_COUNTER] = model[CHANGE_COUNTER] || 0;
+                    compiled = {};
                 intendedObject(key, value, function (key, value) {
                     if (model._set(key, value)) {
                         changedList.push(key);
+                        compiled[key] = value;
                     }
                 });
-                if (changedList[LENGTH]) {
-                    model[CHANGE_COUNTER]++;
+                if (!changedList[LENGTH]) {
+                    return model;
+                }
+                model.digester(function () {
                     duff(changedList, function (name) {
                         model[DISPATCH_EVENT](CHANGED_STRING + ':' + name, {
                             key: name,
@@ -161,14 +180,9 @@ application.scope(function (app) {
                             value: model.get(name)
                         });
                     });
-                    model[DISPATCH_EVENT](CHANGED_STRING, model[PREVIOUS_ATTRIBUTES]);
-                    model[CHANGE_COUNTER]--;
-                }
-                // this event should only ever exist here
-                if (!model[CHANGE_COUNTER]) {
-                    model[DISPATCH_EVENT]('digest', model[PREVIOUS_ATTRIBUTES]);
-                    model[PREVIOUS_ATTRIBUTES] = {};
-                }
+                    model[DISPATCH_EVENT](CHANGED_STRING, compiled);
+                    return model;
+                });
                 return model;
             },
             /**
@@ -444,32 +458,12 @@ application.scope(function (app) {
                     }
                     i--;
                 }
-                // if (!evnt.isStopped()) {
-                //     origin._eventDispatcher(evnt);
-                // }
                 while (origin && origin._eventDispatcher && !evnt.isStopped()) {
                     origin._eventDispatcher(evnt);
                     origin = !evnt.isStopped() && evnt.bubbles && origin[PARENT];
                 }
                 evnt.finished();
                 return evnt;
-                // var evnt =
-                // var evnt, box = makeValidEvent(this),
-                //     originalBox = box,
-                //     currentEventArray = getCurrentEventList(originalBox),
-                //     methodName = upCase(camelCase('on:' + name, ':')),
-                //     childMethodName = upCase(camelCase('on:child:' + name, ':')),
-                //     onMethod = isFunction(box[methodName]);
-                // if (onMethod || getEventList(box, name).length || overrideEventCreation(options)) {
-                //     evnt = box._createEvent(name, data);
-                //     evnt.originalStack = BOOLEAN_TRUE;
-                //     evnt.onMethodName = methodName;
-                //     while (box && box[internalEventsString] && box._eventDispatcher && !evnt.isStopped()) {
-                //         box._eventDispatcher(evnt);
-                //         box = !evnt.isStopped() && evnt.bubbles && box[PARENT];
-                //     }
-                //     evnt.originalStack = BOOLEAN_FALSE;
-                // }
             },
             _remove: function (model) {
                 var parent = this;
