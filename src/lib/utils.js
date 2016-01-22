@@ -512,9 +512,7 @@ application.scope('dev', function (app) {
         findLast = finder(findLastIndex),
         bind = function (fn_, ctx) {
             var fn = fn_;
-            // return fn.bind(ctx);
             if (ctx && isObject(ctx)) {
-                // fn = bind(fn, ctx);
                 fn = fn_.bind(ctx);
             }
             return fn;
@@ -526,9 +524,6 @@ application.scope('dev', function (app) {
                 val = values[lengthString];
                 leftover = val % 8;
                 iterations = Math.floor(val / 8);
-                deltaFn = function () {
-                    i += direction;
-                };
                 if (direction < 0) {
                     i = val - 1;
                 }
