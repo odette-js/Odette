@@ -15,7 +15,7 @@ var content = ['browserify'],
             }
         });
     },
-    modules = 'setup utils shims Strings Collection Events Reqres Box Module Storage Looper Promise Ajax Associator DOMM Element View Buster'.split(' '),
+    modules = 'setup utils shims Strings Collection Events Reqres Box Module Storage Looper Promise Ajax Associator DOMM View Buster'.split(' '),
     paths = makePath({
         jsAll: './src/**/*.js',
         jsList: _.map(modules, function (name) {

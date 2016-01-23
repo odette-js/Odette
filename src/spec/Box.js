@@ -150,7 +150,9 @@ application.scope().run(function (app, _, $) {
                 box.on('digest', function () {
                     fired = 1;
                 });
-                box.set();
+                box.set({
+                    here: 'there'
+                });
                 expect(fired).toEqual(1);
             });
             it('and the alter event', function () {
@@ -325,12 +327,12 @@ application.scope().run(function (app, _, $) {
                     box.sort();
                     expect(box.children.map(function (model) {
                         return model.get('two');
-                    }).un()).toEqual([1, 2, 8]);
+                    }).unwrap()).toEqual([1, 2, 8]);
                     box.comparator = '!two';
                     box.sort();
                     expect(box.children.map(function (model) {
                         return model.get('two');
-                    }).un()).toEqual([8, 2, 1]);
+                    }).unwrap()).toEqual([8, 2, 1]);
                 });
                 it('set up events on their children', function () {
                     var counter = 0;

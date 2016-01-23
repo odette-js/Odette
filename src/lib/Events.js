@@ -23,12 +23,10 @@ application.scope(function (app) {
         once = _.once,
         extend = _.extend,
         remove = _.remove,
-        property = _.property,
         stringify = _.stringify,
         isArrayLike = _.isArrayLike,
         isArray = _.isArray,
         upCase = _.upCase,
-        objCondense = _.objCondense,
         LENGTH = 'length',
         PARENT = 'parent',
         internalEventsString = '_events',
@@ -43,20 +41,22 @@ application.scope(function (app) {
         iterateOverObject = function (box, ctx, key, value, iterator, firstarg, allowNonFn) {
             intendedObject(key, value, function (evnts, funs_) {
                 // only accepts a string or a function
-                var fn = isString(funs_) ? box[funs_] : funs_;
-                if (allowNonFn || isFunction(fn)) {
-                    return duff(gapSplit(evnts), function (eventName) {
-                        var namespace = eventName.split(':')[0];
-                        iterator(box, eventName, {
-                            disabled: BOOLEAN_FALSE,
-                            namespace: namespace,
-                            name: eventName,
-                            handler: fn,
-                            ctx: ctx,
-                            origin: box
-                        }, firstarg);
-                    });
+                var fn = isString(funs_) ? box[funs_] : funs_,
+                    splitevents = gapSplit(evnts);
+                if (!allowNonFn && !isFunction(fn)) {
+                    return splitevents;
                 }
+                return duff(splitevents, function (eventName) {
+                    var namespace = eventName.split(':')[0];
+                    iterator(box, eventName, {
+                        disabled: BOOLEAN_FALSE,
+                        namespace: namespace,
+                        name: eventName,
+                        handler: fn,
+                        ctx: ctx,
+                        origin: box
+                    }, firstarg);
+                });
             });
         },
         // user friendly version
@@ -213,7 +213,7 @@ application.scope(function (app) {
             data: function (arg) {
                 var ret = this[SERIALIZED_DATA];
                 if (arguments[LENGTH]) {
-                    ret = this[SERIALIZED_DATA] = _.parse(_.stringify((arg === blank || arg === NULL) ? {} : arg));
+                    ret = this[SERIALIZED_DATA] = _.parse(_.stringify(isBlank(arg) ? {} : arg));
                 }
                 this[SERIALIZED_DATA] = ret;
                 ret = this[SERIALIZED_DATA];

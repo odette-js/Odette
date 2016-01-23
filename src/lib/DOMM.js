@@ -1,7 +1,9 @@
-application.scope().module('Node', function (module, app, _) {
+application.scope().module('DOMM', function (module, app, _) {
     var blank, sizzleDoc = document,
         eq = _.eq,
-        elementData = app.module('Storage').message.request('storage'),
+        elementData = _.associator,
+        result = _.result,
+        // elementData = app.module('Storage').message.request('storage'),
         uniqueId = _.uniqueId,
         extendFrom = _.extendFrom,
         factories = _.factories,
@@ -14,6 +16,8 @@ application.scope().module('Node', function (module, app, _) {
         isString = _.isString,
         isObject = _.isObject,
         isNumber = _.isNumber,
+        isBoolean = _.isBoolean,
+        stringify = _.stringify,
         wrap = _.wrap,
         merge = _.merge,
         remove = _.splice,
@@ -27,23 +31,54 @@ application.scope().module('Node', function (module, app, _) {
         toArray = _.toArray,
         duffRev = _.duffRev,
         indexOf = _.indexOf,
+        clone = _.clone,
         gapSplit = _.gapSplit,
         camelCase = _.camelCase,
         unCamelCase = _.unCamelCase,
-        objCondense = _.objCondense,
         parseDecimal = _.parseDecimal,
         LENGTH_STRING = 'length',
-        itemsString = '_items',
-        __delegateCountString = '__delegateCount',
-        removeQueueString = 'removeQueue',
-        addQueueString = 'addQueue',
+        ITEMS = '_items',
+        DELEGATE_COUNT = '__delegateCount',
+        REMOVE_QUEUE = 'removeQueue',
+        ADD_QUEUE = 'addQueue',
         CLASSNAME = 'className',
         BOOLEAN_TRUE = !0,
         BOOLEAN_FALSE = !1,
-        getComputed = window.getComputedStyle,
-        allStyles = getComputed(sizzleDoc.body),
-        devicePixelRatio = (window.devicePixelRatio || 1),
+        win = window,
+        WINDOW = 'window',
+        CLASS = 'class',
+        devicePixelRatio = (win.devicePixelRatio || 1),
         ua = navigator.userAgent,
+        isNode = function (object) {
+            return !!(object && isNumber(object.nodeType) && object.nodeType === object.ELEMENT_NODE);
+        },
+        isDom = isNode,
+        /**
+         * @private
+         * @func
+         */
+        isWin = function (obj) {
+            return obj && obj === obj[WINDOW];
+        },
+        /**
+         * @private
+         * @func
+         */
+        isDoc = function (obj) {
+            return obj && isNumber(obj.nodeType) && obj.nodeType === obj.DOCUMENT_NODE;
+        },
+        isFrag = function (frag) {
+            return frag && frag.nodeType === sizzleDoc.DOCUMENT_FRAGMENT_NODE;
+        },
+        getClosestWindow = function (windo_) {
+            var windo = windo_ || win;
+            return isWin(windo) ? windo : (windo && windo.defaultView ? windo.defaultView : (windo.ownerGlobal ? windo.ownerGlobal : $(windo).parent(WINDOW).index(0) || win));
+        },
+        getComputed = function (el, ctx) {
+            var ret = getClosestWindow(ctx).getComputedStyle(el);
+            return ret ? ret : getClosestWindow(el).getComputedStyle(el) || clone(el.style) || {};
+        },
+        allStyles = getComputed(sizzleDoc.body, win),
         /**
          * @func
          */
@@ -227,35 +262,17 @@ application.scope().module('Node', function (module, app, _) {
         getClassName = function (el, key) {
             var className = el[CLASSNAME];
             if (!isString(className)) {
-                className = getAttribute(el, 'class');
+                className = getAttribute(el, CLASS);
             }
             return (className || '').split(' ');
         },
-        setClassName = function (el, key, val) {
-            var value = val.join('');
+        setClassName = function (el, val) {
+            var value = val.join(' ').trim();
             if (isString(el[CLASSNAME])) {
                 el[CLASSNAME] = value;
             } else {
-                setAttribute(el, 'class', value);
+                setAttribute(el, CLASS, value);
             }
-        },
-        queuedata = {
-            className: app.module('Storage').message.request('make:list', {
-                // storage: nodeData,
-                name: CLASSNAME,
-                get: getClassName,
-                set: setClassName,
-                key: function (item) {
-                    return item;
-                }
-            }),
-            data: app.module('Storage').message.request('make:nested', {
-                // storage: nodeData,
-                name: 'dataset',
-                get: attributeInterface,
-                set: attributeInterface,
-                categoryKey: _.camelCase
-            })
         },
         triggerEventWrapper = function (attr, api) {
             attr = attr || api;
@@ -312,31 +329,40 @@ application.scope().module('Node', function (module, app, _) {
         AllEvents = _.concatUnique(Events, SVGEvent, KeyboardEvent, CompositionEvent, GamePadEvent, MouseEvents, TouchEvents, DeviceEvents, FocusEvent, TimeEvent, AnimationEvent, AudioProcessingEvent, UIEvents, ProgressEvent),
         knownPrefixes = gapSplit('-o- -ms- -moz- -webkit- mso- -xv- -atsc- -wap- -khtml- -apple- prince- -ah- -hp- -ro- -rim- -tc-'),
         trustedEvents = gapSplit('load scroll resize orientationchange click dblclick mousedown mouseup mouseover mouseout mouseenter mouseleave mousemove change contextmenu hashchange load mousewheel wheel readystatechange'),
-        setClass = function (el, val) {
-            if (isString(el.className)) {
-                el.className = val;
-            } else {
-                el.setAttribute('class', val);
-            }
-        },
-        knownPrefixesHash = _.wrap(knownPrefixes, true),
+        ALL_EVENTS_HASH = wrap(AllEvents, true),
+        knownPrefixesHash = wrap(knownPrefixes, true),
         /**
          * @private
          * @func
          */
+        // changeClass = function (el, remove, add) {
+        //     var subdata = queuedata.className.get(el);
+        //     queuedata.className.remove(el, remove, subdata);
+        //     queuedata.className.add(el, add, subdata);
+        // },
         changeClass = function (el, remove, add) {
-            var subdata = queuedata.className.get(el);
-            queuedata.className.remove(el, remove, subdata);
-            queuedata.className.add(el, add, subdata);
+            var n, val, command, classList;
+            if (el) {
+                classList = getClassName(el);
+                if (remove) {
+                    _.removeAll(classList, gapSplit(remove));
+                }
+                if (add) {
+                    _.addAll(classList, gapSplit(add));
+                }
+                // val = gapJoin(classList).trim();
+                setClassName(el, classList);
+                return el;
+            }
         },
-        removeClass = function (el, remove) {
-            var subdata = queuedata.className.get(el);
-            queuedata.className.remove(el, remove, subdata);
-        },
-        addClass = function (el, add) {
-            var subdata = queuedata.className.get(el);
-            queuedata.className.add(el, add, subdata);
-        },
+        // removeClass = function (el, remove) {
+        //     var subdata = queuedata.className.get(el);
+        //     queuedata.className.remove(el, remove, subdata);
+        // },
+        // addClass = function (el, add) {
+        //     var subdata = queuedata.className.get(el);
+        //     queuedata.className.add(el, add, subdata);
+        // },
         eventNameProperties = function (str) {},
         /**
          * @private
@@ -361,19 +387,6 @@ application.scope().module('Node', function (module, app, _) {
          * @private
          * @func
          */
-        isDom = function (el) {
-            var hasAttr, retVal = BOOLEAN_FALSE;
-            if (isObject(el)) {
-                if (isObject(el.style)) {
-                    if (isString(el.tagName)) {
-                        if (isFunction(el.getBoundingClientRect)) {
-                            retVal = BOOLEAN_TRUE;
-                        }
-                    }
-                }
-            }
-            return retVal;
-        },
         ensureDOM = function (fn) {
             return function (el) {
                 if (isDom(el)) {
@@ -507,8 +520,8 @@ application.scope().module('Node', function (module, app, _) {
                     count = 0,
                     nuCss = {};
                 if (isObject(el)) {
-                    if (_.isBool(obj)) {
-                        obj = el;
+                    if (isBoolean(key)) {
+                        key = el;
                         retObj = 1;
                     }
                     firstEl = el[0];
@@ -570,12 +583,14 @@ application.scope().module('Node', function (module, app, _) {
             return value;
         },
         style = function (els, key, value) {
+            var ensuredDom;
             if (els[LENGTH_STRING]) {
+                ensuredDom = ensureDOM(function (el) {
+                    el.style[key] = value;
+                });
                 intendedObject(key, value, function (key, value_) {
                     var value = convertStyleValue(value_);
-                    duff(els, ensureDOM(function (el) {
-                        el.style[key] = value;
-                    }));
+                    duff(els, ensuredDom);
                 });
             }
         },
@@ -817,14 +832,13 @@ application.scope().module('Node', function (module, app, _) {
          * @func
          */
         containsClass = function (el, className) {
-            var idxOf, original = getClass(el),
+            var original = getClassName(el),
                 nuClasses = gapSplit(className),
                 nuClassesLen = nuClasses[LENGTH_STRING],
                 i = 0,
                 has = 0;
             for (; i < nuClassesLen; i++) {
-                idxOf = indexOf(original, nuClasses[i]);
-                if (idxOf !== -1) {
+                if (posit(original, nuClasses[i])) {
                     has++;
                 }
             }
@@ -842,23 +856,6 @@ application.scope().module('Node', function (module, app, _) {
                     return tagName.toLowerCase() === str.toLowerCase();
                 }
             }
-        },
-        /**
-         * @private
-         * @func
-         */
-        isWin = function (obj) {
-            return obj && obj === obj.window;
-        },
-        /**
-         * @private
-         * @func
-         */
-        isDoc = function (obj) {
-            return obj && isNumber(obj.nodeType) && obj.nodeType === obj.DOCUMENT_NODE;
-        },
-        isFrag = function (frag) {
-            return frag && frag.nodeType === sizzleDoc.DOCUMENT_FRAGMENT_NODE;
         },
         /**
          * @private
@@ -883,7 +880,7 @@ application.scope().module('Node', function (module, app, _) {
         makeTree = function (str) {
             var div = createEl('div');
             div.innerHTML = str;
-            return $(div.children).remove().un();
+            return $(div.children).remove().unwrap();
         },
         /**
          * @private
@@ -1003,7 +1000,7 @@ application.scope().module('Node', function (module, app, _) {
         },
         frag = function (el) {
             var frag = createDocFrag(),
-                els = el[itemsString] || el;
+                els = result(el, ITEMS) || el;
             if (!_.isArrayLike(els)) {
                 els = [els];
             }
@@ -1054,7 +1051,7 @@ application.scope().module('Node', function (module, app, _) {
             return attachPrevious(function (idxChange) {
                 var domm = this,
                     collected = [],
-                    list = domm[itemsString];
+                    list = domm.unwrap();
                 idxChange = _idxChange || idxChange;
                 if (idxChange) {
                     duff(list, function (idx_, el) {
@@ -1079,7 +1076,7 @@ application.scope().module('Node', function (module, app, _) {
                     ret = {},
                     count = 0,
                     cachedData = [],
-                    domList = dom.un();
+                    domList = dom.unwrap();
                 // moved to outside because iterating over objects is more
                 // time consuming than iterating over a straight list
                 intendedObject(key, value, function (__key, val) {
@@ -1155,7 +1152,7 @@ application.scope().module('Node', function (module, app, _) {
             var children = [],
                 _flat = {},
                 flat = {};
-            _.each(block, function (property, value) {
+            each(block, function (property, value) {
                 var gah;
                 if (_.isObject(value)) {
                     children.push(flattenBlock(value, selector + ' ' + property));
@@ -1169,7 +1166,7 @@ application.scope().module('Node', function (module, app, _) {
         },
         buildBlocks = function (blocks) {
             var allBlocks = coll();
-            _.each(blocks, function (block, selector) {
+            each(blocks, function (block, selector) {
                 allBlocks = allBlocks.concat(flattenBlock(block, selector));
             });
             return allBlocks;
@@ -1201,7 +1198,7 @@ application.scope().module('Node', function (module, app, _) {
         buildStyles = function (obj, opts) {
             return coll(obj).foldl(function (memo, idx, item) {
                 memo += buildBlocks(item).foldl(function (memo, idx, block) {
-                    _.each(block, function (block, idx, selector) {
+                    each(block, function (block, idx, selector) {
                         memo += stringifyBlock(block, selector, opts);
                     });
                     return memo;
@@ -1336,7 +1333,7 @@ application.scope().module('Node', function (module, app, _) {
                     // currentEventStack = data[currentEventStackString];
                     mainHandler = getMainHandler(data, eventType, capturing);
                     if (mainHandler) {
-                        removeStack = mainHandler[removeQueueString];
+                        removeStack = mainHandler[REMOVE_QUEUE];
                         $el = $(el);
                         e = new Event(evnt, el);
                         args = [e].concat(args || []);
@@ -1370,9 +1367,9 @@ application.scope().module('Node', function (module, app, _) {
                             return e.isImmediatePropagationStopped;
                         });
                         duffRev(removeStack, removeEventQueue);
-                        while (mainHandler[addQueueString].length) {
-                            addEventQueue(mainHandler[addQueueString][0]);
-                            gah = mainHandler[addQueueString].shift();
+                        while (mainHandler[ADD_QUEUE].length) {
+                            addEventQueue(mainHandler[ADD_QUEUE][0]);
+                            gah = mainHandler[ADD_QUEUE].shift();
                         }
                     }
                 }
@@ -1477,12 +1474,12 @@ application.scope().module('Node', function (module, app, _) {
                 selector = obj.selector;
             if (!mainHandler.currentEvent) {
                 if (selector) {
-                    obj.list.splice(mainHandler[__delegateCountString]++, 0, obj);
+                    obj.list.splice(mainHandler[DELEGATE_COUNT]++, 0, obj);
                 } else {
                     obj.list.push(obj);
                 }
             } else {
-                mainHandler[addQueueString].push(obj);
+                mainHandler[ADD_QUEUE].push(obj);
             }
         },
         removeEventQueue = function (obj, idx) {
@@ -1495,7 +1492,7 @@ application.scope().module('Node', function (module, app, _) {
                     idx = idx === void 0 ? list.indexOf(obj) : idx;
                     if (idx + 1) {
                         if (selector) {
-                            mainHandler[__delegateCountString]--;
+                            mainHandler[DELEGATE_COUNT]--;
                         }
                         gah = list.splice(idx, 1);
                     }
@@ -1503,7 +1500,7 @@ application.scope().module('Node', function (module, app, _) {
                 }
             } else {
                 if (obj.persist) {
-                    mainHandler[removeQueueString].push(obj);
+                    mainHandler[REMOVE_QUEUE].push(obj);
                 }
             }
             obj.persist = BOOLEAN_FALSE;
@@ -1536,7 +1533,7 @@ application.scope().module('Node', function (module, app, _) {
         removeEvent = function (obj) {
             var mainHandler = obj.mainHandler;
             if (obj.selector) {
-                mainHandler[__delegateCountString] = Math.max(mainHandler[__delegateCountString] - 1, 0);
+                mainHandler[DELEGATE_COUNT] = Math.max(mainHandler[DELEGATE_COUNT] - 1, 0);
             }
             _.remove(obj.list, obj);
         },
@@ -1731,6 +1728,10 @@ application.scope().module('Node', function (module, app, _) {
                             filter = function (el, idx) {
                                 return idx === filtr;
                             };
+                        } else {
+                            filter = function () {
+                                return true;
+                            };
                         }
                     }
                 }
@@ -1762,7 +1763,7 @@ application.scope().module('Node', function (module, app, _) {
             var dom = this,
                 matchers = [],
                 passedString = isString(str);
-            duff(dom.un(), function (el) {
+            duff(dom.unwrap(), function (el) {
                 if (passedString) {
                     duff(_.Sizzle(str, el), function (el) {
                         matchers.push(el);
@@ -1780,7 +1781,10 @@ application.scope().module('Node', function (module, app, _) {
             /**
              * @func
              * @name DOMM#constructor
-             * @param {String|Node|Function} str - string to query the dom with, or a function to run on document load, or an element to wrap in a DOMM instance
+ * @param {            String | Node | Function
+        }
+        str - string to query the dom with, or a
+        function to run on document load, or an element to wrap in a DOMM instance
              * @returns {DOMM} instance
              */
             constructor: function (str, ctx) {
@@ -1795,13 +1799,13 @@ application.scope().module('Node', function (module, app, _) {
                             setTimeout(function () {
                                 str.apply($doc, [$, docData.DOMContentLoadedEvent]);
                             });
-                            els = dom.un();
+                            els = dom.unwrap();
                         } else {
                             dom = $doc.on('DOMContentLoaded', function (e) {
                                 _.unshift(args, $);
                                 str.apply(this, args);
                             });
-                            els = dom.un();
+                            els = dom.unwrap();
                         }
                     }
                 } else {
@@ -1813,7 +1817,7 @@ application.scope().module('Node', function (module, app, _) {
                         }
                     } else {
                         els = str;
-                        if (canBeProcessed(els)) {
+                        if (!isArray(els) && canBeProcessed(els)) {
                             els = [els];
                         }
                     }
@@ -1846,7 +1850,7 @@ application.scope().module('Node', function (module, app, _) {
                 return isFrag(this.index(num || 0) || {});
             },
             frag: function (el) {
-                return _.frag(el || this[itemsString]);
+                return _.frag(el || (this && this[ITEMS]));
             },
             /**
              * @func
@@ -1855,7 +1859,7 @@ application.scope().module('Node', function (module, app, _) {
              * @returns {DOMM} new DOMM instance object
              */
             filter: attachPrevious(function (filter) {
-                return domFilter(this.un(), filter);
+                return domFilter(this.unwrap(), filter);
             }),
             /**
              * @func
@@ -1873,11 +1877,11 @@ application.scope().module('Node', function (module, app, _) {
              */
             children: attachPrevious(function (eq) {
                 var dom = this,
-                    items = dom.un(),
+                    items = dom.unwrap(),
                     filter = createDomFilter(items, eq);
                 return foldl(items, function (memo, el) {
                     return foldl(el.children || el.childNodes, function (memo, child, idx, children) {
-                        if (!filter || filter(child, idx, children)) {
+                        if (filter(child, idx, children)) {
                             memo.push(child);
                         }
                         return memo;
@@ -1935,16 +1939,16 @@ application.scope().module('Node', function (module, app, _) {
              * @param {...*} splat of objects and key value pairs that create a single object to be applied to the element
              * @returns {DOMM} instance
              */
-            css: function (key, value) {
+            css: ensureOne(function (key, value) {
                 var dom = this,
-                    ret = css(dom[itemsString], key, value);
+                    ret = css(dom[ITEMS], key, value);
                 if (isBlank(ret)) {
                     ret = dom;
                 }
                 return ret;
-            },
+            }),
             style: ensureOne(function (key, value) {
-                style(this.un(), key, value);
+                style(this.unwrap(), key, value);
                 return this;
             }),
             /**
@@ -1955,7 +1959,7 @@ application.scope().module('Node', function (module, app, _) {
             allDom: function () {
                 var count = 0,
                     length = this.length(),
-                    result = length && find(this.un(), negate(isDom));
+                    result = length && find(this.unwrap(), negate(isDom));
                 return length && result === void 0;
             },
             /**
@@ -2034,7 +2038,7 @@ application.scope().module('Node', function (module, app, _) {
              * @returns {DOMM} instance
              */
             eq: attachPrevious(function (num) {
-                return eq(this.un(), num);
+                return eq(this.unwrap(), num);
             }),
             /**
              * @func
@@ -2042,7 +2046,7 @@ application.scope().module('Node', function (module, app, _) {
              * @returns {DOMM} instance
              */
             first: attachPrevious(function () {
-                return eq(this.un(), 0);
+                return eq(this.unwrap(), 0);
             }),
             /**
              * @func
@@ -2050,7 +2054,7 @@ application.scope().module('Node', function (module, app, _) {
              * @returns {DOMM} instance
              */
             last: attachPrevious(function () {
-                return eq(this.un(), this.length() - 1);
+                return eq(this.unwrap(), this.length() - 1);
             }),
             /**
              * @func
@@ -2059,7 +2063,7 @@ application.scope().module('Node', function (module, app, _) {
              * @returns {Object} hash of dimensional properties (getBoundingClientRect)
              */
             clientRect: function (num) {
-                return clientRect(eq(this.un(), num)[0]);
+                return clientRect(eq(this.unwrap(), num)[0]);
             },
             /**
              * @func
@@ -2072,7 +2076,7 @@ application.scope().module('Node', function (module, app, _) {
                 var domm = this;
                 if (domm.length()) {
                     callback = _.bind(callback, domm);
-                    duff(domm[itemsString], function (item_, index, all) {
+                    duff(domm[ITEMS], function (item_, index, all) {
                         var item = $([item_]);
                         callback(item, index, all);
                     });
@@ -2342,7 +2346,7 @@ application.scope().module('Node', function (module, app, _) {
                             return [el, original(el)];
                         }));
                     }
-                    return collect[itemsString];
+                    return collect[ITEMS];
                 });
             }()),
             /**
@@ -2354,9 +2358,9 @@ application.scope().module('Node', function (module, app, _) {
             has: function (els) {
                 var has = 0,
                     domm = this,
-                    list = domm[itemsString];
+                    list = domm[ITEMS];
                 if (_.isInstance(els, Collection)) {
-                    els = els.un();
+                    els = els.unwrap();
                 } else {
                     if (isDom(els)) {
                         els = [els];
@@ -2382,7 +2386,7 @@ application.scope().module('Node', function (module, app, _) {
                 if (isInstance(el, DOMM)) {
                     el = el.get();
                 }
-                return indexOf(this[itemsString], el, lookAfter);
+                return indexOf(this[ITEMS], el, lookAfter);
             },
             /**
              * @func
@@ -2465,8 +2469,8 @@ application.scope().module('Node', function (module, app, _) {
             childOf: function (oParent) {
                 var domm = this,
                     _oParent = $(oParent),
-                    children = domm.un();
-                oParent = _oParent.un();
+                    children = domm.unwrap();
+                oParent = _oParent.unwrap();
                 return !!domm.length() && !!_oParent.length() && !find(oParent, function (_parent) {
                     return find(children, function (child) {
                         var parent = child,
@@ -2485,7 +2489,7 @@ application.scope().module('Node', function (module, app, _) {
                 var domm = this,
                     arr = [];
                 domm.each(function (idx, $node) {
-                    var node = $node.get(),
+                    var node = $node.index(),
                         children = $node.children().serialize(),
                         obj = {
                             tag: node.localName
@@ -2545,8 +2549,11 @@ application.scope().module('Node', function (module, app, _) {
         box: box,
         frag: frag,
         isDom: isDom,
+        isNode: isNode,
         isWin: isWin,
+        isWindow: isWin,
         isDoc: isDoc,
+        isDocument: isDoc,
         isFrag: isFrag,
         device: deviceCheck,
         makeEl: makeEl,

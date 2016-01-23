@@ -5,23 +5,22 @@ application.scope('dev', function (app) {
         fn = Function,
         array = Array,
         string = String,
-        toStringString = 'toString',
-        PROTOTYPE_STRING = 'prototype',
-        constructorString = 'constructor',
-        lengthString = 'length',
+        TO_STRING = 'toString',
+        PROTOTYPE = 'prototype',
+        CONSTRUCTOR = 'constructor',
+        LENGTH = 'length',
         CONSTRUCTOR_ID = '__constructorId',
         CONSTRUCTOR_KEY = '__constructor__',
-        stringProto = string[PROTOTYPE_STRING],
-        objectProto = object[PROTOTYPE_STRING],
-        arrayProto = array[PROTOTYPE_STRING],
-        // shiftArray = arrayProto.shift,
-        funcProto = fn[PROTOTYPE_STRING],
+        stringProto = string[PROTOTYPE],
+        objectProto = object[PROTOTYPE],
+        arrayProto = array[PROTOTYPE],
+        funcProto = fn[PROTOTYPE],
         nativeKeys = object.keys,
         BOOLEAN_TRUE = !0,
         BOOLEAN_FALSE = !1,
         hasEnumBug = !{
             toString: null
-        }.propertyIsEnumerable(toStringString),
+        }.propertyIsEnumerable(TO_STRING),
         /**
          * @func
          */
@@ -78,7 +77,7 @@ application.scope('dev', function (app) {
          * @func
          */
         indexOfNaN = function (array, fromIndex, fromRight) {
-            var length = array[lengthString],
+            var length = array[LENGTH],
                 index = fromIndex + (fromRight ? 0 : -1);
             while ((fromRight ? index-- : ++index < length)) {
                 var other = array[index];
@@ -94,7 +93,7 @@ application.scope('dev', function (app) {
             }
             if (array) {
                 var index = (fromIndex || 0) - 1,
-                    length = array[lengthString];
+                    length = array[LENGTH];
                 while (++index < length) {
                     if (array[index] === value) {
                         return index;
@@ -165,8 +164,8 @@ application.scope('dev', function (app) {
         isInstance = function (instance, constructor_) {
             var result = BOOLEAN_FALSE,
                 constructor = constructor_;
-            while (has(constructor, 'constructor')) {
-                constructor = constructor.constructor;
+            while (has(constructor, CONSTRUCTOR)) {
+                constructor = constructor[CONSTRUCTOR];
             }
             if (constructor && constructor[CONSTRUCTOR_ID] && instance && instance[CONSTRUCTOR_ID]) {
                 result = constructor[CONSTRUCTOR_ID] === instance[CONSTRUCTOR_ID];
@@ -240,8 +239,11 @@ application.scope('dev', function (app) {
         isNull = function (thing) {
             return thing === null;
         },
+        isUndefined = function (thing) {
+            return thing === void 0;
+        },
         isBlank = function (thing) {
-            return thing === void 0 || isNull(thing);
+            return isUndefined(thing) || isNull(thing);
         },
         /**
          * @func
@@ -273,9 +275,9 @@ application.scope('dev', function (app) {
          * @func
          */
         isEmpty = function (obj) {
-            return !keys(obj)[lengthString];
+            return !keys(obj)[LENGTH];
         },
-        nonEnumerableProps = gapSplit('valueOf isPrototypeOf ' + toStringString + ' propertyIsEnumerable hasOwnProperty toLocaleString'),
+        nonEnumerableProps = gapSplit('valueOf isPrototypeOf ' + TO_STRING + ' propertyIsEnumerable hasOwnProperty toLocaleString'),
         /**
          * @func
          */
@@ -283,7 +285,7 @@ application.scope('dev', function (app) {
             var i = 0,
                 result = {},
                 objKeys = keys(obj),
-                length = getLength(objKeys);
+                length = objKeys[LENGTH];
             for (; i < length; i++) {
                 result[obj[objKeys[i]]] = objKeys[i];
             }
@@ -293,9 +295,9 @@ application.scope('dev', function (app) {
          * @func
          */
         collectNonEnumProps = function (obj, keys) {
-            var nonEnumIdx = nonEnumerableProps[lengthString];
-            var constructor = obj.constructor;
-            var proto = (isFunction(constructor) && constructor.prototype) || ObjProto;
+            var nonEnumIdx = nonEnumerableProps[LENGTH];
+            var constructor = obj[CONSTRUCTOR];
+            var proto = (isFunction(constructor) && constructor[PROTOTYPE]) || ObjProto;
             // Constructor is a special case.
             var prop = 'constructor';
             if (has(obj, prop) && !contains(keys, prop)) keys.push(prop);
@@ -370,7 +372,7 @@ application.scope('dev', function (app) {
                 base = args.shift();
             }
             base = base || {};
-            length = getLength(args);
+            length = args[LENGTH];
             if (length) {
                 for (; index < length; index++) {
                     merge(base, args[index], deep);
@@ -381,7 +383,7 @@ application.scope('dev', function (app) {
         merge = function (obj1, obj2, deep) {
             var key, val, attach, i = 0,
                 keys = allKeys(obj2),
-                l = getLength(keys);
+                l = keys[LENGTH];
             for (; i < l; i++) {
                 key = keys[i];
                 // ignore undefined
@@ -408,45 +410,18 @@ application.scope('dev', function (app) {
         /**
          * @func
          */
-        property = function (key) {
-            return function (obj) {
-                return obj === blank ? blank : obj[key];
-            };
-        },
         // Helper for collection methods to determine whether a collection
         // should be iterated as an array or as an object
         // Related: http://people.mozilla.org/~jorendorff/es6-draft.html#sec-tolength
         // Avoids a very nasty iOS 8 JIT bug on ARM-64. #2094
         MAX_ARRAY_INDEX = Math.pow(2, 53) - 1,
-        getLength = property('length'),
         /**
          * @func
          */
         isArrayLike = function (collection) {
-            var length = !!collection && getLength(collection);
+            var length = !!collection && collection[LENGTH];
             return isArray(collection) || (isNumber(length) && !isString(collection) && length >= 0 && length <= MAX_ARRAY_INDEX && !isFunction(collection));
         },
-        /**
-         * @func
-         */
-        // each = function (obj, iteratee, context, direction) {
-        //     var length, objKeys, i = 0,
-        //         args = [obj, iteratee, context, direction];
-        //     if (obj) {
-        //         if (!isArrayLike(obj)) {
-        //             args[0] = objKeys = keys(obj);
-        //             length = getLength(objKeys);
-        //             iteratee = bind(iteratee, context);
-        //             args[2] = null;
-        //             args[1] = function (idx, key, all) {
-        //                 // gives you the key, use that to get the value
-        //                 return iteratee(obj[key], key, obj);
-        //             };
-        //         }
-        //         duff.apply(this, args);
-        //     }
-        //     return obj;
-        // },
         eachProxy = function (fn) {
             return function (obj_, iteratee_, context_, direction_) {
                 var ret, obj = obj_,
@@ -474,7 +449,7 @@ application.scope('dev', function (app) {
          */
         createPredicateIndexFinder = function (dir) {
             return eachProxy(function (array, predicate, context, index_) {
-                var length = getLength(array),
+                var length = array[LENGTH],
                     callback = bind(predicate, context),
                     index = index_ || (dir > 0 ? 0 : length - 1);
                 for (; index >= 0 && index < length; index += dir) {
@@ -498,11 +473,13 @@ application.scope('dev', function (app) {
          * @func
          */
         validKey = function (key) {
-            return key !== -1 && key !== blank && key !== null && key !== BOOLEAN_FALSE && key !== BOOLEAN_TRUE;
+            // -1 for arrays
+            // any other data type ensures string
+            return key !== -1 && key === key && key !== blank && key !== null && key !== BOOLEAN_FALSE && key !== BOOLEAN_TRUE;
         },
         finder = function (findHelper) {
-            return function (obj, predicate, context) {
-                var key = findHelper(obj, predicate, context);
+            return function (obj, predicate, context, startpoint) {
+                var key = findHelper(obj, predicate, context, startpoint);
                 if (validKey(key)) {
                     return obj[key];
                 }
@@ -512,16 +489,14 @@ application.scope('dev', function (app) {
         findLast = finder(findLastIndex),
         bind = function (fn_, ctx) {
             var fn = fn_;
-            if (ctx && isObject(ctx)) {
-                fn = fn_.bind(ctx);
-            }
+            fn = fn_.bind(ctx);
             return fn;
         },
         duff = function (values, process, context, direction) {
             var iterations, val, i, leftover, deltaFn;
             if (values && isFunction(process)) {
                 i = 0;
-                val = values[lengthString];
+                val = values[LENGTH];
                 leftover = val % 8;
                 iterations = Math.floor(val / 8);
                 if (direction < 0) {
@@ -556,6 +531,7 @@ application.scope('dev', function (app) {
                     } while (--iterations > 0);
                 }
             }
+            return values;
         },
         each = eachProxy(duff),
         /**
@@ -649,9 +625,9 @@ application.scope('dev', function (app) {
             if (!nameIsStr) {
                 protoProps = name;
             }
-            hasConstructor = has(protoProps, constructorString);
+            hasConstructor = has(protoProps, CONSTRUCTOR);
             if (protoProps && hasConstructor) {
-                child = protoProps[constructorString];
+                child = protoProps[CONSTRUCTOR];
             }
             if (nameIsStr) {
                 // nameString = name;
@@ -659,7 +635,7 @@ application.scope('dev', function (app) {
                 if (child) {
                     passedParent = child;
                 }
-                child = new Function.constructor('var parent=arguments[0];return function ' + name + '(){return parent.apply(this,arguments);}')(passedParent);
+                child = new Function[CONSTRUCTOR]('var parent=arguments[0];return function ' + name + '(){return parent.apply(this,arguments);}')(passedParent);
                 factories[name] = child;
             } else {
                 child = function () {
@@ -671,22 +647,22 @@ application.scope('dev', function (app) {
             child[CONSTRUCTOR_ID] = constructorId;
             child.extend = (this[CONSTRUCTOR_KEY] && this[CONSTRUCTOR_KEY].extend) || constructorExtend;
             var Surrogate = function () {
-                this[constructorString] = child;
+                this[CONSTRUCTOR] = child;
             };
-            Surrogate[PROTOTYPE_STRING] = parent[PROTOTYPE_STRING];
-            child[PROTOTYPE_STRING] = new Surrogate;
+            Surrogate[PROTOTYPE] = parent[PROTOTYPE];
+            child[PROTOTYPE] = new Surrogate;
             if (protoProps) {
-                extend(child[PROTOTYPE_STRING], protoProps);
+                extend(child[PROTOTYPE], protoProps);
             }
             constructor = child;
             child = constructorWrapper(constructor);
             if (!isFunction(protoProps.Model) || !has(protoProps, 'Model')) {
-                constructor[PROTOTYPE_STRING].Model = child;
+                constructor[PROTOTYPE].Model = child;
             }
-            // child.constructor = constructor;
-            child.__super__ = parent[PROTOTYPE_STRING];
+            // child[CONSTRUCTOR] = constructor;
+            child.__super__ = parent[PROTOTYPE];
             constructor[CONSTRUCTOR_ID] = constructorId;
-            constructor[PROTOTYPE_STRING][CONSTRUCTOR_KEY] = child;
+            constructor[PROTOTYPE][CONSTRUCTOR_KEY] = child;
             if (nameIsStr) {
                 makeExtendFrom(name, constructor);
                 // this is good when _ / utils object is your global app object
@@ -703,7 +679,7 @@ application.scope('dev', function (app) {
                 }
                 return new Ch(attributes, options);
             };
-            __.constructor = Ch;
+            __[CONSTRUCTOR] = Ch;
             return __;
         },
         /**
@@ -726,81 +702,6 @@ application.scope('dev', function (app) {
                 }
             };
         },
-        /**
-         * @func
-         */
-        // camelCase = (function () {
-        //     var cached = {};
-        //     return function (str, splitter) {
-        //         var i, s, val;
-        //         if (splitter === undefined) {
-        //             splitter = '-';
-        //         }
-        //         if (!cached[splitter]) {
-        //             cached[splitter] = {};
-        //         }
-        //         val = cached[splitter][str];
-        //         if (!val && isString(str)) {
-        //             if (str[0] === '-') {
-        //                 str = slice(str, 1);
-        //             }
-        //             s = split(str, splitter);
-        //             for (i = getLength(s) - 1; i >= 1; i--) {
-        //                 if (s[i]) {
-        //                     s[i] = upCase(s[i]);
-        //                 }
-        //             }
-        //             val = join(s, '');
-        //         }
-        //         cached[splitter][str] = val;
-        //         cached[splitter][val] = val;
-        //         return val;
-        //     };
-        // }()),
-        /**
-         * @func
-         */
-        // upCase = function (s) {
-        //     return s[0].toUpperCase() + slice(s, 1);
-        // },
-        // cacheable = function (fn) {
-        //     var cache = {};
-        //     return function (input) {
-        //         if (!has(cache, input)) {
-        //             cache[input] = fn.apply(this, arguments);
-        //         }
-        //         return cache[input];
-        //     };
-        // },
-        // categoricallyCacheable = function (fn) {
-        //     return function () {};
-        // },
-        /**
-         * @func
-         */
-        // unCamelCase = (function () {
-        //     var cached = {};
-        //     return function (str, splitter) {
-        //         var val;
-        //         if (!splitter) {
-        //             splitter = '-';
-        //         }
-        //         if (!cached[splitter]) {
-        //             cached[splitter] = {};
-        //         }
-        //         val = cached[splitter][str];
-        //         if (!val) {
-        //             if (str) {
-        //                 val = str.replace(/([a-z])([A-Z])/g, '$1' + splitter + '$2').replace(/[A-Z]/g, function (s) {
-        //                     return s.toLowerCase();
-        //                 });
-        //             }
-        //         }
-        //         cached[splitter][str] = val;
-        //         cached[splitter][val] = val;
-        //         return val;
-        //     };
-        // }()),
         /**
          * @func
          */
@@ -847,8 +748,8 @@ application.scope('dev', function (app) {
                 if (typeof a != 'object' || typeof b != 'object') return BOOLEAN_FALSE;
                 // Objects with different constructors are not equivalent, but `Object`s or `Array`s
                 // from different frames are.
-                var aCtor = a.constructor,
-                    bCtor = b.constructor;
+                var aCtor = a[CONSTRUCTOR],
+                    bCtor = b[CONSTRUCTOR];
                 if (aCtor !== bCtor && !(isFunction(aCtor) && nativeIsInstance(aCtor, aCtor) && isFunction(bCtor) && nativeIsInstance(bCtor, bCtor)) && ('constructor' in a && 'constructor' in b)) {
                     return BOOLEAN_FALSE;
                 }
@@ -859,7 +760,7 @@ application.scope('dev', function (app) {
             // It's done here since we only need them for objects and arrays comparison.
             // aStack = aStack || [];
             // bStack = bStack || [];
-            var length = aStack[lengthString];
+            var length = aStack[LENGTH];
             while (length--) {
                 // Linear search. Performance is inversely proportional to the number of
                 // unique nested structures.
@@ -873,8 +774,8 @@ application.scope('dev', function (app) {
             // Recursively compare objects and arrays.
             if (areArrays) {
                 // Compare array lengths to determine if a deep comparison is necessary.
-                length = a[lengthString];
-                if (length !== b[lengthString]) {
+                length = a[LENGTH];
+                if (length !== b[LENGTH]) {
                     return BOOLEAN_FALSE;
                 }
                 // Deep compare the contents, ignoring non-numeric properties.
@@ -887,9 +788,9 @@ application.scope('dev', function (app) {
                 // Deep compare objects.
                 var objKeys = keys(a),
                     key;
-                length = objKeys[lengthString];
+                length = objKeys[LENGTH];
                 // Ensure that both objects contain the same number of properties before comparing deep equality.
-                if (keys(b)[lengthString] !== length) return BOOLEAN_FALSE;
+                if (keys(b)[LENGTH] !== length) return BOOLEAN_FALSE;
                 while (length--) {
                     // Deep compare each member
                     key = objKeys[length];
@@ -1112,7 +1013,7 @@ application.scope('dev', function (app) {
                         query.push(n + '=' + val);
                     }
                 }
-                if (query[lengthString]) {
+                if (query[LENGTH]) {
                     base += '?';
                 }
                 base += query.join('&');
@@ -1126,12 +1027,12 @@ application.scope('dev', function (app) {
             return base;
         },
         protoProp = function (instance, key, farDown) {
-            var val, proto, constructor = instance.constructor;
+            var val, proto, constructor = instance[CONSTRUCTOR];
             farDown = farDown || 1;
             do {
-                proto = constructor.prototype;
+                proto = constructor[PROTOTYPE];
                 val = proto[key];
-                constructor = proto.constructor;
+                constructor = proto[CONSTRUCTOR];
             } while (--farDown > 0 && constructor && isFinite(farDown));
             return val;
         },
@@ -1199,12 +1100,10 @@ application.scope('dev', function (app) {
                 fn(key, value);
             }
         },
-        /**
-         * @func
-         */
-        /** wrapper for advisibility to be calculated by outside framework */
-        adVisibility = function (adObj) {
-            adObj.set(app.modules.visibility(adObj.el));
+        reverseParams = function (iteratorFn) {
+            return function (value, key, third) {
+                iteratorFn(key, value, third);
+            };
         },
         /**
          * @func
@@ -1250,29 +1149,6 @@ application.scope('dev', function (app) {
             obj[key] = value;
             return obj;
         },
-        objCondense = function () {
-            var skip = 0,
-                obj = {};
-            duff(arguments, function (arg, idx, args) {
-                if (!skip) {
-                    skip++;
-                    if (isString(arg)) {
-                        skip++;
-                        obj[arg] = args[idx + 1];
-                    }
-                    if (isObject(arg)) {
-                        extend(obj, arg);
-                    }
-                }
-                skip--;
-            });
-            return obj;
-        },
-        reverseParams = function (iteratorFn) {
-            return function (value, key, third) {
-                iteratorFn(key, value, third);
-            };
-        },
         /**
          * @func
          */
@@ -1283,18 +1159,8 @@ application.scope('dev', function (app) {
             });
             return obj;
         },
-        result = function (obj, str, args) {
-            var rez = obj;
-            if (isObject(obj)) {
-                rez = obj[str];
-                if (isFunction(rez)) {
-                    rez = obj[str].apply(obj, args || []);
-                }
-            }
-            return rez;
-        },
-        resultOf = function (item, ctx, args) {
-            return _.isFunction(item) ? item.apply(ctx, args || []) : item;
+        result = function (obj, str, arg) {
+            return isFunction(obj[str]) ? obj[str](arg) : obj[str];
         },
         maths = Math,
         mathArray = function (method) {
@@ -1342,28 +1208,22 @@ application.scope('dev', function (app) {
         return this;
     }
     factories.Model = Model;
-    Model.prototype = {};
+    Model[PROTOTYPE] = {};
     makeExtendFrom('Model', factories.Model);
     Model.extend = constructorExtend;
     _ = app._ = {
         noop: function () {},
         monthNames: gapSplit('january feburary march april may june july august september october november december'),
-        possibleEvents: gapSplit('context timings impression impression_image delivered_impression viewable_impression asset_impression goal timer expanded_time auto_expand auto_contract auto_close auto_video_play auto_video_stop counter'),
-        possibleInteractions: gapSplit('click hover_count hover_time expand contract close open_panel exit video_play video_stop'),
         weekdays: gapSplit('sunday monday tuesday wednesday thursday friday saturday'),
-        ignoreAssetTags: gapSplit('script link style meta title head'),
         constructorWrapper: constructorWrapper,
         stringifyQuery: stringifyQuery,
         intendedObject: intendedObject,
         ensureFunction: ensureFunction,
-        objectCondense: objCondense,
         parseDecimal: parseDecimal,
-        adVisibility: adVisibility,
         getReference: getReference,
         cssTemplater: cssTemplater,
         simpleObject: simpleObject,
         isArrayLike: isArrayLike,
-        objCondense: objCondense,
         isInstance: isInstance,
         hasEnumBug: hasEnumBug,
         roundFloat: roundFloat,
@@ -1374,11 +1234,10 @@ application.scope('dev', function (app) {
         pngString: pngString,
         parseBool: parseBool,
         stringify: stringify,
-        getLen: getLength,
         splitGen: splitGen,
         gapSplit: gapSplit,
         uniqueId: uniqueId,
-        property: property,
+        // property: property,
         toString: toString,
         throttle: throttle,
         debounce: debounce,
@@ -1393,9 +1252,6 @@ application.scope('dev', function (app) {
         isArray: isArray,
         isEmpty: isEmpty,
         modules: {},
-        listHas: listHas,
-        isBlank: isBlank,
-        isUndefined: isBlank,
         splice: splice,
         isBoolean: isBoolean,
         invert: invert,
@@ -1405,6 +1261,8 @@ application.scope('dev', function (app) {
         now: nowish,
         map: map,
         result: result,
+        isBlank: isBlank,
+        isUndefined: isUndefined,
         isNull: isNull,
         merge: merge,
         fetch: fetch,
@@ -1415,18 +1273,17 @@ application.scope('dev', function (app) {
         isNumber: isNumber,
         isFinite: isFinite,
         isString: isString,
+        isFunction: isFunction,
         parse: parse,
         shift: shift,
         eachProxy: eachProxy,
         exports: exports,
         slice: slice,
         bind: bind,
-        bind: bind,
         duff: duff,
         sort: sort,
         join: join,
         wrap: wrap,
-        isFunction: isFunction,
         uuid: uuid,
         allKeys: allKeys,
         keys: keys,
@@ -1434,14 +1291,10 @@ application.scope('dev', function (app) {
         each: each,
         push: push,
         pop: pop,
-        len: getLength,
         has: has,
-        rip: rip,
-        png: png,
         negate: negate,
         pI: pI,
         math: {},
-        resultOf: resultOf,
         createPredicateIndexFinder: createPredicateIndexFinder,
         findIndex: findIndex,
         findLastIndex: findLastIndex,

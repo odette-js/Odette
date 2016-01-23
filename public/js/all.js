@@ -1,6 +1,6 @@
-
 (function (win, where) {
     'use strict';
+
     function Application(name, parent) {
         this.version = name;
         this.scoped = true;
@@ -25,165 +25,165 @@
         var i = 0,
             extendor = {},
             parent = this.parent;
-        for (; i < list[lengthString]; i++) {
+        for (; i < list[LENGTH]; i++) {
             extendor[list[i]] = makeParody(parent, parent[list[i]]);
         }
         this.extend(extendor);
         return this;
     };
-    var topmostDoc, makeScriptString = 'makeScript',
-        lengthString = 'length',
+    var topmostDoc, MAKE_SCRIPT = 'makeScript',
+        LENGTH = 'length',
         application = win[where] = win[where] || {
-        versions: {},
-        versionOrder: [],
-        global: true,
-        scoped: false,
-        registerVersion: function (name) {
-            var application = this,
-                cachedOrCreated = application.versions[name],
-                newApp = application.versions[name] = cachedOrCreated || new Application(name, application);
-            newApp.parent = application;
-            application.upsetDefaultVersion(name);
-            if (!cachedOrCreated) {
-                application.versionOrder.push(name);
-            }
-            return newApp;
-        },
-        upsetDefaultVersion: function (version) {
-            var application = this;
-            if (application.defaultVersion) {
-                // keyword version only works the first time then it's set for the lifespan
-                if (+application.defaultVersion === +application.defaultVersion) {
-                    // keyword version overwrites default (dev / hotfix)
-                    if (+version !== +version) {
-                        application.defaultVersion = version;
-                    }
+            versions: {},
+            versionOrder: [],
+            global: true,
+            scoped: false,
+            registerVersion: function (name) {
+                var application = this,
+                    cachedOrCreated = application.versions[name],
+                    newApp = application.versions[name] = cachedOrCreated || new Application(name, application);
+                newApp.parent = application;
+                application.upsetDefaultVersion(name);
+                if (!cachedOrCreated) {
+                    application.versionOrder.push(name);
                 }
-            } else {
-                application.defaultVersion = version;
-            }
-        },
-        unRegisterVersion: function (name) {
-            var application = this,
-                saved = application.versions[name],
-                orderIdx = application.versionOrder.indexOf(name);
-            if (orderIdx !== -1) {
-                application.versionOrder.splice(orderIdx, 1);
-            }
-            saved.parent = void 0;
-            application.versions[name] = void 0;
-            return saved;
-        },
-        scope: function (name_, fn_) {
-            var ret, app = this,
-                hash = app.versions,
-                name = fn_ ? name_ : app.defaultVersion,
-                fn = fn_ ? fn_ : name_;
-            if (typeof name_ === 'string') {
-                app.currentVersion = name_;
-            }
-            app.registerVersion(name);
-            ret = typeof fn === 'function' && fn(hash[name]);
-            return hash[name];
-        },
-        map: function (arra, fn, ctx) {
-            var i = 0,
-                len = arra[lengthString],
-                arr = [];
-            while (len > i) {
-                arr[i] = fn.call(ctx, i, arra[i], arra);
-                i++;
-            }
-            return arr;
-        },
-        registerScopedMethod: function (name, expects_) {
-            var application = this,
-                expects = expects_ || 3,
-                method = application[name] = application[name] || function () {
-                    var version, i = 1,
-                        args = arguments,
-                        args_ = args,
-                        argLen = args[lengthString];
-                    // expects is equivalent to what it would be if the version was passed in
-                    if (argLen < expects) {
-                        version = application.defaultVersion;
-                    } else {
-                        args_ = [];
-                        version = args[1];
-                        for (; i < args[lengthString]; i++) {
-                            args_.push(args[i]);
+                return newApp;
+            },
+            upsetDefaultVersion: function (version) {
+                var application = this;
+                if (application.defaultVersion) {
+                    // keyword version only works the first time then it's set for the lifespan
+                    if (+application.defaultVersion === +application.defaultVersion) {
+                        // keyword version overwrites default (dev / hotfix)
+                        if (+version !== +version) {
+                            application.defaultVersion = version;
                         }
                     }
-                    application.applyTo(version, name, args_);
-                };
-            return application;
-        },
-        get: function (version) {
-            return this.versions[version];
-        },
-        applyTo: function (which, method, args) {
-            var application = this,
-                app = application.get(which);
-            if (app) {
-                return app[method].apply(app, args);
-            }
-        },
-        getCurrentScript: function (d) {
-            var allScripts = (d || doc).scripts,
-                currentScript = d.currentScript,
-                lastScript = allScripts[allScripts[lengthString] - 1];
-            return currentScript || lastScript;
-        },
-        loadScript: function (url, callback, docu_) {
-            var scriptTag, application = this,
-                // allow top doc to be overwritten
-                docu = docu_ || topmostDoc || doc;
-            scriptTag = application[makeScriptString](url, callback);
-            docu.head.appendChild(scriptTag);
-            return application;
-        },
-        makeScript: function (src, onload, docu_) {
-            var docu = docu_ || topmostDoc || doc,
-                script = docu.createElement('script');
-            script.type = 'text/javascript';
-            docu.head.appendChild(script);
-            if (src) {
-                if (onload) {
-                    script.onload = onload;
+                } else {
+                    application.defaultVersion = version;
                 }
-                // src applied last for ie
-                script.src = src;
-            }
-            return script;
-        },
-        touchTop: function (win) {
-            // assume you have top access
-            var href, topAccess = 1,
-                application = this;
-            if (application.topAccess === void 0) {
-                try {
-                    href = win.top.location.href;
-                    // safari bug where unfriendly frame returns undefined
-                    if (href) {
-                        topAccess = 0;
-                        application = win.top[where];
+            },
+            unRegisterVersion: function (name) {
+                var application = this,
+                    saved = application.versions[name],
+                    orderIdx = application.versionOrder.indexOf(name);
+                if (orderIdx !== -1) {
+                    application.versionOrder.splice(orderIdx, 1);
+                }
+                saved.parent = void 0;
+                application.versions[name] = void 0;
+                return saved;
+            },
+            scope: function (name_, fn_) {
+                var ret, app = this,
+                    hash = app.versions,
+                    name = fn_ ? name_ : app.defaultVersion,
+                    fn = fn_ ? fn_ : name_;
+                if (typeof name_ === 'string') {
+                    app.currentVersion = name_;
+                }
+                app.registerVersion(name);
+                ret = typeof fn === 'function' && fn(hash[name]);
+                return hash[name];
+            },
+            map: function (arra, fn, ctx) {
+                var i = 0,
+                    len = arra[LENGTH],
+                    arr = [];
+                while (len > i) {
+                    arr[i] = fn.call(ctx, i, arra[i], arra);
+                    i++;
+                }
+                return arr;
+            },
+            registerScopedMethod: function (name, expects_) {
+                var application = this,
+                    expects = expects_ || 3,
+                    method = application[name] = application[name] || function () {
+                        var version, i = 1,
+                            args = arguments,
+                            args_ = args,
+                            argLen = args[LENGTH];
+                        // expects is equivalent to what it would be if the version was passed in
+                        if (argLen < expects) {
+                            version = application.defaultVersion;
+                        } else {
+                            args_ = [];
+                            version = args[1];
+                            for (; i < args[LENGTH]; i++) {
+                                args_.push(args[i]);
+                            }
+                        }
+                        application.applyTo(version, name, args_);
+                    };
+                return application;
+            },
+            get: function (version) {
+                return this.versions[version];
+            },
+            applyTo: function (which, method, args) {
+                var application = this,
+                    app = application.get(which);
+                if (app) {
+                    return app[method].apply(app, args);
+                }
+            },
+            getCurrentScript: function (d) {
+                var allScripts = (d || doc).scripts,
+                    currentScript = d.currentScript,
+                    lastScript = allScripts[allScripts[LENGTH] - 1];
+                return currentScript || lastScript;
+            },
+            loadScript: function (url, callback, docu_) {
+                var scriptTag, application = this,
+                    // allow top doc to be overwritten
+                    docu = docu_ || topmostDoc || doc;
+                scriptTag = application[MAKE_SCRIPT](url, callback);
+                docu.head.appendChild(scriptTag);
+                return application;
+            },
+            makeScript: function (src, onload, docu_) {
+                var docu = docu_ || topmostDoc || doc,
+                    script = docu.createElement('script');
+                script.type = 'text/javascript';
+                docu.head.appendChild(script);
+                if (src) {
+                    if (onload) {
+                        script.onload = onload;
                     }
-                } catch (e) {
-                    topAccess = 1;
+                    // src applied last for ie
+                    script.src = src;
                 }
-                if (win === win.top) {
-                    topAccess = 0;
+                return script;
+            },
+            touchTop: function (win) {
+                // assume you have top access
+                var href, topAccess = 1,
+                    application = this;
+                if (application.topAccess === void 0) {
+                    try {
+                        href = win.top.location.href;
+                        // safari bug where unfriendly frame returns undefined
+                        if (href) {
+                            topAccess = 0;
+                            application = win.top[where];
+                        }
+                    } catch (e) {
+                        topAccess = 1;
+                    }
+                    if (win === win.top) {
+                        topAccess = 0;
+                    }
+                    if (!topAccess) {
+                        topmostDoc = win.top.document;
+                        win.top[where] = application;
+                    }
+                    application.topAccess = !topAccess;
                 }
-                if (!topAccess) {
-                    topmostDoc = win.top.document;
-                    win.top[where] = application;
-                }
-                application.topAccess = !topAccess;
-            }
-            win[where] = application;
-            return application;
-        },
-    };
+                win[where] = application;
+                return application;
+            },
+        };
 }(window, 'application'));
 application.scope('dev', function (app) {
     var blank, _, object = Object,
@@ -193,24 +193,20 @@ application.scope('dev', function (app) {
         array = Array,
         string = String,
         TO_STRING = 'toString',
-        PROTOTYPE_STRING = 'prototype',
-        constructorString = 'constructor',
+        PROTOTYPE = 'prototype',
+        CONSTRUCTOR = 'constructor',
         LENGTH = 'length',
         CONSTRUCTOR_ID = '__constructorId',
         CONSTRUCTOR_KEY = '__constructor__',
-        stringProto = string[PROTOTYPE_STRING],
-        objectProto = object[PROTOTYPE_STRING],
-        arrayProto = array[PROTOTYPE_STRING],
-        // shiftArray = arrayProto.shift,
-        funcProto = fn[PROTOTYPE_STRING],
+        stringProto = string[PROTOTYPE],
+        objectProto = object[PROTOTYPE],
+        arrayProto = array[PROTOTYPE],
+        funcProto = fn[PROTOTYPE],
         nativeKeys = object.keys,
-        NULL = null,
         BOOLEAN_TRUE = !0,
         BOOLEAN_FALSE = !1,
-        STRING_TRUE = BOOLEAN_TRUE + '',
-        STRING_FALSE = BOOLEAN_FALSE + '',
         hasEnumBug = !{
-            toString: NULL
+            toString: null
         }.propertyIsEnumerable(TO_STRING),
         /**
          * @func
@@ -249,6 +245,15 @@ application.scope('dev', function (app) {
         /**
          * @func
          */
+        isNegative1 = function (num) {
+            return (num === -1);
+        },
+        /**
+         * @func
+         */
+        listHas = function (list, item) {
+            return (!isNegative1(indexOf(list, item)));
+        },
         /**
          * @func
          */
@@ -346,8 +351,8 @@ application.scope('dev', function (app) {
         isInstance = function (instance, constructor_) {
             var result = BOOLEAN_FALSE,
                 constructor = constructor_;
-            while (has(constructor, 'constructor')) {
-                constructor = constructor.constructor;
+            while (has(constructor, CONSTRUCTOR)) {
+                constructor = constructor[CONSTRUCTOR];
             }
             if (constructor && constructor[CONSTRUCTOR_ID] && instance && instance[CONSTRUCTOR_ID]) {
                 result = constructor[CONSTRUCTOR_ID] === instance[CONSTRUCTOR_ID];
@@ -412,11 +417,20 @@ application.scope('dev', function (app) {
          * @func
          */
         isString = isWrap('string'),
+        /**
+         * @func
+         */
+        // isBlank = isWrap('undefined', function (thing) {
+        //     return thing === null;
+        // }),
         isNull = function (thing) {
-            return thing === NULL;
+            return thing === null;
+        },
+        isUndefined = function (thing) {
+            return thing === void 0;
         },
         isBlank = function (thing) {
-            return thing === void 0 || isNull(thing);
+            return isUndefined(thing) || isNull(thing);
         },
         /**
          * @func
@@ -469,8 +483,8 @@ application.scope('dev', function (app) {
          */
         collectNonEnumProps = function (obj, keys) {
             var nonEnumIdx = nonEnumerableProps[LENGTH];
-            var constructor = obj.constructor;
-            var proto = (isFunction(constructor) && constructor.prototype) || ObjProto;
+            var constructor = obj[CONSTRUCTOR];
+            var proto = (isFunction(constructor) && constructor[PROTOTYPE]) || ObjProto;
             // Constructor is a special case.
             var prop = 'constructor';
             if (has(obj, prop) && !contains(keys, prop)) keys.push(prop);
@@ -519,6 +533,19 @@ application.scope('dev', function (app) {
         nowish = function () {
             return +(new Date());
         },
+        allKeys = function (obj) {
+            var key, keys = [];
+            if (isObject(obj)) {
+                for (key in obj) {
+                    keys.push(key);
+                }
+                // Ahem, IE < 9.
+                if (hasEnumBug) {
+                    collectNonEnumProps(obj, keys);
+                }
+            }
+            return keys;
+        },
         /**
          * @func
          */
@@ -542,10 +569,10 @@ application.scope('dev', function (app) {
         },
         merge = function (obj1, obj2, deep) {
             var key, val, attach, i = 0,
-                keysResult = keys(obj2),
-                l = keysResult[LENGTH];
+                keys = allKeys(obj2),
+                l = keys[LENGTH];
             for (; i < l; i++) {
-                key = keysResult[i];
+                key = keys[i];
                 // ignore undefined
                 if (obj2[key] !== blank) {
                     attach = BOOLEAN_FALSE;
@@ -570,11 +597,6 @@ application.scope('dev', function (app) {
         /**
          * @func
          */
-        property = function (key) {
-            return function (obj) {
-                return obj === blank ? blank : obj[key];
-            };
-        },
         // Helper for collection methods to determine whether a collection
         // should be iterated as an array or as an object
         // Related: http://people.mozilla.org/~jorendorff/es6-draft.html#sec-tolength
@@ -584,12 +606,9 @@ application.scope('dev', function (app) {
          * @func
          */
         isArrayLike = function (collection) {
-            var length = collection && collection[LENGTH];
+            var length = !!collection && collection[LENGTH];
             return isArray(collection) || (isNumber(length) && !isString(collection) && length >= 0 && length <= MAX_ARRAY_INDEX && !isFunction(collection));
         },
-        /**
-         * @func
-         */
         eachProxy = function (fn) {
             return function (obj_, iteratee_, context_, direction_) {
                 var ret, obj = obj_,
@@ -602,15 +621,14 @@ application.scope('dev', function (app) {
                     if (!isArrayLike(obj)) {
                         list = keys(obj);
                         iteratee = bind(iterator, context);
-                        context = NULL;
+                        context = null;
                         iterator = function (key, idx, list) {
                             // gives you the key, use that to get the value
                             return iteratee(obj[key], key, obj);
                         };
                     }
-                    ret = fn(list, iterator, context, direction);
+                    return fn(list, iterator, context, direction);
                 }
-                return ret;
             };
         },
         /**
@@ -632,6 +650,7 @@ application.scope('dev', function (app) {
         /**
          * @func
          */
+        // Returns the first index on an array-like that passes a predicate test
         findIndex = createPredicateIndexFinder(1),
         /**
          * @func
@@ -641,11 +660,13 @@ application.scope('dev', function (app) {
          * @func
          */
         validKey = function (key) {
-            return key !== -1 && key !== blank && key !== NULL && key !== BOOLEAN_FALSE && key !== BOOLEAN_TRUE;
+            // -1 for arrays
+            // any other data type ensures string
+            return key !== -1 && key === key && key !== blank && key !== null && key !== BOOLEAN_FALSE && key !== BOOLEAN_TRUE;
         },
         finder = function (findHelper) {
-            return function (obj, predicate, context) {
-                var key = findHelper(obj, predicate, context);
+            return function (obj, predicate, context, startpoint) {
+                var key = findHelper(obj, predicate, context, startpoint);
                 if (validKey(key)) {
                     return obj[key];
                 }
@@ -655,9 +676,7 @@ application.scope('dev', function (app) {
         findLast = finder(findLastIndex),
         bind = function (fn_, ctx) {
             var fn = fn_;
-            if (ctx && isObject(ctx)) {
-                fn = fn_.bind(ctx);
-            }
+            fn = fn_.bind(ctx);
             return fn;
         },
         duff = function (values, process, context, direction) {
@@ -699,6 +718,7 @@ application.scope('dev', function (app) {
                     } while (--iterations > 0);
                 }
             }
+            return values;
         },
         each = eachProxy(duff),
         /**
@@ -707,10 +727,10 @@ application.scope('dev', function (app) {
         parseBool = function (thing) {
             var ret, thingMod = thing + '';
             thingMod = thingMod.trim();
-            if (thingMod === STRING_FALSE + '') {
+            if (thingMod === BOOLEAN_FALSE + '') {
                 ret = BOOLEAN_FALSE;
             }
-            if (thingMod === STRING_TRUE + '') {
+            if (thingMod === BOOLEAN_TRUE + '') {
                 ret = BOOLEAN_TRUE;
             }
             if (ret === blank) {
@@ -727,6 +747,40 @@ application.scope('dev', function (app) {
         pI = function (num) {
             return parseInt(num, 10) || 0;
         },
+        // math = Math,
+        // mathMix = function (method) {
+        //     return function (arr) {
+        //         return math[method].apply(math, arr);
+        //     };
+        // },
+        // random = function () {
+        //     return math.random();
+        // },
+        // mathMixCaller = function (method) {
+        //     return function (num) {
+        //         math[method](num);
+        //     };
+        // },
+        // mathMixComparer = function (method) {
+        //     return function (num, num2) {
+        //         math[method](num, num2);
+        //     };
+        // },
+        // min = mathMix('min'),
+        // max = mathMix('max'),
+        // abs = mathMixCaller('abs'),
+        // acos = mathMixCaller('acos'),
+        // asin = mathMixCaller('asin'),
+        // atan = mathMixCaller('atan'),
+        // ceil = mathMixCaller('ceil'),
+        // cos = mathMixCaller('cos'),
+        // exp = mathMixCaller('exp'),
+        // floor = mathMixCaller('floor'),
+        // log = mathMixCaller('log'),
+        // round = mathMixCaller('round'),
+        // sin = mathMixCaller('sin'),
+        // sqrt = mathMixCaller('sqrt'),
+        // tan = mathMixCaller('tan'),
         /**
          * @func
          */
@@ -758,9 +812,9 @@ application.scope('dev', function (app) {
             if (!nameIsStr) {
                 protoProps = name;
             }
-            hasConstructor = has(protoProps, constructorString);
+            hasConstructor = has(protoProps, CONSTRUCTOR);
             if (protoProps && hasConstructor) {
-                child = protoProps[constructorString];
+                child = protoProps[CONSTRUCTOR];
             }
             if (nameIsStr) {
                 // nameString = name;
@@ -768,7 +822,7 @@ application.scope('dev', function (app) {
                 if (child) {
                     passedParent = child;
                 }
-                child = new Function.constructor('var parent=arguments[0];return function ' + name + '(){return parent.apply(this,arguments);}')(passedParent);
+                child = new Function[CONSTRUCTOR]('var parent=arguments[0];return function ' + name + '(){return parent.apply(this,arguments);}')(passedParent);
                 factories[name] = child;
             } else {
                 child = function () {
@@ -780,22 +834,22 @@ application.scope('dev', function (app) {
             child[CONSTRUCTOR_ID] = constructorId;
             child.extend = (this[CONSTRUCTOR_KEY] && this[CONSTRUCTOR_KEY].extend) || constructorExtend;
             var Surrogate = function () {
-                this[constructorString] = child;
+                this[CONSTRUCTOR] = child;
             };
-            Surrogate[PROTOTYPE_STRING] = parent[PROTOTYPE_STRING];
-            child[PROTOTYPE_STRING] = new Surrogate;
+            Surrogate[PROTOTYPE] = parent[PROTOTYPE];
+            child[PROTOTYPE] = new Surrogate;
             if (protoProps) {
-                extend(child[PROTOTYPE_STRING], protoProps);
+                extend(child[PROTOTYPE], protoProps);
             }
             constructor = child;
             child = constructorWrapper(constructor);
             if (!isFunction(protoProps.Model) || !has(protoProps, 'Model')) {
-                constructor[PROTOTYPE_STRING].Model = child;
+                constructor[PROTOTYPE].Model = child;
             }
-            // child.constructor = constructor;
-            child.__super__ = parent[PROTOTYPE_STRING];
+            // child[CONSTRUCTOR] = constructor;
+            child.__super__ = parent[PROTOTYPE];
             constructor[CONSTRUCTOR_ID] = constructorId;
-            constructor[PROTOTYPE_STRING][CONSTRUCTOR_KEY] = child;
+            constructor[PROTOTYPE][CONSTRUCTOR_KEY] = child;
             if (nameIsStr) {
                 makeExtendFrom(name, constructor);
                 // this is good when _ / utils object is your global app object
@@ -812,7 +866,7 @@ application.scope('dev', function (app) {
                 }
                 return new Ch(attributes, options);
             };
-            __.constructor = Ch;
+            __[CONSTRUCTOR] = Ch;
             return __;
         },
         /**
@@ -846,7 +900,7 @@ application.scope('dev', function (app) {
                 return a !== 0 || 1 / a === 1 / b;
             }
             // A strict comparison is necessary because `null == undefined`.
-            if (a === NULL || a === blank || b === blank || b === NULL) {
+            if (a === null || a === blank || b === blank || b === null) {
                 return a === b;
             }
             // Unwrap any wrapped objects.
@@ -881,8 +935,8 @@ application.scope('dev', function (app) {
                 if (typeof a != 'object' || typeof b != 'object') return BOOLEAN_FALSE;
                 // Objects with different constructors are not equivalent, but `Object`s or `Array`s
                 // from different frames are.
-                var aCtor = a.constructor,
-                    bCtor = b.constructor;
+                var aCtor = a[CONSTRUCTOR],
+                    bCtor = b[CONSTRUCTOR];
                 if (aCtor !== bCtor && !(isFunction(aCtor) && nativeIsInstance(aCtor, aCtor) && isFunction(bCtor) && nativeIsInstance(bCtor, bCtor)) && ('constructor' in a && 'constructor' in b)) {
                     return BOOLEAN_FALSE;
                 }
@@ -977,8 +1031,14 @@ application.scope('dev', function (app) {
         /**
          * @func
          */
-        unshift = function (thing, items) {
-            return [].unshift.apply(thing, toArray(items));
+        unshift = function (thing) {
+            var ret, items = [];
+            duff(arguments, function (arg, idx) {
+                if (idx) {
+                    items.push(arg);
+                }
+            });
+            return [].unshift.apply(thing, items);
         },
         /**
          * @func
@@ -986,6 +1046,17 @@ application.scope('dev', function (app) {
         exports = function (obj) {
             return extend(_, obj);
         },
+        mix = function () {},
+        // cachable = function (fn) {
+        //     var cache = {};
+        //     return function () {
+        //         var key = JSON.stringify(arguments);
+        //         if (!cache[key]) {
+        //             cache[key] = JSON.stringify(fn.apply(this, arguments));
+        //         }
+        //         return JSON.parse(cache[key]);
+        //     };
+        // },
         /**
          * @func
          */
@@ -1005,13 +1076,27 @@ application.scope('dev', function (app) {
         /**
          * @func
          */
+        // returnBuild = function (obj, array, def) {
+        //     var attach, last, depth = obj;
+        //     duff(gapSplit(array), function (key, idx) {
+        //         last = key;
+        //         if (!isObject(depth[key])) {
+        //             if (def[idx] === blank) {
+        //                 depth[key] = {};
+        //             } else {
+        //                 depth[key] = def[idx];
+        //             }
+        //             attach = 1;
+        //         }
+        //         depth = depth[key];
+        //     });
+        //     return depth;
+        // },
         log = function (type, args) {
             if (!_.isFunction(console[type])) {
                 type = 'log';
             }
-            if (console[type]) {
-                console[type].apply(console, args);
-            }
+            console[type].apply(console, args);
         },
         /**
          * @func
@@ -1037,7 +1122,7 @@ application.scope('dev', function (app) {
                     args = arguments,
                     callNow = immediate && !timeout,
                     later = function () {
-                        timeout = NULL;
+                        timeout = null;
                         if (!immediate) {
                             func.apply(context, args);
                         }
@@ -1063,7 +1148,7 @@ application.scope('dev', function (app) {
         },
         toArray = function (obj) {
             var array = [];
-            each(obj, function (value) {
+            each(obj, function (value, key) {
                 array.push(value);
             });
             return array;
@@ -1097,6 +1182,13 @@ application.scope('dev', function (app) {
         /**
          * @func
          */
+        pngString = function () {
+            return "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGP6zwAAAgcBApocMXEAAAAASUVORK5CYII=";
+        },
+        /**
+         * @func
+         */
+        // this should really be it's own factory
         stringifyQuery = function (obj) {
             var val, n, base = obj.url,
                 query = [];
@@ -1122,12 +1214,12 @@ application.scope('dev', function (app) {
             return base;
         },
         protoProp = function (instance, key, farDown) {
-            var val, proto, constructor = instance.constructor;
+            var val, proto, constructor = instance[CONSTRUCTOR];
             farDown = farDown || 1;
             do {
-                proto = constructor.prototype;
+                proto = constructor[PROTOTYPE];
                 val = proto[key];
-                constructor = proto.constructor;
+                constructor = proto[CONSTRUCTOR];
             } while (--farDown > 0 && constructor && isFinite(farDown));
             return val;
         },
@@ -1195,6 +1287,11 @@ application.scope('dev', function (app) {
                 fn(key, value);
             }
         },
+        reverseParams = function (iteratorFn) {
+            return function (value, key, third) {
+                iteratorFn(key, value, third);
+            };
+        },
         /**
          * @func
          */
@@ -1220,16 +1317,37 @@ application.scope('dev', function (app) {
             mult = Math.pow(base || 10, power);
             return (parseInt((mult * val), 10) / mult);
         },
-        reverseParams = function (iteratorFn) {
-            return function (value, key, third) {
-                iteratorFn(key, value, third);
-            };
+        /**
+         * @func
+         */
+        cssTemplater = function (str, obj) {
+            str += '';
+            each(obj, function (key, val) {
+                str = str.split('\\\\' + key + '\\\\').join(val);
+            });
+            return str;
+        },
+        png = pngString,
+        /**
+         * @func
+         */
+        simpleObject = function (key, value) {
+            var obj = {};
+            obj[key] = value;
+            return obj;
+        },
+        /**
+         * @func
+         */
+        rip = function (list, ripped) {
+            var obj = {};
+            duff(gapSplit(list), function (val, key) {
+                obj[val] = ripped[val];
+            });
+            return obj;
         },
         result = function (obj, str, arg) {
             return isFunction(obj[str]) ? obj[str](arg) : obj[str];
-        },
-        resultOf = function (item, ctx, arg) {
-            return isFunction(item) ? item.call(ctx, arg) : item;
         },
         maths = Math,
         mathArray = function (method) {
@@ -1277,7 +1395,7 @@ application.scope('dev', function (app) {
         return this;
     }
     factories.Model = Model;
-    Model.prototype = {};
+    Model[PROTOTYPE] = {};
     makeExtendFrom('Model', factories.Model);
     Model.extend = constructorExtend;
     _ = app._ = {
@@ -1290,6 +1408,8 @@ application.scope('dev', function (app) {
         ensureFunction: ensureFunction,
         parseDecimal: parseDecimal,
         getReference: getReference,
+        cssTemplater: cssTemplater,
+        simpleObject: simpleObject,
         isArrayLike: isArrayLike,
         isInstance: isInstance,
         hasEnumBug: hasEnumBug,
@@ -1298,12 +1418,13 @@ application.scope('dev', function (app) {
         factories: factories,
         listSlice: listSlice,
         fullClone: fullClone,
+        pngString: pngString,
         parseBool: parseBool,
         stringify: stringify,
         splitGen: splitGen,
         gapSplit: gapSplit,
         uniqueId: uniqueId,
-        property: property,
+        // property: property,
         toString: toString,
         throttle: throttle,
         debounce: debounce,
@@ -1317,8 +1438,7 @@ application.scope('dev', function (app) {
         gapJoin: gapJoin,
         isArray: isArray,
         isEmpty: isEmpty,
-        isBlank: isBlank,
-        isUndefined: isBlank,
+        modules: {},
         splice: splice,
         isBoolean: isBoolean,
         invert: invert,
@@ -1328,16 +1448,19 @@ application.scope('dev', function (app) {
         now: nowish,
         map: map,
         result: result,
+        isBlank: isBlank,
+        isUndefined: isUndefined,
         isNull: isNull,
         merge: merge,
         fetch: fetch,
         split: split,
         clone: clone,
-        isNaN: isNaN,
         isObject: isObject,
+        isNaN: isNaN,
         isNumber: isNumber,
         isFinite: isFinite,
         isString: isString,
+        isFunction: isFunction,
         parse: parse,
         shift: shift,
         eachProxy: eachProxy,
@@ -1348,8 +1471,8 @@ application.scope('dev', function (app) {
         sort: sort,
         join: join,
         wrap: wrap,
-        isFunction: isFunction,
         uuid: uuid,
+        allKeys: allKeys,
         keys: keys,
         once: once,
         each: each,
@@ -1873,7 +1996,7 @@ application.scope(function (app) {
         LENGTH = 'length',
         ITEMS = '_items',
         BY_ID = '_byId',
-        previousString = '_previous',
+        PREVIOUS = '_previous',
         each = _.each,
         duff = _.duff,
         push = _.push,
@@ -1881,43 +2004,42 @@ application.scope(function (app) {
         keys = _.keys,
         find = _.find,
         map = _.map,
+        has = _.has,
+        isBlank = _.isBlank,
         stringify = _.stringify,
         findLast = _.findLast,
         allKeys = _.allKeys,
         splice = _.splice,
         toArray = _.toArray,
         gapSplit = _.gapSplit,
-        getLength = _.getLen,
         sort = _.sort,
-        bindTo = _.bindTo,
+        bind = _.bind,
+        extend = _.extend,
+        result = _.result,
         isArrayLike = _.isArrayLike,
-        registry = function () {
-            return this[BY_ID];
-        },
-        eachCall = function (array, method) {
+        negate = _.negate,
+        isArray = _.isArray,
+        indexOf = _.indexOf,
+        clone = _.clone,
+        BOOLEAN_TRUE = !0,
+        BOOLEAN_FALSE = !1,
+        eachCall = function (array, method, arg) {
             return duff(array, function (item) {
-                _.result(item, method);
+                result(item, method, arg);
             });
         },
-        eachRevCall = function (array, method) {
+        eachRevCall = function (array, method, arg) {
             return duff(array, function (item) {
-                _.result(item, method);
+                result(item, method, arg);
             }, null, -1);
-        },
-        unshiftContext = function (fn, ctx) {
-            return function () {
-                var args = toArray(arguments);
-                args.unshift(this);
-                return fn.call(ctx || this, args, arguments);
-            };
         },
         doToEverything = function (doLater, direction) {
             return function () {
-                var args = _.toArray(arguments);
-                var one = args.shift();
+                var args = toArray(arguments),
+                    one = args.shift();
                 duff(args, function (items) {
                     duff(items, function (item) {
-                        doLater.call(_, one, item);
+                        doLater(one, item);
                     }, null, direction || 1);
                 });
                 return one;
@@ -1954,11 +2076,11 @@ application.scope(function (app) {
         },
         range = function (start, stop, step, inclusive) {
             var length, range, idx;
-            if (stop === null || stop === void 0) {
+            if (isBlank(stop)) {
                 stop = start || 0;
                 start = 0;
             }
-            if (!isFinite(start) || !_.isNumber(start)) {
+            if (!isFinite(start) || !isNumber(start)) {
                 start = 0;
             }
             step = +step || 1;
@@ -1972,49 +2094,34 @@ application.scope(function (app) {
             }
             return range;
         },
-        count = function (list, start, end, runner) {
-            var obj, idx, ctx = this;
-            if (start < end && _.isNumber(start) && _.isNumber(end) && isFinite(start) && isFinite(end)) {
+        count = function (list, start, end, runner_) {
+            var runner, obj, idx, ctx = this;
+            if (start < end && isNumber(start) && isNumber(end) && isFinite(start) && isFinite(end)) {
                 end = Math.abs(end);
                 idx = start;
+                runner = bind(runner_, ctx);
                 while (idx < end) {
                     obj = null;
-                    if (_.has(list, idx)) {
+                    if (has(list, idx)) {
                         obj = list[idx];
                     }
-                    runner.call(ctx, obj, idx, list);
+                    runner(obj, idx, list);
                     idx++;
                 }
             }
             return list;
         },
         // array, startIndex, endIndex
-        subset = function (list, startIdx, endIdx) {
-            var ret = [];
-            find(list, function (idx, item) {
-                if (startIdx === idx) {
-                    open = true;
-                    startIdx = idx;
-                }
-                if (idx >= startIdx + limit) {
-                    return true;
-                }
-                if (open) {
-                    ret.push(model);
-                }
-            });
-            // return foldl(list, function(memo,item,idx){
-            //     return memo;
-            // },[]);
-        },
-        listFromMixed = function (obj) {
-            if (!hasArrayNature(obj)) {
-                return [obj];
-            } else if (Array.isArray(obj)) {
-                return obj.slice();
-            } else {
-                return toArray(obj);
-            }
+        between = function (fn) {
+            return function (list, startIdx_, endIdx_) {
+                var ret = [],
+                    startIdx = startIdx_ || 0,
+                    endIdx = endIdx_ || list[LENGTH],
+                    findResult = find(list, function (item, idx, list) {
+                        fn(ret, item, idx, list);
+                    }, null, endIdx);
+                return ret;
+            };
         },
         /**
          * @func
@@ -2024,31 +2131,32 @@ application.scope(function (app) {
                 previousAbs = Infinity;
             // trying to avoid running through 20 matchs
             // when i'm already at the exact one
-            if (isArrayLike(list)) {
-                valuesLen = getLength(list);
-                if (valuesLen === 1) {
-                    match = list[0];
-                }
-                if (_.indexOf(list, target) !== -1) {
-                    match = target;
-                }
-                if (!match) {
-                    // try doing this later with no sorting
-                    sort(list);
-                    for (i = valuesLen - 1;
-                        (i >= 0 && !match); i--) {
-                        path = list[i];
-                        diff = Math.abs(target - path);
-                        if (diff < previousAbs) {
-                            possible = path;
-                            previousAbs = diff;
-                        }
+            if (!isArrayLike(list)) {
+                return;
+            }
+            valuesLen = list[LENGTH];
+            if (valuesLen === 1) {
+                match = list[0];
+            }
+            if (indexOf(list, target) !== -1) {
+                match = target;
+            }
+            if (!match) {
+                // try doing this later with no sorting
+                sort(list);
+                for (i = valuesLen - 1;
+                    (i >= 0 && !match); i--) {
+                    path = list[i];
+                    diff = Math.abs(target - path);
+                    if (diff < previousAbs) {
+                        possible = path;
+                        previousAbs = diff;
                     }
-                    match = possible;
                 }
-                if (!match) {
-                    match = target;
-                }
+                match = possible;
+            }
+            if (!match) {
+                match = target;
             }
             return match;
         },
@@ -2056,13 +2164,13 @@ application.scope(function (app) {
             return count(list, 0, num, runner);
         },
         countFrom = function (list, num, runner) {
-            return count(list, num, list.length, runner);
+            return count(list, num, list[LENGTH], runner);
         },
         /**
          * @func
          */
         posit = function (list, item, lookAfter) {
-            return _.indexOf(list, item, lookAfter) + 1;
+            return indexOf(list, item, lookAfter) + 1;
         },
         /**
          * @func
@@ -2080,9 +2188,8 @@ application.scope(function (app) {
          * @func
          */
         concatUnique = function () {
-            var array = [],
-                all = concat.apply(null, arguments);
-            duff(all, function (item) {
+            var array = [];
+            duff(concat.apply(null, arguments), function (item) {
                 if (!posit(array, item)) {
                     array.push(item);
                 }
@@ -2090,8 +2197,8 @@ application.scope(function (app) {
             return array;
         },
         cycle = function (arr, num) {
-            var piece, len = getLength(arr);
-            if (_.isNumber(len)) {
+            var piece, len = arr[LENGTH];
+            if (isNumber(len)) {
                 num = num % len;
                 piece = arr.splice(num);
                 arr.unshift.apply(arr, piece);
@@ -2109,11 +2216,11 @@ application.scope(function (app) {
         // Returns whether an object has a given set of `key:value` pairs.
         isMatch = function (object, attrs) {
             var key, i = 0,
-                keys = _.keys(attrs),
+                keysResult = keys(attrs),
                 obj = Object(object);
-            return !find(keys, function (val) {
+            return !find(keysResult, function (val) {
                 if (attrs[val] !== obj[val] || !(val in obj)) {
-                    return true;
+                    return BOOLEAN_TRUE;
                 }
             });
         },
@@ -2131,10 +2238,8 @@ application.scope(function (app) {
         pluck = function (arr, key) {
             var items = [];
             duff(arr, function (item) {
-                if (isObject(item)) {
-                    if (item[key] !== void 0) {
-                        items.push(item[key]);
-                    }
+                if (isObject(item) && item[key] !== void 0) {
+                    items.push(item[key]);
                 }
             });
             return items;
@@ -2155,7 +2260,7 @@ application.scope(function (app) {
             return findLast(obj, matches(attrs));
         },
         whereNot = function (obj, attrs) {
-            return filter(obj, _.negate(matches(attrs)));
+            return filter(obj, negate(matches(attrs)));
         },
         flatten = function () {
             return foldl(arguments, function (memo, item) {
@@ -2181,9 +2286,9 @@ application.scope(function (app) {
         },
         merge = splat(function (item, idx, list) {
             var len, collection = this,
-                last = getLength(collection);
+                last = collection[LENGTH];
             if (isArrayLike(item)) {
-                len = getLength(item);
+                len = item[LENGTH];
                 duff(item, function (key, val) {
                     if (val !== void 0) {
                         // removes any undefined items
@@ -2202,14 +2307,14 @@ application.scope(function (app) {
                 evaluatedIsNumber = isNumber(numb),
                 isArray = isArrayLike(numb);
             if (numb < 0) {
-                evaluatedIsNumber = !1;
+                evaluatedIsNumber = BOOLEAN_FALSE;
             }
-            if (getLength(list)) {
+            if (list[LENGTH]) {
                 if (evaluatedIsNumber) {
                     items = [list[numb]];
                 }
                 if (isArray) {
-                    items = _.clone(numb);
+                    items = clone(numb);
                 }
                 if (!isArray && !evaluatedIsNumber && list[0]) {
                     items = [list[0]];
@@ -2220,7 +2325,7 @@ application.scope(function (app) {
         tackRev = function (fn, index, ctx) {
             return function () {
                 var args = toArray(arguments);
-                while (args.length < index) {
+                while (args[LENGTH] < index) {
                     // fill it out with null
                     args.push(null);
                 }
@@ -2254,10 +2359,10 @@ application.scope(function (app) {
             return function (obj, iteratee, memo, context) {
                 // iteratee = optimizeCb(iteratee, context, 4);
                 var actualKeys = !isArrayLike(obj) && keys(obj),
-                    length = getLength(actualKeys || obj),
+                    length = (actualKeys || obj)[LENGTH],
                     index = dir > 0 ? 0 : length - 1;
                 // Determine the initial value if none is provided.
-                if (getLength(arguments) < 3) {
+                if (arguments[LENGTH] < 3) {
                     memo = obj[actualKeys ? actualKeys[index] : index];
                     index += dir;
                 }
@@ -2280,8 +2385,10 @@ application.scope(function (app) {
          */
         filter = function (obj, iteratee, context) {
             var isArrayResult = isArrayLike(obj),
-                bound = bindTo(iteratee, context);
+                bound = bind(iteratee, context),
+                runCount = 0;
             return foldl(obj, function (memo, item, key, all) {
+                runCount++;
                 if (bound(item, key, all)) {
                     if (isArrayResult) {
                         memo.push(item);
@@ -2292,21 +2399,84 @@ application.scope(function (app) {
                 return memo;
             }, isArrayResult ? [] : {});
         },
+        unwrapper = function (fn) {
+            return function (args) {
+                args[0] = args[0][ITEMS];
+                return fn.call(this, args);
+            };
+        },
+        unwrapInstance = function (instance_) {
+            return isInstance(instance, _.Collection) ? instance_ : instance.unwrap();
+        },
+        unwrapAll = function (fn) {
+            return function (args) {
+                duff(args, function (arg, idx, args) {
+                    args[idx] = unwrapInstance(arg);
+                });
+                return fn.call(this, args);
+            };
+        },
         unwrap = function () {
             return this[ITEMS];
         },
-        applyToSelf = function (fn) {
-            return function () {
-                return fn.apply(this, this[ITEMS]);
+        wrappedCollectionMethods = extend(wrap({
+            each: duff,
+            duff: duff,
+            forEach: duff,
+            eachRev: duffRev,
+            duffRev: duffRev,
+            forEachRev: duffRev
+        }, function (fn, val) {
+            return function (iterator) {
+                fn(this[ITEMS], iterator, this);
+                return this;
             };
-        },
-        lengthFn = function () {
-            return this[ITEMS][LENGTH];
-        },
+        }), wrap(gapSplit('addAll removeAll'), function (name) {
+            return function () {
+                var args = toArray(arguments);
+                args.unshift(this);
+                // unwrapAll
+                duff(args, function (arg, idx, args) {
+                    if (isInstance(arg, Collection)) {
+                        arg = arg.unwrap();
+                    }
+                    args[idx] = arg;
+                });
+                // custom
+                _[name].apply(_, args);
+                return this;
+            };
+        }), wrap(gapSplit('sort unshift push cycle uncycle reverse count countTo countFrom eachCall eachRevCall'), function (name) {
+            return function () {
+                var args = toArray(arguments);
+                args.unshift(this[ITEMS]);
+                // unwrapper
+                // custom
+                _[name].apply(_, args);
+                return this;
+            };
+        }), wrap(gapSplit('has add addAt remove removeAt pop shift indexOf find findLast findWhere findLastWhere posit foldr foldl reduce'), function (name) {
+            return function () {
+                var args = toArray(arguments);
+                args.unshift(this[ITEMS]);
+                // custom
+                return _[name].apply(_, args);
+            };
+        }), wrap(gapSplit('merge eq map filter pluck where whereNot'), function (name) {
+            // always responds with an array
+            return function () {
+                var args = toArray(arguments);
+                args.unshift(this[ITEMS]);
+                // unwrapper
+                // custom
+                return new Collection(_[name].apply(_, args));
+            };
+        })),
         ret = _.exports({
             eachCall: eachCall,
             eachRevCall: eachRevCall,
             closest: closest,
+            // map: map,
             filter: filter,
             reduce: foldl,
             foldl: foldl,
@@ -2329,6 +2499,7 @@ application.scope(function (app) {
             where: where,
             findWhere: findWhere,
             findLastWhere: findLastWhere,
+            between: between,
             eq: eq,
             posit: posit,
             range: range,
@@ -2338,83 +2509,14 @@ application.scope(function (app) {
             whereNot: whereNot,
             eachRev: eachRev,
             duffRev: duffRev,
-            unshiftContext: unshiftContext,
             flatten: flatten
         }),
-        wrappedCollectionMethods = _.extend(wrap({
-            each: duff,
-            duff: duff,
-            forEach: duff,
-            eachRev: duffRev,
-            duffRev: duffRev,
-            forEachRev: duffRev
-        }, function (fn, val) {
-            return function (iterator) {
-                fn(this[ITEMS], iterator, this);
-                return this;
-            };
-        }), wrap(gapSplit('addAll removeAll'), function (name) {
-            return function () {
-                // unshiftContext
-                var args = toArray(arguments);
-                args.unshift(this);
-                // unwrapAll
-                duff(args, function (arg, idx, args) {
-                    if (isInstance(arg, Collection)) {
-                        arg = arg.unwrap();
-                    }
-                    args[idx] = arg;
-                });
-                // custom
-                _[name].apply(_, args);
-                return this;
-            };
-        }), wrap(gapSplit('sort unshift push cycle uncycle reverse count countTo countFrom eachCall eachRevCall flatten'), function (name) {
-            return function () {
-                // unshiftContext
-                var args = toArray(arguments);
-                args.unshift(this[ITEMS]);
-                // unwrapper
-                // custom
-                _[name].apply(_, args);
-                return this;
-            };
-        }), wrap(gapSplit('has add addAt remove removeAt pop shift indexOf find findLast findWhere findLastWhere posit foldr foldl reduce'), function (name) {
-            return function () {
-                // unshiftContext
-                var args = toArray(arguments);
-                args.unshift(this[ITEMS]);
-                // custom
-                return _[name].apply(_, args);
-            };
-        }), wrap(gapSplit('merge eq map filter pluck where whereNot'), function (name) {
-            // always responds with an array
-            return function () {
-                // unshiftContext
-                var args = toArray(arguments);
-                args.unshift(this[ITEMS]);
-                // unwrapper
-                // custom
-                return new Collection(_[name].apply(_, args));
-            };
-        })),
-        Collection = extendFrom.Model('Collection', _.extend({
+        Collection = extendFrom.Model('Collection', extend({
             unwrap: unwrap,
-            registry: registry,
-            length: lengthFn,
             range: recreateSelf(range),
-            // flatten: recreateSelf(applyToSelf(flatten)),
-            index: function (number) {
-                return this[ITEMS][number || 0];
-            },
-            first: recreateSelf(function () {
-                return [this[ITEMS][0]];
-            }),
-            last: recreateSelf(function () {
-                var len = this.length();
-                if (len) {
-                    return [this[ITEMS][len - 1]];
-                }
+            flatten: recreateSelf(function () {
+                // return
+                return flatten.apply(null, this[ITEMS]);
             }),
             concat: recreateSelf(function () {
                 var args = [],
@@ -2424,14 +2526,27 @@ application.scope(function (app) {
                     return _.Collection(arg)[ITEMS];
                 }));
             }),
+            length: function () {
+                return this[ITEMS][LENGTH];
+            },
+            first: function () {
+                return [this[ITEMS][0]];
+            },
+            last: function () {
+                return this[ITEMS][this[LENGTH]() - 1];
+            },
+            index: function (number) {
+                return this[ITEMS][number || 0];
+            },
             constructor: function (arr) {
                 var collection = this;
-                if (!_.isArray(arr) && isArrayLike(arr)) {
+                if (!isArray(arr) && isArrayLike(arr)) {
                     arr = toArray(arr);
                 }
-                if (arr !== blank && !isArrayLike(arr)) {
+                if (!isBlank(arr) && !isArrayLike(arr)) {
                     arr = [arr];
                 }
+                collection[BY_ID] = {};
                 collection[ITEMS] = arr || [];
                 return collection;
             },
@@ -2442,7 +2557,7 @@ application.scope(function (app) {
                 // subtle distinction here
                 return map(this[ITEMS], function (item) {
                     var ret;
-                    if (isObject(item) && _.isFunction(item.toJSON)) {
+                    if (isObject(item) && isFunction(item.toJSON)) {
                         ret = item.toJSON();
                     } else {
                         ret = item;
@@ -2473,7 +2588,6 @@ application.scope(function (app) {
              * @returns {Box} instance
              */
             register: function (id, thing) {
-                this[BY_ID] = this[BY_ID] || {};
                 this[BY_ID][id] = thing;
                 return this;
             },
@@ -2488,9 +2602,8 @@ application.scope(function (app) {
              */
             unRegister: function (id) {
                 var box = this,
-                    byid = this[BY_ID] = this[BY_ID] || {},
                     item = box[BY_ID][id];
-                if (item !== blank && id !== blank) {
+                if (item !== void 0) {
                     box[BY_ID][id] = blank;
                 }
                 return item;
@@ -2529,12 +2642,10 @@ application.scope(function (app) {
         once = _.once,
         extend = _.extend,
         remove = _.remove,
-        property = _.property,
         stringify = _.stringify,
         isArrayLike = _.isArrayLike,
         isArray = _.isArray,
         upCase = _.upCase,
-        objCondense = _.objCondense,
         LENGTH = 'length',
         PARENT = 'parent',
         internalEventsString = '_events',
@@ -2549,20 +2660,22 @@ application.scope(function (app) {
         iterateOverObject = function (box, ctx, key, value, iterator, firstarg, allowNonFn) {
             intendedObject(key, value, function (evnts, funs_) {
                 // only accepts a string or a function
-                var fn = isString(funs_) ? box[funs_] : funs_;
-                if (allowNonFn || isFunction(fn)) {
-                    return duff(gapSplit(evnts), function (eventName) {
-                        var namespace = eventName.split(':')[0];
-                        iterator(box, eventName, {
-                            disabled: BOOLEAN_FALSE,
-                            namespace: namespace,
-                            name: eventName,
-                            handler: fn,
-                            ctx: ctx,
-                            origin: box
-                        }, firstarg);
-                    });
+                var fn = isString(funs_) ? box[funs_] : funs_,
+                    splitevents = gapSplit(evnts);
+                if (!allowNonFn && !isFunction(fn)) {
+                    return splitevents;
                 }
+                return duff(splitevents, function (eventName) {
+                    var namespace = eventName.split(':')[0];
+                    iterator(box, eventName, {
+                        disabled: BOOLEAN_FALSE,
+                        namespace: namespace,
+                        name: eventName,
+                        handler: fn,
+                        ctx: ctx,
+                        origin: box
+                    }, firstarg);
+                });
             });
         },
         // user friendly version
@@ -2719,7 +2832,7 @@ application.scope(function (app) {
             data: function (arg) {
                 var ret = this[SERIALIZED_DATA];
                 if (arguments[LENGTH]) {
-                    ret = this[SERIALIZED_DATA] = _.parse(_.stringify((arg === blank || arg === NULL) ? {} : arg));
+                    ret = this[SERIALIZED_DATA] = _.parse(_.stringify(isBlank(arg) ? {} : arg));
                 }
                 this[SERIALIZED_DATA] = ret;
                 ret = this[SERIALIZED_DATA];
@@ -3024,6 +3137,7 @@ application.scope(function (app) {
         each = _.each,
         duff = _.duff,
         find = _.find,
+        isEqual = _.isEqual,
         isBlank = _.isBlank,
         isFunction = _.isFunction,
         duffRev = _.duffRev,
@@ -3036,15 +3150,14 @@ application.scope(function (app) {
         parse = _.parse,
         extend = _.extend,
         listDrop = _.remove,
-        property = _.property,
         stringify = _.stringify,
         isInstance = _.isInstance,
         isArrayLike = _.isArrayLike,
         upCase = _.upCase,
         camelCase = _.camelCase,
         isArray = _.isArray,
-        objCondense = _.objCondense,
         intendedObject = _.intendedObject,
+        uniqueId = _.uniqueId,
         LENGTH = 'length',
         PARENT = 'parent',
         INTERNAL_EVENTS = '_events',
@@ -3056,10 +3169,7 @@ application.scope(function (app) {
         BOOLEAN_TRUE = !0,
         CHILDREN = 'children',
         CHANGE_COUNTER = '_changeCounter',
-        toStringString = 'toString',
-        prototypeString = 'prototype',
         CHANGED_STRING = 'change',
-        constructorString = 'constructor',
         PREVIOUS_ATTRIBUTES = '_previousAttributes',
         /**
          * @class Box
@@ -3067,9 +3177,11 @@ application.scope(function (app) {
          * @augments Model
          */
         Container = _.extendFrom.Events('Container', {
+            cidPrefix: 'c',
+            idAttribute: 'id',
             constructor: function (attributes, secondary) {
                 var model = this;
-                model.cid = model.cid = _.uniqueId(model.cidPrefix);
+                model.cid = model.cid = uniqueId(model.cidPrefix);
                 model.reset(attributes);
                 _.extend(model, secondary);
                 Events.apply(this, arguments);
@@ -3078,19 +3190,20 @@ application.scope(function (app) {
             _reset: function (attributes_) {
                 var childModel, children, model = this,
                     _altered = model._altered = {},
-                    idAttr = _.result(model, 'idAttribute', arguments),
                     // automatically checks to see if the attributes are a string
                     attributes = parse(attributes_) || {},
                     // default attributes
-                    attrs = _.result(model, 'defaults', arguments),
+                    attrs = _.result(model, 'defaults', attributes),
                     // build new attributes
                     newAttributes = extend(attrs, attributes),
+                    // get the id
+                    idAttr = _.result(model, 'idAttribute', newAttributes),
                     // stale attributes
                     ret = model[ATTRIBUTES] || {},
                     history = model[ATTRIBUTE_HISTORY] = {};
                 // set id and let parent know what your new id is
                 this[DISPATCH_EVENT]('before:reset');
-                model._setId(attributes[idAttr]);
+                model._setId(newAttributes[idAttr] || uniqueId());
                 model[PREVIOUS_ATTRIBUTES] = {};
                 // swaps attributes hash
                 model[ATTRIBUTES] = newAttributes;
@@ -3150,7 +3263,7 @@ application.scope(function (app) {
                     history = model[ATTRIBUTE_HISTORY],
                     oldValue = attrs[key],
                     previousAttrsObject = model[PREVIOUS_ATTRIBUTES] = model[PREVIOUS_ATTRIBUTES] || {};
-                if (!_.isEqual(oldValue, newValue)) {
+                if (!isEqual(oldValue, newValue)) {
                     previousAttrsObject[key] = oldValue;
                     history[key] = oldValue;
                     attrs[key] = newValue;
@@ -3182,9 +3295,10 @@ application.scope(function (app) {
                     }
                 });
                 if (!changedList[LENGTH]) {
+                    // do not digest
                     return model;
                 }
-                model.digester(function () {
+                return model.digester(function () {
                     duff(changedList, function (name) {
                         model[DISPATCH_EVENT](CHANGED_STRING + ':' + name, {
                             key: name,
@@ -3195,7 +3309,6 @@ application.scope(function (app) {
                     model[DISPATCH_EVENT](CHANGED_STRING, compiled);
                     return model;
                 });
-                return model;
             },
             /**
              * @description basic json clone of the attributes object
@@ -3234,8 +3347,6 @@ application.scope(function (app) {
              * @name Box#constructor
              * @func
              */
-            cidPrefix: 'c',
-            idAttribute: 'id',
             constructor: function (attributes, secondary) {
                 var model = this;
                 model[CHILDREN] = Collection();
@@ -3267,7 +3378,7 @@ application.scope(function (app) {
             resetChildren: function (newChildren) {
                 var child, box = this,
                     children = box[CHILDREN],
-                    arr = children.un();
+                    arr = children.unwrap();
                 while (arr.length) {
                     child = arr[0];
                     if (child && child.destroy) {
@@ -3396,7 +3507,7 @@ application.scope(function (app) {
                     secondary = extend(_.result(parent, 'childOptions'), secondary_ || {});
                 // unwrap it if you were passed a collection
                 if (isInstance(objs, _.Collection)) {
-                    objs = objs.un();
+                    objs = objs.unwrap();
                 }
                 if (!isArrayLike(objs)) {
                     objs = [objs];
@@ -3460,16 +3571,17 @@ application.scope(function (app) {
                     evnt = evnt_ || origin._createEvent(name, data),
                     parents = origin._collectParents(),
                     i = parents[LENGTH] - 1;
-                while (parents[LENGTH] && parents[i] && !evnt.isStopped()) {
-                    parent = parents[i];
-                    if (parent._isDestroyed) {
-                        evnt.stopImmediatePropagation();
-                        i = 0;
-                    } else {
-                        parent._eventDispatcher(evnt);
-                    }
-                    i--;
-                }
+                // while (parents[LENGTH] && parents[i] && !evnt.isStopped()) {
+                //     parent = parents[i];
+                //     if (parent._isDestroyed) {
+                //         evnt.stopImmediatePropagation();
+                //         i = 0;
+                //     } else {
+                //         parent._eventDispatcher(evnt);
+                //     }
+                //     i--;
+                // }
+                // should all be true the first time around
                 while (origin && origin._eventDispatcher && !evnt.isStopped()) {
                     origin._eventDispatcher(evnt);
                     origin = !evnt.isStopped() && evnt.bubbles && origin[PARENT];
@@ -3478,16 +3590,20 @@ application.scope(function (app) {
                 return evnt;
             },
             _remove: function (model) {
+                // cache the parent
                 var parent = this;
+                // let everyone know that this object is about to be removed
                 model[DISPATCH_EVENT]('before:removed');
                 // notify the child that the remove pipeline is starting
-                // remove the parent listeners
+                // remove the parent events
                 parent._unDelegateParentEvents(model);
+                // have parent remove it's child events
                 parent._unDelegateChildEvents(model);
                 // attach events from parent
                 parent._removeFromHash(model);
                 // void out the parent member tied directly to the model
                 model.parent = void 0;
+                // let everyone know that you've offically separated
                 model[DISPATCH_EVENT]('removed');
                 // notify the child that the remove pipeline is done
                 return model;
@@ -3504,7 +3620,7 @@ application.scope(function (app) {
                 }
                 if (idModel && isObject(idModel)) {
                     if (isInstance(idModel, _.Collection)) {
-                        idModel = idModel.un();
+                        idModel = idModel.unwrap();
                     }
                     if (!_.isArray(idModel)) {
                         idModel = [idModel];
@@ -3768,240 +3884,240 @@ application.scope(function (app) {
         module: moduleHandler
     });
 });
-application.scope().module('Storage', function (module, app, _, factories) {
-    var ELID_STRING = '__uniqueid__',
-        __privateDataCache__ = {},
-        uniqueId = _.uniqueId,
-        datastorage = {
-            make: function (el) {
-                var elId = el[ELID_STRING] = uniqueId('id');
-                var ret = __privateDataCache__[elId] = __privateDataCache__[elId] || {};
-                return ret;
-            },
-            get: function (el) {
-                var id = el[ELID_STRING];
-                var ret = id ? (__privateDataCache__[id] = __privateDataCache__[id] || this.make(el)) : this.make(el);
-                return ret;
-            },
-            remove: function (el) {
-                var id = el[ELID_STRING];
-                __privateDataCache__[id] = el[ELID_STRING] = void 0;
-                return id;
-            }
-        },
-        internalListAddRemove = function (keymaker, itemmaker) {
-            return function (setto) {
-                return function (base, item, subdata_, dirtifier) {
-                    var ret, subdata;
-                    if (!item) {
-                        return;
-                    }
-                    subdata = subdata_ || this.get(base);
-                    ret = !subdata.loaded && this.load(base, subdata);
-                    // each item that i was passed
-                    // duff(gapSplit(items), function (item) {
-                    var listitem, key = keymaker(item),
-                        index = subdata.hash[item];
-                    // do i have you?
-                    if (index === blank) {
-                        // lets make you
-                        listitem = itemmaker(subdata, key);
-                        // do i want you after you have been made?
-                        if (listitem) {
-                            index = subdata.hash[item] = subdata.list.length;
-                            subdata.list.push(listitem);
-                        }
-                    }
-                    // are you made and did i want you?
-                    if (index + 1) {
-                        listitem = subdata.list[index];
-                        setto(listitem, index, key, subdata);
-                        subdata.dirty = !dirtifier;
-                    }
-                };
-            };
-        },
-        createNewJoinable = function (subdata, item) {
-            return item ? {
-                valueOf: function () {
-                    return item;
-                },
-                toString: function () {
-                    var adding = this.flag,
-                        listitem = adding ? item : '',
-                        value = (!adding || !subdata.notTheFirst ? '' : ' ');
-                    if (listitem) {
-                        subdata.notTheFirst = BOOLEAN_TRUE;
-                    }
-                    return value + listitem;
-                }
-            } : BOOLEAN_FALSE;
-        },
-        listAddRemove = function (opts) {
-            var datastorage = opts.storage || datastorage,
-                propertyname = opts.name,
-                getter = opts.get,
-                setter = opts.set,
-                keymaker = opts.key,
-                itemmaker = opts.item,
-                madewithkey = internalListAddRemove(keymaker, itemmaker);
-            return {
-                name: propertyname,
-                add: madewithkey(function (listitem, index, key, subdata) {
-                    listitem.flag = BOOLEAN_TRUE;
-                }),
-                remove: madewithkey(function (listitem, index, key, subdata) {
-                    listitem.flag = BOOLEAN_FALSE;
-                }),
-                toggle: madewithkey(function (listitem, index, key, subdata) {
-                    listitem.flag = !listitem.flag;
-                }),
-                load: function (base, subdata_) {
-                    var listManager = this,
-                        subdata = subdata_ || listManager.get(base);
-                    // don't call listManager function again
-                    subdata.loaded = true;
-                    // load all of the base data
-                    duff(getter(base, propertyname), function (item) {
-                        listManager.add(base, item, subdata, true);
-                    });
-                },
-                unload: function (base, subdata_) {
-                    var subdata = subdata_ || this.get(base);
-                    // check to make sure it has at least been loaded
-                    if (subdata.loaded && subdata.dirty) {
-                        setter(base, this.name, subdata.list);
-                        this.reset();
-                    }
-                },
-                isDirty: function (base) {
-                    return this.get(base).dirty;
-                },
-                // requires base object that data is tied to
-                get: function (base) {
-                    var data = datastorage.get(base);
-                    data[propertyname] = data[propertyname] || this.reset();
-                    return data[propertyname];
-                },
-                // requires subdata
-                reset: function () {
-                    return {
-                        loaded: false,
-                        dirty: false,
-                        list: [],
-                        hash: {}
-                    };
-                }
-            };
-        },
-        nestedList = function (opts) {
-            var propertyname = opts.name,
-                categoryKey = opts.categoryKey,
-                storageGet = {
-                    get: function (base) {
-                        return api.where(base).underspace;
-                    }
-                },
-                api = {
-                    add: function (base, category_, dataset) {
-                        var item, data = dataset || this.where(base);
-                        var category = categoryKey(category_);
-                        if (!data[category]) {
-                            item = this.make(base, category, data);
-                            data._byId[category] = item;
-                            data._items.push(item);
-                            item.load(base);
-                        }
-                        return item;
-                    },
-                    remove: function (base, category_, dataset) {
-                        var data = dataset || this.where(base);
-                        var category = categoryKey(category_);
-                        data[category] = void 0;
-                    },
-                    load: function (base, dataset) {
-                        var categoryManager = this,
-                            data = dataset || categoryManager.where(base);
-                        duff(base.attributes, function (value) {
-                            categoryManager.add(base, value.localName, data);
-                        });
-                    },
-                    upsert: function (base, category, additem, addremove) {
-                        var data = this.where(base),
-                            list = this.get(base, category) || this.add(base, category, data),
-                            wasdirty = list.isDirty(base);
-                        list[addremove ? 'add' : 'remove'](base, additem);
-                        if (wasdirty !== list.isDirty(base)) {
-                            data.dirtyList.push(list);
-                            data.isDirty++;
-                        }
-                    },
-                    get: function (base, category) {
-                        return this.where(base)._byId[category];
-                    },
-                    unload: function (base) {
-                        var data = this.where(base);
-                        duff(data.dirtyList, function (item) {
-                            if (!item.isDirty(base)) {
-                                return;
-                            }
-                            item.unload(base);
-                        });
-                        data.dirtyList = [];
-                        return this;
-                    },
-                    where: function (base) {
-                        var data = datastorage.get(base);
-                        data[propertyname] = data[propertyname] || this.reset();
-                        return data[propertyname];
-                    },
-                    reset: function () {
-                        return {
-                            dirtyList: [],
-                            loaded: false,
-                            _byId: {},
-                            _items: [],
-                            underspace: {}
-                        };
-                    },
-                    make: function (base, category, dataset) {
-                        var collection = listAddRemove({
-                            storage: storageGet,
-                            get: attributeInterface,
-                            name: category,
-                            item: createNewJoinable,
-                            set: function (el, key, value_) {
-                                attributeInterface(el, key, value_.join('') || BOOLEAN_FALSE);
-                            },
-                            key: function (item) {
-                                return (+item === +item) ? +item : item;
-                            }
-                        });
-                        return collection;
-                    }
-                };
-            return api;
-        };
-    module.message.reply({
-        'make:nested': nestedList,
-        'make:list': listAddRemove,
-        storage: datastorage
-    });
-});
+// application.scope().module('Storage', function (module, app, _, factories) {
+//     var ELID_STRING = '__uniqueid__',
+//         __privateDataCache__ = {},
+//         uniqueId = _.uniqueId,
+//         datastorage = {
+//             make: function (el) {
+//                 var elId = el[ELID_STRING] = uniqueId('id');
+//                 var ret = __privateDataCache__[elId] = __privateDataCache__[elId] || {};
+//                 return ret;
+//             },
+//             get: function (el) {
+//                 var id = el[ELID_STRING];
+//                 var ret = id ? (__privateDataCache__[id] = __privateDataCache__[id] || this.make(el)) : this.make(el);
+//                 return ret;
+//             },
+//             remove: function (el) {
+//                 var id = el[ELID_STRING];
+//                 __privateDataCache__[id] = el[ELID_STRING] = void 0;
+//                 return id;
+//             }
+//         },
+//         internalListAddRemove = function (keymaker, itemmaker) {
+//             return function (setto) {
+//                 return function (base, item, subdata_, dirtifier) {
+//                     var ret, subdata;
+//                     if (!item) {
+//                         return;
+//                     }
+//                     subdata = subdata_ || this.get(base);
+//                     ret = !subdata.loaded && this.load(base, subdata);
+//                     // each item that i was passed
+//                     // duff(gapSplit(items), function (item) {
+//                     var listitem, key = keymaker(item),
+//                         index = subdata.hash[item];
+//                     // do i have you?
+//                     if (index === blank) {
+//                         // lets make you
+//                         listitem = itemmaker(subdata, key);
+//                         // do i want you after you have been made?
+//                         if (listitem) {
+//                             index = subdata.hash[item] = subdata.list.length;
+//                             subdata.list.push(listitem);
+//                         }
+//                     }
+//                     // are you made and did i want you?
+//                     if (index + 1) {
+//                         listitem = subdata.list[index];
+//                         setto(listitem, index, key, subdata);
+//                         subdata.dirty = !dirtifier;
+//                     }
+//                 };
+//             };
+//         },
+//         createNewJoinable = function (subdata, item) {
+//             return item ? {
+//                 valueOf: function () {
+//                     return item;
+//                 },
+//                 toString: function () {
+//                     var adding = this.flag,
+//                         listitem = adding ? item : '',
+//                         value = (!adding || !subdata.notTheFirst ? '' : ' ');
+//                     if (listitem) {
+//                         subdata.notTheFirst = BOOLEAN_TRUE;
+//                     }
+//                     return value + listitem;
+//                 }
+//             } : BOOLEAN_FALSE;
+//         },
+//         listAddRemove = function (opts) {
+//             var datastorage = opts.storage || datastorage,
+//                 propertyname = opts.name,
+//                 getter = opts.get,
+//                 setter = opts.set,
+//                 keymaker = opts.key,
+//                 itemmaker = opts.item,
+//                 madewithkey = internalListAddRemove(keymaker, itemmaker);
+//             return {
+//                 name: propertyname,
+//                 add: madewithkey(function (listitem, index, key, subdata) {
+//                     listitem.flag = BOOLEAN_TRUE;
+//                 }),
+//                 remove: madewithkey(function (listitem, index, key, subdata) {
+//                     listitem.flag = BOOLEAN_FALSE;
+//                 }),
+//                 toggle: madewithkey(function (listitem, index, key, subdata) {
+//                     listitem.flag = !listitem.flag;
+//                 }),
+//                 load: function (base, subdata_) {
+//                     var listManager = this,
+//                         subdata = subdata_ || listManager.get(base);
+//                     // don't call listManager function again
+//                     subdata.loaded = true;
+//                     // load all of the base data
+//                     duff(getter(base, propertyname), function (item) {
+//                         listManager.add(base, item, subdata, true);
+//                     });
+//                 },
+//                 unload: function (base, subdata_) {
+//                     var subdata = subdata_ || this.get(base);
+//                     // check to make sure it has at least been loaded
+//                     if (subdata.loaded && subdata.dirty) {
+//                         setter(base, this.name, subdata.list);
+//                         this.reset();
+//                     }
+//                 },
+//                 isDirty: function (base) {
+//                     return this.get(base).dirty;
+//                 },
+//                 // requires base object that data is tied to
+//                 get: function (base) {
+//                     var data = datastorage.get(base);
+//                     data[propertyname] = data[propertyname] || this.reset();
+//                     return data[propertyname];
+//                 },
+//                 // requires subdata
+//                 reset: function () {
+//                     return {
+//                         loaded: false,
+//                         dirty: false,
+//                         list: [],
+//                         hash: {}
+//                     };
+//                 }
+//             };
+//         },
+//         nestedList = function (opts) {
+//             var propertyname = opts.name,
+//                 categoryKey = opts.categoryKey,
+//                 storageGet = {
+//                     get: function (base) {
+//                         return api.where(base).underspace;
+//                     }
+//                 },
+//                 api = {
+//                     add: function (base, category_, dataset) {
+//                         var item, data = dataset || this.where(base);
+//                         var category = categoryKey(category_);
+//                         if (!data[category]) {
+//                             item = this.make(base, category, data);
+//                             data._byId[category] = item;
+//                             data._items.push(item);
+//                             item.load(base);
+//                         }
+//                         return item;
+//                     },
+//                     remove: function (base, category_, dataset) {
+//                         var data = dataset || this.where(base);
+//                         var category = categoryKey(category_);
+//                         data[category] = void 0;
+//                     },
+//                     load: function (base, dataset) {
+//                         var categoryManager = this,
+//                             data = dataset || categoryManager.where(base);
+//                         duff(base.attributes, function (value) {
+//                             categoryManager.add(base, value.localName, data);
+//                         });
+//                     },
+//                     upsert: function (base, category, additem, addremove) {
+//                         var data = this.where(base),
+//                             list = this.get(base, category) || this.add(base, category, data),
+//                             wasdirty = list.isDirty(base);
+//                         list[addremove ? 'add' : 'remove'](base, additem);
+//                         if (wasdirty !== list.isDirty(base)) {
+//                             data.dirtyList.push(list);
+//                             data.isDirty++;
+//                         }
+//                     },
+//                     get: function (base, category) {
+//                         return this.where(base)._byId[category];
+//                     },
+//                     unload: function (base) {
+//                         var data = this.where(base);
+//                         duff(data.dirtyList, function (item) {
+//                             if (!item.isDirty(base)) {
+//                                 return;
+//                             }
+//                             item.unload(base);
+//                         });
+//                         data.dirtyList = [];
+//                         return this;
+//                     },
+//                     where: function (base) {
+//                         var data = datastorage.get(base);
+//                         data[propertyname] = data[propertyname] || this.reset();
+//                         return data[propertyname];
+//                     },
+//                     reset: function () {
+//                         return {
+//                             dirtyList: [],
+//                             loaded: false,
+//                             _byId: {},
+//                             _items: [],
+//                             underspace: {}
+//                         };
+//                     },
+//                     make: function (base, category, dataset) {
+//                         var collection = listAddRemove({
+//                             storage: storageGet,
+//                             get: attributeInterface,
+//                             name: category,
+//                             item: createNewJoinable,
+//                             set: function (el, key, value_) {
+//                                 attributeInterface(el, key, value_.join('') || BOOLEAN_FALSE);
+//                             },
+//                             key: function (item) {
+//                                 return (+item === +item) ? +item : item;
+//                             }
+//                         });
+//                         return collection;
+//                     }
+//                 };
+//             return api;
+//         };
+//     module.message.reply({
+//         'make:nested': nestedList,
+//         'make:list': listAddRemove,
+//         storage: datastorage
+//     });
+// });
 application.scope().module('Looper', function (module, app, _, extendFrom, factories) {
-    var blank, LoopGen, x = 0,
+    'use strict';
+    var blank, x = 0,
         lastTime = 0,
-        lengthString = 'length',
-        isFn = _.isFn,
-        isNum = _.isNum,
+        LENGTH = 'length',
+        isFunction = _.isFunction,
+        isNumber = _.isNumber,
         pI = _.pI,
         posit = _.posit,
         nowish = _.now,
-        getLength = _.property(lengthString),
         gapSplit = _.gapSplit,
         win = window,
         vendors = gapSplit('ms moz webkit o'),
-        requestAnimationFrameString = 'requestAnimationFrame',
+        REQUEST_ANIMATION_FRAME = 'requestAnimationFrame',
         allLoopGens = [],
         runningLoopGens = [],
         bind = _.bind,
@@ -4010,11 +4126,12 @@ application.scope().module('Looper', function (module, app, _, extendFrom, facto
         removeAll = _.removeAll,
         duffRev = _.duffRev,
         extend = _.extend,
-        // extendFrom = _.extendFrom,
-        running = false,
+        BOOLEAN_TRUE = !0,
+        BOOLEAN_FALSE = !1,
+        running = BOOLEAN_FALSE,
         setup = function () {
-            running = true;
-            win[requestAnimationFrameString](function (time) {
+            running = BOOLEAN_TRUE;
+            win[REQUEST_ANIMATION_FRAME](function (time) {
                 duff(runningLoopGens, function (idx, loopGen) {
                     loopGen.run(time);
                 });
@@ -4027,8 +4144,8 @@ application.scope().module('Looper', function (module, app, _, extendFrom, facto
                     runningLoopGens.splice(idx, 1);
                 }
             });
-            running = false;
-            if (runningLoopGens[lengthString]) {
+            running = BOOLEAN_FALSE;
+            if (runningLoopGens[LENGTH]) {
                 setup();
             }
         },
@@ -4042,142 +4159,144 @@ application.scope().module('Looper', function (module, app, _, extendFrom, facto
             if (!running) {
                 setup();
             }
-        };
-    for (; x < getLength(vendors) && !win[requestAnimationFrameString]; ++x) {
-        win[requestAnimationFrameString] = win[vendors[x] + 'RequestAnimationFrame'];
-        win.cancelAnimationFrame = win[vendors[x] + 'CancelAnimationFrame'] || win[vendors[x] + 'CancelRequestAnimationFrame'];
-    }
-    if (!win[requestAnimationFrameString]) {
-        win[requestAnimationFrameString] = function (callback) {
-            var currTime = new Date().getTime(),
-                timeToCall = Math.max(0, 16 - (currTime - lastTime)),
-                id = win.setTimeout(function () {
-                    callback(currTime + timeToCall);
-                }, timeToCall);
-            lastTime = currTime + timeToCall;
-            return id;
-        };
-    }
-    if (!win.cancelAnimationFrame) {
-        win.cancelAnimationFrame = function (id) {
-            win.clearTimeout(id);
-        };
-    }
-    LoopGen = _.extendFrom.Model('LoopGen', {
-        constructor: function (_runner) {
-            var fns, stopped = false,
-                halted = false,
-                destroyed = false,
-                running = false,
-                loopGen = this,
-                counter = 0,
-                fnList = [],
-                addList = [],
-                removeList = [],
-                combineAdd = function () {
-                    if (addList[lengthString]) {
-                        fnList = fnList.concat(addList);
-                        addList = [];
-                    }
+        },
+        shim = (function () {
+            for (; x < vendors[LENGTH] && !win[REQUEST_ANIMATION_FRAME]; ++x) {
+                win[REQUEST_ANIMATION_FRAME] = win[vendors[x] + 'RequestAnimationFrame'];
+                win.cancelAnimationFrame = win[vendors[x] + 'CancelAnimationFrame'] || win[vendors[x] + 'CancelRequestAnimationFrame'];
+            }
+            if (!win[REQUEST_ANIMATION_FRAME]) {
+                win[REQUEST_ANIMATION_FRAME] = function (callback) {
+                    var currTime = new Date().getTime(),
+                        timeToCall = Math.max(0, 16 - (currTime - lastTime)),
+                        id = win.setTimeout(function () {
+                            callback(currTime + timeToCall);
+                        }, timeToCall);
+                    lastTime = currTime + timeToCall;
+                    return id;
                 };
-            extend(loopGen, {
-                length: function () {
-                    return getLength(fnList);
-                },
-                destroy: function () {
-                    destroyed = true;
-                    remove(allLoopGens, this);
-                    return this.halt();
-                },
-                destroyed: function () {
-                    return destroyed;
-                },
-                running: function () {
-                    return !!running;
-                },
-                run: function () {
-                    var tween = this,
-                        removeLater = [],
-                        _nowish = nowish();
-                    if (halted || stopped) {
-                        return;
-                    }
-                    combineAdd();
-                    // removeAll(fnList, removeList);
-                    // removeList = [];
-                    duff(fnList, function (idx, fnObj) {
-                        if (!posit(removeList, fnObj)) {
-                            if (!fnObj.disabled && !halted) {
-                                running = fnObj;
-                                fnObj.fn(_nowish);
+            }
+            if (!win.cancelAnimationFrame) {
+                win.cancelAnimationFrame = function (id) {
+                    win.clearTimeout(id);
+                };
+            }
+        }()),
+        LoopGen = _.extendFrom.Model('LoopGen', {
+            constructor: function (_runner) {
+                var fns, stopped = BOOLEAN_FALSE,
+                    halted = BOOLEAN_FALSE,
+                    destroyed = BOOLEAN_FALSE,
+                    running = BOOLEAN_FALSE,
+                    loopGen = this,
+                    counter = 0,
+                    fnList = [],
+                    addList = [],
+                    removeList = [],
+                    combineAdd = function () {
+                        if (addList[LENGTH]) {
+                            fnList = fnList.concat(addList);
+                            addList = [];
+                        }
+                    };
+                extend(loopGen, {
+                    length: function () {
+                        return fnList[LENGTH];
+                    },
+                    destroy: function () {
+                        destroyed = BOOLEAN_TRUE;
+                        remove(allLoopGens, this);
+                        return this.halt();
+                    },
+                    destroyed: function () {
+                        return destroyed;
+                    },
+                    running: function () {
+                        return !!running;
+                    },
+                    run: function () {
+                        var tween = this,
+                            removeLater = [],
+                            _nowish = nowish();
+                        if (halted || stopped) {
+                            return;
+                        }
+                        combineAdd();
+                        duff(fnList, function (fnObj) {
+                            if (!posit(removeList, fnObj)) {
+                                if (!fnObj.disabled && !halted) {
+                                    running = fnObj;
+                                    fnObj.fn(_nowish);
+                                }
+                            } else {
+                                removeLater.push(fnObj);
                             }
-                        } else {
-                            removeLater.push(fnObj);
+                        });
+                        running = BOOLEAN_FALSE;
+                        combineAdd();
+                        removeAll(fnList, removeList.concat(removeLater));
+                        removeList = [];
+                    },
+                    remove: function (id) {
+                        var ret, fnObj, i = 0;
+                        if (!arguments[LENGTH]) {
+                            if (running) {
+                                id = running.id;
+                            }
                         }
-                    });
-                    running = false;
-                    combineAdd();
-                    removeAll(fnList, removeList.concat(removeLater));
-                    removeList = [];
-                },
-                remove: function (id) {
-                    var ret, fnObj, i = 0;
-                    if (!arguments[lengthString]) {
-                        if (running) {
-                            id = running.id;
-                        }
-                    }
-                    if (isNumber(id)) {
-                        for (; i < fnList[lengthString] && !ret; i++) {
-                            fnObj = fnList[i];
-                            if (fnObj.id === id) {
-                                if (!posit(removeList, fnObj)) {
-                                    removeList.push(fnObj);
-                                    ret = 1;
+                        if (isNumber(id)) {
+                            for (; i < fnList[LENGTH] && !ret; i++) {
+                                fnObj = fnList[i];
+                                if (fnObj.id === id) {
+                                    if (!posit(removeList, fnObj)) {
+                                        removeList.push(fnObj);
+                                        ret = 1;
+                                    }
                                 }
                             }
                         }
-                    }
-                    return !!ret;
-                },
-                stop: function () {
-                    stopped = !0;
-                    return this;
-                },
-                start: function () {
-                    var looper = this;
-                    stopped = !1;
-                    halted = !1;
-                    return looper;
-                },
-                halt: function () {
-                    halted = !0;
-                    return this.stop();
-                },
-                halted: function () {
-                    return halted;
-                },
-                stopped: function () {
-                    return stopped;
-                },
-                reset: function () {
-                    fnList = [];
-                    removeList = [];
-                    addList = [];
-                    return this;
-                },
-                add: function (fn) {
-                    var obj, id = counter,
-                        tween = this;
-                    if (isFunction(fn)) {
-                        if (!fnList[lengthString]) {
+                        return !!ret;
+                    },
+                    stop: function () {
+                        stopped = BOOLEAN_TRUE;
+                        return this;
+                    },
+                    start: function () {
+                        var looper = this;
+                        stopped = BOOLEAN_FALSE;
+                        halted = BOOLEAN_FALSE;
+                        return looper;
+                    },
+                    halt: function () {
+                        halted = BOOLEAN_TRUE;
+                        return this.stop();
+                    },
+                    halted: function () {
+                        return halted;
+                    },
+                    stopped: function () {
+                        return stopped;
+                    },
+                    reset: function () {
+                        fnList = [];
+                        removeList = [];
+                        addList = [];
+                        return this;
+                    },
+                    add: function (fn) {
+                        var obj, id = counter,
+                            tween = this;
+                        if (!isFunction(fn)) {
+                            return;
+                        }
+                        if (!fnList[LENGTH]) {
                             tween.start();
                         }
                         start(tween);
                         obj = {
-                            fn: bind(fn, tween),
+                            fn: tween.bind(fn),
                             id: id,
-                            disabled: !1,
+                            disabled: BOOLEAN_FALSE,
                             bound: tween
                         };
                         if (tween.running()) {
@@ -4188,72 +4307,81 @@ application.scope().module('Looper', function (module, app, _, extendFrom, facto
                         counter++;
                         return id;
                     }
+                });
+                add(loopGen);
+                return loopGen;
+            },
+            bind: function (fn) {
+                return bind(fn, this);
+            },
+            once: function (fn) {
+                return this.count(1, fn);
+            },
+            count: function (timey, fn_) {
+                var fn, count = 0,
+                    times = pI(timey) || 1;
+                if (!fn_ && isFunction(times)) {
+                    fn_ = timey;
+                    times = 1;
                 }
-            });
-            add(loopGen);
-            return loopGen;
-        },
-        once: function (fn) {
-            return this.count(1, fn);
-        },
-        count: function (timey, fn) {
-            var count = 0,
-                times = pI(timey) || 1;
-            if (!fn && isFunction(times)) {
-                fn = timey;
-                times = 1;
-            }
-            if (times < 1 || !isNumber(times)) {
-                times = 1;
-            }
-            if (!isFunction(fn)) {
-                return;
-            }
-            return this.add(function (ms) {
-                var last = 1;
-                count++;
-                if (count >= times) {
+                if (!isFunction(fn_)) {
+                    return;
+                }
+                fn = this.bind(fn_);
+                if (times < 1 || !isNumber(times)) {
+                    times = 1;
+                }
+                return this.add(function (ms) {
+                    var last = 1;
+                    count++;
+                    if (count >= times) {
+                        this.remove();
+                        last = 0;
+                    }
+                    fn(ms, !last, count);
+                });
+            },
+            tween: function (time, fn_) {
+                var fn, added = nowish();
+                if (!time) {
+                    time = 0;
+                }
+                if (!isFunction(fn)) {
+                    return;
+                }
+                fn = this.bind(fn_);
+                return this.interval(0, function (ms) {
+                    var tween = 1,
+                        diff = ms - added;
+                    if (diff >= time) {
+                        tween = 0;
+                        this.remove();
+                    }
+                    fn(ms, Math.min(1, (diff / time)), !tween);
+                });
+            },
+            time: function (time, fn_) {
+                var fn;
+                if (!isFunction(fn)) {
+                    return this;
+                }
+                fn = this.bind(fn_);
+                return this.interval(time, function (ms) {
                     this.remove();
-                    last = 0;
+                    fn(ms);
+                });
+            },
+            frameRate: function (time, fn_, min) {
+                var fn, tween = this,
+                    minimum = Math.min(min || 0.8, 0.8),
+                    expectedFrameRate = 30 * minimum,
+                    lastDate = 1,
+                    lastSkip = nowish();
+                time = time || 125;
+                if (!isFunction(fn_)) {
+                    return tween;
                 }
-                fn.apply(this, [ms, !last, count]);
-            });
-        },
-        tween: function (time, fn) {
-            var added = nowish();
-            if (!time) {
-                time = 0;
-            }
-            if (!isFunction(fn)) {
-                return;
-            }
-            return this.interval(0, function (ms) {
-                var tween = 1,
-                    diff = ms - added;
-                if (diff >= time) {
-                    tween = 0;
-                    this.remove();
-                }
-                fn.call(this, ms, Math.min(1, (diff / time)), !tween);
-            });
-        },
-        time: function (time, fn) {
-            if (!isFunction(fn)) {
-                return;
-            }
-            return this.interval(time, function (ms) {
-                fn.call(this, ms);
-                this.remove();
-            });
-        },
-        frameRate: function (time, fn, min) {
-            var tween = this,
-                minimum = Math.min(min || 0.8, 0.8),
-                expectedFrameRate = 30 * minimum,
-                lastDate = 1,
-                lastSkip = _.now();
-            time = time || 125;
-            if (isFunction(fn)) {
+                fn = bind(fn_, this);
                 return tween.add(function (ms) {
                     var frameRate = 1000 / (ms - lastDate);
                     if (frameRate > 40) {
@@ -4264,28 +4392,28 @@ application.scope().module('Looper', function (module, app, _, extendFrom, facto
                     }
                     if (ms - lastSkip > time) {
                         this.remove();
-                        fn.call(this, ms);
+                        fn(ms);
                     }
                     lastDate = ms;
                 });
-            }
-        },
-        interval: function (time, fn) {
-            var last = nowish();
-            if (!time) {
-                time = 0;
-            }
-            if (!isFunction(fn)) {
-                return;
-            }
-            return this.add(function (ms) {
-                if (ms - time >= last) {
-                    fn.call(this, ms);
-                    last = ms;
+            },
+            interval: function (time, fn_) {
+                var fn, last = nowish();
+                if (!isFunction(fn)) {
+                    return;
                 }
-            });
-        }
-    }, !0);
+                if (!time) {
+                    time = 0;
+                }
+                fn = this.bind(fn);
+                return this.add(function (ms) {
+                    if (ms - time >= last) {
+                        last = ms;
+                        fn(ms);
+                    }
+                });
+            }
+        }, !0);
     _.exports({
         AF: new LoopGen()
     });
@@ -4415,7 +4543,7 @@ application.scope().module('Promise', function (module, app, _) {
                 return this.get('resolved');
             },
             isFulfilled: function () {
-                return !!_.resultOf(result(this, 'successfulResolves')[this.get('state')], this);
+                return !!result(this, 'successfulResolves')[this.get('state')];
             },
             isRejected: function () {
                 return !this.isFulfilled();
@@ -4712,94 +4840,99 @@ application.scope().module('Associator', function (module, app, _) {
      * @class Associator
      * @augments Model
      */
-    var lengthString = 'length';
-    _.extendFrom.Model('Associator', {
-        /**
-         * @func
-         * @name Associator#get
-         * @param {Object} obj - object that data is being gotten against in the Associator
-         * @param {String} [type] - toString version of the object being passed in
-         */
-        get: function (obj, type) {
-            var returnData, idxOf, dataset, n, els, dataArray, current,
-                instance = this,
-                canRead = 0,
-                data = {
-                    dataset: {}
-                };
-            current = this.sameType(obj);
-            els = current.items;
-            dataArray = current.data;
-            if (!els) {
-                els = current.items = [];
-            }
-            if (!dataArray) {
-                dataArray = current.data = [];
-            }
-            if (obj && _.isDom && current.readData) {
-                dataset = obj.dataset;
-                // copy dataset over from one to the other
-                if (_.isObject(dataset) && _.isDom(obj)) {
-                    data.dataset = _.extend(data.dataset, dataset);
+    var LENGTH = 'length',
+        extend = _.extend,
+        isObject = _.isObject,
+        removeAt = _.removeAt,
+        Associator = _.extendFrom.Model('Associator', {
+            /**
+             * @func
+             * @name Associator#get
+             * @param {Object} obj - object that data is being gotten against in the Associator
+             * @param {String} [type] - toString version of the object being passed in
+             */
+            get: function (obj, type) {
+                var returnData, idxOf, dataset, n, els, dataArray, current,
+                    instance = this,
+                    canRead = 0,
+                    data = {
+                        dataset: {}
+                    };
+                current = this.sameType(obj);
+                els = current.items;
+                dataArray = current.data;
+                if (!els) {
+                    els = current.items = [];
                 }
+                if (!dataArray) {
+                    dataArray = current.data = [];
+                }
+                if (obj && _.isDom && current.readData) {
+                    dataset = obj.dataset;
+                    // copy dataset over from one to the other
+                    if (isObject(dataset) && _.isDom(obj)) {
+                        data.dataset = extend(data.dataset, dataset);
+                    }
+                }
+                idxOf = current.items.indexOf(obj);
+                if (idxOf === -1) {
+                    idxOf = current.items[LENGTH];
+                    current.items.push(obj);
+                    dataArray[idxOf] = data;
+                }
+                return dataArray[idxOf];
+            },
+            /**
+             * @func
+             * @name Associator#set
+             * @param {Node} el - Element to store data against
+             * @param {Object} obj - object to extend onto current data
+             * @param {String} [type] - toString evaluation of element, if it has already been evaluated
+             * @returns {Object} data that is being held on the Associator
+             */
+            set: function (el, extensor, type) {
+                var n, data = this.get(el, type);
+                extend(data, extensor || {});
+                return data;
+            },
+            remove: function (el) {
+                var type = this.sameType(el);
+                var idx = _.indexOf(type.items, el);
+                var ret = removeAt(type.data, idx);
+                removeAt(type.items, idx);
+                return ret;
+            },
+            /**
+             * @func
+             * @name Associator#sameType
+             * @param {Object} obj - object to find matched types against
+             */
+            sameType: function (obj) {
+                var instance = this,
+                    type = _.toString(obj),
+                    current = instance[type],
+                    lowerType = type.toLowerCase();
+                if (!current) {
+                    // makes things easier to find
+                    current = instance[type] = {};
+                }
+                // skip reading data
+                if (lowerType.indexOf('global') === -1 && lowerType.indexOf('window') === -1) {
+                    current.readData = 1;
+                }
+                return current;
             }
-            idxOf = current.items.indexOf(obj);
-            if (idxOf === -1) {
-                idxOf = current.items[lengthString];
-                current.items.push(obj);
-                dataArray[idxOf] = data;
-            }
-            return dataArray[idxOf];
-        },
-        /**
-         * @func
-         * @name Associator#set
-         * @param {Node} el - Element to store data against
-         * @param {Object} obj - object to extend onto current data
-         * @param {String} [type] - toString evaluation of element, if it has already been evaluated
-         * @returns {Object} data that is being held on the Associator
-         */
-        set: function (el, extensor, type) {
-            var n, data = this.get(el, type);
-            _.extend(data, extensor || {});
-            return data;
-        },
-        remove: function (el) {
-            var type = this.sameType(el);
-            var idx = _.indexOf(type.items, el);
-            var ret = _.removeAt(type.data, idx);
-            _.removeAt(type.items, idx);
-            return ret;
-        },
-        /**
-         * @func
-         * @name Associator#sameType
-         * @param {Object} obj - object to find matched types against
-         */
-        sameType: function (obj) {
-            var instance = this,
-                type = _.toString(obj),
-                current = instance[type],
-                lowerType = type.toLowerCase();
-            if (!current) {
-                // makes things easier to find
-                current = instance[type] = {};
-            }
-            // skip reading data
-            if (lowerType.indexOf('global') === -1 && lowerType.indexOf('window') === -1) {
-                current.readData = 1;
-            }
-            return current;
-        }
-    }, !0);
+        }, !0);
     _.exports({
         associator: _.Associator()
     });
 });
-application.scope().module('Node', function (module, app, _) {
+application.scope().module('DOMM', function (module, app, _) {
     var blank, sizzleDoc = document,
         eq = _.eq,
-        elementData = app.module('Storage').message.request('storage'),
+        elementData = _.associator,
+        result = _.result,
+        // elementData = app.module('Storage').message.request('storage'),
         uniqueId = _.uniqueId,
         extendFrom = _.extendFrom,
         factories = _.factories,
@@ -4812,6 +4945,8 @@ application.scope().module('Node', function (module, app, _) {
         isString = _.isString,
         isObject = _.isObject,
         isNumber = _.isNumber,
+        isBoolean = _.isBoolean,
+        stringify = _.stringify,
         wrap = _.wrap,
         merge = _.merge,
         remove = _.splice,
@@ -4825,23 +4960,54 @@ application.scope().module('Node', function (module, app, _) {
         toArray = _.toArray,
         duffRev = _.duffRev,
         indexOf = _.indexOf,
+        clone = _.clone,
         gapSplit = _.gapSplit,
         camelCase = _.camelCase,
         unCamelCase = _.unCamelCase,
-        objCondense = _.objCondense,
         parseDecimal = _.parseDecimal,
         LENGTH_STRING = 'length',
-        itemsString = '_items',
-        __delegateCountString = '__delegateCount',
-        removeQueueString = 'removeQueue',
-        addQueueString = 'addQueue',
+        ITEMS = '_items',
+        DELEGATE_COUNT = '__delegateCount',
+        REMOVE_QUEUE = 'removeQueue',
+        ADD_QUEUE = 'addQueue',
         CLASSNAME = 'className',
         BOOLEAN_TRUE = !0,
         BOOLEAN_FALSE = !1,
-        getComputed = window.getComputedStyle,
-        allStyles = getComputed(sizzleDoc.body),
-        devicePixelRatio = (window.devicePixelRatio || 1),
+        win = window,
+        WINDOW = 'window',
+        CLASS = 'class',
+        devicePixelRatio = (win.devicePixelRatio || 1),
         ua = navigator.userAgent,
+        isNode = function (object) {
+            return !!(object && isNumber(object.nodeType) && object.nodeType === object.ELEMENT_NODE);
+        },
+        isDom = isNode,
+        /**
+         * @private
+         * @func
+         */
+        isWin = function (obj) {
+            return obj && obj === obj[WINDOW];
+        },
+        /**
+         * @private
+         * @func
+         */
+        isDoc = function (obj) {
+            return obj && isNumber(obj.nodeType) && obj.nodeType === obj.DOCUMENT_NODE;
+        },
+        isFrag = function (frag) {
+            return frag && frag.nodeType === sizzleDoc.DOCUMENT_FRAGMENT_NODE;
+        },
+        getClosestWindow = function (windo_) {
+            var windo = windo_ || win;
+            return isWin(windo) ? windo : (windo && windo.defaultView ? windo.defaultView : (windo.ownerGlobal ? windo.ownerGlobal : $(windo).parent(WINDOW).index(0) || win));
+        },
+        getComputed = function (el, ctx) {
+            var ret = getClosestWindow(ctx).getComputedStyle(el);
+            return ret ? ret : getClosestWindow(el).getComputedStyle(el) || clone(el.style) || {};
+        },
+        allStyles = getComputed(sizzleDoc.body, win),
         /**
          * @func
          */
@@ -5025,35 +5191,17 @@ application.scope().module('Node', function (module, app, _) {
         getClassName = function (el, key) {
             var className = el[CLASSNAME];
             if (!isString(className)) {
-                className = getAttribute(el, 'class');
+                className = getAttribute(el, CLASS);
             }
             return (className || '').split(' ');
         },
-        setClassName = function (el, key, val) {
-            var value = val.join('');
+        setClassName = function (el, val) {
+            var value = val.join(' ').trim();
             if (isString(el[CLASSNAME])) {
                 el[CLASSNAME] = value;
             } else {
-                setAttribute(el, 'class', value);
+                setAttribute(el, CLASS, value);
             }
-        },
-        queuedata = {
-            className: app.module('Storage').message.request('make:list', {
-                // storage: nodeData,
-                name: CLASSNAME,
-                get: getClassName,
-                set: setClassName,
-                key: function (item) {
-                    return item;
-                }
-            }),
-            data: app.module('Storage').message.request('make:nested', {
-                // storage: nodeData,
-                name: 'dataset',
-                get: attributeInterface,
-                set: attributeInterface,
-                categoryKey: _.camelCase
-            })
         },
         triggerEventWrapper = function (attr, api) {
             attr = attr || api;
@@ -5110,31 +5258,40 @@ application.scope().module('Node', function (module, app, _) {
         AllEvents = _.concatUnique(Events, SVGEvent, KeyboardEvent, CompositionEvent, GamePadEvent, MouseEvents, TouchEvents, DeviceEvents, FocusEvent, TimeEvent, AnimationEvent, AudioProcessingEvent, UIEvents, ProgressEvent),
         knownPrefixes = gapSplit('-o- -ms- -moz- -webkit- mso- -xv- -atsc- -wap- -khtml- -apple- prince- -ah- -hp- -ro- -rim- -tc-'),
         trustedEvents = gapSplit('load scroll resize orientationchange click dblclick mousedown mouseup mouseover mouseout mouseenter mouseleave mousemove change contextmenu hashchange load mousewheel wheel readystatechange'),
-        setClass = function (el, val) {
-            if (isString(el.className)) {
-                el.className = val;
-            } else {
-                el.setAttribute('class', val);
-            }
-        },
-        knownPrefixesHash = _.wrap(knownPrefixes, true),
+        ALL_EVENTS_HASH = wrap(AllEvents, true),
+        knownPrefixesHash = wrap(knownPrefixes, true),
         /**
          * @private
          * @func
          */
+        // changeClass = function (el, remove, add) {
+        //     var subdata = queuedata.className.get(el);
+        //     queuedata.className.remove(el, remove, subdata);
+        //     queuedata.className.add(el, add, subdata);
+        // },
         changeClass = function (el, remove, add) {
-            var subdata = queuedata.className.get(el);
-            queuedata.className.remove(el, remove, subdata);
-            queuedata.className.add(el, add, subdata);
+            var n, val, command, classList;
+            if (el) {
+                classList = getClassName(el);
+                if (remove) {
+                    _.removeAll(classList, gapSplit(remove));
+                }
+                if (add) {
+                    _.addAll(classList, gapSplit(add));
+                }
+                // val = gapJoin(classList).trim();
+                setClassName(el, classList);
+                return el;
+            }
         },
-        removeClass = function (el, remove) {
-            var subdata = queuedata.className.get(el);
-            queuedata.className.remove(el, remove, subdata);
-        },
-        addClass = function (el, add) {
-            var subdata = queuedata.className.get(el);
-            queuedata.className.add(el, add, subdata);
-        },
+        // removeClass = function (el, remove) {
+        //     var subdata = queuedata.className.get(el);
+        //     queuedata.className.remove(el, remove, subdata);
+        // },
+        // addClass = function (el, add) {
+        //     var subdata = queuedata.className.get(el);
+        //     queuedata.className.add(el, add, subdata);
+        // },
         eventNameProperties = function (str) {},
         /**
          * @private
@@ -5159,19 +5316,6 @@ application.scope().module('Node', function (module, app, _) {
          * @private
          * @func
          */
-        isDom = function (el) {
-            var hasAttr, retVal = BOOLEAN_FALSE;
-            if (isObject(el)) {
-                if (isObject(el.style)) {
-                    if (isString(el.tagName)) {
-                        if (isFunction(el.getBoundingClientRect)) {
-                            retVal = BOOLEAN_TRUE;
-                        }
-                    }
-                }
-            }
-            return retVal;
-        },
         ensureDOM = function (fn) {
             return function (el) {
                 if (isDom(el)) {
@@ -5305,8 +5449,8 @@ application.scope().module('Node', function (module, app, _) {
                     count = 0,
                     nuCss = {};
                 if (isObject(el)) {
-                    if (_.isBool(obj)) {
-                        obj = el;
+                    if (isBoolean(key)) {
+                        key = el;
                         retObj = 1;
                     }
                     firstEl = el[0];
@@ -5368,12 +5512,14 @@ application.scope().module('Node', function (module, app, _) {
             return value;
         },
         style = function (els, key, value) {
+            var ensuredDom;
             if (els[LENGTH_STRING]) {
+                ensuredDom = ensureDOM(function (el) {
+                    el.style[key] = value;
+                });
                 intendedObject(key, value, function (key, value_) {
                     var value = convertStyleValue(value_);
-                    duff(els, ensureDOM(function (el) {
-                        el.style[key] = value;
-                    }));
+                    duff(els, ensuredDom);
                 });
             }
         },
@@ -5615,14 +5761,13 @@ application.scope().module('Node', function (module, app, _) {
          * @func
          */
         containsClass = function (el, className) {
-            var idxOf, original = getClass(el),
+            var original = getClassName(el),
                 nuClasses = gapSplit(className),
                 nuClassesLen = nuClasses[LENGTH_STRING],
                 i = 0,
                 has = 0;
             for (; i < nuClassesLen; i++) {
-                idxOf = indexOf(original, nuClasses[i]);
-                if (idxOf !== -1) {
+                if (posit(original, nuClasses[i])) {
                     has++;
                 }
             }
@@ -5640,23 +5785,6 @@ application.scope().module('Node', function (module, app, _) {
                     return tagName.toLowerCase() === str.toLowerCase();
                 }
             }
-        },
-        /**
-         * @private
-         * @func
-         */
-        isWin = function (obj) {
-            return obj && obj === obj.window;
-        },
-        /**
-         * @private
-         * @func
-         */
-        isDoc = function (obj) {
-            return obj && isNumber(obj.nodeType) && obj.nodeType === obj.DOCUMENT_NODE;
-        },
-        isFrag = function (frag) {
-            return frag && frag.nodeType === sizzleDoc.DOCUMENT_FRAGMENT_NODE;
         },
         /**
          * @private
@@ -5681,7 +5809,7 @@ application.scope().module('Node', function (module, app, _) {
         makeTree = function (str) {
             var div = createEl('div');
             div.innerHTML = str;
-            return $(div.children).remove().un();
+            return $(div.children).remove().unwrap();
         },
         /**
          * @private
@@ -5801,7 +5929,7 @@ application.scope().module('Node', function (module, app, _) {
         },
         frag = function (el) {
             var frag = createDocFrag(),
-                els = el[itemsString] || el;
+                els = result(el, ITEMS) || el;
             if (!_.isArrayLike(els)) {
                 els = [els];
             }
@@ -5852,7 +5980,7 @@ application.scope().module('Node', function (module, app, _) {
             return attachPrevious(function (idxChange) {
                 var domm = this,
                     collected = [],
-                    list = domm[itemsString];
+                    list = domm.unwrap();
                 idxChange = _idxChange || idxChange;
                 if (idxChange) {
                     duff(list, function (idx_, el) {
@@ -5877,7 +6005,7 @@ application.scope().module('Node', function (module, app, _) {
                     ret = {},
                     count = 0,
                     cachedData = [],
-                    domList = dom.un();
+                    domList = dom.unwrap();
                 // moved to outside because iterating over objects is more
                 // time consuming than iterating over a straight list
                 intendedObject(key, value, function (__key, val) {
@@ -5953,7 +6081,7 @@ application.scope().module('Node', function (module, app, _) {
             var children = [],
                 _flat = {},
                 flat = {};
-            _.each(block, function (property, value) {
+            each(block, function (property, value) {
                 var gah;
                 if (_.isObject(value)) {
                     children.push(flattenBlock(value, selector + ' ' + property));
@@ -5967,7 +6095,7 @@ application.scope().module('Node', function (module, app, _) {
         },
         buildBlocks = function (blocks) {
             var allBlocks = coll();
-            _.each(blocks, function (block, selector) {
+            each(blocks, function (block, selector) {
                 allBlocks = allBlocks.concat(flattenBlock(block, selector));
             });
             return allBlocks;
@@ -5999,7 +6127,7 @@ application.scope().module('Node', function (module, app, _) {
         buildStyles = function (obj, opts) {
             return coll(obj).foldl(function (memo, idx, item) {
                 memo += buildBlocks(item).foldl(function (memo, idx, block) {
-                    _.each(block, function (block, idx, selector) {
+                    each(block, function (block, idx, selector) {
                         memo += stringifyBlock(block, selector, opts);
                     });
                     return memo;
@@ -6134,7 +6262,7 @@ application.scope().module('Node', function (module, app, _) {
                     // currentEventStack = data[currentEventStackString];
                     mainHandler = getMainHandler(data, eventType, capturing);
                     if (mainHandler) {
-                        removeStack = mainHandler[removeQueueString];
+                        removeStack = mainHandler[REMOVE_QUEUE];
                         $el = $(el);
                         e = new Event(evnt, el);
                         args = [e].concat(args || []);
@@ -6168,9 +6296,9 @@ application.scope().module('Node', function (module, app, _) {
                             return e.isImmediatePropagationStopped;
                         });
                         duffRev(removeStack, removeEventQueue);
-                        while (mainHandler[addQueueString].length) {
-                            addEventQueue(mainHandler[addQueueString][0]);
-                            gah = mainHandler[addQueueString].shift();
+                        while (mainHandler[ADD_QUEUE].length) {
+                            addEventQueue(mainHandler[ADD_QUEUE][0]);
+                            gah = mainHandler[ADD_QUEUE].shift();
                         }
                     }
                 }
@@ -6275,12 +6403,12 @@ application.scope().module('Node', function (module, app, _) {
                 selector = obj.selector;
             if (!mainHandler.currentEvent) {
                 if (selector) {
-                    obj.list.splice(mainHandler[__delegateCountString]++, 0, obj);
+                    obj.list.splice(mainHandler[DELEGATE_COUNT]++, 0, obj);
                 } else {
                     obj.list.push(obj);
                 }
             } else {
-                mainHandler[addQueueString].push(obj);
+                mainHandler[ADD_QUEUE].push(obj);
             }
         },
         removeEventQueue = function (obj, idx) {
@@ -6293,7 +6421,7 @@ application.scope().module('Node', function (module, app, _) {
                     idx = idx === void 0 ? list.indexOf(obj) : idx;
                     if (idx + 1) {
                         if (selector) {
-                            mainHandler[__delegateCountString]--;
+                            mainHandler[DELEGATE_COUNT]--;
                         }
                         gah = list.splice(idx, 1);
                     }
@@ -6301,7 +6429,7 @@ application.scope().module('Node', function (module, app, _) {
                 }
             } else {
                 if (obj.persist) {
-                    mainHandler[removeQueueString].push(obj);
+                    mainHandler[REMOVE_QUEUE].push(obj);
                 }
             }
             obj.persist = BOOLEAN_FALSE;
@@ -6334,7 +6462,7 @@ application.scope().module('Node', function (module, app, _) {
         removeEvent = function (obj) {
             var mainHandler = obj.mainHandler;
             if (obj.selector) {
-                mainHandler[__delegateCountString] = Math.max(mainHandler[__delegateCountString] - 1, 0);
+                mainHandler[DELEGATE_COUNT] = Math.max(mainHandler[DELEGATE_COUNT] - 1, 0);
             }
             _.remove(obj.list, obj);
         },
@@ -6529,6 +6657,10 @@ application.scope().module('Node', function (module, app, _) {
                             filter = function (el, idx) {
                                 return idx === filtr;
                             };
+                        } else {
+                            filter = function () {
+                                return true;
+                            };
                         }
                     }
                 }
@@ -6560,7 +6692,7 @@ application.scope().module('Node', function (module, app, _) {
             var dom = this,
                 matchers = [],
                 passedString = isString(str);
-            duff(dom.un(), function (el) {
+            duff(dom.unwrap(), function (el) {
                 if (passedString) {
                     duff(_.Sizzle(str, el), function (el) {
                         matchers.push(el);
@@ -6578,7 +6710,10 @@ application.scope().module('Node', function (module, app, _) {
             /**
              * @func
              * @name DOMM#constructor
-             * @param {String|Node|Function} str - string to query the dom with, or a function to run on document load, or an element to wrap in a DOMM instance
+ * @param {            String | Node | Function
+        }
+        str - string to query the dom with, or a
+        function to run on document load, or an element to wrap in a DOMM instance
              * @returns {DOMM} instance
              */
             constructor: function (str, ctx) {
@@ -6593,13 +6728,13 @@ application.scope().module('Node', function (module, app, _) {
                             setTimeout(function () {
                                 str.apply($doc, [$, docData.DOMContentLoadedEvent]);
                             });
-                            els = dom.un();
+                            els = dom.unwrap();
                         } else {
                             dom = $doc.on('DOMContentLoaded', function (e) {
                                 _.unshift(args, $);
                                 str.apply(this, args);
                             });
-                            els = dom.un();
+                            els = dom.unwrap();
                         }
                     }
                 } else {
@@ -6611,7 +6746,7 @@ application.scope().module('Node', function (module, app, _) {
                         }
                     } else {
                         els = str;
-                        if (canBeProcessed(els)) {
+                        if (!isArray(els) && canBeProcessed(els)) {
                             els = [els];
                         }
                     }
@@ -6644,7 +6779,7 @@ application.scope().module('Node', function (module, app, _) {
                 return isFrag(this.index(num || 0) || {});
             },
             frag: function (el) {
-                return _.frag(el || this[itemsString]);
+                return _.frag(el || (this && this[ITEMS]));
             },
             /**
              * @func
@@ -6653,7 +6788,7 @@ application.scope().module('Node', function (module, app, _) {
              * @returns {DOMM} new DOMM instance object
              */
             filter: attachPrevious(function (filter) {
-                return domFilter(this.un(), filter);
+                return domFilter(this.unwrap(), filter);
             }),
             /**
              * @func
@@ -6671,11 +6806,11 @@ application.scope().module('Node', function (module, app, _) {
              */
             children: attachPrevious(function (eq) {
                 var dom = this,
-                    items = dom.un(),
+                    items = dom.unwrap(),
                     filter = createDomFilter(items, eq);
                 return foldl(items, function (memo, el) {
                     return foldl(el.children || el.childNodes, function (memo, child, idx, children) {
-                        if (!filter || filter(child, idx, children)) {
+                        if (filter(child, idx, children)) {
                             memo.push(child);
                         }
                         return memo;
@@ -6733,16 +6868,16 @@ application.scope().module('Node', function (module, app, _) {
              * @param {...*} splat of objects and key value pairs that create a single object to be applied to the element
              * @returns {DOMM} instance
              */
-            css: function (key, value) {
+            css: ensureOne(function (key, value) {
                 var dom = this,
-                    ret = css(dom[itemsString], key, value);
+                    ret = css(dom[ITEMS], key, value);
                 if (isBlank(ret)) {
                     ret = dom;
                 }
                 return ret;
-            },
+            }),
             style: ensureOne(function (key, value) {
-                style(this.un(), key, value);
+                style(this.unwrap(), key, value);
                 return this;
             }),
             /**
@@ -6753,7 +6888,7 @@ application.scope().module('Node', function (module, app, _) {
             allDom: function () {
                 var count = 0,
                     length = this.length(),
-                    result = length && find(this.un(), negate(isDom));
+                    result = length && find(this.unwrap(), negate(isDom));
                 return length && result === void 0;
             },
             /**
@@ -6832,7 +6967,7 @@ application.scope().module('Node', function (module, app, _) {
              * @returns {DOMM} instance
              */
             eq: attachPrevious(function (num) {
-                return eq(this.un(), num);
+                return eq(this.unwrap(), num);
             }),
             /**
              * @func
@@ -6840,7 +6975,7 @@ application.scope().module('Node', function (module, app, _) {
              * @returns {DOMM} instance
              */
             first: attachPrevious(function () {
-                return eq(this.un(), 0);
+                return eq(this.unwrap(), 0);
             }),
             /**
              * @func
@@ -6848,7 +6983,7 @@ application.scope().module('Node', function (module, app, _) {
              * @returns {DOMM} instance
              */
             last: attachPrevious(function () {
-                return eq(this.un(), this.length() - 1);
+                return eq(this.unwrap(), this.length() - 1);
             }),
             /**
              * @func
@@ -6857,7 +6992,7 @@ application.scope().module('Node', function (module, app, _) {
              * @returns {Object} hash of dimensional properties (getBoundingClientRect)
              */
             clientRect: function (num) {
-                return clientRect(eq(this.un(), num)[0]);
+                return clientRect(eq(this.unwrap(), num)[0]);
             },
             /**
              * @func
@@ -6870,7 +7005,7 @@ application.scope().module('Node', function (module, app, _) {
                 var domm = this;
                 if (domm.length()) {
                     callback = _.bind(callback, domm);
-                    duff(domm[itemsString], function (item_, index, all) {
+                    duff(domm[ITEMS], function (item_, index, all) {
                         var item = $([item_]);
                         callback(item, index, all);
                     });
@@ -7140,7 +7275,7 @@ application.scope().module('Node', function (module, app, _) {
                             return [el, original(el)];
                         }));
                     }
-                    return collect[itemsString];
+                    return collect[ITEMS];
                 });
             }()),
             /**
@@ -7152,9 +7287,9 @@ application.scope().module('Node', function (module, app, _) {
             has: function (els) {
                 var has = 0,
                     domm = this,
-                    list = domm[itemsString];
+                    list = domm[ITEMS];
                 if (_.isInstance(els, Collection)) {
-                    els = els.un();
+                    els = els.unwrap();
                 } else {
                     if (isDom(els)) {
                         els = [els];
@@ -7180,7 +7315,7 @@ application.scope().module('Node', function (module, app, _) {
                 if (isInstance(el, DOMM)) {
                     el = el.get();
                 }
-                return indexOf(this[itemsString], el, lookAfter);
+                return indexOf(this[ITEMS], el, lookAfter);
             },
             /**
              * @func
@@ -7263,8 +7398,8 @@ application.scope().module('Node', function (module, app, _) {
             childOf: function (oParent) {
                 var domm = this,
                     _oParent = $(oParent),
-                    children = domm.un();
-                oParent = _oParent.un();
+                    children = domm.unwrap();
+                oParent = _oParent.unwrap();
                 return !!domm.length() && !!_oParent.length() && !find(oParent, function (_parent) {
                     return find(children, function (child) {
                         var parent = child,
@@ -7283,7 +7418,7 @@ application.scope().module('Node', function (module, app, _) {
                 var domm = this,
                     arr = [];
                 domm.each(function (idx, $node) {
-                    var node = $node.get(),
+                    var node = $node.index(),
                         children = $node.children().serialize(),
                         obj = {
                             tag: node.localName
@@ -7343,8 +7478,11 @@ application.scope().module('Node', function (module, app, _) {
         box: box,
         frag: frag,
         isDom: isDom,
+        isNode: isNode,
         isWin: isWin,
+        isWindow: isWin,
         isDoc: isDoc,
+        isDocument: isDoc,
         isFrag: isFrag,
         device: deviceCheck,
         makeEl: makeEl,
@@ -7424,59 +7562,6 @@ application.scope().module('Node', function (module, app, _) {
         }
     });
 });
-// application.scope().module('Node', function (module, app, _, factories) {
-//     var blank, BOOLEAN_TRUE = !0,
-//         BOOLEAN_FALSE = !1,
-//         isBlank = _.isBlank,
-//         uniqueId = _.uniqueId,
-//         isString = _.isString,
-//         isArray = _.isArray,
-//         duff = _.duff,
-//         gapSplit = _.gapSplit,
-//         stringify = _.stringify,
-//         intendedObject = _.intendedObject,
-//         Node = factories.Collection.extend('Node', {
-//             constructor: function (el) {
-//                 var node = this;
-//                 node._el = el;
-//                 node.load(el);
-//                 return this;
-//             },
-//             load: function () {
-//                 queuedata[CLASSNAME].load(this._el);
-//                 queuedata.data.load(this._el);
-//             },
-//             apply: function () {
-//                 var node = this,
-//                     el = node._el;
-//                 queuedata[CLASSNAME].unload(el);
-//                 queuedata.data.unload(el);
-//                 return node;
-//             },
-//             data: function (key, passedValue, addremoveDefault_) {
-//                 var el = this._el,
-//                     addremoveDefault = !!addremoveDefault_,
-//                     dataset = queuedata.data.where(el);
-//                 intendedObject(key, passedValue, function (key, value, wasanobject) {
-//                     if (wasanobject) {
-//                         addremoveDefault = !!passedValue;
-//                     }
-//                     intendedObject(value, blank, function (value, addremove, object) {
-//                         if (!object) {
-//                             queuedata.data.singleton(el, key, value);
-//                         } else {
-//                             if (isArray(object)) {
-//                                 value = addremove;
-//                                 addremove = addremoveDefault;
-//                             }
-//                             queuedata.data.upsert(el, key, value, addremove);
-//                         }
-//                     });
-//                 });
-//                 return this;
-//             }
-//         }, BOOLEAN_TRUE);
-// });
 application.scope().module('View', function (module, app, _, $) {
     var blank, each = _.each,
         isFn = _.isFn,

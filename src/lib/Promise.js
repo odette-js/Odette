@@ -123,7 +123,7 @@ application.scope().module('Promise', function (module, app, _) {
                 return this.get('resolved');
             },
             isFulfilled: function () {
-                return !!_.resultOf(result(this, 'successfulResolves')[this.get('state')], this);
+                return !!result(this, 'successfulResolves')[this.get('state')];
             },
             isRejected: function () {
                 return !this.isFulfilled();

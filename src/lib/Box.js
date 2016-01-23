@@ -12,6 +12,7 @@ application.scope(function (app) {
         each = _.each,
         duff = _.duff,
         find = _.find,
+        isEqual = _.isEqual,
         isBlank = _.isBlank,
         isFunction = _.isFunction,
         duffRev = _.duffRev,
@@ -24,15 +25,14 @@ application.scope(function (app) {
         parse = _.parse,
         extend = _.extend,
         listDrop = _.remove,
-        property = _.property,
         stringify = _.stringify,
         isInstance = _.isInstance,
         isArrayLike = _.isArrayLike,
         upCase = _.upCase,
         camelCase = _.camelCase,
         isArray = _.isArray,
-        objCondense = _.objCondense,
         intendedObject = _.intendedObject,
+        uniqueId = _.uniqueId,
         LENGTH = 'length',
         PARENT = 'parent',
         INTERNAL_EVENTS = '_events',
@@ -44,10 +44,7 @@ application.scope(function (app) {
         BOOLEAN_TRUE = !0,
         CHILDREN = 'children',
         CHANGE_COUNTER = '_changeCounter',
-        toStringString = 'toString',
-        prototypeString = 'prototype',
         CHANGED_STRING = 'change',
-        constructorString = 'constructor',
         PREVIOUS_ATTRIBUTES = '_previousAttributes',
         /**
          * @class Box
@@ -55,9 +52,11 @@ application.scope(function (app) {
          * @augments Model
          */
         Container = _.extendFrom.Events('Container', {
+            cidPrefix: 'c',
+            idAttribute: 'id',
             constructor: function (attributes, secondary) {
                 var model = this;
-                model.cid = model.cid = _.uniqueId(model.cidPrefix);
+                model.cid = model.cid = uniqueId(model.cidPrefix);
                 model.reset(attributes);
                 _.extend(model, secondary);
                 Events.apply(this, arguments);
@@ -66,19 +65,20 @@ application.scope(function (app) {
             _reset: function (attributes_) {
                 var childModel, children, model = this,
                     _altered = model._altered = {},
-                    idAttr = _.result(model, 'idAttribute', arguments),
                     // automatically checks to see if the attributes are a string
                     attributes = parse(attributes_) || {},
                     // default attributes
-                    attrs = _.result(model, 'defaults', arguments),
+                    attrs = _.result(model, 'defaults', attributes),
                     // build new attributes
                     newAttributes = extend(attrs, attributes),
+                    // get the id
+                    idAttr = _.result(model, 'idAttribute', newAttributes),
                     // stale attributes
                     ret = model[ATTRIBUTES] || {},
                     history = model[ATTRIBUTE_HISTORY] = {};
                 // set id and let parent know what your new id is
                 this[DISPATCH_EVENT]('before:reset');
-                model._setId(attributes[idAttr]);
+                model._setId(newAttributes[idAttr] || uniqueId());
                 model[PREVIOUS_ATTRIBUTES] = {};
                 // swaps attributes hash
                 model[ATTRIBUTES] = newAttributes;
@@ -138,7 +138,7 @@ application.scope(function (app) {
                     history = model[ATTRIBUTE_HISTORY],
                     oldValue = attrs[key],
                     previousAttrsObject = model[PREVIOUS_ATTRIBUTES] = model[PREVIOUS_ATTRIBUTES] || {};
-                if (!_.isEqual(oldValue, newValue)) {
+                if (!isEqual(oldValue, newValue)) {
                     previousAttrsObject[key] = oldValue;
                     history[key] = oldValue;
                     attrs[key] = newValue;
@@ -170,9 +170,10 @@ application.scope(function (app) {
                     }
                 });
                 if (!changedList[LENGTH]) {
+                    // do not digest
                     return model;
                 }
-                model.digester(function () {
+                return model.digester(function () {
                     duff(changedList, function (name) {
                         model[DISPATCH_EVENT](CHANGED_STRING + ':' + name, {
                             key: name,
@@ -183,7 +184,6 @@ application.scope(function (app) {
                     model[DISPATCH_EVENT](CHANGED_STRING, compiled);
                     return model;
                 });
-                return model;
             },
             /**
              * @description basic json clone of the attributes object
@@ -222,8 +222,6 @@ application.scope(function (app) {
              * @name Box#constructor
              * @func
              */
-            cidPrefix: 'c',
-            idAttribute: 'id',
             constructor: function (attributes, secondary) {
                 var model = this;
                 model[CHILDREN] = Collection();
@@ -255,7 +253,7 @@ application.scope(function (app) {
             resetChildren: function (newChildren) {
                 var child, box = this,
                     children = box[CHILDREN],
-                    arr = children.un();
+                    arr = children.unwrap();
                 while (arr.length) {
                     child = arr[0];
                     if (child && child.destroy) {
@@ -384,7 +382,7 @@ application.scope(function (app) {
                     secondary = extend(_.result(parent, 'childOptions'), secondary_ || {});
                 // unwrap it if you were passed a collection
                 if (isInstance(objs, _.Collection)) {
-                    objs = objs.un();
+                    objs = objs.unwrap();
                 }
                 if (!isArrayLike(objs)) {
                     objs = [objs];
@@ -448,16 +446,17 @@ application.scope(function (app) {
                     evnt = evnt_ || origin._createEvent(name, data),
                     parents = origin._collectParents(),
                     i = parents[LENGTH] - 1;
-                while (parents[LENGTH] && parents[i] && !evnt.isStopped()) {
-                    parent = parents[i];
-                    if (parent._isDestroyed) {
-                        evnt.stopImmediatePropagation();
-                        i = 0;
-                    } else {
-                        parent._eventDispatcher(evnt);
-                    }
-                    i--;
-                }
+                // while (parents[LENGTH] && parents[i] && !evnt.isStopped()) {
+                //     parent = parents[i];
+                //     if (parent._isDestroyed) {
+                //         evnt.stopImmediatePropagation();
+                //         i = 0;
+                //     } else {
+                //         parent._eventDispatcher(evnt);
+                //     }
+                //     i--;
+                // }
+                // should all be true the first time around
                 while (origin && origin._eventDispatcher && !evnt.isStopped()) {
                     origin._eventDispatcher(evnt);
                     origin = !evnt.isStopped() && evnt.bubbles && origin[PARENT];
@@ -466,16 +465,20 @@ application.scope(function (app) {
                 return evnt;
             },
             _remove: function (model) {
+                // cache the parent
                 var parent = this;
+                // let everyone know that this object is about to be removed
                 model[DISPATCH_EVENT]('before:removed');
                 // notify the child that the remove pipeline is starting
-                // remove the parent listeners
+                // remove the parent events
                 parent._unDelegateParentEvents(model);
+                // have parent remove it's child events
                 parent._unDelegateChildEvents(model);
                 // attach events from parent
                 parent._removeFromHash(model);
                 // void out the parent member tied directly to the model
                 model.parent = void 0;
+                // let everyone know that you've offically separated
                 model[DISPATCH_EVENT]('removed');
                 // notify the child that the remove pipeline is done
                 return model;
@@ -492,7 +495,7 @@ application.scope(function (app) {
                 }
                 if (idModel && isObject(idModel)) {
                     if (isInstance(idModel, _.Collection)) {
-                        idModel = idModel.un();
+                        idModel = idModel.unwrap();
                     }
                     if (!_.isArray(idModel)) {
                         idModel = [idModel];

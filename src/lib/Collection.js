@@ -5,9 +5,11 @@ application.scope(function (app) {
         isObject = _.isObject,
         isNumber = _.isNumber,
         isFunction = _.isFunction,
-        lengthString = 'length',
-        itemsString = '_items',
-        previousString = '_previous',
+        isInstance = _.isInstance,
+        LENGTH = 'length',
+        ITEMS = '_items',
+        BY_ID = '_byId',
+        PREVIOUS = '_previous',
         each = _.each,
         duff = _.duff,
         push = _.push,
@@ -15,40 +17,42 @@ application.scope(function (app) {
         keys = _.keys,
         find = _.find,
         map = _.map,
+        has = _.has,
+        isBlank = _.isBlank,
         stringify = _.stringify,
         findLast = _.findLast,
         allKeys = _.allKeys,
         splice = _.splice,
         toArray = _.toArray,
         gapSplit = _.gapSplit,
-        getLength = _.getLen,
         sort = _.sort,
         bind = _.bind,
+        extend = _.extend,
+        result = _.result,
         isArrayLike = _.isArrayLike,
-        eachCall = function (array, method) {
+        negate = _.negate,
+        isArray = _.isArray,
+        indexOf = _.indexOf,
+        clone = _.clone,
+        BOOLEAN_TRUE = !0,
+        BOOLEAN_FALSE = !1,
+        eachCall = function (array, method, arg) {
             return duff(array, function (item) {
-                _.result(item, method);
+                result(item, method, arg);
             });
         },
-        eachRevCall = function (array, method) {
+        eachRevCall = function (array, method, arg) {
             return duff(array, function (item) {
-                _.result(item, method);
+                result(item, method, arg);
             }, null, -1);
-        },
-        unshiftContext = function (fn, ctx) {
-            return function () {
-                var args = toArray(arguments);
-                args.unshift(this);
-                return fn.call(ctx || this, args, arguments);
-            };
         },
         doToEverything = function (doLater, direction) {
             return function () {
-                var args = _.toArray(arguments);
-                var one = args.shift();
+                var args = toArray(arguments),
+                    one = args.shift();
                 duff(args, function (items) {
                     duff(items, function (item) {
-                        doLater.call(_, one, item);
+                        doLater(one, item);
                     }, null, direction || 1);
                 });
                 return one;
@@ -78,18 +82,18 @@ application.scope(function (app) {
         },
         addAll = doToEverything(add),
         addAt = function (list, item, index) {
-            var len = list[lengthString],
+            var len = list[LENGTH],
                 lastIdx = len || 0;
             splice(list, index || 0, 0, item);
-            return len !== list[lengthString];
+            return len !== list[LENGTH];
         },
         range = function (start, stop, step, inclusive) {
             var length, range, idx;
-            if (stop === null || stop === void 0) {
+            if (isBlank(stop)) {
                 stop = start || 0;
                 start = 0;
             }
-            if (!isFinite(start) || !_.isNumber(start)) {
+            if (!isFinite(start) || !isNumber(start)) {
                 start = 0;
             }
             step = +step || 1;
@@ -103,49 +107,34 @@ application.scope(function (app) {
             }
             return range;
         },
-        count = function (list, start, end, runner) {
-            var obj, idx, ctx = this;
-            if (start < end && _.isNumber(start) && _.isNumber(end) && isFinite(start) && isFinite(end)) {
+        count = function (list, start, end, runner_) {
+            var runner, obj, idx, ctx = this;
+            if (start < end && isNumber(start) && isNumber(end) && isFinite(start) && isFinite(end)) {
                 end = Math.abs(end);
                 idx = start;
+                runner = bind(runner_, ctx);
                 while (idx < end) {
                     obj = null;
-                    if (_.has(list, idx)) {
+                    if (has(list, idx)) {
                         obj = list[idx];
                     }
-                    runner.call(ctx, obj, idx, list);
+                    runner(obj, idx, list);
                     idx++;
                 }
             }
             return list;
         },
         // array, startIndex, endIndex
-        subset = function (list, startIdx, endIdx) {
-            var ret = [];
-            find(list, function (idx, item) {
-                if (startIdx === idx) {
-                    open = true;
-                    startIdx = idx;
-                }
-                if (idx >= startIdx + limit) {
-                    return true;
-                }
-                if (open) {
-                    ret.push(model);
-                }
-            });
-            // return foldl(list, function(memo,item,idx){
-            //     return memo;
-            // },[]);
-        },
-        listFromMixed = function (obj) {
-            if (!hasArrayNature(obj)) {
-                return [obj];
-            } else if (Array.isArray(obj)) {
-                return obj.slice();
-            } else {
-                return toArray(obj);
-            }
+        between = function (fn) {
+            return function (list, startIdx_, endIdx_) {
+                var ret = [],
+                    startIdx = startIdx_ || 0,
+                    endIdx = endIdx_ || list[LENGTH],
+                    findResult = find(list, function (item, idx, list) {
+                        fn(ret, item, idx, list);
+                    }, null, endIdx);
+                return ret;
+            };
         },
         /**
          * @func
@@ -155,31 +144,32 @@ application.scope(function (app) {
                 previousAbs = Infinity;
             // trying to avoid running through 20 matchs
             // when i'm already at the exact one
-            if (isArrayLike(list)) {
-                valuesLen = getLength(list);
-                if (valuesLen === 1) {
-                    match = list[0];
-                }
-                if (_.indexOf(list, target) !== -1) {
-                    match = target;
-                }
-                if (!match) {
-                    // try doing this later with no sorting
-                    sort(list);
-                    for (i = valuesLen - 1;
-                        (i >= 0 && !match); i--) {
-                        path = list[i];
-                        diff = Math.abs(target - path);
-                        if (diff < previousAbs) {
-                            possible = path;
-                            previousAbs = diff;
-                        }
+            if (!isArrayLike(list)) {
+                return;
+            }
+            valuesLen = list[LENGTH];
+            if (valuesLen === 1) {
+                match = list[0];
+            }
+            if (indexOf(list, target) !== -1) {
+                match = target;
+            }
+            if (!match) {
+                // try doing this later with no sorting
+                sort(list);
+                for (i = valuesLen - 1;
+                    (i >= 0 && !match); i--) {
+                    path = list[i];
+                    diff = Math.abs(target - path);
+                    if (diff < previousAbs) {
+                        possible = path;
+                        previousAbs = diff;
                     }
-                    match = possible;
                 }
-                if (!match) {
-                    match = target;
-                }
+                match = possible;
+            }
+            if (!match) {
+                match = target;
             }
             return match;
         },
@@ -187,13 +177,13 @@ application.scope(function (app) {
             return count(list, 0, num, runner);
         },
         countFrom = function (list, num, runner) {
-            return count(list, num, list.length, runner);
+            return count(list, num, list[LENGTH], runner);
         },
         /**
          * @func
          */
         posit = function (list, item, lookAfter) {
-            return _.indexOf(list, item, lookAfter) + 1;
+            return indexOf(list, item, lookAfter) + 1;
         },
         /**
          * @func
@@ -211,9 +201,8 @@ application.scope(function (app) {
          * @func
          */
         concatUnique = function () {
-            var array = [],
-                all = concat.apply(null, arguments);
-            duff(all, function (item) {
+            var array = [];
+            duff(concat.apply(null, arguments), function (item) {
                 if (!posit(array, item)) {
                     array.push(item);
                 }
@@ -221,8 +210,8 @@ application.scope(function (app) {
             return array;
         },
         cycle = function (arr, num) {
-            var piece, len = getLength(arr);
-            if (_.isNumber(len)) {
+            var piece, len = arr[LENGTH];
+            if (isNumber(len)) {
                 num = num % len;
                 piece = arr.splice(num);
                 arr.unshift.apply(arr, piece);
@@ -240,11 +229,11 @@ application.scope(function (app) {
         // Returns whether an object has a given set of `key:value` pairs.
         isMatch = function (object, attrs) {
             var key, i = 0,
-                keys = _.keys(attrs),
+                keysResult = keys(attrs),
                 obj = Object(object);
-            return !find(keys, function (val) {
+            return !find(keysResult, function (val) {
                 if (attrs[val] !== obj[val] || !(val in obj)) {
-                    return true;
+                    return BOOLEAN_TRUE;
                 }
             });
         },
@@ -262,10 +251,8 @@ application.scope(function (app) {
         pluck = function (arr, key) {
             var items = [];
             duff(arr, function (item) {
-                if (isObject(item)) {
-                    if (item[key] !== void 0) {
-                        items.push(item[key]);
-                    }
+                if (isObject(item) && item[key] !== void 0) {
+                    items.push(item[key]);
                 }
             });
             return items;
@@ -286,7 +273,7 @@ application.scope(function (app) {
             return findLast(obj, matches(attrs));
         },
         whereNot = function (obj, attrs) {
-            return filter(obj, _.negate(matches(attrs)));
+            return filter(obj, negate(matches(attrs)));
         },
         flatten = function () {
             return foldl(arguments, function (memo, item) {
@@ -312,9 +299,9 @@ application.scope(function (app) {
         },
         merge = splat(function (item, idx, list) {
             var len, collection = this,
-                last = getLength(collection);
+                last = collection[LENGTH];
             if (isArrayLike(item)) {
-                len = getLength(item);
+                len = item[LENGTH];
                 duff(item, function (key, val) {
                     if (val !== void 0) {
                         // removes any undefined items
@@ -323,7 +310,7 @@ application.scope(function (app) {
                     }
                 });
                 if (len > (last || 0)) {
-                    collection[lengthString] = len;
+                    collection[LENGTH] = len;
                 }
             }
         }),
@@ -333,14 +320,14 @@ application.scope(function (app) {
                 evaluatedIsNumber = isNumber(numb),
                 isArray = isArrayLike(numb);
             if (numb < 0) {
-                evaluatedIsNumber = !1;
+                evaluatedIsNumber = BOOLEAN_FALSE;
             }
-            if (getLength(list)) {
+            if (list[LENGTH]) {
                 if (evaluatedIsNumber) {
                     items = [list[numb]];
                 }
                 if (isArray) {
-                    items = _.clone(numb);
+                    items = clone(numb);
                 }
                 if (!isArray && !evaluatedIsNumber && list[0]) {
                     items = [list[0]];
@@ -351,7 +338,7 @@ application.scope(function (app) {
         tackRev = function (fn, index, ctx) {
             return function () {
                 var args = toArray(arguments);
-                while (args.length < index) {
+                while (args[LENGTH] < index) {
                     // fill it out with null
                     args.push(null);
                 }
@@ -372,7 +359,7 @@ application.scope(function (app) {
          */
         // Create a reducing function iterating left or right.
         createReduce = function (dir) {
-            // Optimized iterator function as using arguments[lengthString]
+            // Optimized iterator function as using arguments[LENGTH]
             // in the main function will deoptimize the, see #1991.
             var iterator = function (obj, iteratee, memo, keys, index, length) {
                 var currentKey;
@@ -385,10 +372,10 @@ application.scope(function (app) {
             return function (obj, iteratee, memo, context) {
                 // iteratee = optimizeCb(iteratee, context, 4);
                 var actualKeys = !isArrayLike(obj) && keys(obj),
-                    length = getLength(actualKeys || obj),
+                    length = (actualKeys || obj)[LENGTH],
                     index = dir > 0 ? 0 : length - 1;
                 // Determine the initial value if none is provided.
-                if (getLength(arguments) < 3) {
+                if (arguments[LENGTH] < 3) {
                     memo = obj[actualKeys ? actualKeys[index] : index];
                     index += dir;
                 }
@@ -427,16 +414,12 @@ application.scope(function (app) {
         },
         unwrapper = function (fn) {
             return function (args) {
-                args[0] = args[0][itemsString];
+                args[0] = args[0][ITEMS];
                 return fn.call(this, args);
             };
         },
         unwrapInstance = function (instance_) {
-            var instance = instance_;
-            if (_.isInstance(instance, _.Collection)) {
-                instance = instance.un();
-            }
-            return instance;
+            return isInstance(instance, _.Collection) ? instance_ : instance.unwrap();
         },
         unwrapAll = function (fn) {
             return function (args) {
@@ -447,17 +430,9 @@ application.scope(function (app) {
             };
         },
         unwrap = function () {
-            return this[itemsString];
+            return this[ITEMS];
         },
-        applyToSelf = function (fn) {
-            return function () {
-                return fn.apply(this, this[itemsString]);
-            };
-        },
-        lengthFn = function () {
-            return this[itemsString][lengthString];
-        },
-        wrappedCollectionMethods = _.extend(wrap({
+        wrappedCollectionMethods = extend(wrap({
             each: duff,
             duff: duff,
             forEach: duff,
@@ -466,18 +441,17 @@ application.scope(function (app) {
             forEachRev: duffRev
         }, function (fn, val) {
             return function (iterator) {
-                fn(this[itemsString], iterator, this);
+                fn(this[ITEMS], iterator, this);
                 return this;
             };
         }), wrap(gapSplit('addAll removeAll'), function (name) {
             return function () {
-                // unshiftContext
                 var args = toArray(arguments);
                 args.unshift(this);
                 // unwrapAll
                 duff(args, function (arg, idx, args) {
-                    if (arg instanceof Collection) {
-                        arg = arg.un();
+                    if (isInstance(arg, Collection)) {
+                        arg = arg.unwrap();
                     }
                     args[idx] = arg;
                 });
@@ -487,9 +461,8 @@ application.scope(function (app) {
             };
         }), wrap(gapSplit('sort unshift push cycle uncycle reverse count countTo countFrom eachCall eachRevCall'), function (name) {
             return function () {
-                // unshiftContext
                 var args = toArray(arguments);
-                args.unshift(this[itemsString]);
+                args.unshift(this[ITEMS]);
                 // unwrapper
                 // custom
                 _[name].apply(_, args);
@@ -497,18 +470,16 @@ application.scope(function (app) {
             };
         }), wrap(gapSplit('has add addAt remove removeAt pop shift indexOf find findLast findWhere findLastWhere posit foldr foldl reduce'), function (name) {
             return function () {
-                // unshiftContext
                 var args = toArray(arguments);
-                args.unshift(this[itemsString]);
+                args.unshift(this[ITEMS]);
                 // custom
                 return _[name].apply(_, args);
             };
         }), wrap(gapSplit('merge eq map filter pluck where whereNot'), function (name) {
             // always responds with an array
             return function () {
-                // unshiftContext
                 var args = toArray(arguments);
-                args.unshift(this[itemsString]);
+                args.unshift(this[ITEMS]);
                 // unwrapper
                 // custom
                 return new Collection(_[name].apply(_, args));
@@ -541,9 +512,7 @@ application.scope(function (app) {
             where: where,
             findWhere: findWhere,
             findLastWhere: findLastWhere,
-            // finder: finder,
-            // find: find,
-            // findLast: findLast,
+            between: between,
             eq: eq,
             posit: posit,
             range: range,
@@ -553,48 +522,45 @@ application.scope(function (app) {
             whereNot: whereNot,
             eachRev: eachRev,
             duffRev: duffRev,
-            unshiftContext: unshiftContext,
             flatten: flatten
-            // ,
-            // between: between
         }),
-        BY_ID = '_byId',
-        Collection = extendFrom.Model('Collection', _.extend({
-            un: unwrap,
+        Collection = extendFrom.Model('Collection', extend({
             unwrap: unwrap,
-            len: lengthFn,
-            length: lengthFn,
             range: recreateSelf(range),
-            flatten: recreateSelf(applyToSelf(flatten)),
-            index: function (number) {
-                return this[itemsString][number || 0];
-            },
-            first: recreateSelf(function () {
-                return [this[itemsString][0]];
-            }),
-            last: recreateSelf(function () {
-                var len = this.length();
-                if (len) {
-                    return [this[itemsString][len - 1]];
-                }
+            flatten: recreateSelf(function () {
+                // return
+                return flatten.apply(null, this[ITEMS]);
             }),
             concat: recreateSelf(function () {
                 var args = [],
-                    base = this[itemsString];
+                    base = this[ITEMS];
                 // this allows us to mix collections with regular arguments
                 return base.concat.apply(base, map(arguments, function (arg) {
-                    return _.Collection(arg)[itemsString];
+                    return _.Collection(arg)[ITEMS];
                 }));
             }),
+            length: function () {
+                return this[ITEMS][LENGTH];
+            },
+            first: function () {
+                return [this[ITEMS][0]];
+            },
+            last: function () {
+                return this[ITEMS][this[LENGTH]() - 1];
+            },
+            index: function (number) {
+                return this[ITEMS][number || 0];
+            },
             constructor: function (arr) {
                 var collection = this;
-                if (!_.isArray(arr) && isArrayLike(arr)) {
+                if (!isArray(arr) && isArrayLike(arr)) {
                     arr = toArray(arr);
                 }
-                if (arr !== blank && !isArrayLike(arr)) {
+                if (!isBlank(arr) && !isArrayLike(arr)) {
                     arr = [arr];
                 }
-                collection[itemsString] = arr || [];
+                collection[BY_ID] = {};
+                collection[ITEMS] = arr || [];
                 return collection;
             },
             toString: function () {
@@ -602,9 +568,9 @@ application.scope(function (app) {
             },
             toJSON: function () {
                 // subtle distinction here
-                return map(this[itemsString], function (item) {
+                return map(this[ITEMS], function (item) {
                     var ret;
-                    if (isObject(item) && _.isFunction(item.toJSON)) {
+                    if (isObject(item) && isFunction(item.toJSON)) {
                         ret = item.toJSON();
                     } else {
                         ret = item;
@@ -613,7 +579,7 @@ application.scope(function (app) {
                 });
             },
             join: function (delimiter) {
-                return this[itemsString].join(delimiter);
+                return this[ITEMS].join(delimiter);
             },
             get: function (id) {
                 this[BY_ID] = this[BY_ID] || {};
@@ -635,7 +601,6 @@ application.scope(function (app) {
              * @returns {Box} instance
              */
             register: function (id, thing) {
-                this[BY_ID] = this[BY_ID] || {};
                 this[BY_ID][id] = thing;
                 return this;
             },
@@ -650,7 +615,6 @@ application.scope(function (app) {
              */
             unRegister: function (id) {
                 var box = this,
-                    byid = this[BY_ID] = this[BY_ID] || {},
                     item = box[BY_ID][id];
                 if (item !== void 0) {
                     box[BY_ID][id] = blank;
@@ -659,7 +623,7 @@ application.scope(function (app) {
             },
             mambo: function (fn) {
                 var collection = this;
-                externalMambo(collection[itemsString], function () {
+                externalMambo(collection[ITEMS], function () {
                     fn(collection);
                 });
                 return collection;

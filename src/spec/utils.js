@@ -32,13 +32,13 @@ application.scope().run(function (app, _, $) {
             it('_.push', function () {
                 expect(_.push(baseString.split(' '), 'string')).toEqual(baseString.split(' ').push('string'));
             });
-            it('_.listHas', function () {
-                var list = ['list', 2, 1, null];
-                expect(_.listHas(list, 1)).toEqual(true);
-                expect(_.listHas(list, 'list')).toEqual(true);
-                expect(_.listHas(list, {})).toEqual(false);
-                expect(_.listHas(list, void 0)).toEqual(false);
-            });
+            // it('_.listHas', function () {
+            //     var list = ['list', 2, 1, null];
+            //     expect(_.listHas(list, 1)).toEqual(true);
+            //     expect(_.listHas(list, 'list')).toEqual(true);
+            //     expect(_.listHas(list, {})).toEqual(false);
+            //     expect(_.listHas(list, void 0)).toEqual(false);
+            // });
             it('_.shift', function () {
                 expect(_.shift(baseString.split(' '))).toEqual(baseString.split(' ').shift());
             });
@@ -306,11 +306,6 @@ application.scope().run(function (app, _, $) {
                     two: 2
                 });
             });
-            it('_.property', function () {
-                var getToString = _.property('toString');
-                expect(getToString({})).toEqual({}.toString);
-                expect(getToString(function () {})).toEqual(function () {}.toString);
-            });
             it('_.isArrayLike', function () {
                 expect(_.isArrayLike('')).toEqual(false);
                 expect(_.isArrayLike([])).toEqual(true);
@@ -509,65 +504,6 @@ application.scope().run(function (app, _, $) {
             });
             it('_.roundFloat', function () {
                 expect(_.roundFloat(1.5489909, 3)).toEqual(1.548);
-            });
-            // it('_.flattenMatrix', function () {
-            //     var arr = [],
-            //         noop = function () {},
-            //         matrixAdder = _.flattenMatrix(function (name, fn) {
-            //             arr.push([name, fn]);
-            //         });
-            //     matrixAdder('one two', noop);
-            //     expect(arr).toEqual([
-            //         ['one', noop],
-            //         ['two', noop]
-            //     ]);
-            //     arr = [];
-            //     matrixAdder({
-            //         one: noop,
-            //         two: noop
-            //     });
-            //     expect(arr).toEqual([
-            //         ['one', noop],
-            //         ['two', noop]
-            //     ]);
-            //     arr = [];
-            //     matrixAdder('one two', [noop, noop]);
-            //     expect(arr).toEqual([
-            //         ['one', noop],
-            //         ['one', noop],
-            //         ['two', noop],
-            //         ['two', noop]
-            //     ]);
-            // });
-            it('_.objCondense', function () {
-                // var returnSelf = _.objCondense(function (obj) {
-                // 	return obj;
-                // });
-                expect(_.objCondense('one', 1, 'two', 2, 'three', 3)).toEqual({
-                    one: 1,
-                    two: 2,
-                    three: 3
-                });
-                expect(_.objCondense('one', 1, {
-                    three: 3
-                }, 'two', 2)).toEqual({
-                    one: 1,
-                    two: 2,
-                    three: 3
-                });
-            });
-            it('_.rip', function () {
-                expect(_.rip('one three five', {
-                    one: 1,
-                    two: 2,
-                    three: 3,
-                    four: 4,
-                    five: 5
-                })).toEqual({
-                    one: 1,
-                    three: 3,
-                    five: 5
-                });
             });
         });
     });
