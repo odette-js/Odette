@@ -1,4 +1,4 @@
-application.scope().module('Looper', function (module, app, _, extendFrom, factories) {
+application.scope().module('Looper', function (module, app, _, factories) {
     'use strict';
     var blank, x = 0,
         lastTime = 0,
@@ -12,8 +12,8 @@ application.scope().module('Looper', function (module, app, _, extendFrom, facto
         win = window,
         vendors = gapSplit('ms moz webkit o'),
         REQUEST_ANIMATION_FRAME = 'requestAnimationFrame',
-        allLoopGens = [],
-        runningLoopGens = [],
+        allLoopers = [],
+        runningLoopers = [],
         bind = _.bind,
         duff = _.duff,
         remove = _.remove,
@@ -26,29 +26,29 @@ application.scope().module('Looper', function (module, app, _, extendFrom, facto
         setup = function () {
             running = BOOLEAN_TRUE;
             win[REQUEST_ANIMATION_FRAME](function (time) {
-                duff(runningLoopGens, function (idx, loopGen) {
-                    loopGen.run(time);
+                duff(runningLoopers, function (looper) {
+                    looper.run(time);
                 });
                 teardown();
             });
         },
         teardown = function () {
-            duffRev(runningLoopGens, function (idx, loopGen) {
-                if (loopGen.halted() || loopGen.stopped() || loopGen.destroyed() || !loopGen.length()) {
-                    runningLoopGens.splice(idx, 1);
+            duffRev(runningLoopers, function (looper, idx) {
+                if (looper.halted() || looper.stopped() || looper.destroyed() || !looper.length()) {
+                    runningLoopers.splice(idx, 1);
                 }
             });
             running = BOOLEAN_FALSE;
-            if (runningLoopGens[LENGTH]) {
+            if (runningLoopers[LENGTH]) {
                 setup();
             }
         },
-        add = function (loopGen) {
-            allLoopGens.push(loopGen);
+        add = function (looper) {
+            allLoopers.push(looper);
         },
-        start = function (loopGen) {
-            if (!posit(runningLoopGens, loopGen)) {
-                runningLoopGens.push(loopGen);
+        start = function (looper) {
+            if (!posit(runningLoopers, looper)) {
+                runningLoopers.push(looper);
             }
             if (!running) {
                 setup();
@@ -76,13 +76,13 @@ application.scope().module('Looper', function (module, app, _, extendFrom, facto
                 };
             }
         }()),
-        LoopGen = _.extendFrom.Model('LoopGen', {
+        Looper = factories.Model.extend('Looper', {
             constructor: function (_runner) {
                 var fns, stopped = BOOLEAN_FALSE,
                     halted = BOOLEAN_FALSE,
                     destroyed = BOOLEAN_FALSE,
                     running = BOOLEAN_FALSE,
-                    loopGen = this,
+                    looper = this,
                     counter = 0,
                     fnList = [],
                     addList = [],
@@ -93,13 +93,13 @@ application.scope().module('Looper', function (module, app, _, extendFrom, facto
                             addList = [];
                         }
                     };
-                extend(loopGen, {
+                extend(looper, {
                     length: function () {
                         return fnList[LENGTH];
                     },
                     destroy: function () {
                         destroyed = BOOLEAN_TRUE;
-                        remove(allLoopGens, this);
+                        remove(allLoopers, this);
                         return this.halt();
                     },
                     destroyed: function () {
@@ -202,8 +202,8 @@ application.scope().module('Looper', function (module, app, _, extendFrom, facto
                         return id;
                     }
                 });
-                add(loopGen);
-                return loopGen;
+                add(looper);
+                return looper;
             },
             bind: function (fn) {
                 return bind(fn, this);
@@ -309,6 +309,6 @@ application.scope().module('Looper', function (module, app, _, extendFrom, facto
             }
         }, !0);
     _.exports({
-        AF: new LoopGen()
+        AF: new Looper()
     });
 });

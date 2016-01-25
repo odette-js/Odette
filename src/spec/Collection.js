@@ -1,11 +1,10 @@
-application.scope().run(function (app, _, $) {
-    var factories = _.factories;
+application.scope().run(function (app, _, factories, $) {
     describe('Collection', function () {
         var collection, numberCollection, complexCollection, evenNumberList;
         beforeEach(function () {
-            collection = _.Collection();
-            numberCollection = _.Collection([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
-            complexCollection = _.Collection([_.Box(), _.Box({
+            collection = factories.Collection();
+            numberCollection = factories.Collection([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+            complexCollection = factories.Collection([factories.Box(), factories.Box({
                 one: 1,
                 two: 2,
                 three: 3
@@ -48,8 +47,8 @@ application.scope().run(function (app, _, $) {
             expect(JSON.stringify(complexCollection)).toEqual('[{},{"one":1,"two":2,"three":3}]');
         });
         it('can also concatonate itself with collections and arrays just like a regular array', function () {
-            var collection = _.Collection([0, 1, 2, 3, 4]),
-                list = _.Collection([5, 6, 7, 8, 9]);
+            var collection = factories.Collection([0, 1, 2, 3, 4]),
+                list = factories.Collection([5, 6, 7, 8, 9]);
             expect(collection.concat(list, evenNumberList).unwrap()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 2, 4, 6, 8]);
         });
         it('can also reverse itself momentarily', function () {
@@ -157,10 +156,10 @@ application.scope().run(function (app, _, $) {
                 })).toEqual(7);
             });
             it('findLast', function () {
-                expect(_.Collection([12, 1, 2, 1, 104, 2, 1, 5, 55, 6, 2, 7]).findLast(function (item) {
+                expect(factories.Collection([12, 1, 2, 1, 104, 2, 1, 5, 55, 6, 2, 7]).findLast(function (item) {
                     return item % 17 === 0;
                 })).toEqual(void 0);
-                expect(_.Collection([88, 2, 1, 5, 70, 23, 43, 9]).findLast(function (item) {
+                expect(factories.Collection([88, 2, 1, 5, 70, 23, 43, 9]).findLast(function (item) {
                     return item % 2 === 0;
                 })).toEqual(70);
             });
@@ -175,18 +174,18 @@ application.scope().run(function (app, _, $) {
                     four: 4
                 };
             it('findWhere', function () {
-                expect(_.Collection([firstFindObj, secondFindObj]).findWhere({
+                expect(factories.Collection([firstFindObj, secondFindObj]).findWhere({
                     one: 2
                 })).toEqual(void 0);
-                expect(_.Collection([firstFindObj, secondFindObj]).findWhere({
+                expect(factories.Collection([firstFindObj, secondFindObj]).findWhere({
                     two: 2
                 })).toEqual(firstFindObj);
             });
             it('findLastWhere', function () {
-                expect(_.Collection([firstFindObj, secondFindObj]).findLastWhere({
+                expect(factories.Collection([firstFindObj, secondFindObj]).findLastWhere({
                     one: 2
                 })).toEqual(void 0);
-                expect(_.Collection([firstFindObj, secondFindObj]).findLastWhere({
+                expect(factories.Collection([firstFindObj, secondFindObj]).findLastWhere({
                     two: 2
                 })).toEqual(secondFindObj);
             });
@@ -210,7 +209,7 @@ application.scope().run(function (app, _, $) {
                 expect(numberCollection.merge([0, 1, 2, 6, 7, 8]).unwrap()).toEqual([0, 1, 2, 6, 7, 8, 6, 7, 8, 9]);
             });
             it('range', function () {
-                expect(_.Collection().range(4, 9).unwrap()).toEqual([4, 5, 6, 7, 8]);
+                expect(factories.Collection().range(4, 9).unwrap()).toEqual([4, 5, 6, 7, 8]);
             });
             it('eq', function () {
                 expect(numberCollection.eq(4).unwrap()).toEqual([4]);
@@ -227,7 +226,7 @@ application.scope().run(function (app, _, $) {
                 }).unwrap()).toEqual([1, 3, 5, 7, 9]);
             });
             it('pluck', function () {
-                expect(_.Collection([{
+                expect(factories.Collection([{
                     one: 1
                 }, {
                     one: 2
@@ -238,7 +237,7 @@ application.scope().run(function (app, _, $) {
                 }]).pluck('one').unwrap()).toEqual([1, 2, 3, 4]);
             });
             it('where', function () {
-                expect(_.Collection([{
+                expect(factories.Collection([{
                     one: 1
                 }, {
                     one: 2
@@ -255,7 +254,7 @@ application.scope().run(function (app, _, $) {
                 }]);
             });
             it('flatten', function () {
-                expect(_.Collection([
+                expect(factories.Collection([
                     [0, 1, 2, 3],
                     [4, 5, 6, 7, 8],
                     [9, 10, 11, 12]

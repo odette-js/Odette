@@ -1,25 +1,25 @@
 application.scope(function (app) {
     var blank, _ = app._,
-        extendFrom = _.extendFrom,
         factories = _.factories,
-        Collection = _.Collection,
+        Collection = factories.Collection,
         Events = factories.Events,
         gapSplit = _.gapSplit,
         isObject = _.isObject,
-        isStr = _.isString,
-        isNum = _.isNumber,
-        isFn = _.isFunction,
-        each = _.each,
-        duff = _.duff,
-        find = _.find,
+        isString = _.isString,
+        isNumber = _.isNumber,
         isEqual = _.isEqual,
         isBlank = _.isBlank,
         isFunction = _.isFunction,
+        each = _.each,
+        duff = _.duff,
+        find = _.find,
         duffRev = _.duffRev,
         push = _.push,
         has = _.has,
         map = _.map,
+        result = _.result,
         toArray = _.toArray,
+        remove = _.remove,
         clone = _.clone,
         once = _.once,
         parse = _.parse,
@@ -35,6 +35,7 @@ application.scope(function (app) {
         uniqueId = _.uniqueId,
         LENGTH = 'length',
         PARENT = 'parent',
+        DESTROY = 'destroy',
         INTERNAL_EVENTS = '_events',
         ATTRIBUTES = 'attributes',
         DISPATCH_EVENT = 'dispatchEvent',
@@ -51,15 +52,15 @@ application.scope(function (app) {
          * @description event and attribute extensor object that creates the Box Constructor and convenience method at _.Box
          * @augments Model
          */
-        Container = _.extendFrom.Events('Container', {
+        Container = factories.Events.extend('Container', {
             cidPrefix: 'c',
             idAttribute: 'id',
             constructor: function (attributes, secondary) {
                 var model = this;
                 model.cid = model.cid = uniqueId(model.cidPrefix);
                 model.reset(attributes);
-                _.extend(model, secondary);
-                Events.apply(this, arguments);
+                extend(model, secondary);
+                Events.constructor.apply(this, arguments);
                 return model;
             },
             _reset: function (attributes_) {
@@ -68,11 +69,11 @@ application.scope(function (app) {
                     // automatically checks to see if the attributes are a string
                     attributes = parse(attributes_) || {},
                     // default attributes
-                    attrs = _.result(model, 'defaults', attributes),
+                    attrs = result(model, 'defaults', attributes),
                     // build new attributes
                     newAttributes = extend(attrs, attributes),
                     // get the id
-                    idAttr = _.result(model, 'idAttribute', newAttributes),
+                    idAttr = result(model, 'idAttribute', newAttributes),
                     // stale attributes
                     ret = model[ATTRIBUTES] || {},
                     history = model[ATTRIBUTE_HISTORY] = {};
@@ -147,7 +148,7 @@ application.scope(function (app) {
                 return didChange;
             },
             digester: function (fn) {
-                var model = this;
+                var ret, model = this;
                 model[CHANGE_COUNTER] = model[CHANGE_COUNTER] || 0;
                 model[CHANGE_COUNTER]++;
                 ret = fn();
@@ -208,15 +209,18 @@ application.scope(function (app) {
             },
             _setId: function (id_) {
                 var model = this,
-                    id = id_ === void 0 ? _.uniqueId(!1) : id_ + '';
+                    id = id_ === void 0 ? uniqueId(BOOLEAN_FALSE) : id_ + '';
                 model.id = id;
             },
             reset: function (attrs) {
                 this._reset(attrs);
                 return this;
             }
-        }, true),
-        Box = _.extendFrom.Container('Box', {
+        }, BOOLEAN_TRUE),
+        ModelMaker = function (attributes, secondary) {
+            return new Box(attributes, secondary);
+        },
+        Box = factories.Container.extend('Box', {
             /**
              * @description constructor function for the Box Object
              * @name Box#constructor
@@ -225,7 +229,7 @@ application.scope(function (app) {
             constructor: function (attributes, secondary) {
                 var model = this;
                 model[CHILDREN] = Collection();
-                Container.apply(model, arguments);
+                Container.constructor.apply(model, arguments);
                 return model;
             },
             _gatherChildren: function () {
@@ -254,16 +258,16 @@ application.scope(function (app) {
                 var child, box = this,
                     children = box[CHILDREN],
                     arr = children.unwrap();
-                while (arr.length) {
+                while (arr[LENGTH]) {
                     child = arr[0];
-                    if (child && child.destroy) {
-                        child.destroy();
+                    if (child) {
+                        result(child, DESTROY);
                     }
                     // if it didn't remove itself,
                     // then you should remove it here
-                    // this doesn't work if the child is a basic data type
+                    // this gets run if the child is a basic data type
                     if (arr[0] === child) {
-                        _.remove(arr, child);
+                        remove(arr, child);
                     }
                 }
                 box.add(newChildren);
@@ -288,7 +292,7 @@ application.scope(function (app) {
                 var model = this,
                     attrClone = model.toJSON(),
                     children = model[CHILDREN];
-                if (children.length()) {
+                if (children[LENGTH]()) {
                     attrClone[CHILDREN] = children.toJSON();
                 }
                 return attrClone;
@@ -337,7 +341,7 @@ application.scope(function (app) {
                 }
             },
             _delegateParentEvents: function (model) {
-                var parent = model.parent,
+                var parent = model[PARENT],
                     parentEvents = _.result(model, 'parentEvents');
                 if (parent && parentEvents) {
                     model._delegatedParentEvents = parentEvents;
@@ -364,7 +368,7 @@ application.scope(function (app) {
                 // unties boxes
                 parent._remove(model);
                 // explicitly tie to parent
-                model.parent = parent;
+                model[PARENT] = parent;
                 // attach events from parent
                 parent._addToHash(model);
                 // ties boxes together
@@ -374,54 +378,50 @@ application.scope(function (app) {
                 // notify that you were added
                 return model;
             },
+            Model: ModelMaker,
             // public facing version filters
-            add: function (objs, secondary_) {
-                var childWasAdded, newModel, returnNewModel, parent = this,
+            add: function (objs_, secondary_) {
+                var parent = this,
                     children = parent[CHILDREN],
-                    list = [],
-                    secondary = extend(_.result(parent, 'childOptions'), secondary_ || {});
+                    secondary = extend(result(parent, 'childOptions'), secondary_ || {}),
+                    list = Collection(objs_);
                 // unwrap it if you were passed a collection
-                if (isInstance(objs, _.Collection)) {
-                    objs = objs.unwrap();
+                if (!parent.Model || !list[LENGTH]()) {
+                    return list.unwrap();
                 }
-                if (!isArrayLike(objs)) {
-                    objs = [objs];
-                }
-                if (parent.Model && objs[0]) {
-                    list = map(objs, function (obj) {
-                        var foundModel, isChildType = parent._isChildType(obj);
+                list = list.foldl(function (memo, obj) {
+                    var isChildType = parent._isChildType(obj),
                         // create a new model
-                        newModel = isChildType ? obj : new parent.Model(obj, secondary);
+                        newModel = isChildType ? obj : new parent.Model(obj, secondary),
                         // find by the newly created's id
                         foundModel = children.get(newModel.id);
-                        // out with the old
-                        if (foundModel) {
-                            // update the old model with new info
-                            foundModel.set(newModel.toJSON());
-                            newModel = foundModel;
-                        } else {
-                            childWasAdded = true;
-                            parent._add(newModel);
-                            // list to return
-                        }
-                        return newModel;
-                    });
-                    if (childWasAdded) {
-                        parent[DISPATCH_EVENT]('child:added');
+                    if (foundModel) {
+                        // update the old
+                        foundModel.set(newModel.toJSON());
+                        newModel = foundModel;
+                    } else {
+                        // add the new
+                        parent._add(newModel);
                     }
+                    memo.push(newModel);
+                    return memo;
+                }, []);
+                if (list[LENGTH]) {
+                    parent[DISPATCH_EVENT]('child:added');
                 }
                 return list;
             },
             _removeFromHash: function (child) {
                 var parent = this,
                     children = parent.children;
-                if (children && child) {
-                    // remove the child from the children hash
-                    children.remove(child);
-                    parent._unRegisterChild(child.id);
-                    // unregister from the child hash keys
-                    parent._unRegisterChild(child.cid);
+                if (!children || !child) {
+                    return;
                 }
+                // remove the child from the children hash
+                children.remove(child);
+                parent._unRegisterChild(child.id);
+                // unregister from the child hash keys
+                parent._unRegisterChild(child.cid);
             },
             // only place that we mention parents
             _collectParents: function () {
@@ -441,22 +441,12 @@ application.scope(function (app) {
                 var origin = this,
                     name = (evnt_ && evnt_.methodName) || name_,
                     methodName = (evnt_ && evnt_.methodName) || upCase(camelCase('on:' + name, ':')),
-                    childMethodName = upCase(camelCase('on:child:' + name, ':')),
+                    childMethodName = upCase(camelCase('on:bubble:' + name, ':')),
                     // onMethod = isFunction(origin[methodName]),
                     evnt = evnt_ || origin._createEvent(name, data),
                     parents = origin._collectParents(),
                     i = parents[LENGTH] - 1;
-                // while (parents[LENGTH] && parents[i] && !evnt.isStopped()) {
-                //     parent = parents[i];
-                //     if (parent._isDestroyed) {
-                //         evnt.stopImmediatePropagation();
-                //         i = 0;
-                //     } else {
-                //         parent._eventDispatcher(evnt);
-                //     }
-                //     i--;
-                // }
-                // should all be true the first time around
+                // should all be BOOLEAN_TRUE the first time around
                 while (origin && origin._eventDispatcher && !evnt.isStopped()) {
                     origin._eventDispatcher(evnt);
                     origin = !evnt.isStopped() && evnt.bubbles && origin[PARENT];
@@ -477,37 +467,37 @@ application.scope(function (app) {
                 // attach events from parent
                 parent._removeFromHash(model);
                 // void out the parent member tied directly to the model
-                model.parent = void 0;
+                model[PARENT] = void 0;
                 // let everyone know that you've offically separated
                 model[DISPATCH_EVENT]('removed');
                 // notify the child that the remove pipeline is done
                 return model;
             },
             remove: function (idModel_) {
-                var removedSomething, parent = this,
+                var parent = this,
                     children = parent[CHILDREN],
-                    retList = _.Collection(),
-                    args = _.toArray(arguments).splice(1),
+                    retList = Collection(),
+                    args = toArray(arguments).splice(1),
                     idModel = idModel_;
                 if (!isObject(idModel)) {
                     // it's a string
                     idModel = parent.children.get(idModel + '');
                 }
-                if (idModel && isObject(idModel)) {
-                    if (isInstance(idModel, _.Collection)) {
-                        idModel = idModel.unwrap();
-                    }
-                    if (!_.isArray(idModel)) {
-                        idModel = [idModel];
-                    }
-                    duff(idModel, function (model) {
-                        removedSomething = true;
-                        parent._remove(model);
-                        retList.add(model);
-                    });
-                    if (removedSomething) {
-                        parent[DISPATCH_EVENT]('child:removed');
-                    }
+                if (!idModel || !isObject(idModel)) {
+                    return retList;
+                }
+                if (isInstance(idModel, Collection)) {
+                    idModel = idModel.unwrap();
+                }
+                if (!isArray(idModel)) {
+                    idModel = [idModel];
+                }
+                duff(idModel, function (model) {
+                    parent._remove(model);
+                    retList.add(model);
+                });
+                if (retList[LENGTH]()) {
+                    parent[DISPATCH_EVENT]('child:removed');
                 }
                 return retList;
             },
@@ -524,9 +514,9 @@ application.scope(function (app) {
                 // destroys it's children
                 box.resetChildren();
                 // removes all parent / parent's child listeners
-                removeRet = box.parent && box.parent.remove(box);
+                removeRet = box[PARENT] && box[PARENT].remove(box);
                 // stop listening to other views
-                box[DISPATCH_EVENT]('destroy');
+                box[DISPATCH_EVENT](DESTROY);
                 // stops listening to everything
                 box.stopListening();
                 // takes off all other event handlers
@@ -544,13 +534,13 @@ application.scope(function (app) {
                 var compString, isReversed, model = this,
                     children = model[CHILDREN];
                 if (!comparator) {
-                    comparator = model.comparator;
+                    comparator = result(model, 'comparator');
                 }
-                if (_.isString(comparator)) {
+                if (isString(comparator)) {
                     isReversed = comparator[0] === '!';
                     compString = comparator;
                     if (isReversed) {
-                        compString = comparator.slice(1, comparator[LENGTH]);
+                        compString = comparator.slice(1);
                     }
                     comparator = function (a, b) {
                         var val, valA = a.get(compString),
@@ -569,4 +559,5 @@ application.scope(function (app) {
                 return model;
             }
         }, !0);
+    ModelMaker.constructor = Box;
 });

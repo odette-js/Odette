@@ -4,7 +4,10 @@ application.scope(function (app) {
         Events = factories.Events,
         result = _.result,
         isFunction = _.isFunction,
+        isObject = _.isObject,
         intendedObject = _.intendedObject,
+        PARENT = 'parent',
+        NAME = 'name',
         basicData = function (basic) {
             return function () {
                 return basic;
@@ -15,37 +18,32 @@ application.scope(function (app) {
             if (messengerHash[key]) {
                 messengerHash[key].destroy();
             }
-            obj.name = key;
+            obj[NAME] = key;
             messengerHash[key] = obj;
         },
         removeFromHash = function (obj) {
-            messengerHash[obj.name] = blank;
+            messengerHash[obj[NAME]] = blank;
         },
         Messenger = factories.Events.extend('Messenger', {
             constructor: function (parent) {
-                var hash = {};
+                var ret, scopedHash = {};
                 this._getHash = function (key, arg) {
-                    return result(hash, key, arg);
+                    return result(scopedHash, key, arg);
                 };
                 this._setHash = function (key, val) {
-                    hash[key] = val;
+                    scopedHash[key] = val;
                 };
-                if (_.isObject(parent)) {
-                    this.attachParent(parent);
-                } else {
-                    // is string
-                    attachToHash(key, this);
-                }
+                ret = isObject(parent) ? this.attachParent(parent) : attachToHash(key, this);
+                this.on('before:destroy', function () {
+                    var obj = this;
+                    if (obj[NAME]) {
+                        removeFromHash(obj);
+                    }
+                });
                 return Events.constructor.call(this);
             },
-            onDestroy: function () {
-                var obj = this;
-                if (obj.name) {
-                    removeFromHash(obj);
-                }
-            },
             attachParent: function (parent) {
-                this.parent = parent;
+                this[PARENT] = parent;
                 parent.message = this;
                 return this;
             },
@@ -54,18 +52,15 @@ application.scope(function (app) {
             },
             reply: function (key, handler) {
                 var messenger = this;
-                _.intendedObject(key, handler, function (key, handler_) {
+                intendedObject(key, handler, function (key, handler_) {
                     var handler = handler_;
                     if (!isFunction(handler_)) {
                         handler = basicData(handler_);
                     }
-                    messenger._setHash(key, handler);
+                    messenger._setHash(key, bind(handler, this[PARENT] || {}));
                 });
-                return messenger.parent;
+                return messenger[PARENT];
             }
-        }, true),
-        messenger = _.messenger = function (obj) {
-            return new Messenger(obj);
-        };
-    messenger(app);
+        }, true);
+    factories.Messenger(app);
 });

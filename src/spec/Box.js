@@ -1,8 +1,8 @@
-application.scope().run(function (app, _, $) {
-    var factories = _.factories;
+application.scope().run(function (app, _, factories, $) {
+    // var factories = _.factories;
     describe('Box', function () {
         var blank, box,
-            Box = _.Box,
+            Box = factories.Box,
             handler = function () {
                 return !0;
             },
@@ -206,16 +206,16 @@ application.scope().run(function (app, _, $) {
             });
             it('they can clone children into an array', function () {
                 var clone;
-                box.add([_.Box(), _.Box()]);
+                box.add([factories.Box(), factories.Box()]);
                 clone = box.children.toJSON();
                 expect(clone).toEqual([{}, {}]);
             });
             it('they can even clone their deep, underlying structure', function () {
-                box = _.Box(data);
+                box = factories.Box(data);
                 expect(box.treeToJSON()).toEqual(data);
             });
             it('they can stringify themselves', function () {
-                box = _.Box({
+                box = factories.Box({
                     some: 'thing'
                 });
                 expect(box.toString()).toEqual(JSON.stringify({
@@ -223,16 +223,16 @@ application.scope().run(function (app, _, $) {
                 }));
             });
             it('they can stringify their children', function () {
-                box = _.Box();
+                box = factories.Box();
                 box.add(data.children);
                 expect(box.children.toString()).toEqual(JSON.stringify(data.children));
             });
             // it('they can stringify themselves as a tree structure', function () {
-            //     box = _.Box(data);
+            //     box = factories.Box(data);
             //     expect(box.stringifyTree()).toEqual(JSON.stringify(data));
             // });
             // it('they can stringify themselves as a tree structure', function () {
-            //     box = _.Box(data);
+            //     box = factories.Box(data);
             //     expect(box.stringifyTree()).toEqual(JSON.stringify(data));
             // });
         });
@@ -241,7 +241,7 @@ application.scope().run(function (app, _, $) {
                 box.children.register('registering', {
                     myObj: 1
                 });
-                expect(box.children._byId.registering.myObj).toEqual(1);
+                expect(box.children._byId.id.registering.myObj).toEqual(1);
             });
             it('and retreive information', function () {
                 var data = {
@@ -269,12 +269,12 @@ application.scope().run(function (app, _, $) {
                     expect(box.children.length()).toEqual(2);
                 });
                 it('you can also remove them', function () {
-                    box = _.Box();
+                    box = factories.Box();
                     box.add(data.children);
                     expect(box.children.length()).toEqual(2);
                 });
                 it('or many at the same time', function () {
-                    box = _.Box();
+                    box = factories.Box();
                     box.add([{
                         one: 1
                     }, {
@@ -292,7 +292,7 @@ application.scope().run(function (app, _, $) {
             });
             describe('they can', function () {
                 it('destroy themselves', function () {
-                    box = _.Box();
+                    box = factories.Box();
                     box.add([{
                         one: 1
                     }, {
@@ -380,7 +380,7 @@ application.scope().run(function (app, _, $) {
                 expect(box._events.event1.length).toEqual(0);
             });
             it('if they are listening to something then those listeners will also be removed', function () {
-                var box2 = _.Box(),
+                var box2 = factories.Box(),
                     events = {};
                 box.listenTo(box2, {
                     event1: function () {},
@@ -398,7 +398,7 @@ application.scope().run(function (app, _, $) {
                 expect(_.keys(events).length).toEqual(0);
             });
             it('conversely, if the box has listening objects, it will remove it\'s handlers from other objects', function () {
-                var box2 = _.Box(),
+                var box2 = factories.Box(),
                     events = {};
                 box.listenTo(box2, {
                     event1: function () {},

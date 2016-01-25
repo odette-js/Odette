@@ -1,18 +1,25 @@
-application.scope().module('View', function (module, app, _, $) {
+application.scope().module('View', function (module, app, _, factories, $) {
     var blank, each = _.each,
-        isFn = _.isFn,
+        isFunction = _.isFunction,
         duff = _.duff,
-        factories = _.factories,
         Box = factories.Box,
-        extendFrom = _.extendFrom,
         isString = _.isString,
         gapSplit = _.gapSplit,
         isArray = _.isArray,
+        intendedObject = _.intendedObject,
+        reverseParams = _.reverseParams,
         bind = _.bind,
+        map = _.map,
+        isInstance = _.isInstance,
         has = _.has,
+        clone = _.clone,
+        result = _.result,
         protoProp = _.protoProp,
-        lengthString = 'length',
-        optionsString = 'options',
+        LENGTH = 'length',
+        OPTIONS = 'options',
+        PARENT = 'parent',
+        BOOLEAN_TRUE = !0,
+        BOOLEAN_FALSE = !1,
         templates = {},
         compile = function (id, force) {
             var matches, tag, template, attrs, templateFn = templates[id];
@@ -20,7 +27,7 @@ application.scope().module('View', function (module, app, _, $) {
                 tag = $(id);
                 template = tag.html();
                 matches = template.match(/\{\{([\w\s\d]*)\}\}/mgi);
-                attrs = _.map(matches, function (match) {
+                attrs = map(matches, function (match) {
                     return {
                         match: match,
                         attr: match.split('{{').join('').split('}}').join('').trim()
@@ -29,7 +36,7 @@ application.scope().module('View', function (module, app, _, $) {
                 template = template.trim();
                 templateFn = templates[id] = function (obj) {
                     var str = template,
-                        clone = _.clone(obj);
+                        clone = clone(obj);
                     duff(attrs, function (idx, match) {
                         if (!clone[match.attr]) {
                             clone[match.attr] = '';
@@ -40,35 +47,6 @@ application.scope().module('View', function (module, app, _, $) {
                 };
             }
             return templateFn;
-        },
-        scrapeData = function (model, el, attributes) {
-            var val, value, str = model.dataScrape;
-            if (str) {
-                value = el.data(str);
-                if (isString(value)) {
-                    val = {};
-                    val[_.camelCase(str)] = value;
-                    value = val;
-                }
-                _.extend(attributes, value);
-            }
-        },
-        ensureUIObj = function (fn) {
-            return function () {
-                var ui, view = this,
-                    viewEl = view.el;
-                if (!_.has(view, 'ui')) {
-                    ui = view.ui || {};
-                    view.ui = {};
-                    each(ui, function (domm, key) {
-                        view.ui[key] = $();
-                        viewEl.find(domm).duff(function (el) {
-                            view.attachUIElement(key, el);
-                        });
-                    });
-                }
-                return fn.apply(view, arguments);
-            };
         },
         makeDelegateEventKey = function (view, name) {
             return name + '.delegateEvents' + view.cid;
@@ -89,7 +67,7 @@ application.scope().module('View', function (module, app, _, $) {
                 return _key += namespace;
             }).join(' ');
         },
-        normalizeUIString = function(uiString, ui) {
+        normalizeUIString = function (uiString, ui) {
             return uiString.replace(/@ui\.[a-zA-Z_$0-9]*/g, function (r) {
                 return ui[r.slice(4)];
             });
@@ -98,7 +76,7 @@ application.scope().module('View', function (module, app, _, $) {
         // a given key for triggers and events
         // swaps the @ui with the associated selector.
         // Returns a new, non-mutated, parsed events hash.
-        normalizeUIKeys = function(hash, ui) {
+        normalizeUIKeys = function (hash, ui) {
             return _.reduce(hash, function (memo, val, key) {
                 var normalizedKey = Marionette.normalizeUIString(key, ui);
                 memo[normalizedKey] = val;
@@ -127,11 +105,10 @@ application.scope().module('View', function (module, app, _, $) {
             duff(props, function (idx, prop) {
                 if (has(from, prop)) {
                     to[prop] = from[prop];
-                    from[prop] = void 0;
                 }
             });
         },
-        View = extendFrom.Box('View', {
+        View = factories.Box.extend('View', {
             /**
              * @func
              * @name View#constructor
@@ -147,11 +124,8 @@ application.scope().module('View', function (module, app, _, $) {
                 var model = this;
                 pluckviews(secondary, model, viewplucks);
                 model._ensureElement();
-                Box.apply(model, arguments);
+                Box.constructor.apply(model, arguments);
                 return model;
-            },
-            childViewContainer: function () {
-                return this.el;
             },
             $: function (selector) {
                 return this.el.find(selector);
@@ -173,24 +147,26 @@ application.scope().module('View', function (module, app, _, $) {
                 return regionsManager;
             },
             _appendChildElements: function () {
-                var view = this,
-                    // scoped under view because it always has to be inside of view
-                    el = view.$(_.result(view, 'childViewContainer'));
-                // view.children.eachCall('render');
-                view.children.each(function (idx, child) {
-                    if (_.result(child, 'filter')) {
-                        child.render();
+                var parentView, view = this;
+                view.regionManager.each(function (region) {
+                    region.children.each(function (child) {
+                        if (result(child, 'filter')) {
+                            child.render();
+                        }
+                    });
+                    if (!parentView) {
+                        parentView = view.parentView();
                     }
+                    if (view[PARENT] && view[PARENT].rendered()) {
+                        region._passBufferedViews();
+                    }
+                    // if any were rendered
+                    el.append(view._bufferedEls);
                 });
-                if (view.parent && !view.parent.rendered()) {
-                    view._passBufferedViews();
-                }
-                // if any were rendered
-                el.append(view._bufferedEls);
             },
             _establishRegions: function () {
                 var regionsManager, view = this,
-                    regions = view._establishedRegions || _.result(view, 'regions');
+                    regions = view._establishedRegions || result(view, 'regions');
                 if (regions) {
                     view._establishedRegions = regions;
                 }
@@ -204,17 +180,16 @@ application.scope().module('View', function (module, app, _, $) {
             render: function () {
                 var frag = _.createDocFrag(),
                     view = this;
-                view.isRendered = !1;
+                view.isRendered = BOOLEAN_FALSE;
+                // prep the object with extra members (doc frags on regionviews,
+                // list of children to trigger events on)
                 view._ensureBufferedViews();
-                // detach this element so we don't cause more reflows than necessary
-                // view._detachElement();
-                // remove the child elements
-                // request extra data or something before rendering: is still intact
+                // request extra data or something before rendering: dom is still completely intact
                 view.dispatchEvent('before:render');
-                // set render flat
-                view.isRendered = !1;
                 // unbinds and rebinds element only if it changes
                 view.setElement(view.el);
+                // extra step to wipe element attributes?
+                // update new element's attributes
                 view._setElAttributes();
                 // renders the html
                 view._renderHTML();
@@ -224,8 +199,11 @@ application.scope().module('View', function (module, app, _, $) {
                 view._establishRegions();
                 // puts children back inside parent
                 view._appendChildElements();
+                // attach buffered children
                 view._attachBufferedViews();
-                view.isRendered = !0;
+                // mark the view as rendered
+                view.isRendered = BOOLEAN_TRUE;
+                // dispatch the render event
                 view.dispatchEvent('render');
                 return view;
             },
@@ -262,18 +240,18 @@ application.scope().module('View', function (module, app, _, $) {
             // an element from the `id`, `className` and `tagName` properties.
             _ensureElement: function () {
                 var el, view = this,
-                    _elementSelector = view._elementSelector || _.result(view, 'el');
+                    _elementSelector = view._elementSelector || result(view, 'el');
                 if (_elementSelector) {
                     view._elementSelector = _elementSelector;
                 }
-                if (!_.isInstance(_elementSelector, _.DOMM)) {
+                if (!isInstance(_elementSelector, _.DOMM)) {
                     if (_.isString(_elementSelector)) {
                         // sets external element
                         el = _elementSelector;
                     } else {
                         // defauts back to wrapping the element
                         // creates internal element
-                        el = view._createElement(_.result(view, 'tagName'));
+                        el = view._createElement(result(view, 'tagName'));
                         // subclassed to expand the attributes that can be used
                     }
                     view.setElement(el);
@@ -281,9 +259,9 @@ application.scope().module('View', function (module, app, _, $) {
             },
             _setElAttributes: function () {
                 var view = this;
-                var attrs = _.result(view, 'elementAttributes') || {};
+                var attrs = result(view, 'elementAttributes') || {};
                 if (view.className) {
-                    attrs['class'] = _.result(view, 'className');
+                    attrs['class'] = result(view, 'className');
                 }
                 view._setAttributes(attrs);
             },
@@ -312,7 +290,7 @@ application.scope().module('View', function (module, app, _, $) {
                             methods = [methods_];
                         }
                         __events[makeDelegateEventKeys(view, key)] = _.map(methods, function (idx, method) {
-                            return _.bind(view[method] || method, view);
+                            return bind(view[method] || method, view);
                         });
                     });
                     el.on(__events);
@@ -336,7 +314,7 @@ application.scope().module('View', function (module, app, _, $) {
                             methods = [methods_];
                         }
                         __events[makeDelegateEventKeys(view, key)] = _.map(methods, function (idx, method) {
-                            return _.bind(view[method] || method, view);
+                            return bind(view[method] || method, view);
                         });
                     });
                     el.on(__events);
@@ -345,10 +323,10 @@ application.scope().module('View', function (module, app, _, $) {
             },
             parentView: function () {
                 var found, view = this,
-                    parent = view.parent;
-                while (found && parent && !_.isInstance(parent, View)) {
-                    parent = parent.parent;
-                    if (_.isInstance(parent, View)) {
+                    parent = view[PARENT];
+                while (found && parent && !isInstance(parent, View)) {
+                    parent = parent[PARENT];
+                    if (isInstance(parent, View)) {
                         found = parent;
                     }
                 }
@@ -356,7 +334,7 @@ application.scope().module('View', function (module, app, _, $) {
             },
             _bindUIElements: function () {
                 var view = this,
-                    _uiBindings = view._uiBindings || _.result(view, 'ui');
+                    _uiBindings = view._uiBindings || result(view, 'ui');
                 view.ui = view.ui || {};
                 if (_uiBindings) {
                     // save it to skip the result call later
@@ -421,7 +399,7 @@ application.scope().module('View', function (module, app, _, $) {
                 var ret, _bufferedViews, view = this;
                 view._ensureBufferedViews();
                 ret = Box.prototype.add.call(view, _.isArrayLike(models_) ? models_ : [models_]);
-                _.duff(ret, function (view) {
+                duff(ret, function (view) {
                     view._attemptAttach();
                 });
                 return ret;
@@ -452,11 +430,11 @@ application.scope().module('View', function (module, app, _, $) {
             _attachBufferedChildren: function () {
                 var childView, idx = 0,
                     view = this,
-                    el = view.$(_.result(view, 'childViewContainer'));
+                    el = view.$(result(view, 'childViewContainer'));
                 if (view._bufferedEls) {
                     el.append(view._bufferedEls);
                 }
-                while (view._bufferedViews && view._bufferedViews[lengthString] && view._bufferedViews[idx]) {
+                while (view._bufferedViews && view._bufferedViews[LENGTH] && view._bufferedViews[idx]) {
                     childView = view._bufferedViews[idx];
                     idx++;
                     // appends children to parent el
@@ -469,17 +447,11 @@ application.scope().module('View', function (module, app, _, $) {
             _attachBufferedViews: function () {
                 var parent = this;
                 parent.el.append(parent._bufferedEls);
-                _.duff(parent._bufferedViews, function (idx, buffered) {
+                duff(parent._bufferedViews, function (idx, buffered) {
                     buffered.isAttached = true;
                     buffered.dispatchEvent('attach');
                 });
             },
-            // _attachTrigger: function () {
-            //     var parent = this;
-            //     // only has to happen once
-            //     parent._attachBufferedViews();
-            //     parent._resetBuffered();
-            // },
             attach: function (parent_) {
                 var view = this;
                 if (view.attached()) {
@@ -502,18 +474,14 @@ application.scope().module('View', function (module, app, _, $) {
                     }
                 }
             },
-            // _conditionallyDispachAttached: function () {
-            //     var view = this,
-            //         parent = view.parent;
-            //     if (!view.attached() && parent && parent.attached()) {
-            //         view.isAttached = true;
-            //         parent.el.append(view.el);
-            //         view.dispatchEvent('attach');
-            //     }
-            // },
             detach: function () {
                 var view = this;
+                if (view.isDetaching) {
+                    return;
+                }
+                view.isDetaching = BOOLEAN_TRUE;
                 view.dispatchEvent('before:detach');
+                view.isDetached = BOOLEAN_TRUE;
                 view._detachElement();
             },
             /**
@@ -524,12 +492,11 @@ application.scope().module('View', function (module, app, _, $) {
              */
             destroy: function (opts) {
                 var view = this;
-                view.isRendered = false;
-                // done here for redundancy when using iframes
+                view.isRendered = BOOLEAN_FALSE;
                 view.detach();
                 // remove all events
                 // should internally call remove
-                Box.prototype.destroy.call(view);
+                Box.constructor.prototype.destroy.call(view);
                 return view;
             },
             rendered: function () {
@@ -541,7 +508,7 @@ application.scope().module('View', function (module, app, _, $) {
             attached: function () {
                 return this.isAttached;
             }
-        }, !0),
+        }, BOOLEAN_TRUE),
         Region = factories.View.extend('Region', {
             Model: View,
             _delegateEvents: _.noop,
@@ -567,14 +534,14 @@ application.scope().module('View', function (module, app, _, $) {
                     currentView.detach();
                 }
             }
-        }, true),
+        }, BOOLEAN_TRUE),
         RegionManager = factories.Collection.extend('RegionManager', {
             Model: Region,
             createRegion: function (where, region_) {
                 var scope, regionManager = this,
                     // assume that it is a region
                     region = region_;
-                if (!(region instanceof regionManager.Model)){
+                if (!isInstance(region, regionManager.Model)) {
                     region = new regionManager.Model({
                         id: where
                     }, {
@@ -600,7 +567,7 @@ application.scope().module('View', function (module, app, _, $) {
                 this.$ = $;
             },
             _resetElementContext: function () {
-                this.$ = void 0;
+                this.$ = blank;
             },
             defaultContext: function () {
                 return $;
@@ -610,45 +577,33 @@ application.scope().module('View', function (module, app, _, $) {
                 var parent = regionManager.parent;
                 var _$ = _.has(regionManager, '$') ? regionManager.$ : $;
                 if (parent && parent.$ && !regionManager.$) {
-                    regionManager.$ = _.bind(parent.$, parent);
+                    regionManager.$ = bind(parent.$, parent);
                     _$ = regionManager.$;
                 }
                 return _$;
             },
             establishRegion: function (key, value) {
                 var regionManager = this;
-                var region = regionManager.get(key);
-                if (!region) {
-                    regionManager.createRegion(key, value);
-                }
-            },
-            establishRegions: function (regions) {
-                var regionManager = this;
-                var reversed = _.reverseParams(_.bind(regionManager.establishRegion, regionManager));
-                _.each(regions, reversed, regionManager);
+                intendedObject(key, value, function (key, value) {
+                    if (!regionManager.get(key)) {
+                        regionManager.createRegion(key, value);
+                    }
+                });
                 return regionManager;
             }
-        }, true);
-    _.exports({
-        htmlCompile: compile
-    });
+        }, BOOLEAN_TRUE);
     app.regionManager = new RegionManager();
     app.extend({
-        addRegion: function (where, selector) {
+        getRegion: viewGetRegion,
+        addRegion: function (id, selector) {
             var app = this;
             var regionManager = app.regionManager;
-            _.intendedObject(where, selector, function (key, value) {
+            intendedObject(id, selector, function (key, value) {
                 var region;
                 regionManager.establishRegion(key, value);
                 region = regionManager.get(key);
-                region.isAttached = true;
+                region.isAttached = BOOLEAN_TRUE;
             });
-            return app;
-        },
-        getRegion: viewGetRegion,
-        addRegions: function (obj) {
-            var app = this;
-            app.addRegion(obj);
             return app;
         }
     });

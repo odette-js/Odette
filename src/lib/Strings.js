@@ -7,7 +7,10 @@ application.scope(function (app) {
         isString = _.isString,
         slice = _.slice,
         split = _.split,
+        extend = _.extend,
+        wrap = _.wrap,
         LENGTH = 'length',
+        HTTP = 'http',
         falseBool = false,
         has = _.has,
         join = _.join,
@@ -15,7 +18,7 @@ application.scope(function (app) {
             var cache = {};
             return function (input) {
                 if (!has(cache, input)) {
-                    cache[input] = fn.apply(this, arguments);
+                    cache[input] = fn(input);
                 }
                 return cache[input];
             };
@@ -29,11 +32,11 @@ application.scope(function (app) {
                 return cacher(string);
             };
         },
-        string = _.extend(_.wrap(gapSplit('toLowerCase toUpperCase trim'), function (method) {
+        string = extend(wrap(gapSplit('toLowerCase toUpperCase trim'), function (method) {
             return cacheable(function (item) {
                 return item[method]();
             });
-        }), _.wrap(gapSplit('indexOf match search'), function (method) {
+        }), wrap(gapSplit('indexOf match search'), function (method) {
             return categoricallyCacheable(function (input) {
                 return function (item) {
                     return item[method](input);
@@ -158,21 +161,21 @@ application.scope(function (app) {
         units = function (str) {
             return customUnits(str, baseUnitList);
         },
-        isHttp = function (str) {
+        isHttp = cacheable(function (str) {
             var ret = !1;
-            if ((str.indexOf('http') === 0 && str.split('//').length >= 2) || str.indexOf('//') === 0) {
+            if ((str.indexOf(HTTP) === 0 && str.split('//').length >= 2) || str.indexOf('//') === 0) {
                 ret = !0;
             }
             return ret;
-        },
-        parseHash = function (url) {
+        }),
+        parseHash = cacheable(function (url) {
             var hash = '',
                 hashIdx = indexOf(url, '#') + 1;
             if (hashIdx) {
                 hash = url.slice(hashIdx - 1);
             }
             return hash;
-        },
+        }),
         parseURL = function (url) {
             var firstSlash, hostSplit, originNoProtocol, search = '',
                 hash = '',
@@ -184,7 +187,7 @@ application.scope(function (app) {
                 origin = url,
                 searchIdx = indexOf(url, '?') + 1,
                 searchObject = {},
-                protocols = ['http', 'https', 'file', 'about'],
+                protocols = [HTTP, HTTP + 's', 'file', 'about'],
                 protocolLength = protocols.length,
                 doubleSlash = '//';
             if (searchIdx) {
@@ -208,7 +211,7 @@ application.scope(function (app) {
                     }
                 }
                 if (!protocol) {
-                    protocol = 'http';
+                    protocol = HTTP;
                 }
                 protocol += ':';
                 if (origin.slice(0, protocol.length) + doubleSlash !== protocol + doubleSlash) {
@@ -238,6 +241,12 @@ application.scope(function (app) {
             };
         };
     _.exports({
+        // constants
+        customUnits: customUnits,
+        // cache makers
+        cacheable: cacheable,
+        categoricallyCacheable: categoricallyCacheable,
+        // cacheable
         deprefix: deprefix,
         deprefixAll: deprefixAll,
         prefix: prefix,
@@ -245,12 +254,9 @@ application.scope(function (app) {
         upCase: upCase,
         unCamelCase: unCamelCase,
         camelCase: camelCase,
-        cacheable: cacheable,
-        categoricallyCacheable: categoricallyCacheable,
-        units: units,
         string: string,
+        units: units,
         baseUnitList: baseUnitList,
-        customUnits: customUnits,
         isHttp: isHttp,
         parseHash: parseHash,
         parseURL: parseURL,

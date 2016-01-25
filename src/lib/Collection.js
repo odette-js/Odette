@@ -1,6 +1,5 @@
 application.scope(function (app) {
     var blank, _ = app._,
-        extendFrom = _.extendFrom,
         factories = _.factories,
         isObject = _.isObject,
         isNumber = _.isNumber,
@@ -9,6 +8,7 @@ application.scope(function (app) {
         LENGTH = 'length',
         ITEMS = '_items',
         BY_ID = '_byId',
+        ID = 'id',
         PREVIOUS = '_previous',
         each = _.each,
         duff = _.duff,
@@ -419,7 +419,7 @@ application.scope(function (app) {
             };
         },
         unwrapInstance = function (instance_) {
-            return isInstance(instance, _.Collection) ? instance_ : instance.unwrap();
+            return isInstance(instance, factories.Collection) ? instance_ : instance.unwrap();
         },
         unwrapAll = function (fn) {
             return function (args) {
@@ -524,7 +524,19 @@ application.scope(function (app) {
             duffRev: duffRev,
             flatten: flatten
         }),
-        Collection = extendFrom.Model('Collection', extend({
+        interactWithById = function (fun, expecting) {
+            return function (one, two, three) {
+                var instance = this,
+                    bycategories = instance[BY_ID],
+                    passedCategory = arguments[LENGTH] === expecting,
+                    category = passedCategory ? one : ID,
+                    categoryHash = bycategories[category] = bycategories[category] || {},
+                    key = passedCategory ? two : one,
+                    thing = passedCategory ? three : two;
+                return fun(instance, categoryHash, category, key, thing, passedCategory);
+            };
+        },
+        Collection = factories.Model.extend('Collection', extend({
             unwrap: unwrap,
             range: recreateSelf(range),
             flatten: recreateSelf(function () {
@@ -536,7 +548,7 @@ application.scope(function (app) {
                     base = this[ITEMS];
                 // this allows us to mix collections with regular arguments
                 return base.concat.apply(base, map(arguments, function (arg) {
-                    return _.Collection(arg)[ITEMS];
+                    return Collection(arg)[ITEMS];
                 }));
             }),
             length: function () {
@@ -581,30 +593,27 @@ application.scope(function (app) {
             join: function (delimiter) {
                 return this[ITEMS].join(delimiter);
             },
-            get: function (id) {
-                this[BY_ID] = this[BY_ID] || {};
-                return this[BY_ID][id];
-            },
-            /**
-             * @description gets the item on the _byId object or function. If the _byId is a function, than the methods are passed automatically to it to process away
-             * @func
-             * @name Box#find
-             * @param {*} id - usually a string to lookup from the hash. could be an object that will be processed by a function
-             * @returns {*} thing that was being held at that key value on the _byId hash, or whatever the _byId function returns
-             */
-            /**
-             * @description registers a model by the id that is passed
-             * @func
-             * @name Box#register
-             * @param {String} string - key that the object will be registered under
-             * @param {*} thing - anything that you want to store
-             * @returns {Box} instance
-             */
-            register: function (id, thing) {
-                this[BY_ID][id] = thing;
-                return this;
-            },
-            // match: objCondense(function () {}),
+            get: interactWithById(function (instance, categoryHash, category, key) {
+                return categoryHash[key];
+            }, 2),
+            register: interactWithById(function (instance, categoryHash, category, key, newItem) {
+                categoryHash[key] = newItem;
+            }, 3),
+            unRegister: interactWithById(function (instance, categoryHash, category, key) {
+                var registeredItem = categoryHash[key];
+                if (registeredItem !== blank) {
+                    categoryHash[key] = blank;
+                }
+                return registeredItem;
+            }, 2),
+            swapRegister: interactWithById(function (instance, categoryHash, category, key, newItem) {
+                var registeredItem = categoryHash[key];
+                if (registeredItem !== blank) {
+                    categoryHash[key] = blank;
+                }
+                categoryHash[key] = newItem;
+                return registeredItem;
+            }, 3),
             /**
              * @description adds models to the children array
              * @param {Object|Object[]} objs - object or array of objects to be passed through the model factory and pushed onto the children array
@@ -613,14 +622,6 @@ application.scope(function (app) {
              * @name Box#add
              * @func
              */
-            unRegister: function (id) {
-                var box = this,
-                    item = box[BY_ID][id];
-                if (item !== void 0) {
-                    box[BY_ID][id] = blank;
-                }
-                return item;
-            },
             mambo: function (fn) {
                 var collection = this;
                 externalMambo(collection[ITEMS], function () {

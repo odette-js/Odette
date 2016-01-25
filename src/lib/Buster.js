@@ -1,31 +1,35 @@
-application.scope().module('Buster', function (module, app, _, $) {
+application.scope().module('Buster', function (module, app, _, factories, $) {
     var blank, isReceiving = 0,
         get = _.get,
         duff = _.duff,
+        Collection = factories.Collection,
         gapSplit = _.gapSplit,
         associator = _.associator,
         unitsToNum = _.unitsToNum,
         roundFloat = _.roundFloat,
         extend = _.extend,
-        factories = _.factories,
+        console = _.console,
         infin = 32767,
-        attributesString = 'attributes',
-        // 0 is first positive -1 is first non positive
+        ATTRIBUTES = 'attributes',
+        reference = _.reference,
+        now = _.now,
+        BOOLEAN_TRUE = !0,
+        BOOLEAN_FALSE = !1,
         nInfin = -infin - 1,
-        lengthString = 'length',
-        heightString = 'height',
-        widthString = 'width',
-        bottomString = 'bottom',
-        rightString = 'right',
-        leftString = 'left',
-        topString = 'top',
-        marginBottomString = 'marginBottom',
-        marginRightString = 'marginRight',
-        minHeightString = 'minHeight',
-        maxHeightString = 'maxHeight',
-        minWidthString = 'minWidth',
-        maxWidthString = 'minWidth',
-        queuedMessageIndexString = 'queuedMessageIndex',
+        LENGTH = 'length',
+        HEIGHT = 'height',
+        WIDTH = 'width',
+        BOTTOM = 'bottom',
+        RIGHT = 'right',
+        LEFT = 'left',
+        TOP = 'top',
+        MARGIN_BOTTOM = 'marginBottom',
+        MARGIN_RIGHT = 'marginRight',
+        MIN_HEIGHT = 'minHeight',
+        MAX_HEIGHT = 'maxHeight',
+        MIN_WIDTH = 'minWidth',
+        MAX_WIDTH = 'minWidth',
+        QUEUED_MESSAGE_INDEX = 'queuedMessageIndex',
         pI = _.pI,
         _setupInit = function (e) {
             var i, currentCheck, src, parentEl, frameWin, frameEl, allFrames, tippyTop, spFacts, spOFacts, shouldRespond, sameSide, topDoc, wrapper, buster = this,
@@ -36,7 +40,7 @@ application.scope().module('Buster', function (module, app, _, $) {
                 attrs = get(buster),
                 parts = buster.parts;
             if (app.topAccess) {
-                tippyTop = window[topString];
+                tippyTop = window[TOP];
                 topDoc = tippyTop.document;
                 wrapper = topDoc.body;
             }
@@ -78,7 +82,7 @@ application.scope().module('Buster', function (module, app, _, $) {
                     buster.set({
                         sameSide: 0,
                         id: data.from,
-                        referrer: _.getReference(parts.doc)
+                        referrer: reference(parts.doc)
                     });
                     extend(parts, {
                         srcElement: e.source,
@@ -109,11 +113,11 @@ application.scope().module('Buster', function (module, app, _, $) {
                 parentEl = buster.el.parent();
                 buster.respond(data, {
                     parent: {
-                        height: parentEl[heightString](),
-                        width: parentEl[widthString](),
+                        height: parentEl[HEIGHT](),
+                        width: parentEl[WIDTH](),
                         style: {
-                            height: parentEl.get(0).style[heightString],
-                            width: parentEl.get(0).style[widthString]
+                            height: parentEl.get(0).style[HEIGHT],
+                            width: parentEl.get(0).style[WIDTH]
                         }
                     }
                 });
@@ -145,11 +149,11 @@ application.scope().module('Buster', function (module, app, _, $) {
          * @arg {buster}
          */
         postMessage = function (base, buster) {
-            var busterAttrs = buster[attributesString],
+            var busterAttrs = buster[ATTRIBUTES],
                 sameSide = busterAttrs.sameSide,
                 parts = buster.parts,
                 message = JSON.stringify(base),
-                timestamp = _.nowish(),
+                timestamp = now(),
                 doReceive = function () {
                     receive({
                         data: message,
@@ -163,7 +167,7 @@ application.scope().module('Buster', function (module, app, _, $) {
                 if (busterAttrs.referrer) {
                     parts.sendWin.postMessage(message, busterAttrs.referrer);
                 } else {
-                    window.console.trace('missing referrer', buster);
+                    console.trace('missing referrer', buster);
                 }
             }
             if (sameSide) {
@@ -181,27 +185,27 @@ application.scope().module('Buster', function (module, app, _, $) {
              * @private
              */
             toInner: function (buster) {
-                var attrs = buster[attributesString],
+                var attrs = buster[ATTRIBUTES],
                     parts = buster.parts;
-                parts.sendWin = buster.parent.el.get(0).contentWindow;
-                attrs.referrer = attrs.referrer || _.getReference(parts.doc);
+                parts.sendWin = buster.parent.el.index(0).contentWindow;
+                attrs.referrer = attrs.referrer || reference(parts.doc);
                 attrs.sameSide = !buster.parent.parent.get('unfriendlyCreative');
             },
             /**
              * @private
              */
             fromInner: function (buster) {
-                var attrs = buster[attributesString],
+                var attrs = buster[ATTRIBUTES],
                     parts = buster.parts;
                 parts.sendWin = parts.receiveWin.parent;
-                attrs.referrer = attrs.referrer || _.getReference(parts.doc);
+                attrs.referrer = attrs.referrer || reference(parts.doc);
             },
             notInner: {
                 /**
                  * @private
                  */
                 noAccess: function (buster) {
-                    var url, attrs = buster[attributesString],
+                    var url, attrs = buster[ATTRIBUTES],
                         parts = buster.parts,
                         doc = parts.doc,
                         iframe = doc.createElement('iframe'),
@@ -229,7 +233,7 @@ application.scope().module('Buster', function (module, app, _, $) {
                             setTimeout(function () {
                                 // handle no buster file here
                                 var ret, ad = buster.parent,
-                                    adAttrs = ad[attributesString],
+                                    adAttrs = ad[ATTRIBUTES],
                                     banner = ad.children.index(1),
                                     panel = ad.children.index(2);
                                 if (!ad.busterLoaded) {
@@ -248,8 +252,8 @@ application.scope().module('Buster', function (module, app, _, $) {
                  * @private
                  */
                 topAccess: function (buster) {
-                    var commands, newParent = buster.el.get(0),
-                        attrs = buster[attributesString];
+                    var commands, newParent = buster.el.index(0),
+                        attrs = buster[ATTRIBUTES];
                     // if preventselfinit is true, then that means that
                     // this is being triggered by the buster file
                     if (!attrs.preventSelfInit) {
@@ -289,13 +293,13 @@ application.scope().module('Buster', function (module, app, _, $) {
                         preventScrollCounter = 1;
                     }
                     memo = {
-                        top: Math.min(memo[topString], calced[topString]),
-                        left: Math.min(memo[leftString], calced[leftString]),
-                        right: Math.max(memo[rightString], (calced[leftString] + calced[widthString])),
-                        bottom: Math.max(memo[bottomString], (calced[topString] + calced[heightString])),
+                        top: Math.min(memo[TOP], calced[TOP]),
+                        left: Math.min(memo[LEFT], calced[LEFT]),
+                        right: Math.max(memo[RIGHT], (calced[LEFT] + calced[WIDTH])),
+                        bottom: Math.max(memo[BOTTOM], (calced[TOP] + calced[HEIGHT])),
                         zIndex: Math.max(memo.zIndex, (+com.zIndex || 0)),
-                        marginRight: Math.max(memo[marginRightString], horizontalPush || 0),
-                        marginBottom: Math.max(memo[marginBottomString], verticalPush || 0),
+                        marginRight: Math.max(memo[MARGIN_RIGHT], horizontalPush || 0),
+                        marginBottom: Math.max(memo[MARGIN_BOTTOM], verticalPush || 0),
                         vPushCount: vPushCount + memo.vPushCount,
                         hPushCount: hPushCount + memo.hPushCount,
                         transitionDuration: Math.max(memo.transitionDuration, com.duration),
@@ -318,7 +322,7 @@ application.scope().module('Buster', function (module, app, _, $) {
             });
         };
     if (app.topAccess) {
-        $(window[topString]).on('message', receive);
+        $(window[TOP]).on('message', receive);
     }
     /**
      * @class Buster
@@ -327,7 +331,7 @@ application.scope().module('Buster', function (module, app, _, $) {
      * @augments View
      * @classDesc constructor for buster objects, which have the ability to talk across windows
      */
-    var Message = _.extendFrom.Container('Message', {
+    var Message = factories.Container.extend('Message', {
         // idAttribute: 'command',
         packet: function (data) {
             var ret = this;
@@ -362,14 +366,14 @@ application.scope().module('Buster', function (module, app, _, $) {
             return message;
         }
     });
-    factories.Buster = _.extendFrom.Box('Buster', {
+    factories.Buster = factories.Box.extend('Buster', {
         Model: Message,
         events: {
             unload: 'destroy',
-            'alter:isConnected': function () {
-                this.set(queuedMessageIndexString, 1);
+            'change:isConnected': function () {
+                this.set(QUEUED_MESSAGE_INDEX, 1);
             },
-            'alter:isConnected child:added': 'flush'
+            'change:isConnected child:added': 'flush'
         },
         parentEvents: {
             destroy: 'destroy'
@@ -379,33 +383,25 @@ application.scope().module('Buster', function (module, app, _, $) {
          * @name Buster#destroy
          */
         currentPoint: function () {
-            var currentPoint = this.get('currentPoint') || {};
-            return {
+            var currentPoint = this.get('currentPoint');
+            return currentPoint ? {
                 source: currentPoint.source,
                 srcElement: currentPoint.srcElement,
                 originTimestamp: currentPoint.timestamp,
                 frame: currentPoint.frame,
                 responder: currentPoint.responder
-            };
+            } : {};
         },
         destroy: function () {
             var buster = this,
                 attrs = get(buster);
-            buster.set({
-                isConnected: !1
-            });
-            buster.resetElements();
+            buster.set('isConnected', BOOLEAN_FALSE);
             clearTimeout(attrs.__lastMouseMovingTimeout__);
             _.AF.remove(attrs.elQueryId);
             _.AF.remove(attrs.componentTransitionAFID);
-            buster.allListeners.each(function (idx, obj) {
-                obj.els.off(obj.name, obj.fn, obj.capture);
-            });
-            buster.el.offAll();
-            buster.el.shift();
             buster.parts = {};
             associator.remove(buster.id);
-            factories.Box.prototype.destroy.apply(this, arguments);
+            factories.Box.constructor.prototype.destroy.apply(this, arguments);
             return buster;
         },
         tellMouseMovement: function () {
@@ -418,15 +414,15 @@ application.scope().module('Buster', function (module, app, _, $) {
                 buster = this,
                 attrs = get(buster);
             if (attrs.frameAlwaysFillHeight) {
-                hw[heightString] = '100%';
+                hw[HEIGHT] = '100%';
             }
             if (attrs.frameAlwaysFillWidth) {
-                hw[widthString] = '100%';
+                hw[WIDTH] = '100%';
             }
             hw = _.extend(buster.calculateContainerSize(), extend, hw);
             buster.el.css(hw);
             if (buster.get('applyImportant')) {
-                buster.applyImportantStyles(buster.el.get(0));
+                buster.applyImportantStyles(buster.el.index(0));
             }
             return buster;
         },
@@ -486,23 +482,23 @@ application.scope().module('Buster', function (module, app, _, $) {
                 };
             if (_sizing) {
                 if (_sizing.vPushCount) {
-                    margin[marginBottomString] = busterAttrs.pushVerticalVal;
+                    margin[MARGIN_BOTTOM] = busterAttrs.pushVerticalVal;
                     margin.transitionDuration = _sizing.transitionDuration;
                 } else {
                     if (set0) {
-                        margin[marginBottomString] = 0;
+                        margin[MARGIN_BOTTOM] = 0;
                     } else {
-                        margin[marginBottomString] = 'auto';
+                        margin[MARGIN_BOTTOM] = 'auto';
                     }
                 }
                 if (_sizing.hPushCount) {
-                    margin[marginRightString] = busterAttrs.pushHorizontalVal;
+                    margin[MARGIN_RIGHT] = busterAttrs.pushHorizontalVal;
                     margin.transitionDuration = _sizing.transitionDuration;
                 } else {
                     if (set0) {
-                        margin[marginRightString] = 0;
+                        margin[MARGIN_RIGHT] = 0;
                     } else {
-                        margin[marginRightString] = 'auto';
+                        margin[MARGIN_RIGHT] = 'auto';
                     }
                 }
             }
@@ -515,9 +511,9 @@ application.scope().module('Buster', function (module, app, _, $) {
          */
         initialize: function (opts, options) {
             var receiveWin, registered, buster = this,
-                attrs = buster[attributesString];
-            buster.components = _.Collection();
-            buster.showing = _.Collection();
+                attrs = buster[ATTRIBUTES];
+            buster.components = Collection();
+            buster.showing = Collection();
             buster.on('before:responded', attrs.every);
             buster.addCommand({
                 initialize: _setupInit,
@@ -544,9 +540,9 @@ application.scope().module('Buster', function (module, app, _, $) {
                     });
                     buster.components.each(function (idx, com) {
                         if (_.posit(packet.showing, com.registeredAs)) {
-                            com.isShowing = !0;
+                            com.isShowing = BOOLEAN_TRUE;
                         } else {
-                            com.isShowing = !1;
+                            com.isShowing = BOOLEAN_FALSE;
                         }
                     });
                     if (packet.shouldRespond) {
@@ -554,7 +550,7 @@ application.scope().module('Buster', function (module, app, _, $) {
                     }
                 }
             });
-            buster.allListeners = _.Collection();
+            buster.allListeners = Collection();
             extend(attrs, {
                 frame: null
             });
@@ -602,7 +598,7 @@ application.scope().module('Buster', function (module, app, _, $) {
          */
         getTargets: function (target) {
             var buster = this,
-                attrs = buster[attributesString],
+                attrs = buster[ATTRIBUTES],
                 parts = buster.parts,
                 top = parts.top,
                 targets = [],
@@ -622,7 +618,7 @@ application.scope().module('Buster', function (module, app, _, $) {
             if (target === 'parent') {
                 targets = buster.el.parent();
             }
-            if (!targets[lengthString]) {
+            if (!targets[LENGTH]) {
                 targets = parts.doc.querySelectorAll(target);
             }
             return $(targets);
@@ -636,15 +632,13 @@ application.scope().module('Buster', function (module, app, _, $) {
         flush: function () {
             var n, item, gah, childrenLen, queuedMsg, nuData, i = 0,
                 buster = this,
-                currentIdx = buster.get(queuedMessageIndexString),
+                currentIdx = buster.get(QUEUED_MESSAGE_INDEX),
                 connected = buster.get('isConnected'),
                 initedFrom = buster.get('initedFromPartner'),
                 flushing = buster.get('flushing');
             if (!initedFrom || connected && ((connected || !currentIdx) && !flushing)) {
-                buster.set({
-                    flushing: !0
-                });
-                childrenLen = buster.children.length();
+                buster.set('flushing', BOOLEAN_TRUE);
+                childrenLen = buster.children[LENGTH]();
                 queuedMsg = buster.children.index(currentIdx);
                 while (queuedMsg && currentIdx < childrenLen) {
                     queuedMsg.set({
@@ -652,18 +646,18 @@ application.scope().module('Buster', function (module, app, _, $) {
                     });
                     postMessage(queuedMsg, buster);
                     if (currentIdx) {
-                        currentIdx = (buster.get(queuedMessageIndexString) + 1) || 0;
-                        buster.set(queuedMessageIndexString, currentIdx);
+                        currentIdx = (buster.get(QUEUED_MESSAGE_INDEX) + 1) || 0;
+                        buster.set(QUEUED_MESSAGE_INDEX, currentIdx);
                         queuedMsg = buster.children.index(currentIdx);
                     } else {
                         childrenLen = false;
                     }
                 }
                 buster.set({
-                    flushing: !1
+                    flushing: BOOLEAN_FALSE
                 });
                 if (buster.get('isConnected')) {
-                    if (buster.children.length() > buster.get(queuedMessageIndexString)) {
+                    if (buster.children[LENGTH]() > buster.get(QUEUED_MESSAGE_INDEX)) {
                         buster.flush();
                     }
                 }
@@ -705,7 +699,7 @@ application.scope().module('Buster', function (module, app, _, $) {
          */
         run: function (data, currentPoint_) {
             var packet, format, retVal, messageJSON, responded, onResponse, originalMessage, responseType, methodName, buster = this,
-                attrs = buster[attributesString],
+                attrs = buster[ATTRIBUTES],
                 currentPoint = attrs.currentPoint = currentPoint_,
                 event = currentPoint,
                 messages = attrs.sent,
@@ -765,7 +759,7 @@ application.scope().module('Buster', function (module, app, _, $) {
                 fromInner: attrs.fromInner,
                 toInner: attrs.toInner,
                 // runCount: 0,
-                index: this.children.length(),
+                index: this.children[LENGTH](),
                 preventResponse: false
             };
         },
@@ -775,15 +769,15 @@ application.scope().module('Buster', function (module, app, _, $) {
          */
         shouldUpdate: function (args) {
             var ret, buster = this,
-                attrs = _.get(buster),
+                attrs = buster[ATTRIBUTES],
                 lastUpdate = attrs.lastRespondUpdate,
                 lastFrameRect = attrs.lastFrameRect,
                 top = buster.parts.top || {},
                 width = top.innerWidth,
                 height = top.innerHeight,
-                nowish = _.nowish();
+                nowish = now();
             if (lastUpdate > nowish - 1000 && _.isObject(lastFrameRect)) {
-                ret = !(lastFrameRect[bottomString] < -height * 0.5 || lastFrameRect.top > height * 1.5 || lastFrameRect[rightString] < -width * 0.5 || lastFrameRect[leftString] > width * 1.5);
+                ret = !(lastFrameRect[BOTTOM] < -height * 0.5 || lastFrameRect.top > height * 1.5 || lastFrameRect[RIGHT] < -width * 0.5 || lastFrameRect[LEFT] > width * 1.5);
             } else {
                 ret = 1;
             }
@@ -805,7 +799,7 @@ application.scope().module('Buster', function (module, app, _, $) {
          */
         respond: function (data, extendObj) {
             var lastRespondUpdate, message, buster = this,
-                attrs = buster[attributesString],
+                attrs = buster[ATTRIBUTES],
                 sameSide = attrs.sameSide,
                 base = {};
             if (!extendObj || !_.isObject(extendObj)) {
@@ -844,7 +838,7 @@ application.scope().module('Buster', function (module, app, _, $) {
          * @name Buster#getFrameRect
          */
         getFrameRect: function () {
-            var clientRect = this[attributesString].lastFrameRect = this.el.clientRect();
+            var clientRect = this[ATTRIBUTES].lastFrameRect = this.el.clientRect();
             return clientRect;
         },
         /**
@@ -853,7 +847,7 @@ application.scope().module('Buster', function (module, app, _, $) {
          * @name Buster#getParentRect
          */
         getParentRect: function () {
-            var parentRect = this[attributesString].lastParentRect = this.el.parent().clientRect();
+            var parentRect = this[ATTRIBUTES].lastParentRect = this.el.parent().clientRect();
             return parentRect;
         },
         updateTopData: function () {
@@ -875,7 +869,7 @@ application.scope().module('Buster', function (module, app, _, $) {
                         origin: location.origin,
                         pathname: location.pathname.slice(1),
                         port: location.port,
-                        protocol: location.protocol.slice(0, location.protocol.length - 1),
+                        protocol: location.protocol.slice(0, location.protocol[LENGTH] - 1),
                         search: location.search.slice(1)
                     },
                     innerHeight: topWin.innerHeight || 0,
@@ -930,14 +924,14 @@ application.scope().module('Buster', function (module, app, _, $) {
          * @name Buster#positionInDocument
          */
         positionInDocument: function () {
-            var attrs = this[attributesString],
+            var attrs = this[ATTRIBUTES],
                 wrapperInfo = attrs.wrapperInfo,
                 contentRect = attrs.lastParentRect,
                 pos = attrs.lastPosInDoc = {
-                    top: pI(contentRect[topString] - wrapperInfo[topString]),
-                    bottom: pI(wrapperInfo[heightString] - contentRect[topString] - wrapperInfo.scrollTop - contentRect[heightString]),
-                    left: pI(contentRect[leftString] - wrapperInfo[leftString]),
-                    right: pI(wrapperInfo[widthString] - contentRect[rightString] - wrapperInfo.scrollLeft - wrapperInfo[leftString])
+                    top: pI(contentRect[TOP] - wrapperInfo[TOP]),
+                    bottom: pI(wrapperInfo[HEIGHT] - contentRect[TOP] - wrapperInfo.scrollTop - contentRect[HEIGHT]),
+                    left: pI(contentRect[LEFT] - wrapperInfo[LEFT]),
+                    right: pI(wrapperInfo[WIDTH] - contentRect[RIGHT] - wrapperInfo.scrollLeft - wrapperInfo[LEFT])
                 };
             return pos;
         },
@@ -955,7 +949,7 @@ application.scope().module('Buster', function (module, app, _, $) {
             duff(gapSplit(showList), function (id) {
                 var com = buster.component(id);
                 if (com) {
-                    com.isShowing = !0;
+                    com.isShowing = BOOLEAN_TRUE;
                 }
             });
         },
@@ -964,7 +958,7 @@ application.scope().module('Buster', function (module, app, _, $) {
             duff(gapSplit(hideList), function (id) {
                 var com = buster.component(id);
                 if (com) {
-                    com.isShowing = !1;
+                    com.isShowing = BOOLEAN_FALSE;
                 }
             });
         },
@@ -975,18 +969,18 @@ application.scope().module('Buster', function (module, app, _, $) {
                 sizing = containerSize(components || buster.components);
             attrs._sizing = sizing;
             attrs.containerSize = {
-                top: sizing[topString],
-                left: sizing[leftString],
-                width: sizing[rightString] - sizing[leftString],
-                height: sizing[bottomString] - sizing[topString]
+                top: sizing[TOP],
+                left: sizing[LEFT],
+                width: sizing[RIGHT] - sizing[LEFT],
+                height: sizing[BOTTOM] - sizing[TOP]
             };
-            attrs.pushVerticalVal = Math.min(Math.max(sizing[bottomString] - parentRect[bottomString], 0), sizing[marginBottomString]);
-            attrs.pushHorizontalVal = Math.min(Math.max(sizing[rightString] - parentRect[rightString], 0), sizing[marginRightString]);
+            attrs.pushVerticalVal = Math.min(Math.max(sizing[BOTTOM] - parentRect[BOTTOM], 0), sizing[MARGIN_BOTTOM]);
+            attrs.pushHorizontalVal = Math.min(Math.max(sizing[RIGHT] - parentRect[RIGHT], 0), sizing[MARGIN_RIGHT]);
             sizing = attrs.containerCss = {
-                top: sizing[topString] - parentRect[topString],
-                left: sizing[leftString] - parentRect[leftString],
-                width: sizing[rightString] - sizing[leftString],
-                height: sizing[bottomString] - sizing[topString],
+                top: sizing[TOP] - parentRect[TOP],
+                left: sizing[LEFT] - parentRect[LEFT],
+                width: sizing[RIGHT] - sizing[LEFT],
+                height: sizing[BOTTOM] - sizing[TOP],
                 zIndex: sizing.zIndex || 'inherit'
             };
             return sizing;
@@ -997,13 +991,13 @@ application.scope().module('Buster', function (module, app, _, $) {
                 expansion = factories.expansion[component.dimensionType || 'match'],
                 parentRect = attrs.lastParentRect,
                 parentStyle = attrs.lastParentStyle,
-                result = (expansion || factories.expansion.match).call(buster, component, parentRect, parentStyle, buster.parts[topString]),
+                result = (expansion || factories.expansion.match).call(buster, component, parentRect, parentStyle, buster.parts[TOP]),
                 // these are always relative to the viewport
                 calcSize = component.calculatedSize = _.floor({
-                    top: result[topString],
-                    left: result[leftString],
-                    width: result[widthString],
-                    height: result[heightString]
+                    top: result[TOP],
+                    left: result[LEFT],
+                    width: result[WIDTH],
+                    height: result[HEIGHT]
                 }, 2);
             return calcSize;
         },
@@ -1042,16 +1036,6 @@ application.scope().module('Buster', function (module, app, _, $) {
             });
             return intervalId;
         },
-        resetElements: function () {
-            var buster = this,
-                nextEl = buster.el,
-                finalRes = buster.parts.finalResponsified;
-            do {
-                _.resetAttrs(nextEl.get(0));
-                nextEl = nextEl.parent();
-            } while (nextEl.childOf(finalRes));
-            _.resetAttrs(finalRes.get(0));
-        },
         /**
          * starts a relationship between two busters. simplifies the initialization process.
          * @returns {number} just for responding to the original message in case there's a handler
@@ -1060,7 +1044,7 @@ application.scope().module('Buster', function (module, app, _, $) {
          */
         begin: function () {
             var buster = this,
-                attrs = buster[attributesString],
+                attrs = buster[ATTRIBUTES],
                 inited = buster.initialized = 1,
                 message = buster.send('initialize', {
                     expandConfig: attrs.expandConfig,
@@ -1073,12 +1057,12 @@ application.scope().module('Buster', function (module, app, _, $) {
                     initParentData: packet.parent
                 });
                 buster.set({
-                    isConnected: !0
+                    isConnected: BOOLEAN_TRUE
                 });
             });
             return 1;
         }
-    }, !0);
+    }, BOOLEAN_TRUE);
     _.exports({
         containerSize: containerSize
     });

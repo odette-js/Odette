@@ -1,6 +1,6 @@
 application.scope('dev', function (app) {
     var blank, _, object = Object,
-        extendFrom = {},
+        win = window,
         factories = {},
         fn = Function,
         array = Array,
@@ -9,7 +9,6 @@ application.scope('dev', function (app) {
         PROTOTYPE = 'prototype',
         CONSTRUCTOR = 'constructor',
         LENGTH = 'length',
-        CONSTRUCTOR_ID = '__constructorId',
         CONSTRUCTOR_KEY = '__constructor__',
         stringProto = string[PROTOTYPE],
         objectProto = object[PROTOTYPE],
@@ -18,9 +17,11 @@ application.scope('dev', function (app) {
         nativeKeys = object.keys,
         BOOLEAN_TRUE = !0,
         BOOLEAN_FALSE = !1,
+        NULL = null,
         hasEnumBug = !{
-            toString: null
+            toString: NULL
         }.propertyIsEnumerable(TO_STRING),
+        noop = function () {},
         /**
          * @func
          */
@@ -58,46 +59,41 @@ application.scope('dev', function (app) {
         /**
          * @func
          */
-        isNegative1 = function (num) {
-            return (num === -1);
-        },
-        /**
-         * @func
-         */
-        listHas = function (list, item) {
-            return (!isNegative1(indexOf(list, item)));
-        },
-        /**
-         * @func
-         */
         shift = function (o) {
             return arrayProto.shift.call(o);
         },
         /**
          * @func
          */
-        indexOfNaN = function (array, fromIndex, fromRight) {
-            var length = array[LENGTH],
-                index = fromIndex + (fromRight ? 0 : -1);
-            while ((fromRight ? index-- : ++index < length)) {
-                var other = array[index];
+        indexOfNaN = function (array, fromIndex, toIndex, fromRight) {
+            if (!array) {
+                return -1;
+            }
+            var other, limit = array[LENGTH],
+                index = fromIndex + (fromRight ? 0 : -1),
+                incrementor = fromRight ? -1 : 1;
+            while ((index += incrementor) < limit) {
+                other = array[index];
                 if (other !== other) {
                     return index;
                 }
             }
             return -1;
         },
-        indexOf = function (array, value, fromIndex) {
-            if (value !== value) {
-                return indexOfNaN(array, fromIndex);
+        indexOf = function (array, value, fromIndex, toIndex, fromRight) {
+            var index, limit, incrementor;
+            if (!array) {
+                return -1;
             }
-            if (array) {
-                var index = (fromIndex || 0) - 1,
-                    length = array[LENGTH];
-                while (++index < length) {
-                    if (array[index] === value) {
-                        return index;
-                    }
+            if (value !== value) {
+                return indexOfNaN(array, fromIndex, toIndex, fromRight);
+            }
+            index = (fromIndex || 0) - 1;
+            limit = toIndex || array[LENGTH];
+            incrementor = fromRight ? -1 : 1;
+            while ((index += incrementor) < limit) {
+                if (array[index] === value) {
+                    return index;
                 }
             }
             return -1;
@@ -116,7 +112,7 @@ application.scope('dev', function (app) {
          * @func
          */
         toString = function (obj) {
-            return (obj === null || obj === blank) ? '' : (obj + '');
+            return (obj === NULL || obj === blank) ? '' : (obj + '');
         },
         /**
          * @func
@@ -155,24 +151,22 @@ application.scope('dev', function (app) {
         /**
          * @func
          */
+        previousConstructor = function (instance) {
+            return instance && instance[CONSTRUCTOR_KEY] && instance[CONSTRUCTOR_KEY][CONSTRUCTOR] || instance[CONSTRUCTOR];
+        },
         nativeIsInstance = function (instance, constructor) {
             var result = BOOLEAN_FALSE;
-            if (constructor) {
-                return instance instanceof constructor;
+            if (isFunction(constructor)) {
+                result = instance instanceof constructor;
             }
+            return result;
         },
         isInstance = function (instance, constructor_) {
-            var result = BOOLEAN_FALSE,
-                constructor = constructor_;
+            var constructor = constructor_;
             while (has(constructor, CONSTRUCTOR)) {
                 constructor = constructor[CONSTRUCTOR];
             }
-            if (constructor && constructor[CONSTRUCTOR_ID] && instance && instance[CONSTRUCTOR_ID]) {
-                result = constructor[CONSTRUCTOR_ID] === instance[CONSTRUCTOR_ID];
-            } else {
-                result = nativeIsInstance(instance, constructor);
-            }
-            return result;
+            return nativeIsInstance(instance, constructor);
         },
         /**
          * @func
@@ -257,7 +251,7 @@ application.scope('dev', function (app) {
             };
         },
         isNumber = isWrap('number', negate(isNaN)),
-        isFinite_ = window.isFinite,
+        isFinite_ = win.isFinite,
         isFinite = function (thing) {
             return isNumber(thing) && isFinite_(thing);
         },
@@ -343,7 +337,7 @@ application.scope('dev', function (app) {
                 return val;
             };
         }()),
-        nowish = function () {
+        now = function () {
             return +(new Date());
         },
         allKeys = function (obj) {
@@ -363,44 +357,42 @@ application.scope('dev', function (app) {
          * @func
          */
         extend = function () {
-            var deep, source, keys, length, l, key, args = toArray(arguments),
-                base = args.shift(),
-                index = 0,
-                i = 0;
+            var deep = BOOLEAN_FALSE,
+                args = arguments,
+                length = args[LENGTH],
+                index = 1,
+                first = 0,
+                base = args[0];
             if (base === BOOLEAN_TRUE) {
-                deep = base;
-                base = args.shift();
+                deep = BOOLEAN_TRUE;
+                base = args[1];
+                index = 2;
             }
             base = base || {};
-            length = args[LENGTH];
-            if (length) {
-                for (; index < length; index++) {
-                    merge(base, args[index], deep);
-                }
+            for (; index < length; index++) {
+                merge(base, args[index], deep);
             }
             return base;
         },
         merge = function (obj1, obj2, deep) {
-            var key, val, attach, i = 0,
+            var key, val, i = 0,
                 keys = allKeys(obj2),
                 l = keys[LENGTH];
             for (; i < l; i++) {
                 key = keys[i];
                 // ignore undefined
                 if (obj2[key] !== blank) {
-                    attach = BOOLEAN_FALSE;
                     val = obj2[key];
                     if (deep) {
-                        if (isObject(obj1[key]) && isObject(obj2[key])) {
+                        if (isObject(obj2[key])) {
+                            if (!isObject(obj1[key])) {
+                                obj1[key] = returnDismorphicBase(obj2[key]);
+                            }
                             merge(obj1[key], obj2[key], deep);
-                            attach = BOOLEAN_FALSE;
                         } else {
-                            attach = BOOLEAN_TRUE;
+                            obj1[key] = val;
                         }
                     } else {
-                        attach = BOOLEAN_TRUE;
-                    }
-                    if (attach) {
                         obj1[key] = val;
                     }
                 }
@@ -433,7 +425,9 @@ application.scope('dev', function (app) {
                 if (obj) {
                     if (!isArrayLike(obj)) {
                         list = keys(obj);
-                        iteratee = bind(iterator, context);
+                        if (context) {
+                            iteratee = bind(iterator, context);
+                        }
                         context = null;
                         iterator = function (key, idx, list) {
                             // gives you the key, use that to get the value
@@ -489,7 +483,9 @@ application.scope('dev', function (app) {
         findLast = finder(findLastIndex),
         bind = function (fn_, ctx) {
             var fn = fn_;
-            fn = fn_.bind(ctx);
+            if (ctx) {
+                fn = fn_.bind(ctx);
+            }
             return fn;
         },
         duff = function (values, process, context, direction) {
@@ -620,7 +616,7 @@ application.scope('dev', function (app) {
          * @func
          */
         constructorExtend = function (name, protoProps, attach) {
-            var constructorId, nameString, child, passedParent, hasConstructor, constructor, parent = this,
+            var nameString, child, passedParent, hasConstructor, constructor, parent = this,
                 nameIsStr = isString(name);
             if (!nameIsStr) {
                 protoProps = name;
@@ -630,65 +626,49 @@ application.scope('dev', function (app) {
                 child = protoProps[CONSTRUCTOR];
             }
             if (nameIsStr) {
-                // nameString = name;
                 passedParent = parent;
                 if (child) {
                     passedParent = child;
                 }
                 child = new Function[CONSTRUCTOR]('var parent=arguments[0];return function ' + name + '(){return parent.apply(this,arguments);}')(passedParent);
-                factories[name] = child;
+                // factories[name] = child;
             } else {
                 child = function () {
                     return parent.apply(this, arguments);
                 };
             }
-            extend(child, parent);
-            constructorId = uniqueId('con');
-            child[CONSTRUCTOR_ID] = constructorId;
-            child.extend = (this[CONSTRUCTOR_KEY] && this[CONSTRUCTOR_KEY].extend) || constructorExtend;
+            // extend(child, parent);
+            child.extend = constructorExtend;
             var Surrogate = function () {
                 this[CONSTRUCTOR] = child;
             };
             Surrogate[PROTOTYPE] = parent[PROTOTYPE];
             child[PROTOTYPE] = new Surrogate;
+            // don't call the function if nothing exists
             if (protoProps) {
                 extend(child[PROTOTYPE], protoProps);
             }
             constructor = child;
             child = constructorWrapper(constructor);
-            if (!isFunction(protoProps.Model) || !has(protoProps, 'Model')) {
-                constructor[PROTOTYPE].Model = child;
-            }
-            // child[CONSTRUCTOR] = constructor;
-            child.__super__ = parent[PROTOTYPE];
-            constructor[CONSTRUCTOR_ID] = constructorId;
+            child.__super__ = parent;
             constructor[PROTOTYPE][CONSTRUCTOR_KEY] = child;
-            if (nameIsStr) {
-                makeExtendFrom(name, constructor);
-                // this is good when _ / utils object is your global app object
-                if (attach) {
-                    _[name] = child;
-                }
+            if (nameIsStr && attach) {
+                factories[name] = child;
             }
-            return constructor;
+            return child;
         },
-        constructorWrapper = function (Ch) {
+        constructorWrapper = function (Constructor) {
             var __ = function (attributes, options) {
-                if (isInstance(attributes, Ch)) {
+                if (isInstance(attributes, Constructor)) {
                     return attributes;
                 }
-                return new Ch(attributes, options);
+                return new Constructor(attributes, options);
             };
-            __[CONSTRUCTOR] = Ch;
+            __[CONSTRUCTOR] = Constructor;
+            __.extend = function () {
+                return Constructor.extend.apply(Constructor, arguments);
+            };
             return __;
-        },
-        /**
-         * @func
-         */
-        makeExtendFrom = function (name, child) {
-            extendFrom[name] = function () {
-                return child.extend.apply(child, arguments);
-            };
         },
         /**
          * @func
@@ -873,7 +853,7 @@ application.scope('dev', function (app) {
         /**
          * @func
          */
-        Image = window.Image,
+        Image = win.Image,
         fetch = function (url, callback) {
             var img = new Image();
             url = stringifyQuery(url);
@@ -905,12 +885,12 @@ application.scope('dev', function (app) {
         //     });
         //     return depth;
         // },
-        log = function (type, args) {
-            if (!_.isFunction(console[type])) {
-                type = 'log';
-            }
-            console[type].apply(console, args);
-        },
+        // log = function (type, args) {
+        //     if (!_.isFunction(console[type])) {
+        //         type = 'log';
+        //     }
+        //     console[type].apply(console, args);
+        // },
         /**
          * @func
          */
@@ -919,11 +899,11 @@ application.scope('dev', function (app) {
             if (isString(val)) {
                 val = val.trim();
                 if (val[0] === '{' || val[0] === '[') {
-                    try {
+                    wraptry(function () {
                         val = JSON.parse(val);
-                    } catch (e) {
-                        log('error', ['could not parse', val]);
-                    }
+                    }, function () {
+                        console.error('could not parse', val);
+                    });
                 }
             }
             return val;
@@ -977,17 +957,17 @@ application.scope('dev', function (app) {
             }
             return function () {
                 var context = scope || this,
-                    _nowish = nowish(),
+                    _now = now(),
                     args = arguments;
-                if (last && _nowish < last + threshold) {
+                if (last && _now < last + threshold) {
                     // hold on to it
                     clearTimeout(deferTimer);
                     deferTimer = setTimeout(function () {
-                        last = _nowish;
+                        last = _now;
                         fn.apply(context, args);
                     }, threshold);
                 } else {
-                    last = _nowish;
+                    last = _now;
                     fn.apply(context, args);
                 }
             };
@@ -995,13 +975,6 @@ application.scope('dev', function (app) {
         /**
          * @func
          */
-        pngString = function () {
-            return "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGP6zwAAAgcBApocMXEAAAAASUVORK5CYII=";
-        },
-        /**
-         * @func
-         */
-        // this should really be it's own factory
         stringifyQuery = function (obj) {
             var val, n, base = obj.url,
                 query = [];
@@ -1009,7 +982,7 @@ application.scope('dev', function (app) {
                 for (n in obj.query) {
                     val = obj.query[n];
                     if (val !== blank) {
-                        val = encodeURIComponent(_.stringify(val));
+                        val = encodeURIComponent(stringify(val));
                         query.push(n + '=' + val);
                     }
                 }
@@ -1027,53 +1000,21 @@ application.scope('dev', function (app) {
             return base;
         },
         protoProp = function (instance, key, farDown) {
-            var val, proto, constructor = instance[CONSTRUCTOR];
+            var val, proto, constructor = previousConstructor(instance);
             farDown = farDown || 1;
             do {
                 proto = constructor[PROTOTYPE];
                 val = proto[key];
-                constructor = proto[CONSTRUCTOR];
+                constructor = previousConstructor(proto);
             } while (--farDown > 0 && constructor && isFinite(farDown));
             return val;
         },
-        /**
-         * @func
-         */
-        makeId = (function () {
-            var global = -1,
-                cache = {};
-            return function (prefix) {
-                var prefixStr, retVal;
-                if (!prefix) {
-                    prefixStr = '';
-                }
-                if (prefix) {
-                    prefixStr = prefix.toString();
-                }
-                if (cache[prefixStr] === blank) {
-                    cache[prefixStr] = -1;
-                }
-                cache[prefixStr]++;
-                global++;
-                retVal = prefix + cache[prefixStr];
-                if (!prefix) {
-                    retVal = global;
-                    if (prefix === '') {
-                        retVal = '' + global;
-                    }
-                }
-                return retVal;
-            };
-        }()),
-        /**
-         * @func
-         */
         uuid = function () {
             var blank, cryptoCheck = 'crypto' in window && 'getRandomValues' in crypto,
                 sid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
                     var rnd, r, v;
                     if (cryptoCheck) {
-                        rnd = window.crypto.getRandomValues(new Uint32Array(1));
+                        rnd = win.crypto.getRandomValues(new Uint32Array(1));
                         if (rnd === blank) {
                             cryptoCheck = false;
                         }
@@ -1088,19 +1029,16 @@ application.scope('dev', function (app) {
                 });
             return cryptoCheck ? sid : 'SF' + sid;
         },
-        intendedObject = function (key, value, fn_, ctx) {
+        intendedObject = function (key, value, fn_) {
             var fn = fn_,
                 obj = isObject(key) ? key : BOOLEAN_FALSE;
             if (obj) {
-                each(obj, reverseParams(fn), ctx);
+                each(obj, reverseParams(fn));
             } else {
-                if (ctx) {
-                    fn = bind(fn, ctx);
-                }
                 fn(key, value);
             }
         },
-        reverseParams = function (iteratorFn) {
+        reverseParams = function (iteratorFn, ctx) {
             return function (value, key, third) {
                 iteratorFn(key, value, third);
             };
@@ -1108,7 +1046,7 @@ application.scope('dev', function (app) {
         /**
          * @func
          */
-        getReference = function (str) {
+        reference = function (str) {
             var match;
             if (!isString(str)) {
                 str = str.referrer;
@@ -1140,32 +1078,12 @@ application.scope('dev', function (app) {
             });
             return str;
         },
-        png = pngString,
-        /**
-         * @func
-         */
-        simpleObject = function (key, value) {
-            var obj = {};
-            obj[key] = value;
-            return obj;
-        },
-        /**
-         * @func
-         */
-        rip = function (list, ripped) {
-            var obj = {};
-            duff(gapSplit(list), function (val, key) {
-                obj[val] = ripped[val];
-            });
-            return obj;
-        },
         result = function (obj, str, arg) {
             return isFunction(obj[str]) ? obj[str](arg) : obj[str];
         },
-        maths = Math,
         mathArray = function (method) {
             return function (args) {
-                return maths[method].apply(maths, args);
+                return Math[method].apply(maths, args);
             };
         },
         mathMix = function (key) {
@@ -1199,8 +1117,28 @@ application.scope('dev', function (app) {
                 _fn = _fn || function () {};
                 return fn.call(this, _fn);
             };
+        },
+        _console = win.console || {},
+        _log = _console.log || noop,
+        console = wrap(gapSplit('trace log dir error'), function (key) {
+            var method = _console[key];
+            return function () {
+                if (method) {
+                    return method.apply(_console, arguments);
+                } else {
+                    return _log.apply(_console, arguments);
+                }
+            };
+        }),
+        wraptry = function (trythis, errthat, finalfunction) {
+            try {
+                return trythis();
+            } catch (e) {
+                return errthat && errthat(e);
+            } finally {
+                return finalfunction && finalfunction();
+            }
         };
-    // cssResetString = 'a,abbr,acronym,address,applet,article,aside,audio,b,big,blockquote,body,canvas,caption,center,cite,code,dd,del,details,dfn,div,dl,dt,em,embed,fieldset,figcaption,figure,footer,form,h1,h2,h3,h4,h5,h6,header,hgroup,html,i,iframe,img,ins,kbd,label,legend,li,mark,menu,nav,object,ol,output,p,pre,q,ruby,s,samp,section,small,span,strike,strong,sub,summary,sup,table,tbody,td,tfoot,th,thead,time,tr,tt,u,ul,var,video{margin:0;padding:0;border:0;font:inherit;vertical-align:baseline}article,aside,details,figcaption,figure,footer,header,hgroup,menu,nav,section{display:block}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:after,blockquote:before,q:after,q:before{content:"";content:none}table{border-collapse:collapse;border-spacing:0}'
     /**
      * @class Model
      */
@@ -1209,40 +1147,37 @@ application.scope('dev', function (app) {
     }
     factories.Model = Model;
     Model[PROTOTYPE] = {};
-    makeExtendFrom('Model', factories.Model);
     Model.extend = constructorExtend;
     _ = app._ = {
-        noop: function () {},
-        monthNames: gapSplit('january feburary march april may june july august september october november december'),
+        noop: noop,
+        months: gapSplit('january feburary march april may june july august september october november december'),
         weekdays: gapSplit('sunday monday tuesday wednesday thursday friday saturday'),
         constructorWrapper: constructorWrapper,
         stringifyQuery: stringifyQuery,
         intendedObject: intendedObject,
         ensureFunction: ensureFunction,
         parseDecimal: parseDecimal,
-        getReference: getReference,
+        reference: reference,
         cssTemplater: cssTemplater,
-        simpleObject: simpleObject,
         isArrayLike: isArrayLike,
         isInstance: isInstance,
         hasEnumBug: hasEnumBug,
         roundFloat: roundFloat,
-        extendFrom: extendFrom,
         factories: factories,
         listSlice: listSlice,
         fullClone: fullClone,
-        pngString: pngString,
         parseBool: parseBool,
         stringify: stringify,
         splitGen: splitGen,
         gapSplit: gapSplit,
         uniqueId: uniqueId,
-        // property: property,
+        wraptry: wraptry,
         toString: toString,
         throttle: throttle,
         debounce: debounce,
         protoProp: protoProp,
         reverse: reverse,
+        indexOfNaN: indexOfNaN,
         indexOf: indexOf,
         joinGen: joinGen,
         toArray: toArray,
@@ -1251,14 +1186,11 @@ application.scope('dev', function (app) {
         gapJoin: gapJoin,
         isArray: isArray,
         isEmpty: isEmpty,
-        modules: {},
         splice: splice,
         isBoolean: isBoolean,
         invert: invert,
         extend: extend,
-        makeId: makeId,
-        nowish: nowish,
-        now: nowish,
+        now: now,
         map: map,
         result: result,
         isBlank: isBlank,
@@ -1294,22 +1226,20 @@ application.scope('dev', function (app) {
         has: has,
         negate: negate,
         pI: pI,
-        math: {},
         createPredicateIndexFinder: createPredicateIndexFinder,
         findIndex: findIndex,
         findLastIndex: findLastIndex,
         validKey: validKey,
         finder: finder,
         find: find,
-        findLast: findLast
-    };
-    duff(gapSplit('E LN2 LN10 LOG2E LOG10E PI SQRT1_2 SQRT2 abs acos acosh asin asinh atan atan2 atanh cbrt ceil clz32 cos cosh exp expm1 floor fround hypot imul log log1p log2 log10 max min pow random round sign sin sinh sqrt tan tanh trunc'), function (key) {
-        _[key] = _.math[key] = Math[key];
-    });
-    exports({
+        findLast: findLast,
+        console: console,
         floor: floor,
         ceil: ceil,
         min: mathArray('min'),
-        max: mathArray('max')
-    });
+        max: mathArray('max'),
+        math: wrap(gapSplit('E LN2 LN10 LOG2E LOG10E PI SQRT1_2 SQRT2 abs acos acosh asin asinh atan atan2 atanh cbrt ceil clz32 cos cosh exp expm1 floor fround hypot imul log log1p log2 log10 max min pow random round sign sin sinh sqrt tan tanh trunc'), function (key) {
+            return Math[key];
+        })
+    };
 });

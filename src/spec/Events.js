@@ -1,7 +1,7 @@
 application.scope().run(function (app, _, factories, $) {
     describe('Events', function () {
         var blank, box,
-            Box = _.Box,
+            Box = factories.Box,
             handler = function () {
                 return !0;
             },

@@ -142,11 +142,13 @@
                 docu.head.appendChild(scriptTag);
                 return application;
             },
-            makeScript: function (src, onload, docu_) {
+            makeScript: function (src, onload, docu_, preventappend) {
                 var docu = docu_ || topmostDoc || doc,
                     script = docu.createElement('script');
                 script.type = 'text/javascript';
-                docu.head.appendChild(script);
+                if (!preventappend) {
+                    docu.body.appendChild(script);
+                }
                 if (src) {
                     if (onload) {
                         script.onload = onload;

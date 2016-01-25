@@ -1,7 +1,6 @@
 application.scope(function (app) {
     var blank, _ = app._,
-        // extendFrom = app.extendFrom,
-        // factories = app.factories,
+        factories = _.factories,
         gapSplit = _.gapSplit,
         simpleObject = _.simpleObject,
         isObject = _.isObject,
@@ -15,6 +14,8 @@ application.scope(function (app) {
         push = _.push,
         has = _.has,
         map = _.map,
+        bind = _.bind,
+        find = _.find,
         isInstance = _.isInstance,
         camelCase = _.camelCase,
         intendedObject = _.intendedObject,
@@ -29,12 +30,12 @@ application.scope(function (app) {
         upCase = _.upCase,
         LENGTH = 'length',
         PARENT = 'parent',
-        internalEventsString = '_events',
+        _EVENTS = '_events',
         EVENT_REMOVE = '_removeEventList',
         CURRENT_EVENTS = '_currentEventList',
-        internalListeningToString = '_listeningTo',
-        modifiedTriggerString = 'alter:',
-        iPISString = 'immediatePropagationIsStopped',
+        _LISTENING_TO = '_listeningTo',
+        modifiedTriggerString = 'change:',
+        IMMEDIATE_PROP_IS_STOPPED = 'immediatePropagationIsStopped',
         SERIALIZED_DATA = 'serializedData',
         BOOLEAN_FALSE = !1,
         BOOLEAN_TRUE = !0,
@@ -103,16 +104,11 @@ application.scope(function (app) {
             }
         },
         retreiveEventList = function (model, name) {
-            if (!model[internalEventsString]) {
-                model[internalEventsString] = {};
-            }
-            return model[internalEventsString][name];
+            var internalevents = model[_EVENTS] = model[_EVENTS] || {};
+            return internalevents[name];
         },
         getRemoveList = function (model) {
-            var list = model[EVENT_REMOVE];
-            if (!list) {
-                list = model[EVENT_REMOVE] = [];
-            }
+            var list = model[EVENT_REMOVE] = model[EVENT_REMOVE] = [];
             return list;
         },
         getCurrentEventList = function (box) {
@@ -124,16 +120,17 @@ application.scope(function (app) {
         },
         attachEventObject = function (obj, name, eventObject) {
             var events, list;
-            if (isObject(obj)) {
-                eventObject.ctx = eventObject.ctx || eventObject.origin;
-                eventObject.fn = eventObject.fn || eventObject.handler;
-                eventObject.fn = _.bind(eventObject.fn, eventObject.ctx);
-                events = obj[internalEventsString] = obj[internalEventsString] || {};
-                list = events[name] = events[name] || [];
-                // attached so event can remove itself
-                eventObject.list = list;
-                list.push(eventObject);
+            if (!obj) {
+                return;
             }
+            eventObject.ctx = eventObject.ctx || eventObject.origin;
+            eventObject.fn = eventObject.fn || eventObject.handler;
+            eventObject.fn = bind(eventObject.fn, eventObject.ctx);
+            events = obj[_EVENTS] = obj[_EVENTS] || {};
+            list = events[name] = events[name] || [];
+            // attached so event can remove itself
+            eventObject.list = list;
+            list.push(eventObject);
         },
         extrapolateContext = function (fn) {
             return function () {
@@ -168,7 +165,7 @@ application.scope(function (app) {
             if (!id) {
                 id = obj._listenId = _.uniqueId('l');
             }
-            listeningTo = thing[internalListeningToString] || (thing[internalListeningToString] = {});
+            listeningTo = thing[_LISTENING_TO] || (thing[_LISTENING_TO] = {});
             listening = listeningTo[id];
             // This object is not listening to any other events on `obj` yet.
             // Setup the necessary references to track the listening callbacks.
@@ -188,7 +185,7 @@ application.scope(function (app) {
             }
             return listening;
         },
-        ObjectEvent = _.extendFrom.Model('ObjectEvent', {
+        ObjectEvent = factories.Model.extend('ObjectEvent', {
             constructor: function (name, target, data) {
                 var evnt = this;
                 if (isInstance(data, Event)) {
@@ -198,7 +195,7 @@ application.scope(function (app) {
                 evnt.dispatchChildren = BOOLEAN_FALSE;
                 evnt.dispatchTree = BOOLEAN_FALSE;
                 evnt.onMethodName = upCase(camelCase('on:' + name, ':'));
-                evnt.propagationIsStopped = evnt[iPISString] = BOOLEAN_FALSE;
+                evnt.propagationIsStopped = evnt[IMMEDIATE_PROP_IS_STOPPED] = BOOLEAN_FALSE;
                 evnt.target = target;
                 evnt.name = name;
                 evnt.type = name.split(':')[0];
@@ -231,7 +228,7 @@ application.scope(function (app) {
             },
             stopImmediatePropagation: function () {
                 this.stopPropagation();
-                this[iPISString] = BOOLEAN_TRUE;
+                this[IMMEDIATE_PROP_IS_STOPPED] = BOOLEAN_TRUE;
             },
             stopPropagation: function () {
                 this.propagationIsStopped = BOOLEAN_TRUE;
@@ -285,13 +282,13 @@ application.scope(function (app) {
         },
         // makeValidEvent = ,
         getEventList = function (box, name) {
-            var events = box[internalEventsString] = box[internalEventsString] || {};
+            var events = box[_EVENTS] = box[_EVENTS] || {};
             return events[name] || [];
         },
         overrideEventCreation = function (obj) {
             return obj && (obj.bubbles || obj.dispatchChildren || opts.dispatchTree);
         },
-        Events = _.extendFrom.Model('Events', {
+        Events = factories.Model.extend('Events', {
             /**
              * @description attach event handlers to the Box event loop
              * @func
@@ -312,7 +309,7 @@ application.scope(function (app) {
             _makeValid: function () {
                 var model = this;
                 model[CURRENT_EVENTS] = model[CURRENT_EVENTS] || [];
-                model[internalEventsString] = model[internalEventsString] || {};
+                model[_EVENTS] = model[_EVENTS] || {};
                 model[EVENT_REMOVE] = model[EVENT_REMOVE] || [];
                 return model;
             },
@@ -339,25 +336,24 @@ application.scope(function (app) {
              */
             offAll: function () {
                 var box = this;
-                each(box[internalEventsString], function (array, key, obj) {
+                each(box[_EVENTS], function (array, key, obj) {
                     duffRev(array, removeEvent);
                 });
                 return box;
             },
             off: function (name_, fn_, ctx_) {
                 var currentEventList, currentObj, box = this,
-                    // ctx = fn_,
                     name = name_;
                 box._makeValid();
                 if (arguments[LENGTH]) {
                     if (!name) {
-                        each(box[internalEventsString], function (list, name) {
+                        each(box[_EVENTS], function (list, name) {
                             removeEventObject(box, list, fn_, ctx_);
                         });
                     } else {
                         iterateOverObject(box, isObject(name_) ? fn_ : ctx_, name, fn_, function (box, name, obj) {
-                            removeEventObject(box, !name || box[internalEventsString][name], obj.handler, obj.ctx);
-                        }, BOOLEAN_TRUE);
+                            removeEventObject(box, !name || box[_EVENTS][name], obj.handler, obj.ctx);
+                        });
                     }
                 } else {
                     currentEventList = getCurrentEventList(box);
@@ -370,7 +366,7 @@ application.scope(function (app) {
             stopListening: function (obj, name, callback) {
                 var ids, listening, stillListening = 0,
                     origin = this,
-                    listeningTo = origin[internalListeningToString];
+                    listeningTo = origin[_LISTENING_TO];
                 if (listeningTo && (!obj || obj._listenId)) {
                     duff(obj ? [obj._listenId] : _.keys(listeningTo), function (id) {
                         var listening = listeningTo[id];
@@ -382,7 +378,7 @@ application.scope(function (app) {
                     if (!stillListening && !find(ids, function (id, key) {
                         return listeningTo[id];
                     })) {
-                        origin[internalListeningToString] = blank;
+                        origin[_LISTENING_TO] = blank;
                     }
                 }
                 return origin;
@@ -407,14 +403,14 @@ application.scope(function (app) {
                     name = evnt.name,
                     currentEventArray = getCurrentEventList(box),
                     list = getEventList(box, name),
-                    ret = isFunction(box[evnt.methodName]) && box[evnt.methodName](evnt);
-                anotherRet = evnt[iPISString] || !!_.find(list, function (obj) {
-                    var gah;
-                    currentEventArray.push(obj);
-                    obj.fn(evnt);
-                    gah = currentEventArray.pop(name);
-                    return evnt[iPISString];
-                });
+                    ret = isFunction(box[evnt.methodName]) && box[evnt.methodName](evnt),
+                    anotherRet = !evnt[IMMEDIATE_PROP_IS_STOPPED] && !!find(list, function (obj) {
+                        var gah;
+                        currentEventArray.push(obj);
+                        obj.fn(evnt);
+                        gah = currentEventArray.pop();
+                        return evnt[IMMEDIATE_PROP_IS_STOPPED];
+                    });
                 if (!currentEventArray[LENGTH] && box[EVENT_REMOVE][LENGTH] && box[EVENT_REMOVE][LENGTH]) {
                     duffRev(box[EVENT_REMOVE], removeEvent);
                     box[EVENT_REMOVE] = [];
@@ -425,8 +421,8 @@ application.scope(function (app) {
                 return new ObjectEvent(name, this, data);
             },
             dispatchEvent: function (name, data, evnt_) {
-                var methodName = upCase(camelCase('on:' + name, ':')),
-                    onMethod = isFunction(box[methodName]),
+                var box = this,
+                    methodName = upCase(camelCase('on:' + name, ':')),
                     evnt = evnt_ || box._createEvent(name, data);
                 box._eventDispatcher(evnt);
                 evnt.finished();

@@ -1,16 +1,20 @@
-application.scope().module('DOMM', function (module, app, _) {
+application.scope().module('DOMM', function (module, app, _, factories) {
     var blank, sizzleDoc = document,
         eq = _.eq,
+        once = _.once,
         elementData = _.associator,
         result = _.result,
-        // elementData = app.module('Storage').message.request('storage'),
         uniqueId = _.uniqueId,
-        extendFrom = _.extendFrom,
-        factories = _.factories,
         isFunction = _.isFunction,
+        Collection = factories.Collection,
+        wraptry = _.wraptry,
+        now = _.now,
         each = _.each,
+        bind = _.bind,
         duff = _.duff,
         find = _.find,
+        wrap = _.wrap,
+        trace = _.trace,
         posit = _.posit,
         foldl = _.foldl,
         isString = _.isString,
@@ -18,8 +22,11 @@ application.scope().module('DOMM', function (module, app, _) {
         isNumber = _.isNumber,
         isBoolean = _.isBoolean,
         stringify = _.stringify,
-        wrap = _.wrap,
+        parse = _.parse,
+        isArrayLike = _.isArrayLike,
+        objectMatches = _.matches,
         merge = _.merge,
+        console = _.console,
         remove = _.splice,
         extend = _.extend,
         negate = _.negate,
@@ -32,112 +39,76 @@ application.scope().module('DOMM', function (module, app, _) {
         duffRev = _.duffRev,
         indexOf = _.indexOf,
         clone = _.clone,
+        units = _.units,
         gapSplit = _.gapSplit,
         camelCase = _.camelCase,
         unCamelCase = _.unCamelCase,
         parseDecimal = _.parseDecimal,
-        LENGTH_STRING = 'length',
+        add = _.add,
+        removeAll = _.removeAll,
+        addAll = _.addAll,
+        NODE_TYPE = 'nodeType',
+        PARENT_NODE = 'parentNode',
+        LENGTH = 'length',
         ITEMS = '_items',
         DELEGATE_COUNT = '__delegateCount',
         REMOVE_QUEUE = 'removeQueue',
         ADD_QUEUE = 'addQueue',
         CLASSNAME = 'className',
+        DEFAULT_VIEW = 'defaultView',
+        WINDOW = 'window',
+        DOCUMENT = 'document',
+        CLASS = 'class',
+        STYLE = 'style',
+        BODY = 'body',
+        TOP = 'top',
+        LEFT = 'left',
+        RIGHT = 'right',
+        BOTTOM = 'bottom',
+        WIDTH = 'width',
+        HEIGHT = 'height',
+        INDEX = 'index',
+        INNER_HEIGHT = 'innerHeight',
+        INNER_WIDTH = 'innerWidth',
         BOOLEAN_TRUE = !0,
         BOOLEAN_FALSE = !1,
+        NULL = null,
         win = window,
-        WINDOW = 'window',
-        CLASS = 'class',
         devicePixelRatio = (win.devicePixelRatio || 1),
         ua = navigator.userAgent,
-        isNode = function (object) {
-            return !!(object && isNumber(object.nodeType) && object.nodeType === object.ELEMENT_NODE);
+        isElement = function (object) {
+            return !!(object && isNumber(object[NODE_TYPE]) && object[NODE_TYPE] === object.ELEMENT_NODE);
         },
-        isDom = isNode,
         /**
          * @private
          * @func
          */
-        isWin = function (obj) {
+        isWindow = function (obj) {
             return obj && obj === obj[WINDOW];
         },
         /**
          * @private
          * @func
          */
-        isDoc = function (obj) {
-            return obj && isNumber(obj.nodeType) && obj.nodeType === obj.DOCUMENT_NODE;
+        isDocument = function (obj) {
+            return obj && isNumber(obj[NODE_TYPE]) && obj[NODE_TYPE] === obj.DOCUMENT_NODE;
         },
         isFrag = function (frag) {
-            return frag && frag.nodeType === sizzleDoc.DOCUMENT_FRAGMENT_NODE;
+            return frag && frag[NODE_TYPE] === sizzleDoc.DOCUMENT_FRAGMENT_NODE;
         },
         getClosestWindow = function (windo_) {
             var windo = windo_ || win;
-            return isWin(windo) ? windo : (windo && windo.defaultView ? windo.defaultView : (windo.ownerGlobal ? windo.ownerGlobal : $(windo).parent(WINDOW).index(0) || win));
+            return isWindow(windo) ? windo : (windo && windo[DEFAULT_VIEW] ? windo[DEFAULT_VIEW] : (windo.ownerGlobal ? windo.ownerGlobal : $(windo).parent(WINDOW)[INDEX](0) || win));
         },
         getComputed = function (el, ctx) {
             var ret = getClosestWindow(ctx).getComputedStyle(el);
-            return ret ? ret : getClosestWindow(el).getComputedStyle(el) || clone(el.style) || {};
+            return ret ? ret : getClosestWindow(el).getComputedStyle(el) || clone(el[STYLE]) || {};
         },
-        allStyles = getComputed(sizzleDoc.body, win),
-        /**
-         * @func
-         */
-        isAndroid = function () {
-            return ua.match(/Android/i);
-        },
-        /**
-         * @func
-         */
-        isBlackBerry = function () {
-            return ua.match(/BlackBerry/i);
-        },
-        /**
-         * @func
-         */
-        isIos = function () {
-            return ua.match(/iPhone|iPad|iPod/i);
-        },
-        /**
-         * @func
-         */
-        isOpera = function () {
-            return ua.match(/Opera Mini/i);
-        },
-        /**
-         * @func
-         */
-        isWindows = function () {
-            return ua.match(/IEMobile/i);
-        },
-        /**
-         * @func
-         */
-        // isTablet = function () {
-        //     return ua.match(/Mobile|iPad|Android|BlackBerry|IEMobile|Kindle|NetFront|Silk-Accelerated|(hpw|web)OS|Fennec|Minimo|Opera M(obi|ini)|Blazer|Dolfin|Dolphin|Skyfire|Zune/);
-        // },
+        allStyles = getComputed(sizzleDoc[BODY], win),
         rkeyEvent = /^key/,
         rmouseEvent = /^(?:mouse|pointer|contextmenu)|click/,
         rfocusMorph = /^(?:focusinfocus|focusoutblur)$/,
         rforceEvent = /^webkitmouseforce/,
-        /**
-         * @func
-         */
-        isMobile = function () {
-            return (isAndroid() || isBlackBerry() || isIos() || isOpera() || isWindows());
-        },
-        /**
-         * @func
-         */
-        isTouch = function () {
-            var ret = BOOLEAN_FALSE;
-            if ('ontouchstart' in window || 'onmsgesturechange' in window) {
-                ret = BOOLEAN_TRUE;
-            }
-            if (window.DocumentTouch) {
-                ret = sizzleDoc instanceof window.DocumentTouch;
-            }
-            return ret;
-        },
         hasWebP = (function () {
             var countdown = 4,
                 result = BOOLEAN_TRUE,
@@ -156,14 +127,9 @@ application.scope().module('DOMM', function (module, app, _) {
                 };
             duff(["UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA", "UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==", "UklGRkoAAABXRUJQVlA4WAoAAAAQAAAAAAAAAAAAQUxQSAwAAAARBxAR/Q9ERP8DAABWUDggGAAAABQBAJ0BKgEAAQAAAP4AAA3AAP7mtQAAAA==", "UklGRlIAAABXRUJQVlA4WAoAAAASAAAAAAAAAAAAQU5JTQYAAAD/////AABBTk1GJgAAAAAAAAAAAAAAAAAAAGQAAABWUDhMDQAAAC8AAAAQBxAREYiI/gcA"], function (val) {
                 var img = new Image();
-                img.onload = emptyqueue(function () {
-                    // is this code even doing anything?
-                    // if (result && (img.width > 0) && (img.height > 0)) {
-                    //     result = result;
-                    // }
-                });
+                img.onload = emptyqueue(_.noop);
                 img.onerror = emptyqueue(function () {
-                    result = false;
+                    result = BOOLEAN_FALSE;
                 });
                 img.src = "data:image/webp;base64," + val;
             });
@@ -175,70 +141,41 @@ application.scope().module('DOMM', function (module, app, _) {
                 }
             };
         }()),
-        /**
-         * @func
-         */
-        deviceCheck = _.wrap({
-            isAndroid: isAndroid,
-            isBlackBerry: isBlackBerry,
-            isIos: isIos,
-            isOpera: isOpera,
-            isWindows: isWindows,
-            isMobile: isMobile,
-            isTouch: isTouch
-        }, function (fn) {
-            return !!(fn());
-        }),
         saveDOMContentLoadedEvent = function (doc) {
             var data = elementData.get(doc);
-            if (data.isReady === void 0) {
+            if (data.isReady === blank) {
                 data.isReady = BOOLEAN_FALSE;
-                _.DOMM(doc).on('DOMContentLoaded', function (e) {
+                DOMM(doc).on('DOMContentLoaded', function (e) {
                     data.DOMContentLoadedEvent = e;
                     data.isReady = BOOLEAN_TRUE;
                 });
             }
         },
-        _DOMM = _.factories._DOMM = function (doc) {
+        _DOMM = factories._DOMM = function (doc) {
             saveDOMContentLoadedEvent(doc);
             return function (sel, ctx) {
-                return _.DOMM(sel, ctx || doc);
+                return DOMM(sel, ctx || doc);
             };
         },
-        setAttribute = function (el, key, val) {
-            if (val === true) {
+        setAttribute = function (el, key, val_) {
+            var val = val_;
+            if (val === BOOLEAN_TRUE) {
                 val = '';
+            } else {
+                val = stringify(val);
             }
-            val = stringify(val);
             val += '';
             el.setAttribute(key, val);
         },
         getAttribute = function (el, key, val) {
             var converted;
-            val = el.getAttribute(key);
+            val = parse(el.getAttribute(key));
+            val = +val == val ? +val : val;
             if (val === '') {
                 val = BOOLEAN_TRUE;
             }
-            if (isString(val)) {
-                if (val[0] === '{' || val[0] === '[') {
-                    val = JSON.parse(val);
-                } else {
-                    converted = +val;
-                    if (converted === converted) {
-                        val = converted;
-                    } else {
-                        // if for whatever reason you have a function
-                        if (val[val.length - 1] === '}') {
-                            if (val.slice(0, 8) === 'function') {
-                                val = new Function.constructor('return ' + val);
-                            }
-                        }
-                    }
-                }
-            } else {
-                if (isBlank(val)) {
-                    val = BOOLEAN_FALSE;
-                }
+            if (isBlank(val)) {
+                val = BOOLEAN_FALSE;
             }
             return val;
         },
@@ -329,8 +266,8 @@ application.scope().module('DOMM', function (module, app, _) {
         AllEvents = _.concatUnique(Events, SVGEvent, KeyboardEvent, CompositionEvent, GamePadEvent, MouseEvents, TouchEvents, DeviceEvents, FocusEvent, TimeEvent, AnimationEvent, AudioProcessingEvent, UIEvents, ProgressEvent),
         knownPrefixes = gapSplit('-o- -ms- -moz- -webkit- mso- -xv- -atsc- -wap- -khtml- -apple- prince- -ah- -hp- -ro- -rim- -tc-'),
         trustedEvents = gapSplit('load scroll resize orientationchange click dblclick mousedown mouseup mouseover mouseout mouseenter mouseleave mousemove change contextmenu hashchange load mousewheel wheel readystatechange'),
-        ALL_EVENTS_HASH = wrap(AllEvents, true),
-        knownPrefixesHash = wrap(knownPrefixes, true),
+        ALL_EVENTS_HASH = wrap(AllEvents, BOOLEAN_TRUE),
+        knownPrefixesHash = wrap(knownPrefixes, BOOLEAN_TRUE),
         /**
          * @private
          * @func
@@ -345,10 +282,10 @@ application.scope().module('DOMM', function (module, app, _) {
             if (el) {
                 classList = getClassName(el);
                 if (remove) {
-                    _.removeAll(classList, gapSplit(remove));
+                    removeAll(classList, gapSplit(remove));
                 }
                 if (add) {
-                    _.addAll(classList, gapSplit(add));
+                    addAll(classList, gapSplit(add));
                 }
                 // val = gapJoin(classList).trim();
                 setClassName(el, classList);
@@ -389,7 +326,7 @@ application.scope().module('DOMM', function (module, app, _) {
          */
         ensureDOM = function (fn) {
             return function (el) {
-                if (isDom(el)) {
+                if (isElement(el)) {
                     fn(el);
                 }
             };
@@ -399,20 +336,20 @@ application.scope().module('DOMM', function (module, app, _) {
          * @func
          */
         // returns the flow of the element passed on relative to the element's bounding window
-        position = function (el) {
+        flow = function (el, ctx) {
             var clientRect = el.getBoundingClientRect(),
-                computedStyle = getComputed(el),
+                computedStyle = getComputed(el, ctx),
                 marginTop = parseFloat(computedStyle.marginTop),
                 marginLeft = parseFloat(computedStyle.marginLeft),
                 marginRight = parseFloat(computedStyle.marginRight),
                 marginBottom = parseFloat(computedStyle.marginBottom);
             return {
-                height: clientRect.height,
-                width: clientRect.width,
-                top: clientRect.top - marginTop,
-                left: clientRect.left - marginLeft,
-                right: clientRect.left - marginLeft + clientRect.width - marginRight,
-                bottom: clientRect.top - marginTop + clientRect.height - marginBottom
+                height: clientRect[HEIGHT],
+                width: clientRect[WIDTH],
+                top: clientRect[TOP] - marginTop,
+                left: clientRect[LEFT] - marginLeft,
+                right: clientRect[LEFT] - marginLeft + clientRect[WIDTH] - marginRight,
+                bottom: clientRect[TOP] - marginTop + clientRect[HEIGHT] - marginBottom
             };
         },
         numberBasedCss = {
@@ -476,8 +413,8 @@ application.scope().module('DOMM', function (module, app, _) {
                         list.push(__prefix);
                     }
                 };
-            for (i = 0; i < knownPrefixes[LENGTH_STRING]; i++) {
-                currentLen = knownPrefixes[i][LENGTH_STRING];
+            for (i = 0; i < knownPrefixes[LENGTH]; i++) {
+                currentLen = knownPrefixes[i][LENGTH];
                 if (len < currentLen) {
                     len = currentLen;
                 }
@@ -519,54 +456,55 @@ application.scope().module('DOMM', function (module, app, _) {
                     ret = {},
                     count = 0,
                     nuCss = {};
-                if (isObject(el)) {
-                    if (isBoolean(key)) {
-                        key = el;
-                        retObj = 1;
-                    }
-                    firstEl = el[0];
-                    intendedObject(key, value, function (key, value) {
-                        if (!isBlank(value)) {
-                            count++;
-                            prefixes = [''];
-                            if (prefixed[m]) {
-                                prefixes = prefixed[m].concat(prefixes);
-                            }
-                            for (j = 0; j < prefixes[LENGTH_STRING]; j++) {
-                                finalProp = camelCase(prefixes[j] + m);
-                                nuCss[finalProp] = modifyFinalProp(finalProp, value);
-                            }
-                        } else {
-                            ret[m] = value;
+                if (!isObject(el)) {
+                    return;
+                }
+                if (isBoolean(key)) {
+                    key = el;
+                    retObj = 1;
+                }
+                firstEl = el[0];
+                intendedObject(key, value, function (key, value) {
+                    if (!isBlank(value)) {
+                        count++;
+                        prefixes = [''];
+                        if (prefixed[m]) {
+                            prefixes = prefixed[m].concat(prefixes);
                         }
-                    });
-                    if (retObj) {
-                        return nuCss;
-                    }
-                    if (isDom(el)) {
-                        el = [el];
-                    }
-                    if (!count) {
-                        if (isDom(firstEl)) {
-                            _ret = {};
-                            computed = getComputed(firstEl);
-                            count--;
-                            each(ret, function (val_, key, obj) {
-                                _ret[key] = convertStyleValue(key, computed[key]);
-                                count++;
-                                lastKey = key;
-                            });
-                            if (count + 1) {
-                                if (count) {
-                                    return _ret;
-                                } else {
-                                    return _ret[lastKey];
-                                }
-                            }
+                        for (j = 0; j < prefixes[LENGTH]; j++) {
+                            finalProp = camelCase(prefixes[j] + m);
+                            nuCss[finalProp] = modifyFinalProp(finalProp, value);
                         }
                     } else {
-                        style(el, nuCss);
+                        ret[m] = value;
                     }
+                });
+                if (retObj) {
+                    return nuCss;
+                }
+                if (isElement(el)) {
+                    el = [el];
+                }
+                if (!count) {
+                    if (isElement(firstEl)) {
+                        _ret = {};
+                        computed = getComputed(firstEl);
+                        count--;
+                        each(ret, function (val_, key, obj) {
+                            _ret[key] = convertStyleValue(key, computed[key]);
+                            count++;
+                            lastKey = key;
+                        });
+                        if (count + 1) {
+                            if (count) {
+                                return _ret;
+                            } else {
+                                return _ret[lastKey];
+                            }
+                        }
+                    }
+                } else {
+                    style(el, nuCss);
                 }
             };
         }()),
@@ -584,9 +522,9 @@ application.scope().module('DOMM', function (module, app, _) {
         },
         style = function (els, key, value) {
             var ensuredDom;
-            if (els[LENGTH_STRING]) {
+            if (els[LENGTH]) {
                 ensuredDom = ensureDOM(function (el) {
-                    el.style[key] = value;
+                    el[STYLE][key] = value;
                 });
                 intendedObject(key, value, function (key, value_) {
                     var value = convertStyleValue(value_);
@@ -616,63 +554,68 @@ application.scope().module('DOMM', function (module, app, _) {
          * @private
          * @func
          */
-        box = function (el) {
-            var computed, ret = {};
-            if (isDom(el)) {
-                computed = getComputed(el);
-                ret = merge({
-                    borderBottom: parseFloat(computed.borderBottomWidth) || 0,
-                    borderRight: parseFloat(computed.borderRightWidth) || 0,
-                    borderLeft: parseFloat(computed.borderLeftWidth) || 0,
-                    borderTop: parseFloat(computed.borderTopWidth) || 0,
-                    paddingBottom: parseFloat(computed.paddingBottom) || 0,
-                    paddingRight: parseFloat(computed.paddingRight) || 0,
-                    paddingLeft: parseFloat(computed.paddingLeft) || 0,
-                    paddingTop: parseFloat(computed.paddingTop) || 0,
-                    marginBottom: parseFloat(computed.marginBottom) || 0,
-                    marginRight: parseFloat(computed.marginRight) || 0,
-                    marginLeft: parseFloat(computed.marginLeft) || 0,
-                    marginTop: parseFloat(computed.marginTop) || 0,
-                    computedBottom: parseFloat(computed.bottom) || 0,
-                    computedRight: parseFloat(computed.right) || 0,
-                    computedLeft: parseFloat(computed.left) || 0,
-                    computedTop: parseFloat(computed.top) || 0
-                }, clientRect(el));
+        box = function (el, ctx) {
+            var clientrect, computed, ret = {};
+            if (!isElement(el)) {
+                return ret;
             }
-            return ret;
+            computed = getComputed(el, ctx);
+            clientrect = clientRect(el, ctx);
+            return {
+                borderBottom: +computed.borderBottomWidth || 0,
+                borderRight: +computed.borderRightWidth || 0,
+                borderLeft: +computed.borderLeftWidth || 0,
+                borderTop: +computed.borderTopWidth || 0,
+                paddingBottom: +computed.paddingBottom || 0,
+                paddingRight: +computed.paddingRight || 0,
+                paddingLeft: +computed.paddingLeft || 0,
+                paddingTop: +computed.paddingTop || 0,
+                marginBottom: +computed.marginBottom || 0,
+                marginRight: +computed.marginRight || 0,
+                marginLeft: +computed.marginLeft || 0,
+                marginTop: +computed.marginTop || 0,
+                computedBottom: +computed[BOTTOM] || 0,
+                computedRight: +computed[RIGHT] || 0,
+                computedLeft: +computed[LEFT] || 0,
+                computedTop: +computed[TOP] || 0,
+                top: clientrect[TOP] || 0,
+                left: clientrect[LEFT] || 0,
+                right: clientrect[RIGHT] || 0,
+                bottom: clientrect[BOTTOM] || 0,
+                width: clientrect[WIDTH] || 0,
+                height: clientrect[HEIGHT] || 0
+            };
         },
         clientRect = function (item) {
             var ret = {};
-            if (item) {
-                if (isDom(item) && item.parentNode) {
-                    ret = item.getBoundingClientRect();
-                }
+            if (isElement(item)) {
+                ret = item.getBoundingClientRect();
             }
-            return extend({
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                width: 0,
-                height: 0
-            }, ret);
+            return {
+                top: ret[TOP] || 0,
+                left: ret[LEFT] || 0,
+                right: ret[RIGHT] || 0,
+                bottom: ret[BOTTOM] || 0,
+                width: ret[WIDTH] || 0,
+                height: ret[HEIGHT] || 0
+            };
         },
         /**
          * @private
          * @func
          */
         unitRemoval = function (str, unit) {
-            return parseFloat(str.split(unit || 'px').join('').trim()) || 0;
+            return +(str.split(unit || 'px').join('').trim()) || 0;
         },
         /**
          * @private
          * @func
          */
-        getStyleSize = function (el, attr) {
+        getStyleSize = function (el, attr, win) {
             var val, elStyle, num = el;
             if (isObject(el)) {
-                if (isDom(el)) {
-                    elStyle = getComputed(el);
+                if (isElement(el)) {
+                    elStyle = getComputed(el, win);
                 } else {
                     elStyle = el;
                 }
@@ -698,12 +641,12 @@ application.scope().module('DOMM', function (module, app, _) {
             }
         },
         // always in pixels
-        numToUnitsConverters = {
+        numberToUnit = {
             'in': function (val, el, win, styleAttr) {
                 return val / 96;
             },
             vh: function (val, el, win, styleAttr) {
-                return (val / win.innerHeight) * 100;
+                return (val / win[INNER_HEIGHT]) * 100;
             },
             px: function (val, el, win, styleAttr) {
                 return val;
@@ -712,31 +655,31 @@ application.scope().module('DOMM', function (module, app, _) {
                 return val / 37.79527559055118;
             },
             vw: function (val, el, win, styleAttr) {
-                return (val / win.innerWidth) * 100;
+                return (val / win[INNER_WIDTH]) * 100;
             },
             em: function (val, el, win, styleAttr) {
-                return val / getStyleSize(el, 'fontSize');
+                return val / getStyleSize(el, 'fontSize', win);
             },
             mm: function (val, el, win, styleAttr) {
                 return val / 3.779527559055118;
             },
             vmin: function (val, el, win, styleAttr) {
-                var mult = Math.min(win.innerHeight, win.innerWidth);
+                var mult = Math.min(win[INNER_HEIGHT], win[INNER_WIDTH]);
                 return (val / mult) * 100;
             },
             rem: function (val, el, win, styleAttr) {
-                return val / getStyleSize(win.document.body.parentNode, 'fontSize');
+                return val / getStyleSize(win[DOCUMENT][BODY][PARENT_NODE], 'fontSize', win);
             },
             pt: function (val, el, win, styleAttr) {
                 return val / 1.333333333333333;
             },
             vmax: function (val, el, win, styleAttr) {
-                var mult = Math.max(win.innerHeight, win.innerWidth);
+                var mult = Math.max(win[INNER_HEIGHT], win[INNER_WIDTH]);
                 return (val / mult) * 100;
             },
             '%': function (val, el, win, styleAttr) {
-                var parent = _.isDom(el) ? el.parentNode : el,
-                    _val = getStyleSize(parent, styleAttr);
+                var parent = isElement(el) ? el[PARENT_NODE] : el,
+                    _val = getStyleSize(parent, styleAttr, win);
                 return (val / _val) * 100;
             },
             pc: function (val, el, win, styleAttr) {
@@ -746,7 +689,7 @@ application.scope().module('DOMM', function (module, app, _) {
         numToUnits = function (num, unit, el, winTop, styleAttr, returnNum) {
             var number = num;
             if (num) {
-                number = numToUnitsConverters[unit](num, el, winTop, styleAttr);
+                number = numberToUnit[unit](num, el, winTop, styleAttr);
             }
             number = (number || 0);
             if (!returnNum) {
@@ -758,25 +701,12 @@ application.scope().module('DOMM', function (module, app, _) {
          * @private
          * @func
          */
-        unitsToNumConverters = {
-            // 'in'
-            // vh
-            // px
-            // cm
-            // vw
-            // em
-            // mm
-            // vmin
-            // rem
-            // pt
-            // vmax
-            // '%'
-            // pc
+        unitToNumber = {
             'in': function (val, el, win, styleAttr) {
                 return val * 96;
             },
             vh: function (val, el, win, styleAttr) {
-                return win.innerHeight * val / 100;
+                return win[INNER_HEIGHT] * val / 100;
             },
             px: function (val, el, win, styleAttr) {
                 return val;
@@ -785,7 +715,7 @@ application.scope().module('DOMM', function (module, app, _) {
                 return val * 37.79527559055118;
             },
             vw: function (val, el, win, styleAttr) {
-                return win.innerWidth * val / 100;
+                return win[INNER_WIDTH] * val / 100;
             },
             em: function (val, el, win, styleAttr) {
                 return getStyleSize(el, 'fontSize') * val;
@@ -794,19 +724,19 @@ application.scope().module('DOMM', function (module, app, _) {
                 return val * 3.779527559055118;
             },
             vmin: function (val, el, win, styleAttr) {
-                return ((Math.min(win.innerHeight, win.innerWidth) || 1) * val / 100);
+                return ((Math.min(win[INNER_HEIGHT], win[INNER_WIDTH]) || 1) * val / 100);
             },
             rem: function (val, el, win, styleAttr) {
-                return getStyleSize(win.document.body.parentNode, 'fontSize') * val;
+                return getStyleSize(win[DOCUMENT][BODY][PARENT_NODE], 'fontSize') * val;
             },
             pt: function (val, el, win, styleAttr) {
                 return val * 1.333333333333333;
             },
             vmax: function (val, el, win, styleAttr) {
-                return ((Math.max(win.innerHeight, win.innerWidth) || 1) * val / 100);
+                return ((Math.max(win[INNER_HEIGHT], win[INNER_WIDTH]) || 1) * val / 100);
             },
             '%': function (val, el, win, styleAttr) {
-                var parent = _.isDom(el) ? el.parentNode : el,
+                var parent = isElement(el) ? el[PARENT_NODE] : el,
                     _val = getStyleSize(parent, styleAttr);
                 return (val * _val) / 100;
             },
@@ -815,15 +745,13 @@ application.scope().module('DOMM', function (module, app, _) {
             }
         },
         unitsToNum = function (str, el, winTop, styleAttr) {
-            var ret, number, unit = _.units(str);
-            if (unit) {
-                number = +(str.split(unit).join('')) || 0;
-                if (unitsToNumConverters[unit]) {
-                    number = unitsToNumConverters[unit](number, el, winTop, styleAttr) || 0;
-                }
-            } else {
-                // you passed in a number
-                number = str;
+            var ret, number, unit = units(str);
+            if (!unit) {
+                return str;
+            }
+            number = +(str.split(unit).join('')) || 0;
+            if (unitToNumber[unit]) {
+                number = unitToNumber[unit](number, el, winTop, styleAttr) || 0;
             }
             return number;
         },
@@ -834,7 +762,7 @@ application.scope().module('DOMM', function (module, app, _) {
         containsClass = function (el, className) {
             var original = getClassName(el),
                 nuClasses = gapSplit(className),
-                nuClassesLen = nuClasses[LENGTH_STRING],
+                nuClassesLen = nuClasses[LENGTH],
                 i = 0,
                 has = 0;
             for (; i < nuClassesLen; i++) {
@@ -868,17 +796,17 @@ application.scope().module('DOMM', function (module, app, _) {
          * @private
          * @func
          */
-        createEl = function (str) {
+        createElement = function (str) {
             return sizzleDoc.createElement(str);
         },
         makeEmptyFrame = function (str) {
-            var frame, div = createEl('div');
+            var frame, div = createElement('div');
             div.innerHTML = str;
             frame = div.children[0];
             return $(frame);
         },
         makeTree = function (str) {
-            var div = createEl('div');
+            var div = createElement('div');
             div.innerHTML = str;
             return $(div.children).remove().unwrap();
         },
@@ -886,19 +814,9 @@ application.scope().module('DOMM', function (module, app, _) {
          * @private
          * @func
          */
-        // makeScriptTag = function (src) {
-        //     var scriptTag = createEl('script');
-        //     scriptTag.type = 'text/javascript';
-        //     scriptTag.src = src;
-        //     return scriptTag;
-        // },
-        /**
-         * @private
-         * @func
-         */
         matches = function (element, selector) {
             var match, parent, temp, matchesSelector;
-            if (!selector || !element || element.nodeType !== 1) {
+            if (!selector || !element || element[NODE_TYPE] !== 1) {
                 return BOOLEAN_FALSE;
             }
             matchesSelector = element.webkitMatchesSelector || element.mozMatchesSelector || element.oMatchesSelector || element.matchesSelector;
@@ -906,69 +824,15 @@ application.scope().module('DOMM', function (module, app, _) {
                 return matchesSelector.call(element, selector);
             }
             // fall back to performing a selector:
-            parent = element.parentNode;
+            parent = element[PARENT_NODE];
             temp = !parent;
             if (temp) {
-                parent = createEl('div');
+                parent = createElement('div');
                 parent.appendChild(element);
             }
             // temp && tempParent.removeChild(element);
-            return !!posit(_.Sizzle(selector, parent), element);
+            return !!posit(Sizzle(selector, parent), element);
         },
-        // setAttribute = function (el, key, val) {
-        //     if (val === true) {
-        //         val = '';
-        //     }
-        //     val = _.stringify(val);
-        //     val += '';
-        //     el.setAttribute(key, val);
-        // },
-        // getAttribute = function (el, key, val) {
-        //     var converted;
-        //     val = el.getAttribute(key);
-        //     if (val === '') {
-        //         val = BOOLEAN_TRUE;
-        //     }
-        //     if (isString(val)) {
-        //         if (val[0] === '{' || val[0] === '[') {
-        //             val = JSON.parse(val);
-        //         } else {
-        //             converted = +val;
-        //             if (converted === converted) {
-        //                 val = converted;
-        //             } else {
-        //                 // if for whatever reason you have a function
-        //                 if (val[val.length - 1] === '}') {
-        //                     if (val.slice(0, 8) === 'function') {
-        //                         val = new Function.constructor('return ' + val);
-        //                     }
-        //                 }
-        //             }
-        //         }
-        //     } else {
-        //         if (isBlank(val)) {
-        //             val = BOOLEAN_FALSE;
-        //         }
-        //     }
-        //     return val;
-        // },
-        /**
-         * @private
-         * @func
-         */
-        // attributeInterface = function (el, key, val) {
-        //     // set or remove if not undefined
-        //     // undefined fills in the gap by returning some value, which is never undefined
-        //     if (val !== blank) {
-        //         if (!val && val !== 0) {
-        //             el.removeAttribute(key);
-        //         } else {
-        //             setAttribute(el, key, val);
-        //         }
-        //     } else {
-        //         return getAttribute(el, key, val);
-        //     }
-        // },
         /**
          * @private
          * @func
@@ -985,48 +849,44 @@ application.scope().module('DOMM', function (module, app, _) {
                 return domm;
             };
         },
+        createDocumentFragment = function () {
+            return sizzleDoc.createDocumentFragment();
+        },
         /**
          * @private
          * @func
          */
-        makeEl = function (tagName) {
+        createElements = function (tagName) {
             return $(foldl(gapSplit(tagName), function (memo, name) {
-                memo.push(createEl(name));
+                memo.push(createElement(name));
                 return memo;
             }, []));
         },
-        createDocFrag = function () {
-            return sizzleDoc.createDocumentFragment();
-        },
-        frag = function (el) {
-            var frag = createDocFrag(),
-                els = result(el, ITEMS) || el;
-            if (!_.isArrayLike(els)) {
-                els = [els];
-            }
-            duff(els, function (el) {
+        fragment = function (el) {
+            var frag = createDocumentFragment();
+            $(el).duff(function (el) {
                 frag.appendChild(el);
             });
             return frag;
         },
-        makeEls = function (arr, tag, style, props, attrs) {
-            var frag = createDocFrag();
-            map(arr, function (idx, str) {
-                var div = createEl(tag || 'div');
-                div.innerHTML = str;
-                each(style, function (key, val) {
-                    div.style[key] = val;
-                });
-                each(props, function (key, val) {
-                    div[key] = val;
-                });
-                each(attrs, function (key, val) {
-                    attributeInterface(div, key, val);
-                });
-                frag.appendChild(div);
-            });
-            return frag;
-        },
+        // createElements = function (arr, tag, style, props, attrs) {
+        //     var frag = createDocumentFragment();
+        //     map(arr, function (str) {
+        //         var div = createElement(tag || 'div');
+        //         div.innerHTML = str;
+        //         each(style, function (key, val) {
+        //             div[STYLE][key] = val;
+        //         });
+        //         each(props, function (key, val) {
+        //             div[key] = val;
+        //         });
+        //         each(attrs, function (key, val) {
+        //             attributeInterface(div, key, val);
+        //         });
+        //         frag.appendChild(div);
+        //     });
+        //     return frag;
+        // },
         /**
          * @private
          * @func
@@ -1055,11 +915,11 @@ application.scope().module('DOMM', function (module, app, _) {
                 idxChange = _idxChange || idxChange;
                 if (idxChange) {
                     duff(list, function (idx_, el) {
-                        var parent = el.parentNode,
+                        var parent = el[PARENT_NODE],
                             idx = (indexOf(parent.children, el) + idxChange),
                             item = parent.children[idx];
                         if (item && !posit(list, item)) {
-                            _.add(collected, item);
+                            add(collected, item);
                         }
                     });
                 } else {
@@ -1096,7 +956,7 @@ application.scope().module('DOMM', function (module, app, _) {
                         });
                     });
                 });
-                if (dataKeys[LENGTH_STRING] === 1) {
+                if (dataKeys[LENGTH] === 1) {
                     if (count === 1) {
                         ret = ret[dataKeys[0]];
                     } else {
@@ -1122,10 +982,10 @@ application.scope().module('DOMM', function (module, app, _) {
         // coordinates
         covers = function (element, coords) {
             var _clientRect = clientRect(element),
-                bottom = _clientRect.bottom,
-                right = _clientRect.right,
-                left = _clientRect.left,
-                tippytop = _clientRect.top,
+                bottom = _clientRect[BOTTOM],
+                right = _clientRect[RIGHT],
+                left = _clientRect[LEFT],
+                tippytop = _clientRect[TOP],
                 x = coords.x,
                 y = coords.y,
                 ret = BOOLEAN_FALSE;
@@ -1136,8 +996,8 @@ application.scope().module('DOMM', function (module, app, _) {
         },
         center = function (clientRect) {
             return {
-                x: clientRect.left + (clientRect.width / 2),
-                y: clientRect.top + (clientRect.height / 2)
+                x: clientRect[LEFT] + (clientRect[WIDTH] / 2),
+                y: clientRect[TOP] + (clientRect[HEIGHT] / 2)
             };
         },
         distance = function (a, b) {
@@ -1148,90 +1008,13 @@ application.scope().module('DOMM', function (module, app, _) {
         closer = function (center, current, challenger) {
             return distance(center, current) < distance(center, challenger);
         },
-        flattenBlock = function (block, selector, spaced) {
-            var children = [],
-                _flat = {},
-                flat = {};
-            each(block, function (property, value) {
-                var gah;
-                if (_.isObject(value)) {
-                    children.push(flattenBlock(value, selector + ' ' + property));
-                } else {
-                    flat[property] = value;
-                }
-            });
-            _flat[selector] = flat;
-            _flat = [_flat];
-            return _flat.concat.apply(_flat, children);
-        },
-        buildBlocks = function (blocks) {
-            var allBlocks = coll();
-            each(blocks, function (block, selector) {
-                allBlocks = allBlocks.concat(flattenBlock(block, selector));
-            });
-            return allBlocks;
-        },
-        stringifyPair = function (property, value) {
-            return property + ':' + value + ';';
-        },
-        stringifyBlock = function (block, selector, opts) {
-            var blockString = '' + selector + '{';
-            opts = extend({
-                line: '\n',
-                tab: '\t',
-                minify: 1
-            }, opts || {});
-            each(jsToCss(prefixer(block)), function (property, value) {
-                if (_.isObject(value)) {
-                    blockString += stringifyBlock(value, property, opts);
-                } else {
-                    blockString += stringifyPair(property, value);
-                }
-            });
-            if (blockString[blockString[LENGTH_STRING] - 1] !== '{') {
-                blockString += '}';
-            } else {
-                blockString = '';
-            }
-            return blockString;
-        },
-        buildStyles = function (obj, opts) {
-            return coll(obj).foldl(function (memo, idx, item) {
-                memo += buildBlocks(item).foldl(function (memo, idx, block) {
-                    each(block, function (block, idx, selector) {
-                        memo += stringifyBlock(block, selector, opts);
-                    });
-                    return memo;
-                }, '');
-                memo += '\n';
-                return memo;
-            }, '').split(' &').join('');
-        },
-        // parseEventName = function (name) {
-        //     var ret = [
-        //         [],
-        //         []
-        //     ];
-        //     duff(gapSplit(name), function (nme) {
-        //         var captures = BOOLEAN_FALSE;
-        //         if (nme[0] === '_') {
-        //             nme = nme.slice(1);
-        //             captures = BOOLEAN_TRUE;
-        //         }
-        //         duff(gapSplit(eventExpander[nme] || nme), function (nm) {
-        //             ret[0].push(nm);
-        //             ret[1].push(captures);
-        //         });
-        //     });
-        //     return ret;
-        // },
         createSelector = function (domm, args, fn) {
             var fun, selector, name = args.shift();
             if (isString(args[0]) || isBlank(args[0])) {
                 selector = args.shift();
             }
             if (isFunction(args[0])) {
-                fn = _.bind(fn, domm);
+                fn = bind(fn, domm);
                 fun = args[0];
                 duff(gapSplit(name), function (nme) {
                     var split = eventToNamespace(nme),
@@ -1249,7 +1032,7 @@ application.scope().module('DOMM', function (module, app, _) {
         },
         ensureOne = function (fn) {
             return function () {
-                if (this.length()) {
+                if (this[LENGTH]()) {
                     fn.apply(this, arguments);
                 }
                 return this;
@@ -1261,6 +1044,7 @@ application.scope().module('DOMM', function (module, app, _) {
                 // if there's nothing selected, then do nothing
                 args = toArray(arguments);
                 obj = args.shift();
+                // intendedObject(obj, null, function () {});
                 if (isObject(obj)) {
                     if (isString(args[0])) {
                         selector = args.shift();
@@ -1275,20 +1059,17 @@ application.scope().module('DOMM', function (module, app, _) {
             });
         },
         validateEvent = function (evnt, el) {
-            if (isString(evnt)) {
-                evnt = {
-                    type: evnt,
-                    bubbles: BOOLEAN_FALSE,
-                    eventPhase: 2,
-                    cancelable: BOOLEAN_FALSE,
-                    defaultPrevented: BOOLEAN_FALSE,
-                    data: '',
-                    isTrusted: BOOLEAN_FALSE,
-                    timeStamp: _.nowish(),
-                    target: el
-                };
-            }
-            return evnt;
+            return !isString(evnt) ? evnt : {
+                type: evnt,
+                bubbles: BOOLEAN_FALSE,
+                eventPhase: 2,
+                cancelable: BOOLEAN_FALSE,
+                defaultPrevented: BOOLEAN_FALSE,
+                data: '',
+                isTrusted: BOOLEAN_FALSE,
+                timeStamp: now(),
+                target: el
+            };
         },
         isCapturing = function (evnt) {
             var capturing = BOOLEAN_FALSE,
@@ -1296,20 +1077,20 @@ application.scope().module('DOMM', function (module, app, _) {
             if (eventPhase === 1) {
                 capturing = BOOLEAN_TRUE;
             }
-            if (eventPhase === 2 && !evnt.bubbles && isDom(evnt.srcElement)) {
+            if (eventPhase === 2 && !evnt.bubbles && isElement(evnt.srcElement)) {
                 capturing = BOOLEAN_TRUE;
             }
             return capturing;
         },
         findMatch = function (el, target, selector) {
-            var parent, found = null;
+            var parent, found = NULL;
             if (selector && isString(selector)) {
                 parent = target;
-                while (parent && !found && isDom(parent) && parent !== el) {
+                while (parent && !found && isElement(parent) && parent !== el) {
                     if (matches(parent, selector)) {
                         found = parent;
                     }
-                    parent = parent.parentNode;
+                    parent = parent[PARENT_NODE];
                 }
             }
             return found;
@@ -1317,93 +1098,93 @@ application.scope().module('DOMM', function (module, app, _) {
         getMainHandler = function (data, name, capturing) {
             return data.handlers[capturing + ':' + name];
         },
-        dispatchEvent = function (el, evnt, capturing, data, args, selector) {
-            var e, gah, eventNameStack, capturingStack, events, stack, currentEventStack, selectorIsString, mainHandler, eventType, removeStack, $el, matches = 1;
-            evnt = validateEvent(evnt, el);
-            if (evnt && evnt.type) {
-                capturing = !!capturing;
-                if (!_.isObject(data)) {
-                    data = elementData.get(el);
+        eventDispatcher = function (el, e, args, list) {
+            var $el = DOMM(el);
+            return find(list, function (obj) {
+                var selectorsMatch, ctx, originalTarget = e.currentTarget,
+                    mainHandler = obj.mainHandler;
+                if (mainHandler.currentEvent) {
+                    return BOOLEAN_TRUE;
                 }
-                events = data.events;
-                capturingStack = events[capturing];
-                if (capturingStack) {
-                    eventType = evnt.type;
-                    eventNameStack = capturingStack[eventType];
-                    // currentEventStack = data[currentEventStackString];
-                    mainHandler = getMainHandler(data, eventType, capturing);
-                    if (mainHandler) {
-                        removeStack = mainHandler[REMOVE_QUEUE];
-                        $el = $(el);
-                        e = new Event(evnt, el);
-                        args = [e].concat(args || []);
-                        // selectorIsString = isString(selector);
-                        find(eventNameStack, function (obj) {
-                            var selectorsMatch, ctx, originalTarget = e.currentTarget,
-                                mainHandler = obj.mainHandler;
-                            if (mainHandler.currentEvent) {
-                                return BOOLEAN_TRUE;
-                            }
-                            mainHandler.currentEvent = obj;
-                            if (obj && obj.persist && !obj.disabled) {
-                                if (obj.selector) {
-                                    ctx = findMatch(el, evnt.target, obj.selector);
-                                    if (ctx) {
-                                        e.currentTarget = ctx;
-                                    } else {
-                                        mainHandler.currentEvent = null;
-                                        return;
-                                    }
-                                }
-                                // e.type = obj.passedName;
-                                obj.fn.apply(ctx || $el, args);
-                            }
-                            if (!obj.persist) {
-                                // puts it on the event queue
-                                removeEventQueue(obj);
-                            }
-                            e.currentTarget = originalTarget;
-                            mainHandler.currentEvent = null;
-                            return e.isImmediatePropagationStopped;
-                        });
-                        duffRev(removeStack, removeEventQueue);
-                        while (mainHandler[ADD_QUEUE].length) {
-                            addEventQueue(mainHandler[ADD_QUEUE][0]);
-                            gah = mainHandler[ADD_QUEUE].shift();
+                mainHandler.currentEvent = obj;
+                if (obj && obj.persist && !obj.disabled) {
+                    if (obj.selector) {
+                        ctx = findMatch(el, evnt.target, obj.selector);
+                        if (ctx) {
+                            e.currentTarget = ctx;
+                        } else {
+                            mainHandler.currentEvent = NULL;
+                            return;
                         }
                     }
+                    obj.fn.apply(ctx || $el, args);
                 }
+                if (!obj.persist) {
+                    // puts it on the event queue
+                    removeEventQueue(obj);
+                }
+                e.currentTarget = originalTarget;
+                mainHandler.currentEvent = NULL;
+                return e.isImmediatePropagationStopped;
+            });
+        },
+        dispatchEvent = function (el, evnt_, capturing, data, args, selector) {
+            var e, gah, list, capturingStack, events, stack, currentEventStack, selectorIsString, mainHandler, eventType, removeStack, $el, matches = 1,
+                evnt = validateEvent(evnt_, el);
+            if (!evnt || !evnt.type) {
+                return;
+            }
+            capturing = !!capturing;
+            if (!_.isObject(data)) {
+                data = elementData.get(el);
+            }
+            events = data.events;
+            capturingStack = events[capturing];
+            if (!capturingStack) {
+                return;
+            }
+            eventType = evnt.type;
+            list = capturingStack[eventType];
+            mainHandler = getMainHandler(data, eventType, capturing);
+            if (!mainHandler) {
+                return;
+            }
+            removeStack = mainHandler[REMOVE_QUEUE];
+            e = new Event(evnt, el);
+            args = [e].concat(args || []);
+            wraptry(function () {
+                eventDispatcher(el, e, args, list);
+            }, function () {
+                console.trace(e);
+            });
+            duffRev(removeStack, removeEventQueue);
+            while (mainHandler[ADD_QUEUE][LENGTH]) {
+                addEventQueue(mainHandler[ADD_QUEUE][0]);
+                gah = mainHandler[ADD_QUEUE].shift();
             }
         },
         matchesHandler = function (handler, obj) {
             return !handler || obj.fn === handler;
         },
-        _eventExpander = (function (__obj) {
-            var obj = {};
-            each(__obj, function (key, val, object) {
-                obj[key] = gapSplit(val);
-            });
-            return obj;
-        }({
+        _eventExpander = wrap({
             ready: 'DOMContentLoaded',
             deviceorientation: 'deviceorientation mozOrientation',
             fullscreenalter: 'webkitfullscreenchange mozfullscreenchange fullscreenchange MSFullscreenChange',
             hover: 'mouseenter mouseleave',
             forcetouch: 'webkitmouseforcewillbegin webkitmouseforcedown webkitmouseforceup webkitmouseforcechanged'
-        })),
-        distilledEventName = (function () {
-            var obj = {};
-            each(_eventExpander, function (key, arr) {
-                duff(arr, function (idx, item) {
-                    obj[item] = key;
-                });
+        }, function (val) {
+            return gapSplit(val);
+        }),
+        distilledEventName = foldl(_eventExpander, function (memo, arr, key) {
+            duff(arr, function (item) {
+                memo[item] = key;
             });
-            return obj;
-        }()),
+            return memo;
+        }, {}),
         eventExpander = function (fn_) {
-            return function (nme, idx) {
-                var fn = _.bind(fn_, this);
-                duff(gapSplit(_eventExpander[nme] || nme), function (name, idx) {
+            return function (nme) {
+                var fn = bind(fn_, this);
+                duff(gapSplit(_eventExpander[nme] || nme), function (name) {
                     fn(name, nme);
                 });
             };
@@ -1443,7 +1224,7 @@ application.scope().module('DOMM', function (module, app, _) {
                         __delegateCount: 0,
                         addQueue: [],
                         removeQueue: [],
-                        currentEvent: null,
+                        currentEvent: NULL,
                         capturing: capture
                     };
                     el.addEventListener(name, eventHandler, capture);
@@ -1451,7 +1232,7 @@ application.scope().module('DOMM', function (module, app, _) {
                 attach = _.find(namespaceCache, function (obj) {
                     // remove any duplicates
                     if (fn === obj.fn && obj.namespace === namespace && selector === obj.selector) {
-                        return true;
+                        return BOOLEAN_TRUE;
                     }
                 });
                 if (!attach) {
@@ -1488,15 +1269,15 @@ application.scope().module('DOMM', function (module, app, _) {
                 selector = obj.selector;
             if (!mainHandler.currentEvent) {
                 if (!obj.isDestroyed) {
-                    obj.isDestroyed = true;
-                    idx = idx === void 0 ? list.indexOf(obj) : idx;
+                    obj.isDestroyed = BOOLEAN_TRUE;
+                    idx = idx === blank ? list.indexOf(obj) : idx;
                     if (idx + 1) {
                         if (selector) {
                             mainHandler[DELEGATE_COUNT]--;
                         }
                         gah = list.splice(idx, 1);
                     }
-                    obj.list = null;
+                    obj.list = NULL;
                 }
             } else {
                 if (obj.persist) {
@@ -1510,7 +1291,7 @@ application.scope().module('DOMM', function (module, app, _) {
                 // var args = toArray(arguments);
                 var args = ['', blank, []],
                     origArgs = _.filter(arguments, negate(isBlank)),
-                    argLen = origArgs.length;
+                    argLen = origArgs[LENGTH];
                 if (!isObject(name)) {
                     if (argLen === 1) {
                         args = [name, blank, [blank]];
@@ -1522,7 +1303,7 @@ application.scope().module('DOMM', function (module, app, _) {
                 if (argLen === 3) {
                     args = arguments;
                 }
-                fn.apply(this, args);
+                return fn.apply(this, args);
             };
         },
         removeEventListener = ensureHandlers(expandEventListenerArguments(function (name, namespace, selector, handler, capture) {
@@ -1564,8 +1345,6 @@ application.scope().module('DOMM', function (module, app, _) {
          * @augments Model
          * @augments Collection
          */
-        coll = _.Collection,
-        Collection = _.factories.Collection,
         fixHooks = {
             // Includes some event props shared by KeyEvent and MouseEvent
             props: gapSplit("data altKey bubbles cancelable ctrlKey currentTarget eventPhase metaKey relatedTarget shiftKey target timeStamp view which"),
@@ -1598,7 +1377,7 @@ application.scope().module('DOMM', function (module, app, _) {
                     if (isBlank(evnt.pageX) && !isBlank(original.clientX)) {
                         evntDoc = evnt.target.ownerDocument || sizzleDoc;
                         doc = evntDoc.documentElement;
-                        body = evntDoc.body;
+                        body = evntDoc[BODY];
                         evnt.pageX = original.clientX + (doc && doc.scrollLeft || body && body.scrollLeft || 0) - (doc && doc.clientLeft || body && body.clientLeft || 0);
                         evnt.pageY = original.clientY + (doc && doc.scrollTop || body && body.scrollTop || 0) - (doc && doc.clientTop || body && body.clientTop || 0);
                     }
@@ -1610,7 +1389,7 @@ application.scope().module('DOMM', function (module, app, _) {
                     evnt.y = original.y || 0;
                     // Add which for click: 1 === left; 2 === middle; 3 === right
                     // Note: button is not normalized, so don't use it
-                    if (!evnt.which && button !== undefined) {
+                    if (!evnt.which && button !== blank) {
                         evnt.which = (button & 1 ? 1 : (button & 2 ? 3 : (button & 4 ? 2 : 0)));
                     }
                     return evnt;
@@ -1626,7 +1405,7 @@ application.scope().module('DOMM', function (module, app, _) {
                     fixHooks.fixedHooks[type] = fixHook = rmouseEvent.test(type) ? this.mouseHooks : rkeyEvent.test(type) ? this.keyHooks : rforceEvent.test(type) ? this.forceHooks : {};
                 }
                 copy = fixHook.props ? this.props.concat(fixHook.props) : this.props;
-                i = copy.length;
+                i = copy[LENGTH];
                 while (i--) {
                     prop = copy[i];
                     val = originalEvent[prop];
@@ -1644,8 +1423,8 @@ application.scope().module('DOMM', function (module, app, _) {
                 }
                 // Support: Safari 6.0+, Chrome<28
                 // Target should not be a text node (#504, #13143)
-                if (target.nodeType === 3) {
-                    evnt.target = target.parentNode;
+                if (target[NODE_TYPE] === 3) {
+                    evnt.target = target[PARENT_NODE];
                 }
                 if (isFunction(fixHook.filter)) {
                     fixHook.filter(evnt, originalEvent);
@@ -1656,22 +1435,22 @@ application.scope().module('DOMM', function (module, app, _) {
                 // special
                 if (evnt.type === 'fullscreenchange') {
                     doc = evnt.target;
-                    if (isWin(doc)) {
-                        doc = doc.document;
+                    if (isWindow(doc)) {
+                        doc = doc[DOCUMENT];
                     } else {
-                        while (doc && !isDoc(doc) && doc.parentNode) {
-                            doc = doc.parentNode;
+                        while (doc && !isDocument(doc) && doc[PARENT_NODE]) {
+                            doc = doc[PARENT_NODE];
                         }
                     }
                     evnt.fullscreenDocument = doc;
-                    if (isDoc(doc)) {
-                        evnt.isFullScreen = (doc.fullScreen || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.fullscreenElement) ? true : false;
+                    if (isDocument(doc)) {
+                        evnt.isFullScreen = (doc.fullScreen || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.fullscreenElement) ? BOOLEAN_TRUE : BOOLEAN_FALSE;
                     }
                 }
                 return evnt;
             }
         },
-        Event = _.extendFrom.Model('Event', {
+        Event = factories.Model.extend('Event', {
             constructor: function (evnt, el) {
                 var e = this;
                 e.originalEvent = evnt;
@@ -1708,12 +1487,12 @@ application.scope().module('DOMM', function (module, app, _) {
                 filter = filtr;
             } else {
                 if (isObject(filtr)) {
-                    if (isDom(filtr)) {
+                    if (isElement(filtr)) {
                         filter = function (el) {
                             return !!posit(items, el);
                         };
                     } else {
-                        filter = _.matches(filtr);
+                        filter = objectMatches(filtr);
                     }
                 } else {
                     if (isString(filtr)) {
@@ -1730,7 +1509,7 @@ application.scope().module('DOMM', function (module, app, _) {
                             };
                         } else {
                             filter = function () {
-                                return true;
+                                return BOOLEAN_TRUE;
                             };
                         }
                     }
@@ -1744,14 +1523,14 @@ application.scope().module('DOMM', function (module, app, _) {
         },
         dimFinder = function (element, doc, win) {
             return function (num) {
-                var ret, el = this.get(num);
-                if (isDom(el)) {
+                var ret, el = this[INDEX](num);
+                if (isElement(el)) {
                     ret = clientRect(el)[element];
                 } else {
-                    if (isDoc(el) && el.body) {
-                        ret = el.body[doc];
+                    if (isDocument(el) && el[BODY]) {
+                        ret = el[BODY][doc];
                     } else {
-                        if (isWin(el)) {
+                        if (isWindow(el)) {
                             ret = el[win];
                         }
                     }
@@ -1765,7 +1544,7 @@ application.scope().module('DOMM', function (module, app, _) {
                 passedString = isString(str);
             duff(dom.unwrap(), function (el) {
                 if (passedString) {
-                    duff(_.Sizzle(str, el), function (el) {
+                    duff(Sizzle(str, el), function (el) {
                         matchers.push(el);
                     });
                 } else {
@@ -1775,35 +1554,41 @@ application.scope().module('DOMM', function (module, app, _) {
             return matchers;
         }),
         canBeProcessed = function (item) {
-            return isDom(item) || isWin(item) || isDoc(item) || isFrag(item);
+            return isElement(item) || isWindow(item) || isDocument(item) || isFrag(item);
         },
-        DOMM = factories.DOMM = _.extendFrom.Collection('DOMM', extend({
+        append = function (el) {
+            var dom = this,
+                frag = fragment(el);
+            dom.duff(function (el) {
+                el.appendChild(frag);
+            });
+            return dom;
+        },
+        DOMM = factories.DOMM = factories.Collection.extend('DOMM', extend({
             /**
              * @func
              * @name DOMM#constructor
- * @param {            String | Node | Function
-        }
-        str - string to query the dom with, or a
-        function to run on document load, or an element to wrap in a DOMM instance
+             * @param {String | Node | Function} str - string to query the dom with, or a function to run on document load, or an element to wrap in a DOMM instance
              * @returns {DOMM} instance
              */
             constructor: function (str, ctx) {
-                var i, els, elsLen, $doc, docEl, docData, dom = this;
+                var i, els, handler, elsLen, $doc, docEl, docData, dom = this;
+                dom.context = ctx || win[DOCUMENT];
                 if (isFunction(str)) {
-                    if (_.isDoc(ctx)) {
+                    if (isDocument(ctx)) {
                         $doc = $(ctx);
-                        docEl = $doc.get();
+                        docEl = $doc[INDEX]();
                         docData = elementData.get(docEl);
+                        handler = bind(str, $doc);
                         if (docData.isReady) {
                             // make it async
-                            setTimeout(function () {
-                                str.apply($doc, [$, docData.DOMContentLoadedEvent]);
+                            _.AF.once(function () {
+                                handler($, docData.DOMContentLoadedEvent);
                             });
                             els = dom.unwrap();
                         } else {
                             dom = $doc.on('DOMContentLoaded', function (e) {
-                                _.unshift(args, $);
-                                str.apply(this, args);
+                                handler($, e);
                             });
                             els = dom.unwrap();
                         }
@@ -1813,7 +1598,7 @@ application.scope().module('DOMM', function (module, app, _) {
                         if (str[0] === '<') {
                             els = makeTree(str);
                         } else {
-                            els = _.Sizzle(str, ctx);
+                            els = Sizzle(str, ctx);
                         }
                     } else {
                         els = str;
@@ -1822,7 +1607,7 @@ application.scope().module('DOMM', function (module, app, _) {
                         }
                     }
                 }
-                Collection.call(dom, els);
+                Collection.constructor.call(dom, els);
                 return dom;
             },
             /**
@@ -1831,11 +1616,11 @@ application.scope().module('DOMM', function (module, app, _) {
              * @description asks if the first or specified index of the object is a window type object
              * @returns {Boolean}
              */
-            isWin: function (num) {
-                return isWin(this.index(num || 0) || {});
+            isWindow: function (num) {
+                return isWindow(this[INDEX](num || 0) || {});
             },
-            isDom: function (num) {
-                return isDom(this.index(num || 0) || {});
+            isElement: function (num) {
+                return isElement(this[INDEX](num || 0) || {});
             },
             /**
              * @func
@@ -1843,14 +1628,14 @@ application.scope().module('DOMM', function (module, app, _) {
              * @description asks if the first or specified index of the object is a document type object
              * @returns {Boolean}
              */
-            isDoc: function (num) {
-                return isDoc(this.index(num || 0) || {});
+            isDocument: function (num) {
+                return isDocument(this[INDEX](num || 0) || {});
             },
-            isFrag: function (num) {
-                return isFrag(this.index(num || 0) || {});
+            isFragment: function (num) {
+                return isFrag(this[INDEX](num || 0) || {});
             },
-            frag: function (el) {
-                return _.frag(el || (this && this[ITEMS]));
+            fragment: function (el) {
+                return fragment(el || (this && this[ITEMS]));
             },
             /**
              * @func
@@ -1927,11 +1712,11 @@ application.scope().module('DOMM', function (module, app, _) {
              */
             once: expandEventListenerArguments(eachProc(function (el, types, namespace, selector, fn, capture) {
                 var args = toArray(arguments);
-                args[4] = _.once(function () {
-                    _removeEventListener.apply(null, args);
+                args[4] = once(function () {
+                    _removeEventListener.apply(NULL, args);
                     return fn.apply(this, arguments);
                 });
-                _addEventListener.apply(null, args);
+                _addEventListener.apply(NULL, args);
             })),
             /**
              * @func
@@ -1941,7 +1726,7 @@ application.scope().module('DOMM', function (module, app, _) {
              */
             css: ensureOne(function (key, value) {
                 var dom = this,
-                    ret = css(dom[ITEMS], key, value);
+                    ret = css(dom.unwrap(), key, value);
                 if (isBlank(ret)) {
                     ret = dom;
                 }
@@ -1956,24 +1741,24 @@ application.scope().module('DOMM', function (module, app, _) {
              * @name DOMM#allDom
              * @returns {Boolean} value indicating whether or not there were any non dom elements found in the collection
              */
-            allDom: function () {
+            allElements: function () {
                 var count = 0,
-                    length = this.length(),
-                    result = length && find(this.unwrap(), negate(isDom));
-                return length && result === void 0;
+                    length = this[LENGTH](),
+                    result = length && find(this.unwrap(), negate(isElement));
+                return length && result === blank;
             },
             /**
              * @func
              * @name DOMM#height
              * @returns {Number} height of the first object, adjusting for the different types of possible objects such as dom element, document or window
              */
-            height: dimFinder('height', 'scrollHeight', 'innerHeight'),
+            height: dimFinder(HEIGHT, 'scrollHeight', 'innerHeight'),
             /**
              * @func
              * @name DOMM#width
              * @returns {Number} width of the first object, adjusting for the different types of possible objects such as dom element, document or window
              */
-            width: dimFinder('width', 'scrollWidth', 'innerWidth'),
+            width: dimFinder(WIDTH, 'scrollWidth', 'innerWidth'),
             /**
              * @func
              * @name DOMM#getStyle
@@ -1982,8 +1767,8 @@ application.scope().module('DOMM', function (module, app, _) {
             getStyle: function (eq) {
                 var ret = {},
                     first = this.get();
-                if (first && isDom(first)) {
-                    ret = getComputed(first);
+                if (first && isElement(first)) {
+                    ret = getComputed(first, this.context);
                 }
                 return ret;
             },
@@ -2021,7 +1806,7 @@ application.scope().module('DOMM', function (module, app, _) {
                 if (isBlank(val)) {
                     value = el[key];
                     if (isBlank(value)) {
-                        value = null;
+                        value = NULL;
                     }
                 } else {
                     if (isBlank(val)) {
@@ -2054,7 +1839,7 @@ application.scope().module('DOMM', function (module, app, _) {
              * @returns {DOMM} instance
              */
             last: attachPrevious(function () {
-                return eq(this.unwrap(), this.length() - 1);
+                return eq(this.unwrap(), this[LENGTH]() - 1);
             }),
             /**
              * @func
@@ -2074,8 +1859,8 @@ application.scope().module('DOMM', function (module, app, _) {
              */
             each: function (callback) {
                 var domm = this;
-                if (domm.length()) {
-                    callback = _.bind(callback, domm);
+                if (domm[LENGTH]()) {
+                    callback = bind(callback, domm);
                     duff(domm[ITEMS], function (item_, index, all) {
                         var item = $([item_]);
                         callback(item, index, all);
@@ -2136,7 +1921,7 @@ application.scope().module('DOMM', function (module, app, _) {
                         retVals.push(1);
                     }
                 });
-                return (dom.length() && countLen[LENGTH_STRING] === retVals[LENGTH_STRING]);
+                return (dom[LENGTH]() && countLen[LENGTH] === retVals[LENGTH]);
             },
             /**
              * @func
@@ -2159,7 +1944,10 @@ application.scope().module('DOMM', function (module, app, _) {
              * @param {Number} [num=0] - index to get the boxmodel of
              */
             box: function (num) {
-                return box(this.get(num));
+                return box(this[INDEX](num), this.context);
+            },
+            flow: function (num) {
+                return flow(this[index](num), this.context);
             },
             /**
              * @func
@@ -2180,27 +1968,20 @@ application.scope().module('DOMM', function (module, app, _) {
              * @returns {DOMM} instance
              */
             hide: eachProc(ensureDOM(function (el) {
-                el.style.display = 'none';
+                el[STYLE].display = 'none';
             })),
             /**
              * @func
              * @name DOMM#show
              */
             show: eachProc(ensureDOM(function (el) {
-                el.style.display = 'block';
+                el[STYLE].display = 'block';
             })),
             /**
              * @func
              * @name DOMM#append
              */
-            append: function (el) {
-                var dom = this,
-                    frag = _.frag(el);
-                dom.duff(function (el) {
-                    el.appendChild(frag);
-                });
-                return dom;
-            },
+            append: append,
             /**
              * @func
              * @name DOMM#next
@@ -2226,7 +2007,7 @@ application.scope().module('DOMM', function (module, app, _) {
              */
             insertAt: function (els, idx) {
                 var point, dom = this,
-                    frag = _.frag(els),
+                    frag = fragment(els),
                     children = dom.children();
                 if (!idx && !isNumber(idx)) {
                     point = {};
@@ -2238,10 +2019,10 @@ application.scope().module('DOMM', function (module, app, _) {
                     point = dom.children().filter(idx);
                 }
                 if (isInstance(point, DOMM)) {
-                    point = point.get(0);
+                    point = point[INDEX](0);
                 }
-                if (!_.isDom(point)) {
-                    point = null;
+                if (!_.isElement(point)) {
+                    point = NULL;
                 }
                 dom.duff(function (el) {
                     el.insertBefore(frag, point);
@@ -2254,7 +2035,7 @@ application.scope().module('DOMM', function (module, app, _) {
              * @returns {DOMM} instance
              */
             remove: eachProc(function (el) {
-                var parent = el.parentNode;
+                var parent = el[PARENT_NODE];
                 if (isObject(parent) && isFunction(parent.removeChild)) {
                     parent.removeChild(el);
                 }
@@ -2271,7 +2052,7 @@ application.scope().module('DOMM', function (module, app, _) {
                             var rets, found, parent = el,
                                 next = original;
                             while (parent && !found) {
-                                rets = fn(parent.parentNode || parent.defaultView, original, next);
+                                rets = fn(parent[PARENT_NODE] || parent[DEFAULT_VIEW], original, next);
                                 parent = rets[0];
                                 found = rets[1];
                                 next = rets[2];
@@ -2293,25 +2074,25 @@ application.scope().module('DOMM', function (module, app, _) {
                     },
                     speshal = {
                         document: function (parent, original, next) {
-                            return [parent, isDoc(parent)];
+                            return [parent, isDocument(parent)];
                         },
                         window: function (parent, original, next) {
-                            return [parent, isWin(parent)];
+                            return [parent, isWindow(parent)];
                         },
                         iframe: function (parent, original, next) {
                             var win, found = 1;
-                            if (isWin(parent) && parent !== window.top) {
+                            if (isWindow(parent) && parent !== window[TOP]) {
                                 if (parent.location.protocol.indexOf('http') === -1) {
                                     win = parent;
                                     found = 1;
-                                    try {
+                                    wraptry(function () {
                                         parent = win.frameElement;
                                         if (parent) {
                                             found = 0;
                                         }
-                                    } catch (e) {
+                                    }, function () {
                                         found = 1;
-                                    }
+                                    });
                                 }
                             }
                             return [parent, (!found && parent)];
@@ -2319,7 +2100,7 @@ application.scope().module('DOMM', function (module, app, _) {
                     };
                 return attachPrevious(function (original) {
                     var iterator, doDefault = 1,
-                        collect = coll();
+                        collect = Collection();
                     if (isNumber(original)) {
                         iterator = number;
                     } else {
@@ -2362,19 +2143,19 @@ application.scope().module('DOMM', function (module, app, _) {
                 if (_.isInstance(els, Collection)) {
                     els = els.unwrap();
                 } else {
-                    if (isDom(els)) {
+                    if (isElement(els)) {
                         els = [els];
                     }
                 }
-                if (els[LENGTH_STRING]) {
-                    has = els[LENGTH_STRING];
+                if (els[LENGTH]) {
+                    has = els[LENGTH];
                 }
                 find(els, function (el) {
                     if (domm.posit(el)) {
                         has--;
                     }
                 });
-                return has === 0 && els && els[LENGTH_STRING];
+                return has === 0 && els && els[LENGTH];
             },
             /**
              * @func
@@ -2384,7 +2165,7 @@ application.scope().module('DOMM', function (module, app, _) {
              */
             indexOf: function (el, lookAfter) {
                 if (isInstance(el, DOMM)) {
-                    el = el.get();
+                    el = el[INDEX]();
                 }
                 return indexOf(this[ITEMS], el, lookAfter);
             },
@@ -2416,12 +2197,12 @@ application.scope().module('DOMM', function (module, app, _) {
                     bR = box.borderRight,
                     bL = box.borderLeft;
                 return {
-                    bottom: box.bottom - pB - bB,
-                    height: box.height - pT - bT - pB - bB,
-                    right: box.right - pR - bR,
-                    width: box.width - pL - bL - pR - bR,
-                    left: box.left + pL - bL,
-                    top: box.top + pT - bT
+                    bottom: box[BOTTOM] - pB - bB,
+                    height: box[HEIGHT] - pT - bT - pB - bB,
+                    right: box[RIGHT] - pR - bR,
+                    width: box[WIDTH] - pL - bL - pR - bR,
+                    left: box[LEFT] + pL - bL,
+                    top: box[TOP] + pT - bT
                 };
             },
             /**
@@ -2436,42 +2217,24 @@ application.scope().module('DOMM', function (module, app, _) {
                     mB = box.marginBottom,
                     mR = box.marginRight;
                 return {
-                    height: box.height + mT + mB,
-                    bottom: box.bottom + mB,
-                    width: box.width + mR + mL,
-                    right: box.right + mR,
-                    left: box.left + mL,
-                    top: box.top + mT
+                    height: box[HEIGHT] + mT + mB,
+                    bottom: box[BOTTOM] + mB,
+                    width: box[WIDTH] + mR + mL,
+                    right: box[RIGHT] + mR,
+                    left: box[LEFT] + mL,
+                    top: box[TOP] + mT
                 };
-            },
-            /**
-             * @func
-             * @name DOMM#stopEvent
-             */
-            stopEvent: function (e, now) {
-                e = _.Event(e);
-                e.stopPropagation();
-                e.preventDefault();
-                if (!isBlank(e.cancelBubble)) {
-                    e.cancelBubble = BOOLEAN_TRUE;
-                }
-                if (!isBlank(e.cancel)) {
-                    e.cancel = BOOLEAN_TRUE;
-                }
-                if (now) {
-                    e.stopImmediatePropagation();
-                }
             },
             /**
              * @func
              * @name DOMM#childOf
              */
-            childOf: function (oParent) {
+            childOf: function (oParent_) {
                 var domm = this,
-                    _oParent = $(oParent),
-                    children = domm.unwrap();
-                oParent = _oParent.unwrap();
-                return !!domm.length() && !!_oParent.length() && !find(oParent, function (_parent) {
+                    _oParent = $(oParent_),
+                    children = domm.unwrap(),
+                    oParent = _oParent.unwrap();
+                return !!children[LENGTH] && !!oParent[LENGTH] && !find(oParent, function (_parent) {
                     return find(children, function (child) {
                         var parent = child,
                             finding = BOOLEAN_TRUE;
@@ -2479,7 +2242,7 @@ application.scope().module('DOMM', function (module, app, _) {
                             if (_parent === parent) {
                                 finding = BOOLEAN_FALSE;
                             }
-                            parent = parent.parentNode;
+                            parent = parent[PARENT_NODE];
                         }
                         return finding;
                     });
@@ -2488,13 +2251,13 @@ application.scope().module('DOMM', function (module, app, _) {
             serialize: function () {
                 var domm = this,
                     arr = [];
-                domm.each(function (idx, $node) {
-                    var node = $node.index(),
+                domm.each(function ($node) {
+                    var node = $node[INDEX](),
                         children = $node.children().serialize(),
                         obj = {
                             tag: node.localName
                         };
-                    if (children.length) {
+                    if (children[LENGTH]) {
                         obj.children = children;
                     }
                     if (node.innerText) {
@@ -2511,10 +2274,10 @@ application.scope().module('DOMM', function (module, app, _) {
                 return JSON.stringify(this.serialize());
             }
         }, _.wrap({
-            id: 0,
-            src: 0,
-            checked: 0,
-            disabled: 0,
+            id: BOOLEAN_FALSE,
+            src: BOOLEAN_FALSE,
+            checked: BOOLEAN_FALSE,
+            disabled: BOOLEAN_FALSE,
             tag: 'localName',
             classes: 'className'
         }, function (attr, api) {
@@ -2527,19 +2290,21 @@ application.scope().module('DOMM', function (module, app, _) {
                     setter[attr] = str;
                     return this.attr(setter);
                 }
-                item = this.get(str);
+                item = this[INDEX](str);
                 if (item) {
                     return item[attr];
                 }
             };
-        }), _.wrap({
+        }), wrap({
             play: 'playing',
             pause: 'paused'
-        }, triggerEventWrapper), _.wrap(gapSplit('blur focus focusin focusout load resize scroll unload click dblclick mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave change select submit keydown keypress keyup error contextmenu'), function (attr) {
+        }, triggerEventWrapper), wrap(gapSplit('blur focus focusin focusout load resize scroll unload click dblclick mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave change select submit keydown keypress keyup error contextmenu'), function (attr) {
             return triggerEventWrapper(attr);
         })), BOOLEAN_TRUE),
-        $ = _DOMM(sizzleDoc);
-    app.addModuleArgs([$]);
+        $ = _DOMM(sizzleDoc),
+        Sizzle = function (str, ctx) {
+            return (ctx || sizzleDoc).querySelectorAll(str);
+        };
     _.exports({
         covers: covers,
         center: center,
@@ -2547,89 +2312,17 @@ application.scope().module('DOMM', function (module, app, _) {
         distance: distance,
         css: css,
         box: box,
-        frag: frag,
-        isDom: isDom,
-        isNode: isNode,
-        isWin: isWin,
-        isWindow: isWin,
-        isDoc: isDoc,
-        isDocument: isDoc,
-        isFrag: isFrag,
-        device: deviceCheck,
-        makeEl: makeEl,
-        makeEls: makeEls,
-        createDocFrag: createDocFrag,
-        hasWebP: hasWebP,
-        makeTree: makeTree,
-        numToUnits: numToUnits,
-        unitsToNumConverters: unitsToNumConverters,
-        numToUnitsConverters: numToUnitsConverters,
-        position: position,
-        unitsToNum: unitsToNum,
-        buildStyles: buildStyles,
-        changeClass: changeClass,
-        unitRemoval: unitRemoval,
-        getStyleSize: getStyleSize,
-        htmlDataMatch: htmlDataMatch,
-        toStyleString: toStyleString,
-        trustedEvents: trustedEvents,
-        makeEmptyFrame: makeEmptyFrame,
-        isTrustedEvent: isTrustedEvent,
-        devicePxRatio: devicePixelRatio,
-        setAttribute: setAttribute,
-        getAttribute: getAttribute,
-        attributeInterface: attributeInterface,
-        attributeRegExpMaker: function (attr, regex) {
-            var stringified = regex.toString(),
-                converted = stringified.slice(1, stringified[LENGTH_STRING] - 1).replace(new RegExp('{{{}}}'), attr);
-            return new RegExp(converted, 'mgi');
-        },
-        Sizzle: function (str, ctx) {
-            return (ctx || sizzleDoc).querySelectorAll(str);
-        },
-        stashAttrs: function (el, extras) {
-            var data = _.stashedAttrs(el);
-            duff(gapSplit('id class maxWidth width minWidth maxHeight height minHeight style').concat(gapSplit(extras) || []), function (idx, attr) {
-                if (!_.has(data.backup, attr)) {
-                    data.stashedCount++;
-                }
-                data.backup[attr] = _.attributeInterface(el, unCamelCase(attr));
-            });
-        },
-        stashedAttrs: function (el) {
-            var obj = {},
-                data = elementData.get(el);
-            if (!data.backup) {
-                data.backup = {};
-            }
-            if (!data.stashedCount) {
-                data.stashedCount = 0;
-            }
-            return data;
-        },
-        resetAttrs: function (el) {
-            var data = elementData.get(el);
-            each(data.backup, function (key, val) {
-                attributeInterface(el, unCamelCase(key), val);
-            });
-        },
-        elementData: elementData,
-        eventLists: {
-            Event: Event,
-            SVGEvent: SVGEvent,
-            KeyboardEvent: KeyboardEvent,
-            GamePadEvent: GamePadEvent,
-            CompositionEvent: CompositionEvent,
-            MouseEvents: MouseEvents,
-            TouchEvents: TouchEvents,
-            DeviceEvents: DeviceEvents,
-            FocusEvent: FocusEvent,
-            TimeEvent: TimeEvent,
-            AnimationEvent: AnimationEvent,
-            AudioProcessingEvent: AudioProcessingEvent,
-            UIEvents: UIEvents,
-            ProgressEvent: ProgressEvent,
-            AllEvents: AllEvents
-        }
+        fragment: fragment,
+        isElement: isElement,
+        isWindow: isWindow,
+        isDocument: isDocument,
+        isFragment: isFrag,
+        createElement: createElement,
+        createElements: createElements,
+        createDocumentFragment: createDocumentFragment,
+        Sizzle: Sizzle,
+        unitToNumber: unitToNumber,
+        numberToUnit: numberToUnit
     });
+    app.addModuleArgs([$]);
 });

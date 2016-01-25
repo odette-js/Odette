@@ -3,7 +3,7 @@ application.scope().run(function (app, _, factories, $) {
         var madeit, promise;
         beforeEach(function () {
             madeit = 0;
-            promise = _.Promise();
+            promise = factories.Promise();
         });
         it('allows for async resolution of state', function () {
             expect(_.isObject(promise)).toEqual(true);

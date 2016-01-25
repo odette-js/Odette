@@ -209,11 +209,11 @@ application.scope().run(function (app, _, $) {
             });
             it('_.isInstance', function () {
                 var obj = {},
-                    newBox = _.Box();
+                    newBox = factories.Box();
                 expect(_.isInstance(obj, Object)).toEqual(true);
                 expect(_.isInstance(newBox, factories.Box)).toEqual(true);
-                expect(_.isInstance(newBox, _.Box)).toEqual(true);
-                expect(_.isInstance(newBox, _.Collection)).toEqual(false);
+                expect(_.isInstance(newBox, factories.Box)).toEqual(true);
+                expect(_.isInstance(newBox, factories.Collection)).toEqual(false);
             });
             it('_.negate', function () {
                 var falsey = _.negate(function () {
@@ -498,7 +498,7 @@ application.scope().run(function (app, _, $) {
                 })).toEqual('//google.com?some=where&und=efined&blank=undefined&under=statement&one=1&has=false&nully=null&even=%7B%22moar%22%3A%22things%22%7D');
             });
             it('_.protoProp', function () {
-                var box = _.Box();
+                var box = factories.Box();
                 box.idAttribute = 'something';
                 expect(_.protoProp(box, 'idAttribute')).toEqual(factories.Box.constructor.prototype.idAttribute);
             });

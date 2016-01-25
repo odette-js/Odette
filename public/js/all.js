@@ -142,11 +142,13 @@
                 docu.head.appendChild(scriptTag);
                 return application;
             },
-            makeScript: function (src, onload, docu_) {
+            makeScript: function (src, onload, docu_, preventappend) {
                 var docu = docu_ || topmostDoc || doc,
                     script = docu.createElement('script');
                 script.type = 'text/javascript';
-                docu.head.appendChild(script);
+                if (!preventappend) {
+                    docu.body.appendChild(script);
+                }
                 if (src) {
                     if (onload) {
                         script.onload = onload;
@@ -187,7 +189,7 @@
 }(window, 'application'));
 application.scope('dev', function (app) {
     var blank, _, object = Object,
-        extendFrom = {},
+        win = window,
         factories = {},
         fn = Function,
         array = Array,
@@ -196,7 +198,6 @@ application.scope('dev', function (app) {
         PROTOTYPE = 'prototype',
         CONSTRUCTOR = 'constructor',
         LENGTH = 'length',
-        CONSTRUCTOR_ID = '__constructorId',
         CONSTRUCTOR_KEY = '__constructor__',
         stringProto = string[PROTOTYPE],
         objectProto = object[PROTOTYPE],
@@ -205,9 +206,11 @@ application.scope('dev', function (app) {
         nativeKeys = object.keys,
         BOOLEAN_TRUE = !0,
         BOOLEAN_FALSE = !1,
+        NULL = null,
         hasEnumBug = !{
-            toString: null
+            toString: NULL
         }.propertyIsEnumerable(TO_STRING),
+        noop = function () {},
         /**
          * @func
          */
@@ -245,46 +248,41 @@ application.scope('dev', function (app) {
         /**
          * @func
          */
-        isNegative1 = function (num) {
-            return (num === -1);
-        },
-        /**
-         * @func
-         */
-        listHas = function (list, item) {
-            return (!isNegative1(indexOf(list, item)));
-        },
-        /**
-         * @func
-         */
         shift = function (o) {
             return arrayProto.shift.call(o);
         },
         /**
          * @func
          */
-        indexOfNaN = function (array, fromIndex, fromRight) {
-            var length = array[LENGTH],
-                index = fromIndex + (fromRight ? 0 : -1);
-            while ((fromRight ? index-- : ++index < length)) {
-                var other = array[index];
+        indexOfNaN = function (array, fromIndex, toIndex, fromRight) {
+            if (!array) {
+                return -1;
+            }
+            var other, limit = array[LENGTH],
+                index = fromIndex + (fromRight ? 0 : -1),
+                incrementor = fromRight ? -1 : 1;
+            while ((index += incrementor) < limit) {
+                other = array[index];
                 if (other !== other) {
                     return index;
                 }
             }
             return -1;
         },
-        indexOf = function (array, value, fromIndex) {
-            if (value !== value) {
-                return indexOfNaN(array, fromIndex);
+        indexOf = function (array, value, fromIndex, toIndex, fromRight) {
+            var index, limit, incrementor;
+            if (!array) {
+                return -1;
             }
-            if (array) {
-                var index = (fromIndex || 0) - 1,
-                    length = array[LENGTH];
-                while (++index < length) {
-                    if (array[index] === value) {
-                        return index;
-                    }
+            if (value !== value) {
+                return indexOfNaN(array, fromIndex, toIndex, fromRight);
+            }
+            index = (fromIndex || 0) - 1;
+            limit = toIndex || array[LENGTH];
+            incrementor = fromRight ? -1 : 1;
+            while ((index += incrementor) < limit) {
+                if (array[index] === value) {
+                    return index;
                 }
             }
             return -1;
@@ -303,7 +301,7 @@ application.scope('dev', function (app) {
          * @func
          */
         toString = function (obj) {
-            return (obj === null || obj === blank) ? '' : (obj + '');
+            return (obj === NULL || obj === blank) ? '' : (obj + '');
         },
         /**
          * @func
@@ -342,24 +340,22 @@ application.scope('dev', function (app) {
         /**
          * @func
          */
+        previousConstructor = function (instance) {
+            return instance && instance[CONSTRUCTOR_KEY] && instance[CONSTRUCTOR_KEY][CONSTRUCTOR] || instance[CONSTRUCTOR];
+        },
         nativeIsInstance = function (instance, constructor) {
             var result = BOOLEAN_FALSE;
-            if (constructor) {
-                return instance instanceof constructor;
+            if (isFunction(constructor)) {
+                result = instance instanceof constructor;
             }
+            return result;
         },
         isInstance = function (instance, constructor_) {
-            var result = BOOLEAN_FALSE,
-                constructor = constructor_;
+            var constructor = constructor_;
             while (has(constructor, CONSTRUCTOR)) {
                 constructor = constructor[CONSTRUCTOR];
             }
-            if (constructor && constructor[CONSTRUCTOR_ID] && instance && instance[CONSTRUCTOR_ID]) {
-                result = constructor[CONSTRUCTOR_ID] === instance[CONSTRUCTOR_ID];
-            } else {
-                result = nativeIsInstance(instance, constructor);
-            }
-            return result;
+            return nativeIsInstance(instance, constructor);
         },
         /**
          * @func
@@ -444,7 +440,7 @@ application.scope('dev', function (app) {
             };
         },
         isNumber = isWrap('number', negate(isNaN)),
-        isFinite_ = window.isFinite,
+        isFinite_ = win.isFinite,
         isFinite = function (thing) {
             return isNumber(thing) && isFinite_(thing);
         },
@@ -530,7 +526,7 @@ application.scope('dev', function (app) {
                 return val;
             };
         }()),
-        nowish = function () {
+        now = function () {
             return +(new Date());
         },
         allKeys = function (obj) {
@@ -550,44 +546,42 @@ application.scope('dev', function (app) {
          * @func
          */
         extend = function () {
-            var deep, source, keys, length, l, key, args = toArray(arguments),
-                base = args.shift(),
-                index = 0,
-                i = 0;
+            var deep = BOOLEAN_FALSE,
+                args = arguments,
+                length = args[LENGTH],
+                index = 1,
+                first = 0,
+                base = args[0];
             if (base === BOOLEAN_TRUE) {
-                deep = base;
-                base = args.shift();
+                deep = BOOLEAN_TRUE;
+                base = args[1];
+                index = 2;
             }
             base = base || {};
-            length = args[LENGTH];
-            if (length) {
-                for (; index < length; index++) {
-                    merge(base, args[index], deep);
-                }
+            for (; index < length; index++) {
+                merge(base, args[index], deep);
             }
             return base;
         },
         merge = function (obj1, obj2, deep) {
-            var key, val, attach, i = 0,
+            var key, val, i = 0,
                 keys = allKeys(obj2),
                 l = keys[LENGTH];
             for (; i < l; i++) {
                 key = keys[i];
                 // ignore undefined
                 if (obj2[key] !== blank) {
-                    attach = BOOLEAN_FALSE;
                     val = obj2[key];
                     if (deep) {
-                        if (isObject(obj1[key]) && isObject(obj2[key])) {
+                        if (isObject(obj2[key])) {
+                            if (!isObject(obj1[key])) {
+                                obj1[key] = returnDismorphicBase(obj2[key]);
+                            }
                             merge(obj1[key], obj2[key], deep);
-                            attach = BOOLEAN_FALSE;
                         } else {
-                            attach = BOOLEAN_TRUE;
+                            obj1[key] = val;
                         }
                     } else {
-                        attach = BOOLEAN_TRUE;
-                    }
-                    if (attach) {
                         obj1[key] = val;
                     }
                 }
@@ -620,7 +614,9 @@ application.scope('dev', function (app) {
                 if (obj) {
                     if (!isArrayLike(obj)) {
                         list = keys(obj);
-                        iteratee = bind(iterator, context);
+                        if (context) {
+                            iteratee = bind(iterator, context);
+                        }
                         context = null;
                         iterator = function (key, idx, list) {
                             // gives you the key, use that to get the value
@@ -676,7 +672,9 @@ application.scope('dev', function (app) {
         findLast = finder(findLastIndex),
         bind = function (fn_, ctx) {
             var fn = fn_;
-            fn = fn_.bind(ctx);
+            if (ctx) {
+                fn = fn_.bind(ctx);
+            }
             return fn;
         },
         duff = function (values, process, context, direction) {
@@ -807,7 +805,7 @@ application.scope('dev', function (app) {
          * @func
          */
         constructorExtend = function (name, protoProps, attach) {
-            var constructorId, nameString, child, passedParent, hasConstructor, constructor, parent = this,
+            var nameString, child, passedParent, hasConstructor, constructor, parent = this,
                 nameIsStr = isString(name);
             if (!nameIsStr) {
                 protoProps = name;
@@ -817,65 +815,49 @@ application.scope('dev', function (app) {
                 child = protoProps[CONSTRUCTOR];
             }
             if (nameIsStr) {
-                // nameString = name;
                 passedParent = parent;
                 if (child) {
                     passedParent = child;
                 }
                 child = new Function[CONSTRUCTOR]('var parent=arguments[0];return function ' + name + '(){return parent.apply(this,arguments);}')(passedParent);
-                factories[name] = child;
+                // factories[name] = child;
             } else {
                 child = function () {
                     return parent.apply(this, arguments);
                 };
             }
-            extend(child, parent);
-            constructorId = uniqueId('con');
-            child[CONSTRUCTOR_ID] = constructorId;
-            child.extend = (this[CONSTRUCTOR_KEY] && this[CONSTRUCTOR_KEY].extend) || constructorExtend;
+            // extend(child, parent);
+            child.extend = constructorExtend;
             var Surrogate = function () {
                 this[CONSTRUCTOR] = child;
             };
             Surrogate[PROTOTYPE] = parent[PROTOTYPE];
             child[PROTOTYPE] = new Surrogate;
+            // don't call the function if nothing exists
             if (protoProps) {
                 extend(child[PROTOTYPE], protoProps);
             }
             constructor = child;
             child = constructorWrapper(constructor);
-            if (!isFunction(protoProps.Model) || !has(protoProps, 'Model')) {
-                constructor[PROTOTYPE].Model = child;
-            }
-            // child[CONSTRUCTOR] = constructor;
-            child.__super__ = parent[PROTOTYPE];
-            constructor[CONSTRUCTOR_ID] = constructorId;
+            child.__super__ = parent;
             constructor[PROTOTYPE][CONSTRUCTOR_KEY] = child;
-            if (nameIsStr) {
-                makeExtendFrom(name, constructor);
-                // this is good when _ / utils object is your global app object
-                if (attach) {
-                    _[name] = child;
-                }
+            if (nameIsStr && attach) {
+                factories[name] = child;
             }
-            return constructor;
+            return child;
         },
-        constructorWrapper = function (Ch) {
+        constructorWrapper = function (Constructor) {
             var __ = function (attributes, options) {
-                if (isInstance(attributes, Ch)) {
+                if (isInstance(attributes, Constructor)) {
                     return attributes;
                 }
-                return new Ch(attributes, options);
+                return new Constructor(attributes, options);
             };
-            __[CONSTRUCTOR] = Ch;
+            __[CONSTRUCTOR] = Constructor;
+            __.extend = function () {
+                return Constructor.extend.apply(Constructor, arguments);
+            };
             return __;
-        },
-        /**
-         * @func
-         */
-        makeExtendFrom = function (name, child) {
-            extendFrom[name] = function () {
-                return child.extend.apply(child, arguments);
-            };
         },
         /**
          * @func
@@ -1060,7 +1042,7 @@ application.scope('dev', function (app) {
         /**
          * @func
          */
-        Image = window.Image,
+        Image = win.Image,
         fetch = function (url, callback) {
             var img = new Image();
             url = stringifyQuery(url);
@@ -1092,12 +1074,12 @@ application.scope('dev', function (app) {
         //     });
         //     return depth;
         // },
-        log = function (type, args) {
-            if (!_.isFunction(console[type])) {
-                type = 'log';
-            }
-            console[type].apply(console, args);
-        },
+        // log = function (type, args) {
+        //     if (!_.isFunction(console[type])) {
+        //         type = 'log';
+        //     }
+        //     console[type].apply(console, args);
+        // },
         /**
          * @func
          */
@@ -1106,11 +1088,11 @@ application.scope('dev', function (app) {
             if (isString(val)) {
                 val = val.trim();
                 if (val[0] === '{' || val[0] === '[') {
-                    try {
+                    wraptry(function () {
                         val = JSON.parse(val);
-                    } catch (e) {
-                        log('error', ['could not parse', val]);
-                    }
+                    }, function () {
+                        console.error('could not parse', val);
+                    });
                 }
             }
             return val;
@@ -1164,17 +1146,17 @@ application.scope('dev', function (app) {
             }
             return function () {
                 var context = scope || this,
-                    _nowish = nowish(),
+                    _now = now(),
                     args = arguments;
-                if (last && _nowish < last + threshold) {
+                if (last && _now < last + threshold) {
                     // hold on to it
                     clearTimeout(deferTimer);
                     deferTimer = setTimeout(function () {
-                        last = _nowish;
+                        last = _now;
                         fn.apply(context, args);
                     }, threshold);
                 } else {
-                    last = _nowish;
+                    last = _now;
                     fn.apply(context, args);
                 }
             };
@@ -1182,13 +1164,6 @@ application.scope('dev', function (app) {
         /**
          * @func
          */
-        pngString = function () {
-            return "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGP6zwAAAgcBApocMXEAAAAASUVORK5CYII=";
-        },
-        /**
-         * @func
-         */
-        // this should really be it's own factory
         stringifyQuery = function (obj) {
             var val, n, base = obj.url,
                 query = [];
@@ -1196,7 +1171,7 @@ application.scope('dev', function (app) {
                 for (n in obj.query) {
                     val = obj.query[n];
                     if (val !== blank) {
-                        val = encodeURIComponent(_.stringify(val));
+                        val = encodeURIComponent(stringify(val));
                         query.push(n + '=' + val);
                     }
                 }
@@ -1214,53 +1189,21 @@ application.scope('dev', function (app) {
             return base;
         },
         protoProp = function (instance, key, farDown) {
-            var val, proto, constructor = instance[CONSTRUCTOR];
+            var val, proto, constructor = previousConstructor(instance);
             farDown = farDown || 1;
             do {
                 proto = constructor[PROTOTYPE];
                 val = proto[key];
-                constructor = proto[CONSTRUCTOR];
+                constructor = previousConstructor(proto);
             } while (--farDown > 0 && constructor && isFinite(farDown));
             return val;
         },
-        /**
-         * @func
-         */
-        makeId = (function () {
-            var global = -1,
-                cache = {};
-            return function (prefix) {
-                var prefixStr, retVal;
-                if (!prefix) {
-                    prefixStr = '';
-                }
-                if (prefix) {
-                    prefixStr = prefix.toString();
-                }
-                if (cache[prefixStr] === blank) {
-                    cache[prefixStr] = -1;
-                }
-                cache[prefixStr]++;
-                global++;
-                retVal = prefix + cache[prefixStr];
-                if (!prefix) {
-                    retVal = global;
-                    if (prefix === '') {
-                        retVal = '' + global;
-                    }
-                }
-                return retVal;
-            };
-        }()),
-        /**
-         * @func
-         */
         uuid = function () {
             var blank, cryptoCheck = 'crypto' in window && 'getRandomValues' in crypto,
                 sid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
                     var rnd, r, v;
                     if (cryptoCheck) {
-                        rnd = window.crypto.getRandomValues(new Uint32Array(1));
+                        rnd = win.crypto.getRandomValues(new Uint32Array(1));
                         if (rnd === blank) {
                             cryptoCheck = false;
                         }
@@ -1275,19 +1218,16 @@ application.scope('dev', function (app) {
                 });
             return cryptoCheck ? sid : 'SF' + sid;
         },
-        intendedObject = function (key, value, fn_, ctx) {
+        intendedObject = function (key, value, fn_) {
             var fn = fn_,
                 obj = isObject(key) ? key : BOOLEAN_FALSE;
             if (obj) {
-                each(obj, reverseParams(fn), ctx);
+                each(obj, reverseParams(fn));
             } else {
-                if (ctx) {
-                    fn = bind(fn, ctx);
-                }
                 fn(key, value);
             }
         },
-        reverseParams = function (iteratorFn) {
+        reverseParams = function (iteratorFn, ctx) {
             return function (value, key, third) {
                 iteratorFn(key, value, third);
             };
@@ -1295,7 +1235,7 @@ application.scope('dev', function (app) {
         /**
          * @func
          */
-        getReference = function (str) {
+        reference = function (str) {
             var match;
             if (!isString(str)) {
                 str = str.referrer;
@@ -1327,32 +1267,12 @@ application.scope('dev', function (app) {
             });
             return str;
         },
-        png = pngString,
-        /**
-         * @func
-         */
-        simpleObject = function (key, value) {
-            var obj = {};
-            obj[key] = value;
-            return obj;
-        },
-        /**
-         * @func
-         */
-        rip = function (list, ripped) {
-            var obj = {};
-            duff(gapSplit(list), function (val, key) {
-                obj[val] = ripped[val];
-            });
-            return obj;
-        },
         result = function (obj, str, arg) {
             return isFunction(obj[str]) ? obj[str](arg) : obj[str];
         },
-        maths = Math,
         mathArray = function (method) {
             return function (args) {
-                return maths[method].apply(maths, args);
+                return Math[method].apply(maths, args);
             };
         },
         mathMix = function (key) {
@@ -1386,8 +1306,28 @@ application.scope('dev', function (app) {
                 _fn = _fn || function () {};
                 return fn.call(this, _fn);
             };
+        },
+        _console = win.console || {},
+        _log = _console.log || noop,
+        console = wrap(gapSplit('trace log dir error'), function (key) {
+            var method = _console[key];
+            return function () {
+                if (method) {
+                    return method.apply(_console, arguments);
+                } else {
+                    return _log.apply(_console, arguments);
+                }
+            };
+        }),
+        wraptry = function (trythis, errthat, finalfunction) {
+            try {
+                return trythis();
+            } catch (e) {
+                return errthat && errthat(e);
+            } finally {
+                return finalfunction && finalfunction();
+            }
         };
-    // cssResetString = 'a,abbr,acronym,address,applet,article,aside,audio,b,big,blockquote,body,canvas,caption,center,cite,code,dd,del,details,dfn,div,dl,dt,em,embed,fieldset,figcaption,figure,footer,form,h1,h2,h3,h4,h5,h6,header,hgroup,html,i,iframe,img,ins,kbd,label,legend,li,mark,menu,nav,object,ol,output,p,pre,q,ruby,s,samp,section,small,span,strike,strong,sub,summary,sup,table,tbody,td,tfoot,th,thead,time,tr,tt,u,ul,var,video{margin:0;padding:0;border:0;font:inherit;vertical-align:baseline}article,aside,details,figcaption,figure,footer,header,hgroup,menu,nav,section{display:block}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:after,blockquote:before,q:after,q:before{content:"";content:none}table{border-collapse:collapse;border-spacing:0}'
     /**
      * @class Model
      */
@@ -1396,40 +1336,37 @@ application.scope('dev', function (app) {
     }
     factories.Model = Model;
     Model[PROTOTYPE] = {};
-    makeExtendFrom('Model', factories.Model);
     Model.extend = constructorExtend;
     _ = app._ = {
-        noop: function () {},
-        monthNames: gapSplit('january feburary march april may june july august september october november december'),
+        noop: noop,
+        months: gapSplit('january feburary march april may june july august september october november december'),
         weekdays: gapSplit('sunday monday tuesday wednesday thursday friday saturday'),
         constructorWrapper: constructorWrapper,
         stringifyQuery: stringifyQuery,
         intendedObject: intendedObject,
         ensureFunction: ensureFunction,
         parseDecimal: parseDecimal,
-        getReference: getReference,
+        reference: reference,
         cssTemplater: cssTemplater,
-        simpleObject: simpleObject,
         isArrayLike: isArrayLike,
         isInstance: isInstance,
         hasEnumBug: hasEnumBug,
         roundFloat: roundFloat,
-        extendFrom: extendFrom,
         factories: factories,
         listSlice: listSlice,
         fullClone: fullClone,
-        pngString: pngString,
         parseBool: parseBool,
         stringify: stringify,
         splitGen: splitGen,
         gapSplit: gapSplit,
         uniqueId: uniqueId,
-        // property: property,
+        wraptry: wraptry,
         toString: toString,
         throttle: throttle,
         debounce: debounce,
         protoProp: protoProp,
         reverse: reverse,
+        indexOfNaN: indexOfNaN,
         indexOf: indexOf,
         joinGen: joinGen,
         toArray: toArray,
@@ -1438,14 +1375,11 @@ application.scope('dev', function (app) {
         gapJoin: gapJoin,
         isArray: isArray,
         isEmpty: isEmpty,
-        modules: {},
         splice: splice,
         isBoolean: isBoolean,
         invert: invert,
         extend: extend,
-        makeId: makeId,
-        nowish: nowish,
-        now: nowish,
+        now: now,
         map: map,
         result: result,
         isBlank: isBlank,
@@ -1481,24 +1415,22 @@ application.scope('dev', function (app) {
         has: has,
         negate: negate,
         pI: pI,
-        math: {},
         createPredicateIndexFinder: createPredicateIndexFinder,
         findIndex: findIndex,
         findLastIndex: findLastIndex,
         validKey: validKey,
         finder: finder,
         find: find,
-        findLast: findLast
-    };
-    duff(gapSplit('E LN2 LN10 LOG2E LOG10E PI SQRT1_2 SQRT2 abs acos acosh asin asinh atan atan2 atanh cbrt ceil clz32 cos cosh exp expm1 floor fround hypot imul log log1p log2 log10 max min pow random round sign sin sinh sqrt tan tanh trunc'), function (key) {
-        _[key] = _.math[key] = Math[key];
-    });
-    exports({
+        findLast: findLast,
+        console: console,
         floor: floor,
         ceil: ceil,
         min: mathArray('min'),
-        max: mathArray('max')
-    });
+        max: mathArray('max'),
+        math: wrap(gapSplit('E LN2 LN10 LOG2E LOG10E PI SQRT1_2 SQRT2 abs acos acosh asin asinh atan atan2 atanh cbrt ceil clz32 cos cosh exp expm1 floor fround hypot imul log log1p log2 log10 max min pow random round sign sin sinh sqrt tan tanh trunc'), function (key) {
+            return Math[key];
+        })
+    };
 });
 application.scope(function (app) {
     app.shims = function (win) {
@@ -1735,7 +1667,10 @@ application.scope(function (app) {
         isString = _.isString,
         slice = _.slice,
         split = _.split,
+        extend = _.extend,
+        wrap = _.wrap,
         LENGTH = 'length',
+        HTTP = 'http',
         falseBool = false,
         has = _.has,
         join = _.join,
@@ -1743,7 +1678,7 @@ application.scope(function (app) {
             var cache = {};
             return function (input) {
                 if (!has(cache, input)) {
-                    cache[input] = fn.apply(this, arguments);
+                    cache[input] = fn(input);
                 }
                 return cache[input];
             };
@@ -1757,11 +1692,11 @@ application.scope(function (app) {
                 return cacher(string);
             };
         },
-        string = _.extend(_.wrap(gapSplit('toLowerCase toUpperCase trim'), function (method) {
+        string = extend(wrap(gapSplit('toLowerCase toUpperCase trim'), function (method) {
             return cacheable(function (item) {
                 return item[method]();
             });
-        }), _.wrap(gapSplit('indexOf match search'), function (method) {
+        }), wrap(gapSplit('indexOf match search'), function (method) {
             return categoricallyCacheable(function (input) {
                 return function (item) {
                     return item[method](input);
@@ -1886,21 +1821,21 @@ application.scope(function (app) {
         units = function (str) {
             return customUnits(str, baseUnitList);
         },
-        isHttp = function (str) {
+        isHttp = cacheable(function (str) {
             var ret = !1;
-            if ((str.indexOf('http') === 0 && str.split('//').length >= 2) || str.indexOf('//') === 0) {
+            if ((str.indexOf(HTTP) === 0 && str.split('//').length >= 2) || str.indexOf('//') === 0) {
                 ret = !0;
             }
             return ret;
-        },
-        parseHash = function (url) {
+        }),
+        parseHash = cacheable(function (url) {
             var hash = '',
                 hashIdx = indexOf(url, '#') + 1;
             if (hashIdx) {
                 hash = url.slice(hashIdx - 1);
             }
             return hash;
-        },
+        }),
         parseURL = function (url) {
             var firstSlash, hostSplit, originNoProtocol, search = '',
                 hash = '',
@@ -1912,7 +1847,7 @@ application.scope(function (app) {
                 origin = url,
                 searchIdx = indexOf(url, '?') + 1,
                 searchObject = {},
-                protocols = ['http', 'https', 'file', 'about'],
+                protocols = [HTTP, HTTP + 's', 'file', 'about'],
                 protocolLength = protocols.length,
                 doubleSlash = '//';
             if (searchIdx) {
@@ -1936,7 +1871,7 @@ application.scope(function (app) {
                     }
                 }
                 if (!protocol) {
-                    protocol = 'http';
+                    protocol = HTTP;
                 }
                 protocol += ':';
                 if (origin.slice(0, protocol.length) + doubleSlash !== protocol + doubleSlash) {
@@ -1966,6 +1901,12 @@ application.scope(function (app) {
             };
         };
     _.exports({
+        // constants
+        customUnits: customUnits,
+        // cache makers
+        cacheable: cacheable,
+        categoricallyCacheable: categoricallyCacheable,
+        // cacheable
         deprefix: deprefix,
         deprefixAll: deprefixAll,
         prefix: prefix,
@@ -1973,12 +1914,9 @@ application.scope(function (app) {
         upCase: upCase,
         unCamelCase: unCamelCase,
         camelCase: camelCase,
-        cacheable: cacheable,
-        categoricallyCacheable: categoricallyCacheable,
-        units: units,
         string: string,
+        units: units,
         baseUnitList: baseUnitList,
-        customUnits: customUnits,
         isHttp: isHttp,
         parseHash: parseHash,
         parseURL: parseURL,
@@ -1987,7 +1925,6 @@ application.scope(function (app) {
 });
 application.scope(function (app) {
     var blank, _ = app._,
-        extendFrom = _.extendFrom,
         factories = _.factories,
         isObject = _.isObject,
         isNumber = _.isNumber,
@@ -1996,6 +1933,7 @@ application.scope(function (app) {
         LENGTH = 'length',
         ITEMS = '_items',
         BY_ID = '_byId',
+        ID = 'id',
         PREVIOUS = '_previous',
         each = _.each,
         duff = _.duff,
@@ -2406,7 +2344,7 @@ application.scope(function (app) {
             };
         },
         unwrapInstance = function (instance_) {
-            return isInstance(instance, _.Collection) ? instance_ : instance.unwrap();
+            return isInstance(instance, factories.Collection) ? instance_ : instance.unwrap();
         },
         unwrapAll = function (fn) {
             return function (args) {
@@ -2511,7 +2449,19 @@ application.scope(function (app) {
             duffRev: duffRev,
             flatten: flatten
         }),
-        Collection = extendFrom.Model('Collection', extend({
+        interactWithById = function (fun, expecting) {
+            return function (one, two, three) {
+                var instance = this,
+                    bycategories = instance[BY_ID],
+                    passedCategory = arguments[LENGTH] === expecting,
+                    category = passedCategory ? one : ID,
+                    categoryHash = bycategories[category] = bycategories[category] || {},
+                    key = passedCategory ? two : one,
+                    thing = passedCategory ? three : two;
+                return fun(instance, categoryHash, category, key, thing, passedCategory);
+            };
+        },
+        Collection = factories.Model.extend('Collection', extend({
             unwrap: unwrap,
             range: recreateSelf(range),
             flatten: recreateSelf(function () {
@@ -2523,7 +2473,7 @@ application.scope(function (app) {
                     base = this[ITEMS];
                 // this allows us to mix collections with regular arguments
                 return base.concat.apply(base, map(arguments, function (arg) {
-                    return _.Collection(arg)[ITEMS];
+                    return Collection(arg)[ITEMS];
                 }));
             }),
             length: function () {
@@ -2568,30 +2518,27 @@ application.scope(function (app) {
             join: function (delimiter) {
                 return this[ITEMS].join(delimiter);
             },
-            get: function (id) {
-                this[BY_ID] = this[BY_ID] || {};
-                return this[BY_ID][id];
-            },
-            /**
-             * @description gets the item on the _byId object or function. If the _byId is a function, than the methods are passed automatically to it to process away
-             * @func
-             * @name Box#find
-             * @param {*} id - usually a string to lookup from the hash. could be an object that will be processed by a function
-             * @returns {*} thing that was being held at that key value on the _byId hash, or whatever the _byId function returns
-             */
-            /**
-             * @description registers a model by the id that is passed
-             * @func
-             * @name Box#register
-             * @param {String} string - key that the object will be registered under
-             * @param {*} thing - anything that you want to store
-             * @returns {Box} instance
-             */
-            register: function (id, thing) {
-                this[BY_ID][id] = thing;
-                return this;
-            },
-            // match: objCondense(function () {}),
+            get: interactWithById(function (instance, categoryHash, category, key) {
+                return categoryHash[key];
+            }, 2),
+            register: interactWithById(function (instance, categoryHash, category, key, newItem) {
+                categoryHash[key] = newItem;
+            }, 3),
+            unRegister: interactWithById(function (instance, categoryHash, category, key) {
+                var registeredItem = categoryHash[key];
+                if (registeredItem !== blank) {
+                    categoryHash[key] = blank;
+                }
+                return registeredItem;
+            }, 2),
+            swapRegister: interactWithById(function (instance, categoryHash, category, key, newItem) {
+                var registeredItem = categoryHash[key];
+                if (registeredItem !== blank) {
+                    categoryHash[key] = blank;
+                }
+                categoryHash[key] = newItem;
+                return registeredItem;
+            }, 3),
             /**
              * @description adds models to the children array
              * @param {Object|Object[]} objs - object or array of objects to be passed through the model factory and pushed onto the children array
@@ -2600,14 +2547,6 @@ application.scope(function (app) {
              * @name Box#add
              * @func
              */
-            unRegister: function (id) {
-                var box = this,
-                    item = box[BY_ID][id];
-                if (item !== void 0) {
-                    box[BY_ID][id] = blank;
-                }
-                return item;
-            },
             mambo: function (fn) {
                 var collection = this;
                 externalMambo(collection[ITEMS], function () {
@@ -2619,8 +2558,7 @@ application.scope(function (app) {
 });
 application.scope(function (app) {
     var blank, _ = app._,
-        // extendFrom = app.extendFrom,
-        // factories = app.factories,
+        factories = _.factories,
         gapSplit = _.gapSplit,
         simpleObject = _.simpleObject,
         isObject = _.isObject,
@@ -2634,6 +2572,8 @@ application.scope(function (app) {
         push = _.push,
         has = _.has,
         map = _.map,
+        bind = _.bind,
+        find = _.find,
         isInstance = _.isInstance,
         camelCase = _.camelCase,
         intendedObject = _.intendedObject,
@@ -2648,12 +2588,12 @@ application.scope(function (app) {
         upCase = _.upCase,
         LENGTH = 'length',
         PARENT = 'parent',
-        internalEventsString = '_events',
+        _EVENTS = '_events',
         EVENT_REMOVE = '_removeEventList',
         CURRENT_EVENTS = '_currentEventList',
-        internalListeningToString = '_listeningTo',
-        modifiedTriggerString = 'alter:',
-        iPISString = 'immediatePropagationIsStopped',
+        _LISTENING_TO = '_listeningTo',
+        modifiedTriggerString = 'change:',
+        IMMEDIATE_PROP_IS_STOPPED = 'immediatePropagationIsStopped',
         SERIALIZED_DATA = 'serializedData',
         BOOLEAN_FALSE = !1,
         BOOLEAN_TRUE = !0,
@@ -2722,16 +2662,11 @@ application.scope(function (app) {
             }
         },
         retreiveEventList = function (model, name) {
-            if (!model[internalEventsString]) {
-                model[internalEventsString] = {};
-            }
-            return model[internalEventsString][name];
+            var internalevents = model[_EVENTS] = model[_EVENTS] || {};
+            return internalevents[name];
         },
         getRemoveList = function (model) {
-            var list = model[EVENT_REMOVE];
-            if (!list) {
-                list = model[EVENT_REMOVE] = [];
-            }
+            var list = model[EVENT_REMOVE] = model[EVENT_REMOVE] = [];
             return list;
         },
         getCurrentEventList = function (box) {
@@ -2743,16 +2678,17 @@ application.scope(function (app) {
         },
         attachEventObject = function (obj, name, eventObject) {
             var events, list;
-            if (isObject(obj)) {
-                eventObject.ctx = eventObject.ctx || eventObject.origin;
-                eventObject.fn = eventObject.fn || eventObject.handler;
-                eventObject.fn = _.bind(eventObject.fn, eventObject.ctx);
-                events = obj[internalEventsString] = obj[internalEventsString] || {};
-                list = events[name] = events[name] || [];
-                // attached so event can remove itself
-                eventObject.list = list;
-                list.push(eventObject);
+            if (!obj) {
+                return;
             }
+            eventObject.ctx = eventObject.ctx || eventObject.origin;
+            eventObject.fn = eventObject.fn || eventObject.handler;
+            eventObject.fn = bind(eventObject.fn, eventObject.ctx);
+            events = obj[_EVENTS] = obj[_EVENTS] || {};
+            list = events[name] = events[name] || [];
+            // attached so event can remove itself
+            eventObject.list = list;
+            list.push(eventObject);
         },
         extrapolateContext = function (fn) {
             return function () {
@@ -2787,7 +2723,7 @@ application.scope(function (app) {
             if (!id) {
                 id = obj._listenId = _.uniqueId('l');
             }
-            listeningTo = thing[internalListeningToString] || (thing[internalListeningToString] = {});
+            listeningTo = thing[_LISTENING_TO] || (thing[_LISTENING_TO] = {});
             listening = listeningTo[id];
             // This object is not listening to any other events on `obj` yet.
             // Setup the necessary references to track the listening callbacks.
@@ -2807,7 +2743,7 @@ application.scope(function (app) {
             }
             return listening;
         },
-        ObjectEvent = _.extendFrom.Model('ObjectEvent', {
+        ObjectEvent = factories.Model.extend('ObjectEvent', {
             constructor: function (name, target, data) {
                 var evnt = this;
                 if (isInstance(data, Event)) {
@@ -2817,7 +2753,7 @@ application.scope(function (app) {
                 evnt.dispatchChildren = BOOLEAN_FALSE;
                 evnt.dispatchTree = BOOLEAN_FALSE;
                 evnt.onMethodName = upCase(camelCase('on:' + name, ':'));
-                evnt.propagationIsStopped = evnt[iPISString] = BOOLEAN_FALSE;
+                evnt.propagationIsStopped = evnt[IMMEDIATE_PROP_IS_STOPPED] = BOOLEAN_FALSE;
                 evnt.target = target;
                 evnt.name = name;
                 evnt.type = name.split(':')[0];
@@ -2850,7 +2786,7 @@ application.scope(function (app) {
             },
             stopImmediatePropagation: function () {
                 this.stopPropagation();
-                this[iPISString] = BOOLEAN_TRUE;
+                this[IMMEDIATE_PROP_IS_STOPPED] = BOOLEAN_TRUE;
             },
             stopPropagation: function () {
                 this.propagationIsStopped = BOOLEAN_TRUE;
@@ -2904,13 +2840,13 @@ application.scope(function (app) {
         },
         // makeValidEvent = ,
         getEventList = function (box, name) {
-            var events = box[internalEventsString] = box[internalEventsString] || {};
+            var events = box[_EVENTS] = box[_EVENTS] || {};
             return events[name] || [];
         },
         overrideEventCreation = function (obj) {
             return obj && (obj.bubbles || obj.dispatchChildren || opts.dispatchTree);
         },
-        Events = _.extendFrom.Model('Events', {
+        Events = factories.Model.extend('Events', {
             /**
              * @description attach event handlers to the Box event loop
              * @func
@@ -2931,7 +2867,7 @@ application.scope(function (app) {
             _makeValid: function () {
                 var model = this;
                 model[CURRENT_EVENTS] = model[CURRENT_EVENTS] || [];
-                model[internalEventsString] = model[internalEventsString] || {};
+                model[_EVENTS] = model[_EVENTS] || {};
                 model[EVENT_REMOVE] = model[EVENT_REMOVE] || [];
                 return model;
             },
@@ -2958,25 +2894,24 @@ application.scope(function (app) {
              */
             offAll: function () {
                 var box = this;
-                each(box[internalEventsString], function (array, key, obj) {
+                each(box[_EVENTS], function (array, key, obj) {
                     duffRev(array, removeEvent);
                 });
                 return box;
             },
             off: function (name_, fn_, ctx_) {
                 var currentEventList, currentObj, box = this,
-                    // ctx = fn_,
                     name = name_;
                 box._makeValid();
                 if (arguments[LENGTH]) {
                     if (!name) {
-                        each(box[internalEventsString], function (list, name) {
+                        each(box[_EVENTS], function (list, name) {
                             removeEventObject(box, list, fn_, ctx_);
                         });
                     } else {
                         iterateOverObject(box, isObject(name_) ? fn_ : ctx_, name, fn_, function (box, name, obj) {
-                            removeEventObject(box, !name || box[internalEventsString][name], obj.handler, obj.ctx);
-                        }, BOOLEAN_TRUE);
+                            removeEventObject(box, !name || box[_EVENTS][name], obj.handler, obj.ctx);
+                        });
                     }
                 } else {
                     currentEventList = getCurrentEventList(box);
@@ -2989,7 +2924,7 @@ application.scope(function (app) {
             stopListening: function (obj, name, callback) {
                 var ids, listening, stillListening = 0,
                     origin = this,
-                    listeningTo = origin[internalListeningToString];
+                    listeningTo = origin[_LISTENING_TO];
                 if (listeningTo && (!obj || obj._listenId)) {
                     duff(obj ? [obj._listenId] : _.keys(listeningTo), function (id) {
                         var listening = listeningTo[id];
@@ -3001,7 +2936,7 @@ application.scope(function (app) {
                     if (!stillListening && !find(ids, function (id, key) {
                         return listeningTo[id];
                     })) {
-                        origin[internalListeningToString] = blank;
+                        origin[_LISTENING_TO] = blank;
                     }
                 }
                 return origin;
@@ -3026,14 +2961,14 @@ application.scope(function (app) {
                     name = evnt.name,
                     currentEventArray = getCurrentEventList(box),
                     list = getEventList(box, name),
-                    ret = isFunction(box[evnt.methodName]) && box[evnt.methodName](evnt);
-                anotherRet = evnt[iPISString] || !!_.find(list, function (obj) {
-                    var gah;
-                    currentEventArray.push(obj);
-                    obj.fn(evnt);
-                    gah = currentEventArray.pop(name);
-                    return evnt[iPISString];
-                });
+                    ret = isFunction(box[evnt.methodName]) && box[evnt.methodName](evnt),
+                    anotherRet = !evnt[IMMEDIATE_PROP_IS_STOPPED] && !!find(list, function (obj) {
+                        var gah;
+                        currentEventArray.push(obj);
+                        obj.fn(evnt);
+                        gah = currentEventArray.pop();
+                        return evnt[IMMEDIATE_PROP_IS_STOPPED];
+                    });
                 if (!currentEventArray[LENGTH] && box[EVENT_REMOVE][LENGTH] && box[EVENT_REMOVE][LENGTH]) {
                     duffRev(box[EVENT_REMOVE], removeEvent);
                     box[EVENT_REMOVE] = [];
@@ -3044,8 +2979,8 @@ application.scope(function (app) {
                 return new ObjectEvent(name, this, data);
             },
             dispatchEvent: function (name, data, evnt_) {
-                var methodName = upCase(camelCase('on:' + name, ':')),
-                    onMethod = isFunction(box[methodName]),
+                var box = this,
+                    methodName = upCase(camelCase('on:' + name, ':')),
                     evnt = evnt_ || box._createEvent(name, data);
                 box._eventDispatcher(evnt);
                 evnt.finished();
@@ -3054,10 +2989,15 @@ application.scope(function (app) {
         }, !0);
 });
 application.scope(function (app) {
-    var _ = app._,
+    var blank, _ = app._,
+        factories = _.factories,
+        Events = factories.Events,
         result = _.result,
         isFunction = _.isFunction,
+        isObject = _.isObject,
         intendedObject = _.intendedObject,
+        PARENT = 'parent',
+        NAME = 'name',
         basicData = function (basic) {
             return function () {
                 return basic;
@@ -3068,38 +3008,32 @@ application.scope(function (app) {
             if (messengerHash[key]) {
                 messengerHash[key].destroy();
             }
-            obj.name = key;
+            obj[NAME] = key;
             messengerHash[key] = obj;
         },
         removeFromHash = function (obj) {
-            messengerHash[obj.name] = void 0;
+            messengerHash[obj[NAME]] = blank;
         },
-        Events = _.factories.Events,
-        Messenger = _.extendFrom.Events('Messenger', {
+        Messenger = factories.Events.extend('Messenger', {
             constructor: function (parent) {
-                var hash = {};
+                var ret, scopedHash = {};
                 this._getHash = function (key, arg) {
-                    return result(hash, key, arg);
+                    return result(scopedHash, key, arg);
                 };
                 this._setHash = function (key, val) {
-                    hash[key] = val;
+                    scopedHash[key] = val;
                 };
-                if (_.isObject(parent)) {
-                    this.attachParent(parent);
-                } else {
-                    // is string
-                    attachToHash(key, this);
-                }
-                return Events.call(this);
-            },
-            onDestroy: function () {
-                var obj = this;
-                if (obj.name) {
-                    removeFromHash(obj);
-                }
+                ret = isObject(parent) ? this.attachParent(parent) : attachToHash(key, this);
+                this.on('before:destroy', function () {
+                    var obj = this;
+                    if (obj[NAME]) {
+                        removeFromHash(obj);
+                    }
+                });
+                return Events.constructor.call(this);
             },
             attachParent: function (parent) {
-                this.parent = parent;
+                this[PARENT] = parent;
                 parent.message = this;
                 return this;
             },
@@ -3108,43 +3042,40 @@ application.scope(function (app) {
             },
             reply: function (key, handler) {
                 var messenger = this;
-                _.intendedObject(key, handler, function (key, handler_) {
+                intendedObject(key, handler, function (key, handler_) {
                     var handler = handler_;
                     if (!isFunction(handler_)) {
                         handler = basicData(handler_);
                     }
-                    messenger._setHash(key, handler);
+                    messenger._setHash(key, bind(handler, this[PARENT] || {}));
                 });
-                return messenger.parent;
+                return messenger[PARENT];
             }
-        }, true),
-        messenger = _.messenger = function (obj) {
-            return new Messenger(obj);
-        };
-    messenger(app);
+        }, true);
+    factories.Messenger(app);
 });
 application.scope(function (app) {
     var blank, _ = app._,
-        extendFrom = _.extendFrom,
         factories = _.factories,
-        Collection = _.Collection,
+        Collection = factories.Collection,
         Events = factories.Events,
         gapSplit = _.gapSplit,
         isObject = _.isObject,
-        isStr = _.isString,
-        isNum = _.isNumber,
-        isFn = _.isFunction,
-        each = _.each,
-        duff = _.duff,
-        find = _.find,
+        isString = _.isString,
+        isNumber = _.isNumber,
         isEqual = _.isEqual,
         isBlank = _.isBlank,
         isFunction = _.isFunction,
+        each = _.each,
+        duff = _.duff,
+        find = _.find,
         duffRev = _.duffRev,
         push = _.push,
         has = _.has,
         map = _.map,
+        result = _.result,
         toArray = _.toArray,
+        remove = _.remove,
         clone = _.clone,
         once = _.once,
         parse = _.parse,
@@ -3160,6 +3091,7 @@ application.scope(function (app) {
         uniqueId = _.uniqueId,
         LENGTH = 'length',
         PARENT = 'parent',
+        DESTROY = 'destroy',
         INTERNAL_EVENTS = '_events',
         ATTRIBUTES = 'attributes',
         DISPATCH_EVENT = 'dispatchEvent',
@@ -3176,15 +3108,15 @@ application.scope(function (app) {
          * @description event and attribute extensor object that creates the Box Constructor and convenience method at _.Box
          * @augments Model
          */
-        Container = _.extendFrom.Events('Container', {
+        Container = factories.Events.extend('Container', {
             cidPrefix: 'c',
             idAttribute: 'id',
             constructor: function (attributes, secondary) {
                 var model = this;
                 model.cid = model.cid = uniqueId(model.cidPrefix);
                 model.reset(attributes);
-                _.extend(model, secondary);
-                Events.apply(this, arguments);
+                extend(model, secondary);
+                Events.constructor.apply(this, arguments);
                 return model;
             },
             _reset: function (attributes_) {
@@ -3193,11 +3125,11 @@ application.scope(function (app) {
                     // automatically checks to see if the attributes are a string
                     attributes = parse(attributes_) || {},
                     // default attributes
-                    attrs = _.result(model, 'defaults', attributes),
+                    attrs = result(model, 'defaults', attributes),
                     // build new attributes
                     newAttributes = extend(attrs, attributes),
                     // get the id
-                    idAttr = _.result(model, 'idAttribute', newAttributes),
+                    idAttr = result(model, 'idAttribute', newAttributes),
                     // stale attributes
                     ret = model[ATTRIBUTES] || {},
                     history = model[ATTRIBUTE_HISTORY] = {};
@@ -3272,7 +3204,7 @@ application.scope(function (app) {
                 return didChange;
             },
             digester: function (fn) {
-                var model = this;
+                var ret, model = this;
                 model[CHANGE_COUNTER] = model[CHANGE_COUNTER] || 0;
                 model[CHANGE_COUNTER]++;
                 ret = fn();
@@ -3333,15 +3265,18 @@ application.scope(function (app) {
             },
             _setId: function (id_) {
                 var model = this,
-                    id = id_ === void 0 ? _.uniqueId(!1) : id_ + '';
+                    id = id_ === void 0 ? uniqueId(BOOLEAN_FALSE) : id_ + '';
                 model.id = id;
             },
             reset: function (attrs) {
                 this._reset(attrs);
                 return this;
             }
-        }, true),
-        Box = _.extendFrom.Container('Box', {
+        }, BOOLEAN_TRUE),
+        ModelMaker = function (attributes, secondary) {
+            return new Box(attributes, secondary);
+        },
+        Box = factories.Container.extend('Box', {
             /**
              * @description constructor function for the Box Object
              * @name Box#constructor
@@ -3350,7 +3285,7 @@ application.scope(function (app) {
             constructor: function (attributes, secondary) {
                 var model = this;
                 model[CHILDREN] = Collection();
-                Container.apply(model, arguments);
+                Container.constructor.apply(model, arguments);
                 return model;
             },
             _gatherChildren: function () {
@@ -3379,16 +3314,16 @@ application.scope(function (app) {
                 var child, box = this,
                     children = box[CHILDREN],
                     arr = children.unwrap();
-                while (arr.length) {
+                while (arr[LENGTH]) {
                     child = arr[0];
-                    if (child && child.destroy) {
-                        child.destroy();
+                    if (child) {
+                        result(child, DESTROY);
                     }
                     // if it didn't remove itself,
                     // then you should remove it here
-                    // this doesn't work if the child is a basic data type
+                    // this gets run if the child is a basic data type
                     if (arr[0] === child) {
-                        _.remove(arr, child);
+                        remove(arr, child);
                     }
                 }
                 box.add(newChildren);
@@ -3413,7 +3348,7 @@ application.scope(function (app) {
                 var model = this,
                     attrClone = model.toJSON(),
                     children = model[CHILDREN];
-                if (children.length()) {
+                if (children[LENGTH]()) {
                     attrClone[CHILDREN] = children.toJSON();
                 }
                 return attrClone;
@@ -3462,7 +3397,7 @@ application.scope(function (app) {
                 }
             },
             _delegateParentEvents: function (model) {
-                var parent = model.parent,
+                var parent = model[PARENT],
                     parentEvents = _.result(model, 'parentEvents');
                 if (parent && parentEvents) {
                     model._delegatedParentEvents = parentEvents;
@@ -3489,7 +3424,7 @@ application.scope(function (app) {
                 // unties boxes
                 parent._remove(model);
                 // explicitly tie to parent
-                model.parent = parent;
+                model[PARENT] = parent;
                 // attach events from parent
                 parent._addToHash(model);
                 // ties boxes together
@@ -3499,54 +3434,50 @@ application.scope(function (app) {
                 // notify that you were added
                 return model;
             },
+            Model: ModelMaker,
             // public facing version filters
-            add: function (objs, secondary_) {
-                var childWasAdded, newModel, returnNewModel, parent = this,
+            add: function (objs_, secondary_) {
+                var parent = this,
                     children = parent[CHILDREN],
-                    list = [],
-                    secondary = extend(_.result(parent, 'childOptions'), secondary_ || {});
+                    secondary = extend(result(parent, 'childOptions'), secondary_ || {}),
+                    list = Collection(objs_);
                 // unwrap it if you were passed a collection
-                if (isInstance(objs, _.Collection)) {
-                    objs = objs.unwrap();
+                if (!parent.Model || !list[LENGTH]()) {
+                    return list.unwrap();
                 }
-                if (!isArrayLike(objs)) {
-                    objs = [objs];
-                }
-                if (parent.Model && objs[0]) {
-                    list = map(objs, function (obj) {
-                        var foundModel, isChildType = parent._isChildType(obj);
+                list = list.foldl(function (memo, obj) {
+                    var isChildType = parent._isChildType(obj),
                         // create a new model
-                        newModel = isChildType ? obj : new parent.Model(obj, secondary);
+                        newModel = isChildType ? obj : new parent.Model(obj, secondary),
                         // find by the newly created's id
                         foundModel = children.get(newModel.id);
-                        // out with the old
-                        if (foundModel) {
-                            // update the old model with new info
-                            foundModel.set(newModel.toJSON());
-                            newModel = foundModel;
-                        } else {
-                            childWasAdded = true;
-                            parent._add(newModel);
-                            // list to return
-                        }
-                        return newModel;
-                    });
-                    if (childWasAdded) {
-                        parent[DISPATCH_EVENT]('child:added');
+                    if (foundModel) {
+                        // update the old
+                        foundModel.set(newModel.toJSON());
+                        newModel = foundModel;
+                    } else {
+                        // add the new
+                        parent._add(newModel);
                     }
+                    memo.push(newModel);
+                    return memo;
+                }, []);
+                if (list[LENGTH]) {
+                    parent[DISPATCH_EVENT]('child:added');
                 }
                 return list;
             },
             _removeFromHash: function (child) {
                 var parent = this,
                     children = parent.children;
-                if (children && child) {
-                    // remove the child from the children hash
-                    children.remove(child);
-                    parent._unRegisterChild(child.id);
-                    // unregister from the child hash keys
-                    parent._unRegisterChild(child.cid);
+                if (!children || !child) {
+                    return;
                 }
+                // remove the child from the children hash
+                children.remove(child);
+                parent._unRegisterChild(child.id);
+                // unregister from the child hash keys
+                parent._unRegisterChild(child.cid);
             },
             // only place that we mention parents
             _collectParents: function () {
@@ -3566,22 +3497,12 @@ application.scope(function (app) {
                 var origin = this,
                     name = (evnt_ && evnt_.methodName) || name_,
                     methodName = (evnt_ && evnt_.methodName) || upCase(camelCase('on:' + name, ':')),
-                    childMethodName = upCase(camelCase('on:child:' + name, ':')),
+                    childMethodName = upCase(camelCase('on:bubble:' + name, ':')),
                     // onMethod = isFunction(origin[methodName]),
                     evnt = evnt_ || origin._createEvent(name, data),
                     parents = origin._collectParents(),
                     i = parents[LENGTH] - 1;
-                // while (parents[LENGTH] && parents[i] && !evnt.isStopped()) {
-                //     parent = parents[i];
-                //     if (parent._isDestroyed) {
-                //         evnt.stopImmediatePropagation();
-                //         i = 0;
-                //     } else {
-                //         parent._eventDispatcher(evnt);
-                //     }
-                //     i--;
-                // }
-                // should all be true the first time around
+                // should all be BOOLEAN_TRUE the first time around
                 while (origin && origin._eventDispatcher && !evnt.isStopped()) {
                     origin._eventDispatcher(evnt);
                     origin = !evnt.isStopped() && evnt.bubbles && origin[PARENT];
@@ -3602,37 +3523,37 @@ application.scope(function (app) {
                 // attach events from parent
                 parent._removeFromHash(model);
                 // void out the parent member tied directly to the model
-                model.parent = void 0;
+                model[PARENT] = void 0;
                 // let everyone know that you've offically separated
                 model[DISPATCH_EVENT]('removed');
                 // notify the child that the remove pipeline is done
                 return model;
             },
             remove: function (idModel_) {
-                var removedSomething, parent = this,
+                var parent = this,
                     children = parent[CHILDREN],
-                    retList = _.Collection(),
-                    args = _.toArray(arguments).splice(1),
+                    retList = Collection(),
+                    args = toArray(arguments).splice(1),
                     idModel = idModel_;
                 if (!isObject(idModel)) {
                     // it's a string
                     idModel = parent.children.get(idModel + '');
                 }
-                if (idModel && isObject(idModel)) {
-                    if (isInstance(idModel, _.Collection)) {
-                        idModel = idModel.unwrap();
-                    }
-                    if (!_.isArray(idModel)) {
-                        idModel = [idModel];
-                    }
-                    duff(idModel, function (model) {
-                        removedSomething = true;
-                        parent._remove(model);
-                        retList.add(model);
-                    });
-                    if (removedSomething) {
-                        parent[DISPATCH_EVENT]('child:removed');
-                    }
+                if (!idModel || !isObject(idModel)) {
+                    return retList;
+                }
+                if (isInstance(idModel, Collection)) {
+                    idModel = idModel.unwrap();
+                }
+                if (!isArray(idModel)) {
+                    idModel = [idModel];
+                }
+                duff(idModel, function (model) {
+                    parent._remove(model);
+                    retList.add(model);
+                });
+                if (retList[LENGTH]()) {
+                    parent[DISPATCH_EVENT]('child:removed');
                 }
                 return retList;
             },
@@ -3649,9 +3570,9 @@ application.scope(function (app) {
                 // destroys it's children
                 box.resetChildren();
                 // removes all parent / parent's child listeners
-                removeRet = box.parent && box.parent.remove(box);
+                removeRet = box[PARENT] && box[PARENT].remove(box);
                 // stop listening to other views
-                box[DISPATCH_EVENT]('destroy');
+                box[DISPATCH_EVENT](DESTROY);
                 // stops listening to everything
                 box.stopListening();
                 // takes off all other event handlers
@@ -3669,13 +3590,13 @@ application.scope(function (app) {
                 var compString, isReversed, model = this,
                     children = model[CHILDREN];
                 if (!comparator) {
-                    comparator = model.comparator;
+                    comparator = result(model, 'comparator');
                 }
-                if (_.isString(comparator)) {
+                if (isString(comparator)) {
                     isReversed = comparator[0] === '!';
                     compString = comparator;
                     if (isReversed) {
-                        compString = comparator.slice(1, comparator[LENGTH]);
+                        compString = comparator.slice(1);
                     }
                     comparator = function (a, b) {
                         var val, valA = a.get(compString),
@@ -3694,40 +3615,47 @@ application.scope(function (app) {
                 return model;
             }
         }, !0);
+    ModelMaker.constructor = Box;
 });
 application.scope(function (app) {
     var blank, _ = app._,
-        // submodules = app.submodules = {},
         factories = _.factories,
         Box = _.factories.Box,
+        isFunction = _.isFunction,
+        extend = _.extend,
+        BOOLEAN_TRUE = !0,
+        BOOLEAN_FALSE = !1,
+        _EXTRA_MODULE_ARGS = '_extraModuleArgs',
         startableMethods = {
-            start: function () {
+            start: function (evnt) {
                 var startable = this;
                 if (!startable.started) {
-                    startable.dispatchEvent('before:start', arguments);
-                    startable.started = true;
-                    startable.dispatchEvent('start', arguments);
+                    startable.dispatchEvent('before:start', evnt);
+                    startable.started = BOOLEAN_TRUE;
+                    startable.dispatchEvent('start', evnt);
                 }
+                return startable;
             },
-            stop: function () {
+            stop: function (evnt) {
                 var startable = this;
                 if (startable.started) {
-                    startable.dispatchEvent('before:stop', arguments);
-                    startable.started = false;
-                    startable.dispatchEvent('stop', arguments);
+                    startable.dispatchEvent('before:stop', evnt);
+                    startable.started = BOOLEAN_FALSE;
+                    startable.dispatchEvent('stop', evnt);
                 }
+                return startable;
             },
             toggle: function () {
-                var module = this;
-                if (module.started) {
-                    module.stop.apply(module, arguments);
+                var startable = this;
+                if (startable.started) {
+                    startable.stop(evnt);
                 } else {
-                    module.start.apply(module, arguments);
+                    startable.start(evnt);
                 }
-                return module;
+                return startable;
             }
         },
-        Startable = _.extendFrom.Box('Startable', startableMethods, !0),
+        Startable = factories.Box.extend('Startable', startableMethods, BOOLEAN_TRUE),
         doStart = function (e) {
             if (this.get('startWithParent')) {
                 this.start(e);
@@ -3757,6 +3685,7 @@ application.scope(function (app) {
                 }
                 namespace = namespace.join('.');
                 attrs = {
+                    id: name,
                     name: name,
                     globalname: namespace
                 };
@@ -3769,18 +3698,20 @@ application.scope(function (app) {
                     });
                     parent.children.add(module);
                 }
-                parent.children.register(name, module);
-                // parent.registerModule(name, module);
+                // parent.children.register(name, module);
             }
-            if (!module.hasInitialized && _.isFunction(fn)) {
-                module.hasInitialized = true;
+            if (!module.hasInitialized && isFunction(fn)) {
+                module.hasInitialized = BOOLEAN_TRUE;
                 module.handler(fn);
             }
             return module;
         },
-        Module = _.extendFrom.Box('Module', _.extend({}, startableMethods, {
-            // registerModule: registerModule,
-            // unRegisterModule: unRegisterModule,
+        moduleRunner = function (fn) {
+            var module = this;
+            fn.apply(module, module.createArguments());
+            return module;
+        },
+        moduleMethods = extend({}, startableMethods, {
             idAttribute: 'name',
             module: moduleHandler,
             parentEvents: {
@@ -3788,14 +3719,10 @@ application.scope(function (app) {
                 stop: doStop
             },
             exports: function (obj) {
-                _.extend(this.get('exports'), obj);
+                extend(this.get('exports'), obj);
                 return this;
             },
-            run: function (fn) {
-                var module = this;
-                fn.apply(module, module.createArguments());
-                return module;
-            },
+            run: moduleRunner,
             createArguments: function () {
                 return [this].concat(this.application.createArguments());
             },
@@ -3804,15 +3731,15 @@ application.scope(function (app) {
                 // module.submodules = {};
                 module.name = attrs.name;
                 module.application = opts.application;
-                module.handlers = _.Collection();
-                _.messenger(this);
-                Box.apply(this, arguments);
+                module.handlers = factories.Collection();
+                factories.Messenger(this);
+                Box.constructor.apply(this, arguments);
                 return module;
             },
             defaults: function () {
                 return {
-                    startWithParent: true,
-                    stopWithParent: true,
+                    startWithParent: BOOLEAN_TRUE,
+                    stopWithParent: BOOLEAN_TRUE,
                     exports: {}
                 };
             },
@@ -3828,283 +3755,63 @@ application.scope(function (app) {
                 module.run(fn);
                 return module;
             }
-        }), !0);
-    app.extend({
-        children: _.Collection(),
-        // registerModule: registerModule,
-        /**
-         * @func
-         * @name Specless#run
-         * @returns {*}
-         */
-        run: Module.prototype.run,
-        /**
-         * @func
-         * @name Specless#baseModuleArguments
-         * @returns {Array} list of base arguments to apply to submodules
-         */
-        baseModuleArguments: function () {
-            var app = this;
-            return [app, app._];
-        },
-        /**
-         * @func
-         * @name Specless#addModuleArgs
-         * @param {Array} arr - list of arguments that will be added to the extraModule args list
-         * @returns {Specless} instance
-         */
-        addModuleArgs: function (arr) {
-            var app = this;
-            app.extraModuleArgs = app.extraModuleArgs || [];
-            app._.addAll(app.extraModuleArgs, arr);
-            return app;
-        },
-        /**
-         * @func
-         * @name Specless#removeModuleArgs
-         * @param {Array} arr - list of objects or functions that will be removed from the extraModuleArgs
-         * @returns {Specless} instance
-         */
-        removeModuleArgs: function (arr) {
-            this.utils.removeAll(this.extraModuleArgs, arr);
-            return this;
-        },
-        /**
-         * @func
-         * @name Specless#createArguments
-         * @returns {Object[]}
-         */
-        createArguments: function () {
-            return this.baseModuleArguments().concat(this.extraModuleArgs);
-        },
-        require: function (modulename) {
-            var module = this.module(modulename);
-            return module.getExports();
-        },
-        module: moduleHandler
-    });
+        }),
+        Module = factories.Box.extend('Module', moduleMethods, BOOLEAN_TRUE),
+        appextendresult = app.extend(extend({}, factories.Events.constructor.prototype, moduleMethods, {
+            _extraModuleArgs: [],
+            children: factories.Collection(),
+            module: moduleHandler,
+            /**
+             * @func
+             * @name Specless#run
+             * @returns {*}
+             */
+            run: moduleRunner,
+            /**
+             * @func
+             * @name Specless#baseModuleArguments
+             * @returns {Array} list of base arguments to apply to submodules
+             */
+            baseModuleArguments: function () {
+                var app = this;
+                return [app, app._, app._ && app._.factories];
+            },
+            /**
+             * @func
+             * @name Specless#addModuleArgs
+             * @param {Array} arr - list of arguments that will be added to the extraModule args list
+             * @returns {Specless} instance
+             */
+            addModuleArgs: function (arr) {
+                var app = this;
+                app._.addAll(app[_EXTRA_MODULE_ARGS], arr);
+                return app;
+            },
+            /**
+             * @func
+             * @name Specless#removeModuleArgs
+             * @param {Array} arr - list of objects or functions that will be removed from the extraModuleArgs
+             * @returns {Specless} instance
+             */
+            removeModuleArgs: function (arr) {
+                this.utils.removeAll(this[_EXTRA_MODULE_ARGS], arr);
+                return this;
+            },
+            /**
+             * @func
+             * @name Specless#createArguments
+             * @returns {Object[]}
+             */
+            createArguments: function () {
+                return this.baseModuleArguments().concat(this[_EXTRA_MODULE_ARGS]);
+            },
+            require: function (modulename) {
+                var module = this.module(modulename);
+                return module.getExports();
+            }
+        }));
 });
-// application.scope().module('Storage', function (module, app, _, factories) {
-//     var ELID_STRING = '__uniqueid__',
-//         __privateDataCache__ = {},
-//         uniqueId = _.uniqueId,
-//         datastorage = {
-//             make: function (el) {
-//                 var elId = el[ELID_STRING] = uniqueId('id');
-//                 var ret = __privateDataCache__[elId] = __privateDataCache__[elId] || {};
-//                 return ret;
-//             },
-//             get: function (el) {
-//                 var id = el[ELID_STRING];
-//                 var ret = id ? (__privateDataCache__[id] = __privateDataCache__[id] || this.make(el)) : this.make(el);
-//                 return ret;
-//             },
-//             remove: function (el) {
-//                 var id = el[ELID_STRING];
-//                 __privateDataCache__[id] = el[ELID_STRING] = void 0;
-//                 return id;
-//             }
-//         },
-//         internalListAddRemove = function (keymaker, itemmaker) {
-//             return function (setto) {
-//                 return function (base, item, subdata_, dirtifier) {
-//                     var ret, subdata;
-//                     if (!item) {
-//                         return;
-//                     }
-//                     subdata = subdata_ || this.get(base);
-//                     ret = !subdata.loaded && this.load(base, subdata);
-//                     // each item that i was passed
-//                     // duff(gapSplit(items), function (item) {
-//                     var listitem, key = keymaker(item),
-//                         index = subdata.hash[item];
-//                     // do i have you?
-//                     if (index === blank) {
-//                         // lets make you
-//                         listitem = itemmaker(subdata, key);
-//                         // do i want you after you have been made?
-//                         if (listitem) {
-//                             index = subdata.hash[item] = subdata.list.length;
-//                             subdata.list.push(listitem);
-//                         }
-//                     }
-//                     // are you made and did i want you?
-//                     if (index + 1) {
-//                         listitem = subdata.list[index];
-//                         setto(listitem, index, key, subdata);
-//                         subdata.dirty = !dirtifier;
-//                     }
-//                 };
-//             };
-//         },
-//         createNewJoinable = function (subdata, item) {
-//             return item ? {
-//                 valueOf: function () {
-//                     return item;
-//                 },
-//                 toString: function () {
-//                     var adding = this.flag,
-//                         listitem = adding ? item : '',
-//                         value = (!adding || !subdata.notTheFirst ? '' : ' ');
-//                     if (listitem) {
-//                         subdata.notTheFirst = BOOLEAN_TRUE;
-//                     }
-//                     return value + listitem;
-//                 }
-//             } : BOOLEAN_FALSE;
-//         },
-//         listAddRemove = function (opts) {
-//             var datastorage = opts.storage || datastorage,
-//                 propertyname = opts.name,
-//                 getter = opts.get,
-//                 setter = opts.set,
-//                 keymaker = opts.key,
-//                 itemmaker = opts.item,
-//                 madewithkey = internalListAddRemove(keymaker, itemmaker);
-//             return {
-//                 name: propertyname,
-//                 add: madewithkey(function (listitem, index, key, subdata) {
-//                     listitem.flag = BOOLEAN_TRUE;
-//                 }),
-//                 remove: madewithkey(function (listitem, index, key, subdata) {
-//                     listitem.flag = BOOLEAN_FALSE;
-//                 }),
-//                 toggle: madewithkey(function (listitem, index, key, subdata) {
-//                     listitem.flag = !listitem.flag;
-//                 }),
-//                 load: function (base, subdata_) {
-//                     var listManager = this,
-//                         subdata = subdata_ || listManager.get(base);
-//                     // don't call listManager function again
-//                     subdata.loaded = true;
-//                     // load all of the base data
-//                     duff(getter(base, propertyname), function (item) {
-//                         listManager.add(base, item, subdata, true);
-//                     });
-//                 },
-//                 unload: function (base, subdata_) {
-//                     var subdata = subdata_ || this.get(base);
-//                     // check to make sure it has at least been loaded
-//                     if (subdata.loaded && subdata.dirty) {
-//                         setter(base, this.name, subdata.list);
-//                         this.reset();
-//                     }
-//                 },
-//                 isDirty: function (base) {
-//                     return this.get(base).dirty;
-//                 },
-//                 // requires base object that data is tied to
-//                 get: function (base) {
-//                     var data = datastorage.get(base);
-//                     data[propertyname] = data[propertyname] || this.reset();
-//                     return data[propertyname];
-//                 },
-//                 // requires subdata
-//                 reset: function () {
-//                     return {
-//                         loaded: false,
-//                         dirty: false,
-//                         list: [],
-//                         hash: {}
-//                     };
-//                 }
-//             };
-//         },
-//         nestedList = function (opts) {
-//             var propertyname = opts.name,
-//                 categoryKey = opts.categoryKey,
-//                 storageGet = {
-//                     get: function (base) {
-//                         return api.where(base).underspace;
-//                     }
-//                 },
-//                 api = {
-//                     add: function (base, category_, dataset) {
-//                         var item, data = dataset || this.where(base);
-//                         var category = categoryKey(category_);
-//                         if (!data[category]) {
-//                             item = this.make(base, category, data);
-//                             data._byId[category] = item;
-//                             data._items.push(item);
-//                             item.load(base);
-//                         }
-//                         return item;
-//                     },
-//                     remove: function (base, category_, dataset) {
-//                         var data = dataset || this.where(base);
-//                         var category = categoryKey(category_);
-//                         data[category] = void 0;
-//                     },
-//                     load: function (base, dataset) {
-//                         var categoryManager = this,
-//                             data = dataset || categoryManager.where(base);
-//                         duff(base.attributes, function (value) {
-//                             categoryManager.add(base, value.localName, data);
-//                         });
-//                     },
-//                     upsert: function (base, category, additem, addremove) {
-//                         var data = this.where(base),
-//                             list = this.get(base, category) || this.add(base, category, data),
-//                             wasdirty = list.isDirty(base);
-//                         list[addremove ? 'add' : 'remove'](base, additem);
-//                         if (wasdirty !== list.isDirty(base)) {
-//                             data.dirtyList.push(list);
-//                             data.isDirty++;
-//                         }
-//                     },
-//                     get: function (base, category) {
-//                         return this.where(base)._byId[category];
-//                     },
-//                     unload: function (base) {
-//                         var data = this.where(base);
-//                         duff(data.dirtyList, function (item) {
-//                             if (!item.isDirty(base)) {
-//                                 return;
-//                             }
-//                             item.unload(base);
-//                         });
-//                         data.dirtyList = [];
-//                         return this;
-//                     },
-//                     where: function (base) {
-//                         var data = datastorage.get(base);
-//                         data[propertyname] = data[propertyname] || this.reset();
-//                         return data[propertyname];
-//                     },
-//                     reset: function () {
-//                         return {
-//                             dirtyList: [],
-//                             loaded: false,
-//                             _byId: {},
-//                             _items: [],
-//                             underspace: {}
-//                         };
-//                     },
-//                     make: function (base, category, dataset) {
-//                         var collection = listAddRemove({
-//                             storage: storageGet,
-//                             get: attributeInterface,
-//                             name: category,
-//                             item: createNewJoinable,
-//                             set: function (el, key, value_) {
-//                                 attributeInterface(el, key, value_.join('') || BOOLEAN_FALSE);
-//                             },
-//                             key: function (item) {
-//                                 return (+item === +item) ? +item : item;
-//                             }
-//                         });
-//                         return collection;
-//                     }
-//                 };
-//             return api;
-//         };
-//     module.message.reply({
-//         'make:nested': nestedList,
-//         'make:list': listAddRemove,
-//         storage: datastorage
-//     });
-// });
-application.scope().module('Looper', function (module, app, _, extendFrom, factories) {
+application.scope().module('Looper', function (module, app, _, factories) {
     'use strict';
     var blank, x = 0,
         lastTime = 0,
@@ -4118,8 +3825,8 @@ application.scope().module('Looper', function (module, app, _, extendFrom, facto
         win = window,
         vendors = gapSplit('ms moz webkit o'),
         REQUEST_ANIMATION_FRAME = 'requestAnimationFrame',
-        allLoopGens = [],
-        runningLoopGens = [],
+        allLoopers = [],
+        runningLoopers = [],
         bind = _.bind,
         duff = _.duff,
         remove = _.remove,
@@ -4132,29 +3839,29 @@ application.scope().module('Looper', function (module, app, _, extendFrom, facto
         setup = function () {
             running = BOOLEAN_TRUE;
             win[REQUEST_ANIMATION_FRAME](function (time) {
-                duff(runningLoopGens, function (idx, loopGen) {
-                    loopGen.run(time);
+                duff(runningLoopers, function (looper) {
+                    looper.run(time);
                 });
                 teardown();
             });
         },
         teardown = function () {
-            duffRev(runningLoopGens, function (idx, loopGen) {
-                if (loopGen.halted() || loopGen.stopped() || loopGen.destroyed() || !loopGen.length()) {
-                    runningLoopGens.splice(idx, 1);
+            duffRev(runningLoopers, function (looper, idx) {
+                if (looper.halted() || looper.stopped() || looper.destroyed() || !looper.length()) {
+                    runningLoopers.splice(idx, 1);
                 }
             });
             running = BOOLEAN_FALSE;
-            if (runningLoopGens[LENGTH]) {
+            if (runningLoopers[LENGTH]) {
                 setup();
             }
         },
-        add = function (loopGen) {
-            allLoopGens.push(loopGen);
+        add = function (looper) {
+            allLoopers.push(looper);
         },
-        start = function (loopGen) {
-            if (!posit(runningLoopGens, loopGen)) {
-                runningLoopGens.push(loopGen);
+        start = function (looper) {
+            if (!posit(runningLoopers, looper)) {
+                runningLoopers.push(looper);
             }
             if (!running) {
                 setup();
@@ -4182,13 +3889,13 @@ application.scope().module('Looper', function (module, app, _, extendFrom, facto
                 };
             }
         }()),
-        LoopGen = _.extendFrom.Model('LoopGen', {
+        Looper = factories.Model.extend('Looper', {
             constructor: function (_runner) {
                 var fns, stopped = BOOLEAN_FALSE,
                     halted = BOOLEAN_FALSE,
                     destroyed = BOOLEAN_FALSE,
                     running = BOOLEAN_FALSE,
-                    loopGen = this,
+                    looper = this,
                     counter = 0,
                     fnList = [],
                     addList = [],
@@ -4199,13 +3906,13 @@ application.scope().module('Looper', function (module, app, _, extendFrom, facto
                             addList = [];
                         }
                     };
-                extend(loopGen, {
+                extend(looper, {
                     length: function () {
                         return fnList[LENGTH];
                     },
                     destroy: function () {
                         destroyed = BOOLEAN_TRUE;
-                        remove(allLoopGens, this);
+                        remove(allLoopers, this);
                         return this.halt();
                     },
                     destroyed: function () {
@@ -4308,8 +4015,8 @@ application.scope().module('Looper', function (module, app, _, extendFrom, facto
                         return id;
                     }
                 });
-                add(loopGen);
-                return loopGen;
+                add(looper);
+                return looper;
             },
             bind: function (fn) {
                 return bind(fn, this);
@@ -4415,32 +4122,35 @@ application.scope().module('Looper', function (module, app, _, extendFrom, facto
             }
         }, !0);
     _.exports({
-        AF: new LoopGen()
+        AF: new Looper()
     });
 });
-application.scope().module('Promise', function (module, app, _) {
+application.scope().module('Promise', function (module, app, _, factories) {
     var blank, flatten = _.flatten,
-        extendFrom = _.extendFrom,
-        factories = _.factories,
-        lengthString = 'length',
+        LENGTH = 'length',
+        FAILURE = 'failure',
+        SUCCESS = 'success',
+        STATE = 'state',
+        ALWAYS = 'always',
+        IS_EMPTYING = 'isEmptying',
+        ALL_STATES = 'allStates',
+        STASHED_ARGUMENT = 'stashedArgument',
+        bind = _.bind,
+        isString = _.isString,
+        intendedObject = _.intendedObject,
         duff = _.duff,
         each = _.each,
         extend = _.extend,
         toArray = _.toArray,
         isFunction = _.isFunction,
-        foldr = _.foldr,
+        foldl = _.foldl,
         result = _.result,
-        collapse = function (args) {
-            return foldr(args, function (memo, item) {
-                if (item) {
-                    memo.push(item);
-                }
-                return memo;
-            }, []);
-        },
+        wraptry = _.wraptry,
+        BOOLEAN_TRUE = !0,
+        BOOLEAN_FALSE = !1,
         when = function () {
             var promise = _.Promise();
-            promise.add(_.foldl(flatten(arguments), function (memo, pro) {
+            promise.add(foldl(flatten(arguments), function (memo, pro) {
                 if (promise._isChildType(pro)) {
                     memo.push(pro);
                 }
@@ -4448,49 +4158,45 @@ application.scope().module('Promise', function (module, app, _) {
             }, []));
             return promise;
         },
-        preventDoOver = {
-            success: true,
-            failure: true
-        },
         dispatch = function (promise, name, opts) {
-            promise.dispatchEvent(name, opts);
-            if (!preventDoOver[name]) {
-                promise.dispatchEvent(promise.isFulfilled() ? 'success' : 'failure', opts);
+            var shouldstop, finalName = name,
+                everalways = BOOLEAN_FALSE,
+                allstates = result(promise, ALL_STATES);
+            while (!shouldstop) {
+                everalways = everalways || finalName === ALWAYS;
+                promise.executeHandlers(finalName);
+                finalName = allstates[finalName];
+                shouldstop = !isString(finalName);
             }
-            promise.dispatchEvent('always', opts);
+            if (!everalways) {
+                promise.executeHandlers(ALWAYS);
+            }
         },
         executeIfNeeded = function (promise, name) {
             return function () {
-                var stashed = promise.get('stashed'),
-                    resolved = promise.resolved(),
-                    apply = stashed && resolved,
-                    // takes N functions from arrays or nested arrays
-                    passedFns = each(flatten(arguments), function (fn) {
-                        if (isFunction(fn)) {
-                            if (apply) {
-                                fn.apply(promise, stashed);
-                            } else {
-                                promise.once(name, fn);
-                            }
-                        }
-                    });
+                each(flatten(arguments), function (fn) {
+                    if (isFunction(fn)) {
+                        promise.executeHandler(name, fn, BOOLEAN_TRUE);
+                    }
+                });
                 return promise;
             };
         },
-        associativeStates = {
-            success: true,
-            failure: true,
-            error: true,
-            always: true
-        },
-        addState = function (doit, key) {
+        // associativeStates = {
+        //     success: BOOLEAN_TRUE,
+        //     failure: BOOLEAN_FALSE,
+        //     error: FAILURE,
+        //     always: BOOLEAN_TRUE
+        // },
+        addState = function (key) {
             var promise = this;
-            if (!promise[key] && doit !== false) {
+            // if you haven't already attached a method, then do so now
+            if (!promise[key]) {
                 promise[key] = executeIfNeeded(promise, key);
             }
             return promise;
         },
-        Promise = extendFrom.Box('Promise', {
+        Promise = factories.Box.extend('Promise', {
             addState: addState,
             childEvents: {
                 always: 'check'
@@ -4498,110 +4204,170 @@ application.scope().module('Promise', function (module, app, _) {
             events: {
                 'child:added': 'check'
             },
+            baseStates: function () {
+                return {
+                    success: BOOLEAN_TRUE,
+                    failure: BOOLEAN_FALSE,
+                    error: BOOLEAN_FALSE,
+                    always: BOOLEAN_TRUE
+                };
+            },
             constructor: function () {
                 var promise = this;
-                factories.Box.call(promise);
+                factories.Box.constructor.call(promise);
                 promise.restart();
                 // cannot have been resolved in any way yet
-                _.each(_.extend({}, associativeStates, result(promise, 'associativeStates')), addState, promise);
+                intendedObject(extend({}, result(promise, 'baseStates'), result(promise, 'associativeStates')), null, bind(addState, promise));
                 // add passed in success handlers
                 promise.success(arguments);
                 return promise;
             },
             check: function () {
                 var notSuccessful, resolveAs, parent = this,
-                    children = parent.children;
-                if (!children.find(function (idx, child) {
-                    notSuccessful = notSuccessful || child.state() !== 'success';
+                    children = parent.children,
+                    argumentAggregate = [];
+                if (children.length() && !children.find(function (child) {
+                    notSuccessful = notSuccessful || child.state() !== SUCCESS;
+                    argumentAggregate.push(child.get(STASHED_ARGUMENT));
                     return !child.resolved();
                 })) {
-                    if (notSuccessful) {
-                        resolveAs = 'failure';
-                    } else {
-                        resolveAs = 'success';
-                    }
-                    parent.resolveAs(resolveAs);
+                    parent.resolveAs(notSuccessful ? FAILURE : SUCCESS, argumentAggregate);
                 }
             },
             _isChildType: function (promise) {
                 return promise.success && promise.failure && promise.resolve;
             },
+            defaults: function () {
+                return {
+                    state: 'pending',
+                    resolved: BOOLEAN_FALSE,
+                    stashedArgument: null,
+                    stashedHandlers: {}
+                };
+            },
+            restart: function () {
+                return this.set(this.defaults());
+            },
             state: function () {
-                return this.get('state');
+                return this.get(STATE);
             },
-            // returns an object -- always
-            auxilarySuccess: function () {
-                return {};
+            auxilaryStates: function () {
+                return BOOLEAN_FALSE;
             },
-            successfulResolves: function () {
-                var resultResult = result(this, 'auxilarySuccess') || {};
-                resultResult.success = true;
+            allStates: function () {
+                var resultResult = this._allStates = this._allStates || extend({}, result(this, 'baseStates'), result(this, 'auxilaryStates') || {});
                 return resultResult;
+            },
+            fullfillments: function () {
+                var allstates = result(this, ALL_STATES);
+                var results = this._fullfillments = this._fullfillments || wrap(allstates, function (value, key_) {
+                    var key = key_;
+                    while (isString(key)) {
+                        key = allstates[key];
+                    }
+                    // has to end in a boolean
+                    return key;
+                });
+                return results;
+            },
+            recognizedState: function (state, states_) {
+                var states = states_ || result(this, ALL_STATES);
+                return states[state] === BOOLEAN_FALSE || states[state] === BOOLEAN_TRUE;
             },
             resolved: function () {
                 // allows resolved to be defined in a different way
                 return this.get('resolved');
             },
             isFulfilled: function () {
-                return !!result(this, 'successfulResolves')[this.get('state')];
+                return result(this, ALL_STATES)[this.get(STATE)] === BOOLEAN_TRUE;
             },
             isRejected: function () {
-                return !this.isFulfilled();
+                return result(this, ALL_STATES)[this.get(STATE)] === BOOLEAN_FALSE;
             },
             isPending: function () {
-                return this.get('state') === 'pending';
-            },
-            defaults: function () {
-                return {
-                    state: 'pending',
-                    resolved: false,
-                    stashed: {}
-                };
-            },
-            restart: function () {
-                var promise = this;
-                if (promise.resolved()) {
-                    promise.set(promise.defaults());
-                }
-                return promise;
+                return this.get(STATE) === 'pending';
             },
             resolveAs: function (resolveAs_, opts_) {
                 var opts = opts_,
                     resolveAs = resolveAs_,
-                    promise = this,
-                    stashed = promise.get('stashed');
-                if (!promise.resolved()) {
-                    if (!_.isString(resolveAs)) {
-                        opts = resolveAs;
-                        resolveAs = false;
-                    }
-                    promise.set({
-                        resolved: true,
-                        state: resolveAs || 'success',
-                        stashed: opts || stashed
-                    });
-                    opts = promise.get('stashed');
-                    resolveAs = promise.get('state');
-                    try {
-                        dispatch(promise, resolveAs, opts);
-                    } catch (e) {
-                        dispatch(promise, 'error', {
-                            // nest the sucker again in case it's an array or something else
-                            options: opts,
-                            message: 'javascript execution error'
-                        });
-                    }
+                    promise = this;
+                if (promise.resolved()) {
+                    return promise;
                 }
-                return promise;
+                if (!isString(resolveAs)) {
+                    opts = resolveAs;
+                    resolveAs = BOOLEAN_FALSE;
+                }
+                promise.set({
+                    resolved: BOOLEAN_TRUE,
+                    // default state if none is given, is to have it succeed
+                    state: resolveAs || FAILURE,
+                    stashedArgument: opts
+                });
+                resolveAs = promise.get(STATE);
+                return wraptry(function () {
+                    dispatch(promise, resolveAs);
+                    return promise;
+                }, function () {
+                    promise.set(STASHED_ARGUMENT, {
+                        // nest the sucker again in case it's an array or something else
+                        options: opts,
+                        message: 'javascript execution error'
+                    });
+                    dispatch(promise, 'error');
+                    return promise;
+                }, function () {
+                    return promise;
+                });
             },
             // convenience functions
             resolve: function (opts) {
-                return this.resolveAs('success', opts);
+                return this.resolveAs(SUCCESS, opts);
             },
             reject: function (opts) {
-                return this.resolveAs('failure', opts);
+                return this.resolveAs(FAILURE, opts);
+            },
+            executeHandlers: function (name) {
+                var handler, countLimit, promise = this,
+                    arg = promise.get(STASHED_ARGUMENT),
+                    handlers = promise.get('stashedHandlers')[name];
+                if (!handlers || !handlers[LENGTH]) {
+                    return promise;
+                }
+                countLimit = handlers[LENGTH];
+                promise.set(IS_EMPTYING, BOOLEAN_TRUE);
+                while (handlers[0] && --countLimit >= 0) {
+                    handler = handlers.shift();
+                    // should already be bound
+                    handler(arg);
+                }
+                promise.set(IS_EMPTYING, BOOLEAN_FALSE);
+                return promise;
+            },
+            executeHandler: function (name, fn_, needsbinding) {
+                var promise = this,
+                    arg = promise.get(STASHED_ARGUMENT),
+                    fn = fn_;
+                promise.stashHandler(name, fn);
+                if (promise.resolved() && !promise.get(IS_EMPTYING)) {
+                    promise.executeHandlers(name);
+                }
+                return promise;
+            },
+            stashHandler: function (name, fn, needsbinding) {
+                var promise = this,
+                    stashedHandlers = promise.get('stashedHandlers'),
+                    byName = stashedHandlers[name] = stashedHandlers[name] || [];
+                if (isFunction(fn)) {
+                    byName.push(bind(fn, this));
+                }
+            },
+            handle: function (resolutionstate, fun) {
+                this.addState(resolutionstate);
+                this.executeHandler(resolutionstate, fun, BOOLEAN_TRUE);
+                return this;
             }
-        }, 1);
+        }, BOOLEAN_TRUE);
     _.exports({
         when: when
     });
@@ -4609,10 +4375,26 @@ application.scope().module('Promise', function (module, app, _) {
 application.scope().module('Ajax', function (module, app, _, factories) {
     var gapSplit = _.gapSplit,
         duff = _.duff,
+        each = _.each,
+        unCamelCase = _.unCamelCase,
         posit = _.posit,
-        extendFrom = _.extendFrom,
+        result = _.result,
+        wraptry = _.wraptry,
+        BOOLEAN_TRUE = !0,
+        BOOLEAN_FALSE = !1,
+        STATUS = 'status',
+        // ERROR = 'error',
+        FAILURE = 'failure',
+        SUCCESS = 'success',
+        READY_STATE = 'readyState',
+        isObject = _.isObject,
+        isArray = _.isArray,
+        stringify = _.stringify,
+        parse = _.parse,
+        extend = _.extend,
+        stringifyQuery = _.stringifyQuery,
         validTypes = gapSplit('GET POST PUT DELETE'),
-        baseEvents = gapSplit('progress timeout error abort'),
+        baseEvents = gapSplit('progress timeout abort error'),
         cache = {},
         /**
          * @description helper function to attach a bunch of event listeners to the request object as well as help them trigger the appropriate events on the Ajax object itself
@@ -4628,7 +4410,7 @@ application.scope().module('Ajax', function (module, app, _, factories) {
                 if (evnt === 'progress') {
                     req['on' + evnt] = function (e) {
                         prog++;
-                        ajax.dispatchEvent(evnt, {
+                        ajax.executeHandlers(evnt, {
                             percent: (e.loaded / e.total) || (prog / (prog + 1)),
                             counter: prog
                         });
@@ -4642,12 +4424,12 @@ application.scope().module('Ajax', function (module, app, _, factories) {
         },
         sendthething = function (xhrReq, args) {
             return function () {
-                try {
+                wraptry(function () {
                     xhrReq.send.apply(xhrReq, args);
-                } catch (e) {
-                    // reports on send error
-                    factories.reportError('xhr', e + '');
-                }
+                    // }, function (e) {
+                    // handle an xhr req send error here
+                    // factories.reportError('xhr', e + '');
+                });
             };
         },
         sendRequest = function (ajax, xhrReq, type, url) {
@@ -4656,7 +4438,7 @@ application.scope().module('Ajax', function (module, app, _, factories) {
             if (url) {
                 xhrReq.open(type, url, ajax.get('async'));
                 if (data) {
-                    args.push(_.stringify(data));
+                    args.push(stringify(data));
                 }
                 ajax.setHeaders(ajax.get('headers'));
                 attachBaseListeners(ajax);
@@ -4694,6 +4476,15 @@ application.scope().module('Ajax', function (module, app, _, factories) {
              */
             DELETE: function () {}
         },
+        alterurlHandler = function () {
+            var ajax = this,
+                xhrReq = ajax.requestObject,
+                type = ajax.get('type'),
+                thingToDo = decide[type] || decide.GET;
+            if (thingToDo) {
+                thingToDo(ajax, xhrReq, type);
+            }
+        },
         /**
          * @class Ajax
          * @alias _.Ajax
@@ -4701,28 +4492,7 @@ application.scope().module('Ajax', function (module, app, _, factories) {
          * @augments Model
          * @classdesc XHR object wrapper Triggers events based on xhr state changes and abstracts many anomalies that have to do with IE
          */
-        Ajax = _.factories.Ajax = _.extendFrom.Promise('Ajax', {
-            events: {
-                'alter:url': function () {
-                    var ajax = this,
-                        xhrReq = ajax.requestObject,
-                        type = ajax.get('type'),
-                        thingToDo = decide[type] || decide.GET;
-                    if (thingToDo) {
-                        thingToDo(ajax, xhrReq, type);
-                    }
-                }
-            },
-            associativeStates: {
-                timeout: true,
-                abort: true
-            },
-            defaults: function () {
-                return {
-                    async: true,
-                    type: 'GET'
-                };
-            },
+        Ajax = factories.Promise.extend('Ajax', {
             /**
              * @func
              * @name Ajax#constructor
@@ -4733,7 +4503,7 @@ application.scope().module('Ajax', function (module, app, _, factories) {
                 var promise, url, thingToDo, typeThing, type, xhrReq, ajax = this,
                     method = 'onreadystatechange';
                 // Add a cache buster to the url
-                // ajax.async = true;
+                // ajax.async = BOOLEAN_TRUE;
                 xhrReq = new XMLHttpRequest();
                 // covers ie9
                 if (typeof XDomainRequest !== 'undefined') {
@@ -4754,26 +4524,26 @@ application.scope().module('Ajax', function (module, app, _, factories) {
                         type: type
                     };
                 }
+                str = extend({
+                    async: BOOLEAN_TRUE
+                }, str);
                 str.type = (str.type || 'GET').toUpperCase();
                 str.method = method;
-                factories.Promise.apply(ajax);
-                _.extend(ajax, secondary);
-                /** @member {XMLHttpRequest} */
+                factories.Promise.constructor.apply(ajax);
+                ajax.on('change:url', alterurlHandler);
+                extend(ajax, secondary);
                 ajax.requestObject = xhrReq;
-                return ajax.on('error abort timeout', function (e) {
-                    factories.reportError('xhr error', e.type);
-                }).set(str).always(function (evnt) {
-                    ajax.dispatchEvent('status:' + evnt.status, evnt);
-                });
+                ajax.set(str);
+                return ajax;
             },
             status: function (code, handler) {
-                return this.once(_.simpleObject('status:' + code, handler));
+                return this.handle('status:' + code, handler);
             },
             setHeaders: function (headers) {
                 var ajax = this,
                     xhrReq = ajax.requestObject;
-                _.each(headers, function (val, key) {
-                    xhrReq.setRequestHeader(_.unCamelCase(key), val);
+                each(headers, function (val, key) {
+                    xhrReq.setRequestHeader(unCamelCase(key), val);
                 });
                 return ajax;
             },
@@ -4784,8 +4554,8 @@ application.scope().module('Ajax', function (module, app, _, factories) {
              */
             getUrl: function () {
                 var url = this.get('url');
-                if (_.isObject(url) && !_.isArray(url)) {
-                    url = _.stringifyQuery(url);
+                if (isObject(url) && !isArray(url)) {
+                    url = stringifyQuery(url);
                 }
                 return url;
             },
@@ -4795,39 +4565,56 @@ application.scope().module('Ajax', function (module, app, _, factories) {
              * @returns {ajax}
              * @name Ajax#attachResponseHandler
              */
-            attachResponseHandler: function (fn) {
+            auxilaryStates: function () {
+                return {
+                    'status:200': SUCCESS,
+                    'status:202': SUCCESS,
+                    'status:205': SUCCESS,
+                    'status:302': SUCCESS,
+                    'status:304': SUCCESS,
+                    'status:400': FAILURE,
+                    'status:401': FAILURE,
+                    'status:403': FAILURE,
+                    'status:404': FAILURE,
+                    'status:405': FAILURE,
+                    'status:406': FAILURE,
+                    'status:500': FAILURE,
+                    'status:502': FAILURE,
+                    'status:505': FAILURE,
+                    'status:511': FAILURE,
+                    timeout: FAILURE,
+                    abort: FAILURE
+                };
+            },
+            parse: function (rawData) {
+                return parse(rawData);
+            },
+            attachResponseHandler: function () {
                 var ajax = this,
                     xhrReqObj = ajax.requestObject,
-                    hasSucceeded = 0,
+                    hasFinished = BOOLEAN_FALSE,
                     method = ajax.get('method'),
                     handler = function (evnt) {
-                        var doIt, responseTxt, xhrReqObj = this;
-                        if (xhrReqObj && !hasSucceeded) {
-                            responseTxt = xhrReqObj.responseText;
-                            ajax.dispatchEvent('readychange', [evnt, xhrReqObj]);
-                            if (method === 'onreadystatechange') {
-                                if (xhrReqObj.readyState === 4) {
-                                    doIt = 1;
-                                }
+                        var status, doIt, allStates, rawData, readystate, xhrReqObj = this;
+                        if (!xhrReqObj || hasFinished) {
+                            return;
+                        }
+                        status = xhrReqObj[STATUS];
+                        readystate = xhrReqObj[READY_STATE];
+                        rawData = xhrReqObj.responseText;
+                        ajax.currentEvent = evnt;
+                        ajax.set('readystate', readystate);
+                        if (method === 'onload' || (method === 'onreadystatechange' && readystate === 4)) {
+                            ajax.set('status', status);
+                            allStates = result(ajax, 'allStates');
+                            if (allStates[STATUS + ':' + xhrReqObj[STATUS]] === SUCCESS) {
+                                rawData = result(ajax, 'parse', rawData);
                             }
-                            if (method === 'onload') {
-                                doIt = 1;
-                            }
-                            if (doIt) {
-                                if ((xhrReqObj.status >= 200 && xhrReqObj.status <= 205) || xhrReqObj.status === 304 || xhrReqObj.status === 302) {
-                                    responseTxt = _.parse(responseTxt);
-                                    ajax.resolve(responseTxt);
-                                    ajax.dispatchEvent('load', [responseTxt, evnt, xhrReqObj]);
-                                    hasSucceeded = 1;
-                                } else {
-                                    ajax.reject(evnt, responseTxt);
-                                }
-                            }
+                            rawData = parse(rawData);
+                            hasFinished = BOOLEAN_TRUE;
+                            ajax.resolveAs(STATUS + ':' + xhrReqObj[STATUS], rawData);
                         }
                     };
-                if (_.isFunction(fn)) {
-                    handler = fn;
-                }
                 if (!xhrReqObj[method]) {
                     xhrReqObj[method] = handler;
                 }
@@ -4835,7 +4622,7 @@ application.scope().module('Ajax', function (module, app, _, factories) {
             }
         }, !0);
 });
-application.scope().module('Associator', function (module, app, _) {
+application.scope().module('Associator', function (module, app, _, factories) {
     /**
      * @class Associator
      * @augments Model
@@ -4844,7 +4631,7 @@ application.scope().module('Associator', function (module, app, _) {
         extend = _.extend,
         isObject = _.isObject,
         removeAt = _.removeAt,
-        Associator = _.extendFrom.Model('Associator', {
+        Associator = factories.Model.extend('Associator', {
             /**
              * @func
              * @name Associator#get
@@ -4924,22 +4711,26 @@ application.scope().module('Associator', function (module, app, _) {
             }
         }, !0);
     _.exports({
-        associator: _.Associator()
+        associator: factories.Associator()
     });
 });
-application.scope().module('DOMM', function (module, app, _) {
+application.scope().module('DOMM', function (module, app, _, factories) {
     var blank, sizzleDoc = document,
         eq = _.eq,
+        once = _.once,
         elementData = _.associator,
         result = _.result,
-        // elementData = app.module('Storage').message.request('storage'),
         uniqueId = _.uniqueId,
-        extendFrom = _.extendFrom,
-        factories = _.factories,
         isFunction = _.isFunction,
+        Collection = factories.Collection,
+        wraptry = _.wraptry,
+        now = _.now,
         each = _.each,
+        bind = _.bind,
         duff = _.duff,
         find = _.find,
+        wrap = _.wrap,
+        trace = _.trace,
         posit = _.posit,
         foldl = _.foldl,
         isString = _.isString,
@@ -4947,8 +4738,11 @@ application.scope().module('DOMM', function (module, app, _) {
         isNumber = _.isNumber,
         isBoolean = _.isBoolean,
         stringify = _.stringify,
-        wrap = _.wrap,
+        parse = _.parse,
+        isArrayLike = _.isArrayLike,
+        objectMatches = _.matches,
         merge = _.merge,
+        console = _.console,
         remove = _.splice,
         extend = _.extend,
         negate = _.negate,
@@ -4961,112 +4755,76 @@ application.scope().module('DOMM', function (module, app, _) {
         duffRev = _.duffRev,
         indexOf = _.indexOf,
         clone = _.clone,
+        units = _.units,
         gapSplit = _.gapSplit,
         camelCase = _.camelCase,
         unCamelCase = _.unCamelCase,
         parseDecimal = _.parseDecimal,
-        LENGTH_STRING = 'length',
+        add = _.add,
+        removeAll = _.removeAll,
+        addAll = _.addAll,
+        NODE_TYPE = 'nodeType',
+        PARENT_NODE = 'parentNode',
+        LENGTH = 'length',
         ITEMS = '_items',
         DELEGATE_COUNT = '__delegateCount',
         REMOVE_QUEUE = 'removeQueue',
         ADD_QUEUE = 'addQueue',
         CLASSNAME = 'className',
+        DEFAULT_VIEW = 'defaultView',
+        WINDOW = 'window',
+        DOCUMENT = 'document',
+        CLASS = 'class',
+        STYLE = 'style',
+        BODY = 'body',
+        TOP = 'top',
+        LEFT = 'left',
+        RIGHT = 'right',
+        BOTTOM = 'bottom',
+        WIDTH = 'width',
+        HEIGHT = 'height',
+        INDEX = 'index',
+        INNER_HEIGHT = 'innerHeight',
+        INNER_WIDTH = 'innerWidth',
         BOOLEAN_TRUE = !0,
         BOOLEAN_FALSE = !1,
+        NULL = null,
         win = window,
-        WINDOW = 'window',
-        CLASS = 'class',
         devicePixelRatio = (win.devicePixelRatio || 1),
         ua = navigator.userAgent,
-        isNode = function (object) {
-            return !!(object && isNumber(object.nodeType) && object.nodeType === object.ELEMENT_NODE);
+        isElement = function (object) {
+            return !!(object && isNumber(object[NODE_TYPE]) && object[NODE_TYPE] === object.ELEMENT_NODE);
         },
-        isDom = isNode,
         /**
          * @private
          * @func
          */
-        isWin = function (obj) {
+        isWindow = function (obj) {
             return obj && obj === obj[WINDOW];
         },
         /**
          * @private
          * @func
          */
-        isDoc = function (obj) {
-            return obj && isNumber(obj.nodeType) && obj.nodeType === obj.DOCUMENT_NODE;
+        isDocument = function (obj) {
+            return obj && isNumber(obj[NODE_TYPE]) && obj[NODE_TYPE] === obj.DOCUMENT_NODE;
         },
         isFrag = function (frag) {
-            return frag && frag.nodeType === sizzleDoc.DOCUMENT_FRAGMENT_NODE;
+            return frag && frag[NODE_TYPE] === sizzleDoc.DOCUMENT_FRAGMENT_NODE;
         },
         getClosestWindow = function (windo_) {
             var windo = windo_ || win;
-            return isWin(windo) ? windo : (windo && windo.defaultView ? windo.defaultView : (windo.ownerGlobal ? windo.ownerGlobal : $(windo).parent(WINDOW).index(0) || win));
+            return isWindow(windo) ? windo : (windo && windo[DEFAULT_VIEW] ? windo[DEFAULT_VIEW] : (windo.ownerGlobal ? windo.ownerGlobal : $(windo).parent(WINDOW)[INDEX](0) || win));
         },
         getComputed = function (el, ctx) {
             var ret = getClosestWindow(ctx).getComputedStyle(el);
-            return ret ? ret : getClosestWindow(el).getComputedStyle(el) || clone(el.style) || {};
+            return ret ? ret : getClosestWindow(el).getComputedStyle(el) || clone(el[STYLE]) || {};
         },
-        allStyles = getComputed(sizzleDoc.body, win),
-        /**
-         * @func
-         */
-        isAndroid = function () {
-            return ua.match(/Android/i);
-        },
-        /**
-         * @func
-         */
-        isBlackBerry = function () {
-            return ua.match(/BlackBerry/i);
-        },
-        /**
-         * @func
-         */
-        isIos = function () {
-            return ua.match(/iPhone|iPad|iPod/i);
-        },
-        /**
-         * @func
-         */
-        isOpera = function () {
-            return ua.match(/Opera Mini/i);
-        },
-        /**
-         * @func
-         */
-        isWindows = function () {
-            return ua.match(/IEMobile/i);
-        },
-        /**
-         * @func
-         */
-        // isTablet = function () {
-        //     return ua.match(/Mobile|iPad|Android|BlackBerry|IEMobile|Kindle|NetFront|Silk-Accelerated|(hpw|web)OS|Fennec|Minimo|Opera M(obi|ini)|Blazer|Dolfin|Dolphin|Skyfire|Zune/);
-        // },
+        allStyles = getComputed(sizzleDoc[BODY], win),
         rkeyEvent = /^key/,
         rmouseEvent = /^(?:mouse|pointer|contextmenu)|click/,
         rfocusMorph = /^(?:focusinfocus|focusoutblur)$/,
         rforceEvent = /^webkitmouseforce/,
-        /**
-         * @func
-         */
-        isMobile = function () {
-            return (isAndroid() || isBlackBerry() || isIos() || isOpera() || isWindows());
-        },
-        /**
-         * @func
-         */
-        isTouch = function () {
-            var ret = BOOLEAN_FALSE;
-            if ('ontouchstart' in window || 'onmsgesturechange' in window) {
-                ret = BOOLEAN_TRUE;
-            }
-            if (window.DocumentTouch) {
-                ret = sizzleDoc instanceof window.DocumentTouch;
-            }
-            return ret;
-        },
         hasWebP = (function () {
             var countdown = 4,
                 result = BOOLEAN_TRUE,
@@ -5085,14 +4843,9 @@ application.scope().module('DOMM', function (module, app, _) {
                 };
             duff(["UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA", "UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==", "UklGRkoAAABXRUJQVlA4WAoAAAAQAAAAAAAAAAAAQUxQSAwAAAARBxAR/Q9ERP8DAABWUDggGAAAABQBAJ0BKgEAAQAAAP4AAA3AAP7mtQAAAA==", "UklGRlIAAABXRUJQVlA4WAoAAAASAAAAAAAAAAAAQU5JTQYAAAD/////AABBTk1GJgAAAAAAAAAAAAAAAAAAAGQAAABWUDhMDQAAAC8AAAAQBxAREYiI/gcA"], function (val) {
                 var img = new Image();
-                img.onload = emptyqueue(function () {
-                    // is this code even doing anything?
-                    // if (result && (img.width > 0) && (img.height > 0)) {
-                    //     result = result;
-                    // }
-                });
+                img.onload = emptyqueue(_.noop);
                 img.onerror = emptyqueue(function () {
-                    result = false;
+                    result = BOOLEAN_FALSE;
                 });
                 img.src = "data:image/webp;base64," + val;
             });
@@ -5104,70 +4857,41 @@ application.scope().module('DOMM', function (module, app, _) {
                 }
             };
         }()),
-        /**
-         * @func
-         */
-        deviceCheck = _.wrap({
-            isAndroid: isAndroid,
-            isBlackBerry: isBlackBerry,
-            isIos: isIos,
-            isOpera: isOpera,
-            isWindows: isWindows,
-            isMobile: isMobile,
-            isTouch: isTouch
-        }, function (fn) {
-            return !!(fn());
-        }),
         saveDOMContentLoadedEvent = function (doc) {
             var data = elementData.get(doc);
-            if (data.isReady === void 0) {
+            if (data.isReady === blank) {
                 data.isReady = BOOLEAN_FALSE;
-                _.DOMM(doc).on('DOMContentLoaded', function (e) {
+                DOMM(doc).on('DOMContentLoaded', function (e) {
                     data.DOMContentLoadedEvent = e;
                     data.isReady = BOOLEAN_TRUE;
                 });
             }
         },
-        _DOMM = _.factories._DOMM = function (doc) {
+        _DOMM = factories._DOMM = function (doc) {
             saveDOMContentLoadedEvent(doc);
             return function (sel, ctx) {
-                return _.DOMM(sel, ctx || doc);
+                return DOMM(sel, ctx || doc);
             };
         },
-        setAttribute = function (el, key, val) {
-            if (val === true) {
+        setAttribute = function (el, key, val_) {
+            var val = val_;
+            if (val === BOOLEAN_TRUE) {
                 val = '';
+            } else {
+                val = stringify(val);
             }
-            val = stringify(val);
             val += '';
             el.setAttribute(key, val);
         },
         getAttribute = function (el, key, val) {
             var converted;
-            val = el.getAttribute(key);
+            val = parse(el.getAttribute(key));
+            val = +val == val ? +val : val;
             if (val === '') {
                 val = BOOLEAN_TRUE;
             }
-            if (isString(val)) {
-                if (val[0] === '{' || val[0] === '[') {
-                    val = JSON.parse(val);
-                } else {
-                    converted = +val;
-                    if (converted === converted) {
-                        val = converted;
-                    } else {
-                        // if for whatever reason you have a function
-                        if (val[val.length - 1] === '}') {
-                            if (val.slice(0, 8) === 'function') {
-                                val = new Function.constructor('return ' + val);
-                            }
-                        }
-                    }
-                }
-            } else {
-                if (isBlank(val)) {
-                    val = BOOLEAN_FALSE;
-                }
+            if (isBlank(val)) {
+                val = BOOLEAN_FALSE;
             }
             return val;
         },
@@ -5258,8 +4982,8 @@ application.scope().module('DOMM', function (module, app, _) {
         AllEvents = _.concatUnique(Events, SVGEvent, KeyboardEvent, CompositionEvent, GamePadEvent, MouseEvents, TouchEvents, DeviceEvents, FocusEvent, TimeEvent, AnimationEvent, AudioProcessingEvent, UIEvents, ProgressEvent),
         knownPrefixes = gapSplit('-o- -ms- -moz- -webkit- mso- -xv- -atsc- -wap- -khtml- -apple- prince- -ah- -hp- -ro- -rim- -tc-'),
         trustedEvents = gapSplit('load scroll resize orientationchange click dblclick mousedown mouseup mouseover mouseout mouseenter mouseleave mousemove change contextmenu hashchange load mousewheel wheel readystatechange'),
-        ALL_EVENTS_HASH = wrap(AllEvents, true),
-        knownPrefixesHash = wrap(knownPrefixes, true),
+        ALL_EVENTS_HASH = wrap(AllEvents, BOOLEAN_TRUE),
+        knownPrefixesHash = wrap(knownPrefixes, BOOLEAN_TRUE),
         /**
          * @private
          * @func
@@ -5274,10 +4998,10 @@ application.scope().module('DOMM', function (module, app, _) {
             if (el) {
                 classList = getClassName(el);
                 if (remove) {
-                    _.removeAll(classList, gapSplit(remove));
+                    removeAll(classList, gapSplit(remove));
                 }
                 if (add) {
-                    _.addAll(classList, gapSplit(add));
+                    addAll(classList, gapSplit(add));
                 }
                 // val = gapJoin(classList).trim();
                 setClassName(el, classList);
@@ -5318,7 +5042,7 @@ application.scope().module('DOMM', function (module, app, _) {
          */
         ensureDOM = function (fn) {
             return function (el) {
-                if (isDom(el)) {
+                if (isElement(el)) {
                     fn(el);
                 }
             };
@@ -5328,20 +5052,20 @@ application.scope().module('DOMM', function (module, app, _) {
          * @func
          */
         // returns the flow of the element passed on relative to the element's bounding window
-        position = function (el) {
+        flow = function (el, ctx) {
             var clientRect = el.getBoundingClientRect(),
-                computedStyle = getComputed(el),
+                computedStyle = getComputed(el, ctx),
                 marginTop = parseFloat(computedStyle.marginTop),
                 marginLeft = parseFloat(computedStyle.marginLeft),
                 marginRight = parseFloat(computedStyle.marginRight),
                 marginBottom = parseFloat(computedStyle.marginBottom);
             return {
-                height: clientRect.height,
-                width: clientRect.width,
-                top: clientRect.top - marginTop,
-                left: clientRect.left - marginLeft,
-                right: clientRect.left - marginLeft + clientRect.width - marginRight,
-                bottom: clientRect.top - marginTop + clientRect.height - marginBottom
+                height: clientRect[HEIGHT],
+                width: clientRect[WIDTH],
+                top: clientRect[TOP] - marginTop,
+                left: clientRect[LEFT] - marginLeft,
+                right: clientRect[LEFT] - marginLeft + clientRect[WIDTH] - marginRight,
+                bottom: clientRect[TOP] - marginTop + clientRect[HEIGHT] - marginBottom
             };
         },
         numberBasedCss = {
@@ -5405,8 +5129,8 @@ application.scope().module('DOMM', function (module, app, _) {
                         list.push(__prefix);
                     }
                 };
-            for (i = 0; i < knownPrefixes[LENGTH_STRING]; i++) {
-                currentLen = knownPrefixes[i][LENGTH_STRING];
+            for (i = 0; i < knownPrefixes[LENGTH]; i++) {
+                currentLen = knownPrefixes[i][LENGTH];
                 if (len < currentLen) {
                     len = currentLen;
                 }
@@ -5448,54 +5172,55 @@ application.scope().module('DOMM', function (module, app, _) {
                     ret = {},
                     count = 0,
                     nuCss = {};
-                if (isObject(el)) {
-                    if (isBoolean(key)) {
-                        key = el;
-                        retObj = 1;
-                    }
-                    firstEl = el[0];
-                    intendedObject(key, value, function (key, value) {
-                        if (!isBlank(value)) {
-                            count++;
-                            prefixes = [''];
-                            if (prefixed[m]) {
-                                prefixes = prefixed[m].concat(prefixes);
-                            }
-                            for (j = 0; j < prefixes[LENGTH_STRING]; j++) {
-                                finalProp = camelCase(prefixes[j] + m);
-                                nuCss[finalProp] = modifyFinalProp(finalProp, value);
-                            }
-                        } else {
-                            ret[m] = value;
+                if (!isObject(el)) {
+                    return;
+                }
+                if (isBoolean(key)) {
+                    key = el;
+                    retObj = 1;
+                }
+                firstEl = el[0];
+                intendedObject(key, value, function (key, value) {
+                    if (!isBlank(value)) {
+                        count++;
+                        prefixes = [''];
+                        if (prefixed[m]) {
+                            prefixes = prefixed[m].concat(prefixes);
                         }
-                    });
-                    if (retObj) {
-                        return nuCss;
-                    }
-                    if (isDom(el)) {
-                        el = [el];
-                    }
-                    if (!count) {
-                        if (isDom(firstEl)) {
-                            _ret = {};
-                            computed = getComputed(firstEl);
-                            count--;
-                            each(ret, function (val_, key, obj) {
-                                _ret[key] = convertStyleValue(key, computed[key]);
-                                count++;
-                                lastKey = key;
-                            });
-                            if (count + 1) {
-                                if (count) {
-                                    return _ret;
-                                } else {
-                                    return _ret[lastKey];
-                                }
-                            }
+                        for (j = 0; j < prefixes[LENGTH]; j++) {
+                            finalProp = camelCase(prefixes[j] + m);
+                            nuCss[finalProp] = modifyFinalProp(finalProp, value);
                         }
                     } else {
-                        style(el, nuCss);
+                        ret[m] = value;
                     }
+                });
+                if (retObj) {
+                    return nuCss;
+                }
+                if (isElement(el)) {
+                    el = [el];
+                }
+                if (!count) {
+                    if (isElement(firstEl)) {
+                        _ret = {};
+                        computed = getComputed(firstEl);
+                        count--;
+                        each(ret, function (val_, key, obj) {
+                            _ret[key] = convertStyleValue(key, computed[key]);
+                            count++;
+                            lastKey = key;
+                        });
+                        if (count + 1) {
+                            if (count) {
+                                return _ret;
+                            } else {
+                                return _ret[lastKey];
+                            }
+                        }
+                    }
+                } else {
+                    style(el, nuCss);
                 }
             };
         }()),
@@ -5513,9 +5238,9 @@ application.scope().module('DOMM', function (module, app, _) {
         },
         style = function (els, key, value) {
             var ensuredDom;
-            if (els[LENGTH_STRING]) {
+            if (els[LENGTH]) {
                 ensuredDom = ensureDOM(function (el) {
-                    el.style[key] = value;
+                    el[STYLE][key] = value;
                 });
                 intendedObject(key, value, function (key, value_) {
                     var value = convertStyleValue(value_);
@@ -5545,63 +5270,68 @@ application.scope().module('DOMM', function (module, app, _) {
          * @private
          * @func
          */
-        box = function (el) {
-            var computed, ret = {};
-            if (isDom(el)) {
-                computed = getComputed(el);
-                ret = merge({
-                    borderBottom: parseFloat(computed.borderBottomWidth) || 0,
-                    borderRight: parseFloat(computed.borderRightWidth) || 0,
-                    borderLeft: parseFloat(computed.borderLeftWidth) || 0,
-                    borderTop: parseFloat(computed.borderTopWidth) || 0,
-                    paddingBottom: parseFloat(computed.paddingBottom) || 0,
-                    paddingRight: parseFloat(computed.paddingRight) || 0,
-                    paddingLeft: parseFloat(computed.paddingLeft) || 0,
-                    paddingTop: parseFloat(computed.paddingTop) || 0,
-                    marginBottom: parseFloat(computed.marginBottom) || 0,
-                    marginRight: parseFloat(computed.marginRight) || 0,
-                    marginLeft: parseFloat(computed.marginLeft) || 0,
-                    marginTop: parseFloat(computed.marginTop) || 0,
-                    computedBottom: parseFloat(computed.bottom) || 0,
-                    computedRight: parseFloat(computed.right) || 0,
-                    computedLeft: parseFloat(computed.left) || 0,
-                    computedTop: parseFloat(computed.top) || 0
-                }, clientRect(el));
+        box = function (el, ctx) {
+            var clientrect, computed, ret = {};
+            if (!isElement(el)) {
+                return ret;
             }
-            return ret;
+            computed = getComputed(el, ctx);
+            clientrect = clientRect(el, ctx);
+            return {
+                borderBottom: +computed.borderBottomWidth || 0,
+                borderRight: +computed.borderRightWidth || 0,
+                borderLeft: +computed.borderLeftWidth || 0,
+                borderTop: +computed.borderTopWidth || 0,
+                paddingBottom: +computed.paddingBottom || 0,
+                paddingRight: +computed.paddingRight || 0,
+                paddingLeft: +computed.paddingLeft || 0,
+                paddingTop: +computed.paddingTop || 0,
+                marginBottom: +computed.marginBottom || 0,
+                marginRight: +computed.marginRight || 0,
+                marginLeft: +computed.marginLeft || 0,
+                marginTop: +computed.marginTop || 0,
+                computedBottom: +computed[BOTTOM] || 0,
+                computedRight: +computed[RIGHT] || 0,
+                computedLeft: +computed[LEFT] || 0,
+                computedTop: +computed[TOP] || 0,
+                top: clientrect[TOP] || 0,
+                left: clientrect[LEFT] || 0,
+                right: clientrect[RIGHT] || 0,
+                bottom: clientrect[BOTTOM] || 0,
+                width: clientrect[WIDTH] || 0,
+                height: clientrect[HEIGHT] || 0
+            };
         },
         clientRect = function (item) {
             var ret = {};
-            if (item) {
-                if (isDom(item) && item.parentNode) {
-                    ret = item.getBoundingClientRect();
-                }
+            if (isElement(item)) {
+                ret = item.getBoundingClientRect();
             }
-            return extend({
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                width: 0,
-                height: 0
-            }, ret);
+            return {
+                top: ret[TOP] || 0,
+                left: ret[LEFT] || 0,
+                right: ret[RIGHT] || 0,
+                bottom: ret[BOTTOM] || 0,
+                width: ret[WIDTH] || 0,
+                height: ret[HEIGHT] || 0
+            };
         },
         /**
          * @private
          * @func
          */
         unitRemoval = function (str, unit) {
-            return parseFloat(str.split(unit || 'px').join('').trim()) || 0;
+            return +(str.split(unit || 'px').join('').trim()) || 0;
         },
         /**
          * @private
          * @func
          */
-        getStyleSize = function (el, attr) {
+        getStyleSize = function (el, attr, win) {
             var val, elStyle, num = el;
             if (isObject(el)) {
-                if (isDom(el)) {
-                    elStyle = getComputed(el);
+                if (isElement(el)) {
+                    elStyle = getComputed(el, win);
                 } else {
                     elStyle = el;
                 }
@@ -5627,12 +5357,12 @@ application.scope().module('DOMM', function (module, app, _) {
             }
         },
         // always in pixels
-        numToUnitsConverters = {
+        numberToUnit = {
             'in': function (val, el, win, styleAttr) {
                 return val / 96;
             },
             vh: function (val, el, win, styleAttr) {
-                return (val / win.innerHeight) * 100;
+                return (val / win[INNER_HEIGHT]) * 100;
             },
             px: function (val, el, win, styleAttr) {
                 return val;
@@ -5641,31 +5371,31 @@ application.scope().module('DOMM', function (module, app, _) {
                 return val / 37.79527559055118;
             },
             vw: function (val, el, win, styleAttr) {
-                return (val / win.innerWidth) * 100;
+                return (val / win[INNER_WIDTH]) * 100;
             },
             em: function (val, el, win, styleAttr) {
-                return val / getStyleSize(el, 'fontSize');
+                return val / getStyleSize(el, 'fontSize', win);
             },
             mm: function (val, el, win, styleAttr) {
                 return val / 3.779527559055118;
             },
             vmin: function (val, el, win, styleAttr) {
-                var mult = Math.min(win.innerHeight, win.innerWidth);
+                var mult = Math.min(win[INNER_HEIGHT], win[INNER_WIDTH]);
                 return (val / mult) * 100;
             },
             rem: function (val, el, win, styleAttr) {
-                return val / getStyleSize(win.document.body.parentNode, 'fontSize');
+                return val / getStyleSize(win[DOCUMENT][BODY][PARENT_NODE], 'fontSize', win);
             },
             pt: function (val, el, win, styleAttr) {
                 return val / 1.333333333333333;
             },
             vmax: function (val, el, win, styleAttr) {
-                var mult = Math.max(win.innerHeight, win.innerWidth);
+                var mult = Math.max(win[INNER_HEIGHT], win[INNER_WIDTH]);
                 return (val / mult) * 100;
             },
             '%': function (val, el, win, styleAttr) {
-                var parent = _.isDom(el) ? el.parentNode : el,
-                    _val = getStyleSize(parent, styleAttr);
+                var parent = isElement(el) ? el[PARENT_NODE] : el,
+                    _val = getStyleSize(parent, styleAttr, win);
                 return (val / _val) * 100;
             },
             pc: function (val, el, win, styleAttr) {
@@ -5675,7 +5405,7 @@ application.scope().module('DOMM', function (module, app, _) {
         numToUnits = function (num, unit, el, winTop, styleAttr, returnNum) {
             var number = num;
             if (num) {
-                number = numToUnitsConverters[unit](num, el, winTop, styleAttr);
+                number = numberToUnit[unit](num, el, winTop, styleAttr);
             }
             number = (number || 0);
             if (!returnNum) {
@@ -5687,25 +5417,12 @@ application.scope().module('DOMM', function (module, app, _) {
          * @private
          * @func
          */
-        unitsToNumConverters = {
-            // 'in'
-            // vh
-            // px
-            // cm
-            // vw
-            // em
-            // mm
-            // vmin
-            // rem
-            // pt
-            // vmax
-            // '%'
-            // pc
+        unitToNumber = {
             'in': function (val, el, win, styleAttr) {
                 return val * 96;
             },
             vh: function (val, el, win, styleAttr) {
-                return win.innerHeight * val / 100;
+                return win[INNER_HEIGHT] * val / 100;
             },
             px: function (val, el, win, styleAttr) {
                 return val;
@@ -5714,7 +5431,7 @@ application.scope().module('DOMM', function (module, app, _) {
                 return val * 37.79527559055118;
             },
             vw: function (val, el, win, styleAttr) {
-                return win.innerWidth * val / 100;
+                return win[INNER_WIDTH] * val / 100;
             },
             em: function (val, el, win, styleAttr) {
                 return getStyleSize(el, 'fontSize') * val;
@@ -5723,19 +5440,19 @@ application.scope().module('DOMM', function (module, app, _) {
                 return val * 3.779527559055118;
             },
             vmin: function (val, el, win, styleAttr) {
-                return ((Math.min(win.innerHeight, win.innerWidth) || 1) * val / 100);
+                return ((Math.min(win[INNER_HEIGHT], win[INNER_WIDTH]) || 1) * val / 100);
             },
             rem: function (val, el, win, styleAttr) {
-                return getStyleSize(win.document.body.parentNode, 'fontSize') * val;
+                return getStyleSize(win[DOCUMENT][BODY][PARENT_NODE], 'fontSize') * val;
             },
             pt: function (val, el, win, styleAttr) {
                 return val * 1.333333333333333;
             },
             vmax: function (val, el, win, styleAttr) {
-                return ((Math.max(win.innerHeight, win.innerWidth) || 1) * val / 100);
+                return ((Math.max(win[INNER_HEIGHT], win[INNER_WIDTH]) || 1) * val / 100);
             },
             '%': function (val, el, win, styleAttr) {
-                var parent = _.isDom(el) ? el.parentNode : el,
+                var parent = isElement(el) ? el[PARENT_NODE] : el,
                     _val = getStyleSize(parent, styleAttr);
                 return (val * _val) / 100;
             },
@@ -5744,15 +5461,13 @@ application.scope().module('DOMM', function (module, app, _) {
             }
         },
         unitsToNum = function (str, el, winTop, styleAttr) {
-            var ret, number, unit = _.units(str);
-            if (unit) {
-                number = +(str.split(unit).join('')) || 0;
-                if (unitsToNumConverters[unit]) {
-                    number = unitsToNumConverters[unit](number, el, winTop, styleAttr) || 0;
-                }
-            } else {
-                // you passed in a number
-                number = str;
+            var ret, number, unit = units(str);
+            if (!unit) {
+                return str;
+            }
+            number = +(str.split(unit).join('')) || 0;
+            if (unitToNumber[unit]) {
+                number = unitToNumber[unit](number, el, winTop, styleAttr) || 0;
             }
             return number;
         },
@@ -5763,7 +5478,7 @@ application.scope().module('DOMM', function (module, app, _) {
         containsClass = function (el, className) {
             var original = getClassName(el),
                 nuClasses = gapSplit(className),
-                nuClassesLen = nuClasses[LENGTH_STRING],
+                nuClassesLen = nuClasses[LENGTH],
                 i = 0,
                 has = 0;
             for (; i < nuClassesLen; i++) {
@@ -5797,17 +5512,17 @@ application.scope().module('DOMM', function (module, app, _) {
          * @private
          * @func
          */
-        createEl = function (str) {
+        createElement = function (str) {
             return sizzleDoc.createElement(str);
         },
         makeEmptyFrame = function (str) {
-            var frame, div = createEl('div');
+            var frame, div = createElement('div');
             div.innerHTML = str;
             frame = div.children[0];
             return $(frame);
         },
         makeTree = function (str) {
-            var div = createEl('div');
+            var div = createElement('div');
             div.innerHTML = str;
             return $(div.children).remove().unwrap();
         },
@@ -5815,19 +5530,9 @@ application.scope().module('DOMM', function (module, app, _) {
          * @private
          * @func
          */
-        // makeScriptTag = function (src) {
-        //     var scriptTag = createEl('script');
-        //     scriptTag.type = 'text/javascript';
-        //     scriptTag.src = src;
-        //     return scriptTag;
-        // },
-        /**
-         * @private
-         * @func
-         */
         matches = function (element, selector) {
             var match, parent, temp, matchesSelector;
-            if (!selector || !element || element.nodeType !== 1) {
+            if (!selector || !element || element[NODE_TYPE] !== 1) {
                 return BOOLEAN_FALSE;
             }
             matchesSelector = element.webkitMatchesSelector || element.mozMatchesSelector || element.oMatchesSelector || element.matchesSelector;
@@ -5835,69 +5540,15 @@ application.scope().module('DOMM', function (module, app, _) {
                 return matchesSelector.call(element, selector);
             }
             // fall back to performing a selector:
-            parent = element.parentNode;
+            parent = element[PARENT_NODE];
             temp = !parent;
             if (temp) {
-                parent = createEl('div');
+                parent = createElement('div');
                 parent.appendChild(element);
             }
             // temp && tempParent.removeChild(element);
-            return !!posit(_.Sizzle(selector, parent), element);
+            return !!posit(Sizzle(selector, parent), element);
         },
-        // setAttribute = function (el, key, val) {
-        //     if (val === true) {
-        //         val = '';
-        //     }
-        //     val = _.stringify(val);
-        //     val += '';
-        //     el.setAttribute(key, val);
-        // },
-        // getAttribute = function (el, key, val) {
-        //     var converted;
-        //     val = el.getAttribute(key);
-        //     if (val === '') {
-        //         val = BOOLEAN_TRUE;
-        //     }
-        //     if (isString(val)) {
-        //         if (val[0] === '{' || val[0] === '[') {
-        //             val = JSON.parse(val);
-        //         } else {
-        //             converted = +val;
-        //             if (converted === converted) {
-        //                 val = converted;
-        //             } else {
-        //                 // if for whatever reason you have a function
-        //                 if (val[val.length - 1] === '}') {
-        //                     if (val.slice(0, 8) === 'function') {
-        //                         val = new Function.constructor('return ' + val);
-        //                     }
-        //                 }
-        //             }
-        //         }
-        //     } else {
-        //         if (isBlank(val)) {
-        //             val = BOOLEAN_FALSE;
-        //         }
-        //     }
-        //     return val;
-        // },
-        /**
-         * @private
-         * @func
-         */
-        // attributeInterface = function (el, key, val) {
-        //     // set or remove if not undefined
-        //     // undefined fills in the gap by returning some value, which is never undefined
-        //     if (val !== blank) {
-        //         if (!val && val !== 0) {
-        //             el.removeAttribute(key);
-        //         } else {
-        //             setAttribute(el, key, val);
-        //         }
-        //     } else {
-        //         return getAttribute(el, key, val);
-        //     }
-        // },
         /**
          * @private
          * @func
@@ -5914,48 +5565,44 @@ application.scope().module('DOMM', function (module, app, _) {
                 return domm;
             };
         },
+        createDocumentFragment = function () {
+            return sizzleDoc.createDocumentFragment();
+        },
         /**
          * @private
          * @func
          */
-        makeEl = function (tagName) {
+        createElements = function (tagName) {
             return $(foldl(gapSplit(tagName), function (memo, name) {
-                memo.push(createEl(name));
+                memo.push(createElement(name));
                 return memo;
             }, []));
         },
-        createDocFrag = function () {
-            return sizzleDoc.createDocumentFragment();
-        },
-        frag = function (el) {
-            var frag = createDocFrag(),
-                els = result(el, ITEMS) || el;
-            if (!_.isArrayLike(els)) {
-                els = [els];
-            }
-            duff(els, function (el) {
+        fragment = function (el) {
+            var frag = createDocumentFragment();
+            $(el).duff(function (el) {
                 frag.appendChild(el);
             });
             return frag;
         },
-        makeEls = function (arr, tag, style, props, attrs) {
-            var frag = createDocFrag();
-            map(arr, function (idx, str) {
-                var div = createEl(tag || 'div');
-                div.innerHTML = str;
-                each(style, function (key, val) {
-                    div.style[key] = val;
-                });
-                each(props, function (key, val) {
-                    div[key] = val;
-                });
-                each(attrs, function (key, val) {
-                    attributeInterface(div, key, val);
-                });
-                frag.appendChild(div);
-            });
-            return frag;
-        },
+        // createElements = function (arr, tag, style, props, attrs) {
+        //     var frag = createDocumentFragment();
+        //     map(arr, function (str) {
+        //         var div = createElement(tag || 'div');
+        //         div.innerHTML = str;
+        //         each(style, function (key, val) {
+        //             div[STYLE][key] = val;
+        //         });
+        //         each(props, function (key, val) {
+        //             div[key] = val;
+        //         });
+        //         each(attrs, function (key, val) {
+        //             attributeInterface(div, key, val);
+        //         });
+        //         frag.appendChild(div);
+        //     });
+        //     return frag;
+        // },
         /**
          * @private
          * @func
@@ -5984,11 +5631,11 @@ application.scope().module('DOMM', function (module, app, _) {
                 idxChange = _idxChange || idxChange;
                 if (idxChange) {
                     duff(list, function (idx_, el) {
-                        var parent = el.parentNode,
+                        var parent = el[PARENT_NODE],
                             idx = (indexOf(parent.children, el) + idxChange),
                             item = parent.children[idx];
                         if (item && !posit(list, item)) {
-                            _.add(collected, item);
+                            add(collected, item);
                         }
                     });
                 } else {
@@ -6025,7 +5672,7 @@ application.scope().module('DOMM', function (module, app, _) {
                         });
                     });
                 });
-                if (dataKeys[LENGTH_STRING] === 1) {
+                if (dataKeys[LENGTH] === 1) {
                     if (count === 1) {
                         ret = ret[dataKeys[0]];
                     } else {
@@ -6051,10 +5698,10 @@ application.scope().module('DOMM', function (module, app, _) {
         // coordinates
         covers = function (element, coords) {
             var _clientRect = clientRect(element),
-                bottom = _clientRect.bottom,
-                right = _clientRect.right,
-                left = _clientRect.left,
-                tippytop = _clientRect.top,
+                bottom = _clientRect[BOTTOM],
+                right = _clientRect[RIGHT],
+                left = _clientRect[LEFT],
+                tippytop = _clientRect[TOP],
                 x = coords.x,
                 y = coords.y,
                 ret = BOOLEAN_FALSE;
@@ -6065,8 +5712,8 @@ application.scope().module('DOMM', function (module, app, _) {
         },
         center = function (clientRect) {
             return {
-                x: clientRect.left + (clientRect.width / 2),
-                y: clientRect.top + (clientRect.height / 2)
+                x: clientRect[LEFT] + (clientRect[WIDTH] / 2),
+                y: clientRect[TOP] + (clientRect[HEIGHT] / 2)
             };
         },
         distance = function (a, b) {
@@ -6077,90 +5724,13 @@ application.scope().module('DOMM', function (module, app, _) {
         closer = function (center, current, challenger) {
             return distance(center, current) < distance(center, challenger);
         },
-        flattenBlock = function (block, selector, spaced) {
-            var children = [],
-                _flat = {},
-                flat = {};
-            each(block, function (property, value) {
-                var gah;
-                if (_.isObject(value)) {
-                    children.push(flattenBlock(value, selector + ' ' + property));
-                } else {
-                    flat[property] = value;
-                }
-            });
-            _flat[selector] = flat;
-            _flat = [_flat];
-            return _flat.concat.apply(_flat, children);
-        },
-        buildBlocks = function (blocks) {
-            var allBlocks = coll();
-            each(blocks, function (block, selector) {
-                allBlocks = allBlocks.concat(flattenBlock(block, selector));
-            });
-            return allBlocks;
-        },
-        stringifyPair = function (property, value) {
-            return property + ':' + value + ';';
-        },
-        stringifyBlock = function (block, selector, opts) {
-            var blockString = '' + selector + '{';
-            opts = extend({
-                line: '\n',
-                tab: '\t',
-                minify: 1
-            }, opts || {});
-            each(jsToCss(prefixer(block)), function (property, value) {
-                if (_.isObject(value)) {
-                    blockString += stringifyBlock(value, property, opts);
-                } else {
-                    blockString += stringifyPair(property, value);
-                }
-            });
-            if (blockString[blockString[LENGTH_STRING] - 1] !== '{') {
-                blockString += '}';
-            } else {
-                blockString = '';
-            }
-            return blockString;
-        },
-        buildStyles = function (obj, opts) {
-            return coll(obj).foldl(function (memo, idx, item) {
-                memo += buildBlocks(item).foldl(function (memo, idx, block) {
-                    each(block, function (block, idx, selector) {
-                        memo += stringifyBlock(block, selector, opts);
-                    });
-                    return memo;
-                }, '');
-                memo += '\n';
-                return memo;
-            }, '').split(' &').join('');
-        },
-        // parseEventName = function (name) {
-        //     var ret = [
-        //         [],
-        //         []
-        //     ];
-        //     duff(gapSplit(name), function (nme) {
-        //         var captures = BOOLEAN_FALSE;
-        //         if (nme[0] === '_') {
-        //             nme = nme.slice(1);
-        //             captures = BOOLEAN_TRUE;
-        //         }
-        //         duff(gapSplit(eventExpander[nme] || nme), function (nm) {
-        //             ret[0].push(nm);
-        //             ret[1].push(captures);
-        //         });
-        //     });
-        //     return ret;
-        // },
         createSelector = function (domm, args, fn) {
             var fun, selector, name = args.shift();
             if (isString(args[0]) || isBlank(args[0])) {
                 selector = args.shift();
             }
             if (isFunction(args[0])) {
-                fn = _.bind(fn, domm);
+                fn = bind(fn, domm);
                 fun = args[0];
                 duff(gapSplit(name), function (nme) {
                     var split = eventToNamespace(nme),
@@ -6178,7 +5748,7 @@ application.scope().module('DOMM', function (module, app, _) {
         },
         ensureOne = function (fn) {
             return function () {
-                if (this.length()) {
+                if (this[LENGTH]()) {
                     fn.apply(this, arguments);
                 }
                 return this;
@@ -6190,6 +5760,7 @@ application.scope().module('DOMM', function (module, app, _) {
                 // if there's nothing selected, then do nothing
                 args = toArray(arguments);
                 obj = args.shift();
+                // intendedObject(obj, null, function () {});
                 if (isObject(obj)) {
                     if (isString(args[0])) {
                         selector = args.shift();
@@ -6204,20 +5775,17 @@ application.scope().module('DOMM', function (module, app, _) {
             });
         },
         validateEvent = function (evnt, el) {
-            if (isString(evnt)) {
-                evnt = {
-                    type: evnt,
-                    bubbles: BOOLEAN_FALSE,
-                    eventPhase: 2,
-                    cancelable: BOOLEAN_FALSE,
-                    defaultPrevented: BOOLEAN_FALSE,
-                    data: '',
-                    isTrusted: BOOLEAN_FALSE,
-                    timeStamp: _.nowish(),
-                    target: el
-                };
-            }
-            return evnt;
+            return !isString(evnt) ? evnt : {
+                type: evnt,
+                bubbles: BOOLEAN_FALSE,
+                eventPhase: 2,
+                cancelable: BOOLEAN_FALSE,
+                defaultPrevented: BOOLEAN_FALSE,
+                data: '',
+                isTrusted: BOOLEAN_FALSE,
+                timeStamp: now(),
+                target: el
+            };
         },
         isCapturing = function (evnt) {
             var capturing = BOOLEAN_FALSE,
@@ -6225,20 +5793,20 @@ application.scope().module('DOMM', function (module, app, _) {
             if (eventPhase === 1) {
                 capturing = BOOLEAN_TRUE;
             }
-            if (eventPhase === 2 && !evnt.bubbles && isDom(evnt.srcElement)) {
+            if (eventPhase === 2 && !evnt.bubbles && isElement(evnt.srcElement)) {
                 capturing = BOOLEAN_TRUE;
             }
             return capturing;
         },
         findMatch = function (el, target, selector) {
-            var parent, found = null;
+            var parent, found = NULL;
             if (selector && isString(selector)) {
                 parent = target;
-                while (parent && !found && isDom(parent) && parent !== el) {
+                while (parent && !found && isElement(parent) && parent !== el) {
                     if (matches(parent, selector)) {
                         found = parent;
                     }
-                    parent = parent.parentNode;
+                    parent = parent[PARENT_NODE];
                 }
             }
             return found;
@@ -6246,93 +5814,93 @@ application.scope().module('DOMM', function (module, app, _) {
         getMainHandler = function (data, name, capturing) {
             return data.handlers[capturing + ':' + name];
         },
-        dispatchEvent = function (el, evnt, capturing, data, args, selector) {
-            var e, gah, eventNameStack, capturingStack, events, stack, currentEventStack, selectorIsString, mainHandler, eventType, removeStack, $el, matches = 1;
-            evnt = validateEvent(evnt, el);
-            if (evnt && evnt.type) {
-                capturing = !!capturing;
-                if (!_.isObject(data)) {
-                    data = elementData.get(el);
+        eventDispatcher = function (el, e, args, list) {
+            var $el = DOMM(el);
+            return find(list, function (obj) {
+                var selectorsMatch, ctx, originalTarget = e.currentTarget,
+                    mainHandler = obj.mainHandler;
+                if (mainHandler.currentEvent) {
+                    return BOOLEAN_TRUE;
                 }
-                events = data.events;
-                capturingStack = events[capturing];
-                if (capturingStack) {
-                    eventType = evnt.type;
-                    eventNameStack = capturingStack[eventType];
-                    // currentEventStack = data[currentEventStackString];
-                    mainHandler = getMainHandler(data, eventType, capturing);
-                    if (mainHandler) {
-                        removeStack = mainHandler[REMOVE_QUEUE];
-                        $el = $(el);
-                        e = new Event(evnt, el);
-                        args = [e].concat(args || []);
-                        // selectorIsString = isString(selector);
-                        find(eventNameStack, function (obj) {
-                            var selectorsMatch, ctx, originalTarget = e.currentTarget,
-                                mainHandler = obj.mainHandler;
-                            if (mainHandler.currentEvent) {
-                                return BOOLEAN_TRUE;
-                            }
-                            mainHandler.currentEvent = obj;
-                            if (obj && obj.persist && !obj.disabled) {
-                                if (obj.selector) {
-                                    ctx = findMatch(el, evnt.target, obj.selector);
-                                    if (ctx) {
-                                        e.currentTarget = ctx;
-                                    } else {
-                                        mainHandler.currentEvent = null;
-                                        return;
-                                    }
-                                }
-                                // e.type = obj.passedName;
-                                obj.fn.apply(ctx || $el, args);
-                            }
-                            if (!obj.persist) {
-                                // puts it on the event queue
-                                removeEventQueue(obj);
-                            }
-                            e.currentTarget = originalTarget;
-                            mainHandler.currentEvent = null;
-                            return e.isImmediatePropagationStopped;
-                        });
-                        duffRev(removeStack, removeEventQueue);
-                        while (mainHandler[ADD_QUEUE].length) {
-                            addEventQueue(mainHandler[ADD_QUEUE][0]);
-                            gah = mainHandler[ADD_QUEUE].shift();
+                mainHandler.currentEvent = obj;
+                if (obj && obj.persist && !obj.disabled) {
+                    if (obj.selector) {
+                        ctx = findMatch(el, evnt.target, obj.selector);
+                        if (ctx) {
+                            e.currentTarget = ctx;
+                        } else {
+                            mainHandler.currentEvent = NULL;
+                            return;
                         }
                     }
+                    obj.fn.apply(ctx || $el, args);
                 }
+                if (!obj.persist) {
+                    // puts it on the event queue
+                    removeEventQueue(obj);
+                }
+                e.currentTarget = originalTarget;
+                mainHandler.currentEvent = NULL;
+                return e.isImmediatePropagationStopped;
+            });
+        },
+        dispatchEvent = function (el, evnt_, capturing, data, args, selector) {
+            var e, gah, list, capturingStack, events, stack, currentEventStack, selectorIsString, mainHandler, eventType, removeStack, $el, matches = 1,
+                evnt = validateEvent(evnt_, el);
+            if (!evnt || !evnt.type) {
+                return;
+            }
+            capturing = !!capturing;
+            if (!_.isObject(data)) {
+                data = elementData.get(el);
+            }
+            events = data.events;
+            capturingStack = events[capturing];
+            if (!capturingStack) {
+                return;
+            }
+            eventType = evnt.type;
+            list = capturingStack[eventType];
+            mainHandler = getMainHandler(data, eventType, capturing);
+            if (!mainHandler) {
+                return;
+            }
+            removeStack = mainHandler[REMOVE_QUEUE];
+            e = new Event(evnt, el);
+            args = [e].concat(args || []);
+            wraptry(function () {
+                eventDispatcher(el, e, args, list);
+            }, function () {
+                console.trace(e);
+            });
+            duffRev(removeStack, removeEventQueue);
+            while (mainHandler[ADD_QUEUE][LENGTH]) {
+                addEventQueue(mainHandler[ADD_QUEUE][0]);
+                gah = mainHandler[ADD_QUEUE].shift();
             }
         },
         matchesHandler = function (handler, obj) {
             return !handler || obj.fn === handler;
         },
-        _eventExpander = (function (__obj) {
-            var obj = {};
-            each(__obj, function (key, val, object) {
-                obj[key] = gapSplit(val);
-            });
-            return obj;
-        }({
+        _eventExpander = wrap({
             ready: 'DOMContentLoaded',
             deviceorientation: 'deviceorientation mozOrientation',
             fullscreenalter: 'webkitfullscreenchange mozfullscreenchange fullscreenchange MSFullscreenChange',
             hover: 'mouseenter mouseleave',
             forcetouch: 'webkitmouseforcewillbegin webkitmouseforcedown webkitmouseforceup webkitmouseforcechanged'
-        })),
-        distilledEventName = (function () {
-            var obj = {};
-            each(_eventExpander, function (key, arr) {
-                duff(arr, function (idx, item) {
-                    obj[item] = key;
-                });
+        }, function (val) {
+            return gapSplit(val);
+        }),
+        distilledEventName = foldl(_eventExpander, function (memo, arr, key) {
+            duff(arr, function (item) {
+                memo[item] = key;
             });
-            return obj;
-        }()),
+            return memo;
+        }, {}),
         eventExpander = function (fn_) {
-            return function (nme, idx) {
-                var fn = _.bind(fn_, this);
-                duff(gapSplit(_eventExpander[nme] || nme), function (name, idx) {
+            return function (nme) {
+                var fn = bind(fn_, this);
+                duff(gapSplit(_eventExpander[nme] || nme), function (name) {
                     fn(name, nme);
                 });
             };
@@ -6372,7 +5940,7 @@ application.scope().module('DOMM', function (module, app, _) {
                         __delegateCount: 0,
                         addQueue: [],
                         removeQueue: [],
-                        currentEvent: null,
+                        currentEvent: NULL,
                         capturing: capture
                     };
                     el.addEventListener(name, eventHandler, capture);
@@ -6380,7 +5948,7 @@ application.scope().module('DOMM', function (module, app, _) {
                 attach = _.find(namespaceCache, function (obj) {
                     // remove any duplicates
                     if (fn === obj.fn && obj.namespace === namespace && selector === obj.selector) {
-                        return true;
+                        return BOOLEAN_TRUE;
                     }
                 });
                 if (!attach) {
@@ -6417,15 +5985,15 @@ application.scope().module('DOMM', function (module, app, _) {
                 selector = obj.selector;
             if (!mainHandler.currentEvent) {
                 if (!obj.isDestroyed) {
-                    obj.isDestroyed = true;
-                    idx = idx === void 0 ? list.indexOf(obj) : idx;
+                    obj.isDestroyed = BOOLEAN_TRUE;
+                    idx = idx === blank ? list.indexOf(obj) : idx;
                     if (idx + 1) {
                         if (selector) {
                             mainHandler[DELEGATE_COUNT]--;
                         }
                         gah = list.splice(idx, 1);
                     }
-                    obj.list = null;
+                    obj.list = NULL;
                 }
             } else {
                 if (obj.persist) {
@@ -6439,7 +6007,7 @@ application.scope().module('DOMM', function (module, app, _) {
                 // var args = toArray(arguments);
                 var args = ['', blank, []],
                     origArgs = _.filter(arguments, negate(isBlank)),
-                    argLen = origArgs.length;
+                    argLen = origArgs[LENGTH];
                 if (!isObject(name)) {
                     if (argLen === 1) {
                         args = [name, blank, [blank]];
@@ -6451,7 +6019,7 @@ application.scope().module('DOMM', function (module, app, _) {
                 if (argLen === 3) {
                     args = arguments;
                 }
-                fn.apply(this, args);
+                return fn.apply(this, args);
             };
         },
         removeEventListener = ensureHandlers(expandEventListenerArguments(function (name, namespace, selector, handler, capture) {
@@ -6493,8 +6061,6 @@ application.scope().module('DOMM', function (module, app, _) {
          * @augments Model
          * @augments Collection
          */
-        coll = _.Collection,
-        Collection = _.factories.Collection,
         fixHooks = {
             // Includes some event props shared by KeyEvent and MouseEvent
             props: gapSplit("data altKey bubbles cancelable ctrlKey currentTarget eventPhase metaKey relatedTarget shiftKey target timeStamp view which"),
@@ -6527,7 +6093,7 @@ application.scope().module('DOMM', function (module, app, _) {
                     if (isBlank(evnt.pageX) && !isBlank(original.clientX)) {
                         evntDoc = evnt.target.ownerDocument || sizzleDoc;
                         doc = evntDoc.documentElement;
-                        body = evntDoc.body;
+                        body = evntDoc[BODY];
                         evnt.pageX = original.clientX + (doc && doc.scrollLeft || body && body.scrollLeft || 0) - (doc && doc.clientLeft || body && body.clientLeft || 0);
                         evnt.pageY = original.clientY + (doc && doc.scrollTop || body && body.scrollTop || 0) - (doc && doc.clientTop || body && body.clientTop || 0);
                     }
@@ -6539,7 +6105,7 @@ application.scope().module('DOMM', function (module, app, _) {
                     evnt.y = original.y || 0;
                     // Add which for click: 1 === left; 2 === middle; 3 === right
                     // Note: button is not normalized, so don't use it
-                    if (!evnt.which && button !== undefined) {
+                    if (!evnt.which && button !== blank) {
                         evnt.which = (button & 1 ? 1 : (button & 2 ? 3 : (button & 4 ? 2 : 0)));
                     }
                     return evnt;
@@ -6555,7 +6121,7 @@ application.scope().module('DOMM', function (module, app, _) {
                     fixHooks.fixedHooks[type] = fixHook = rmouseEvent.test(type) ? this.mouseHooks : rkeyEvent.test(type) ? this.keyHooks : rforceEvent.test(type) ? this.forceHooks : {};
                 }
                 copy = fixHook.props ? this.props.concat(fixHook.props) : this.props;
-                i = copy.length;
+                i = copy[LENGTH];
                 while (i--) {
                     prop = copy[i];
                     val = originalEvent[prop];
@@ -6573,8 +6139,8 @@ application.scope().module('DOMM', function (module, app, _) {
                 }
                 // Support: Safari 6.0+, Chrome<28
                 // Target should not be a text node (#504, #13143)
-                if (target.nodeType === 3) {
-                    evnt.target = target.parentNode;
+                if (target[NODE_TYPE] === 3) {
+                    evnt.target = target[PARENT_NODE];
                 }
                 if (isFunction(fixHook.filter)) {
                     fixHook.filter(evnt, originalEvent);
@@ -6585,22 +6151,22 @@ application.scope().module('DOMM', function (module, app, _) {
                 // special
                 if (evnt.type === 'fullscreenchange') {
                     doc = evnt.target;
-                    if (isWin(doc)) {
-                        doc = doc.document;
+                    if (isWindow(doc)) {
+                        doc = doc[DOCUMENT];
                     } else {
-                        while (doc && !isDoc(doc) && doc.parentNode) {
-                            doc = doc.parentNode;
+                        while (doc && !isDocument(doc) && doc[PARENT_NODE]) {
+                            doc = doc[PARENT_NODE];
                         }
                     }
                     evnt.fullscreenDocument = doc;
-                    if (isDoc(doc)) {
-                        evnt.isFullScreen = (doc.fullScreen || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.fullscreenElement) ? true : false;
+                    if (isDocument(doc)) {
+                        evnt.isFullScreen = (doc.fullScreen || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.fullscreenElement) ? BOOLEAN_TRUE : BOOLEAN_FALSE;
                     }
                 }
                 return evnt;
             }
         },
-        Event = _.extendFrom.Model('Event', {
+        Event = factories.Model.extend('Event', {
             constructor: function (evnt, el) {
                 var e = this;
                 e.originalEvent = evnt;
@@ -6637,12 +6203,12 @@ application.scope().module('DOMM', function (module, app, _) {
                 filter = filtr;
             } else {
                 if (isObject(filtr)) {
-                    if (isDom(filtr)) {
+                    if (isElement(filtr)) {
                         filter = function (el) {
                             return !!posit(items, el);
                         };
                     } else {
-                        filter = _.matches(filtr);
+                        filter = objectMatches(filtr);
                     }
                 } else {
                     if (isString(filtr)) {
@@ -6659,7 +6225,7 @@ application.scope().module('DOMM', function (module, app, _) {
                             };
                         } else {
                             filter = function () {
-                                return true;
+                                return BOOLEAN_TRUE;
                             };
                         }
                     }
@@ -6673,14 +6239,14 @@ application.scope().module('DOMM', function (module, app, _) {
         },
         dimFinder = function (element, doc, win) {
             return function (num) {
-                var ret, el = this.get(num);
-                if (isDom(el)) {
+                var ret, el = this[INDEX](num);
+                if (isElement(el)) {
                     ret = clientRect(el)[element];
                 } else {
-                    if (isDoc(el) && el.body) {
-                        ret = el.body[doc];
+                    if (isDocument(el) && el[BODY]) {
+                        ret = el[BODY][doc];
                     } else {
-                        if (isWin(el)) {
+                        if (isWindow(el)) {
                             ret = el[win];
                         }
                     }
@@ -6694,7 +6260,7 @@ application.scope().module('DOMM', function (module, app, _) {
                 passedString = isString(str);
             duff(dom.unwrap(), function (el) {
                 if (passedString) {
-                    duff(_.Sizzle(str, el), function (el) {
+                    duff(Sizzle(str, el), function (el) {
                         matchers.push(el);
                     });
                 } else {
@@ -6704,35 +6270,41 @@ application.scope().module('DOMM', function (module, app, _) {
             return matchers;
         }),
         canBeProcessed = function (item) {
-            return isDom(item) || isWin(item) || isDoc(item) || isFrag(item);
+            return isElement(item) || isWindow(item) || isDocument(item) || isFrag(item);
         },
-        DOMM = factories.DOMM = _.extendFrom.Collection('DOMM', extend({
+        append = function (el) {
+            var dom = this,
+                frag = fragment(el);
+            dom.duff(function (el) {
+                el.appendChild(frag);
+            });
+            return dom;
+        },
+        DOMM = factories.DOMM = factories.Collection.extend('DOMM', extend({
             /**
              * @func
              * @name DOMM#constructor
- * @param {            String | Node | Function
-        }
-        str - string to query the dom with, or a
-        function to run on document load, or an element to wrap in a DOMM instance
+             * @param {String | Node | Function} str - string to query the dom with, or a function to run on document load, or an element to wrap in a DOMM instance
              * @returns {DOMM} instance
              */
             constructor: function (str, ctx) {
-                var i, els, elsLen, $doc, docEl, docData, dom = this;
+                var i, els, handler, elsLen, $doc, docEl, docData, dom = this;
+                dom.context = ctx || win[DOCUMENT];
                 if (isFunction(str)) {
-                    if (_.isDoc(ctx)) {
+                    if (isDocument(ctx)) {
                         $doc = $(ctx);
-                        docEl = $doc.get();
+                        docEl = $doc[INDEX]();
                         docData = elementData.get(docEl);
+                        handler = bind(str, $doc);
                         if (docData.isReady) {
                             // make it async
-                            setTimeout(function () {
-                                str.apply($doc, [$, docData.DOMContentLoadedEvent]);
+                            _.AF.once(function () {
+                                handler($, docData.DOMContentLoadedEvent);
                             });
                             els = dom.unwrap();
                         } else {
                             dom = $doc.on('DOMContentLoaded', function (e) {
-                                _.unshift(args, $);
-                                str.apply(this, args);
+                                handler($, e);
                             });
                             els = dom.unwrap();
                         }
@@ -6742,7 +6314,7 @@ application.scope().module('DOMM', function (module, app, _) {
                         if (str[0] === '<') {
                             els = makeTree(str);
                         } else {
-                            els = _.Sizzle(str, ctx);
+                            els = Sizzle(str, ctx);
                         }
                     } else {
                         els = str;
@@ -6751,7 +6323,7 @@ application.scope().module('DOMM', function (module, app, _) {
                         }
                     }
                 }
-                Collection.call(dom, els);
+                Collection.constructor.call(dom, els);
                 return dom;
             },
             /**
@@ -6760,11 +6332,11 @@ application.scope().module('DOMM', function (module, app, _) {
              * @description asks if the first or specified index of the object is a window type object
              * @returns {Boolean}
              */
-            isWin: function (num) {
-                return isWin(this.index(num || 0) || {});
+            isWindow: function (num) {
+                return isWindow(this[INDEX](num || 0) || {});
             },
-            isDom: function (num) {
-                return isDom(this.index(num || 0) || {});
+            isElement: function (num) {
+                return isElement(this[INDEX](num || 0) || {});
             },
             /**
              * @func
@@ -6772,14 +6344,14 @@ application.scope().module('DOMM', function (module, app, _) {
              * @description asks if the first or specified index of the object is a document type object
              * @returns {Boolean}
              */
-            isDoc: function (num) {
-                return isDoc(this.index(num || 0) || {});
+            isDocument: function (num) {
+                return isDocument(this[INDEX](num || 0) || {});
             },
-            isFrag: function (num) {
-                return isFrag(this.index(num || 0) || {});
+            isFragment: function (num) {
+                return isFrag(this[INDEX](num || 0) || {});
             },
-            frag: function (el) {
-                return _.frag(el || (this && this[ITEMS]));
+            fragment: function (el) {
+                return fragment(el || (this && this[ITEMS]));
             },
             /**
              * @func
@@ -6856,11 +6428,11 @@ application.scope().module('DOMM', function (module, app, _) {
              */
             once: expandEventListenerArguments(eachProc(function (el, types, namespace, selector, fn, capture) {
                 var args = toArray(arguments);
-                args[4] = _.once(function () {
-                    _removeEventListener.apply(null, args);
+                args[4] = once(function () {
+                    _removeEventListener.apply(NULL, args);
                     return fn.apply(this, arguments);
                 });
-                _addEventListener.apply(null, args);
+                _addEventListener.apply(NULL, args);
             })),
             /**
              * @func
@@ -6870,7 +6442,7 @@ application.scope().module('DOMM', function (module, app, _) {
              */
             css: ensureOne(function (key, value) {
                 var dom = this,
-                    ret = css(dom[ITEMS], key, value);
+                    ret = css(dom.unwrap(), key, value);
                 if (isBlank(ret)) {
                     ret = dom;
                 }
@@ -6885,24 +6457,24 @@ application.scope().module('DOMM', function (module, app, _) {
              * @name DOMM#allDom
              * @returns {Boolean} value indicating whether or not there were any non dom elements found in the collection
              */
-            allDom: function () {
+            allElements: function () {
                 var count = 0,
-                    length = this.length(),
-                    result = length && find(this.unwrap(), negate(isDom));
-                return length && result === void 0;
+                    length = this[LENGTH](),
+                    result = length && find(this.unwrap(), negate(isElement));
+                return length && result === blank;
             },
             /**
              * @func
              * @name DOMM#height
              * @returns {Number} height of the first object, adjusting for the different types of possible objects such as dom element, document or window
              */
-            height: dimFinder('height', 'scrollHeight', 'innerHeight'),
+            height: dimFinder(HEIGHT, 'scrollHeight', 'innerHeight'),
             /**
              * @func
              * @name DOMM#width
              * @returns {Number} width of the first object, adjusting for the different types of possible objects such as dom element, document or window
              */
-            width: dimFinder('width', 'scrollWidth', 'innerWidth'),
+            width: dimFinder(WIDTH, 'scrollWidth', 'innerWidth'),
             /**
              * @func
              * @name DOMM#getStyle
@@ -6911,8 +6483,8 @@ application.scope().module('DOMM', function (module, app, _) {
             getStyle: function (eq) {
                 var ret = {},
                     first = this.get();
-                if (first && isDom(first)) {
-                    ret = getComputed(first);
+                if (first && isElement(first)) {
+                    ret = getComputed(first, this.context);
                 }
                 return ret;
             },
@@ -6950,7 +6522,7 @@ application.scope().module('DOMM', function (module, app, _) {
                 if (isBlank(val)) {
                     value = el[key];
                     if (isBlank(value)) {
-                        value = null;
+                        value = NULL;
                     }
                 } else {
                     if (isBlank(val)) {
@@ -6983,7 +6555,7 @@ application.scope().module('DOMM', function (module, app, _) {
              * @returns {DOMM} instance
              */
             last: attachPrevious(function () {
-                return eq(this.unwrap(), this.length() - 1);
+                return eq(this.unwrap(), this[LENGTH]() - 1);
             }),
             /**
              * @func
@@ -7003,8 +6575,8 @@ application.scope().module('DOMM', function (module, app, _) {
              */
             each: function (callback) {
                 var domm = this;
-                if (domm.length()) {
-                    callback = _.bind(callback, domm);
+                if (domm[LENGTH]()) {
+                    callback = bind(callback, domm);
                     duff(domm[ITEMS], function (item_, index, all) {
                         var item = $([item_]);
                         callback(item, index, all);
@@ -7065,7 +6637,7 @@ application.scope().module('DOMM', function (module, app, _) {
                         retVals.push(1);
                     }
                 });
-                return (dom.length() && countLen[LENGTH_STRING] === retVals[LENGTH_STRING]);
+                return (dom[LENGTH]() && countLen[LENGTH] === retVals[LENGTH]);
             },
             /**
              * @func
@@ -7088,7 +6660,10 @@ application.scope().module('DOMM', function (module, app, _) {
              * @param {Number} [num=0] - index to get the boxmodel of
              */
             box: function (num) {
-                return box(this.get(num));
+                return box(this[INDEX](num), this.context);
+            },
+            flow: function (num) {
+                return flow(this[index](num), this.context);
             },
             /**
              * @func
@@ -7109,27 +6684,20 @@ application.scope().module('DOMM', function (module, app, _) {
              * @returns {DOMM} instance
              */
             hide: eachProc(ensureDOM(function (el) {
-                el.style.display = 'none';
+                el[STYLE].display = 'none';
             })),
             /**
              * @func
              * @name DOMM#show
              */
             show: eachProc(ensureDOM(function (el) {
-                el.style.display = 'block';
+                el[STYLE].display = 'block';
             })),
             /**
              * @func
              * @name DOMM#append
              */
-            append: function (el) {
-                var dom = this,
-                    frag = _.frag(el);
-                dom.duff(function (el) {
-                    el.appendChild(frag);
-                });
-                return dom;
-            },
+            append: append,
             /**
              * @func
              * @name DOMM#next
@@ -7155,7 +6723,7 @@ application.scope().module('DOMM', function (module, app, _) {
              */
             insertAt: function (els, idx) {
                 var point, dom = this,
-                    frag = _.frag(els),
+                    frag = fragment(els),
                     children = dom.children();
                 if (!idx && !isNumber(idx)) {
                     point = {};
@@ -7167,10 +6735,10 @@ application.scope().module('DOMM', function (module, app, _) {
                     point = dom.children().filter(idx);
                 }
                 if (isInstance(point, DOMM)) {
-                    point = point.get(0);
+                    point = point[INDEX](0);
                 }
-                if (!_.isDom(point)) {
-                    point = null;
+                if (!_.isElement(point)) {
+                    point = NULL;
                 }
                 dom.duff(function (el) {
                     el.insertBefore(frag, point);
@@ -7183,7 +6751,7 @@ application.scope().module('DOMM', function (module, app, _) {
              * @returns {DOMM} instance
              */
             remove: eachProc(function (el) {
-                var parent = el.parentNode;
+                var parent = el[PARENT_NODE];
                 if (isObject(parent) && isFunction(parent.removeChild)) {
                     parent.removeChild(el);
                 }
@@ -7200,7 +6768,7 @@ application.scope().module('DOMM', function (module, app, _) {
                             var rets, found, parent = el,
                                 next = original;
                             while (parent && !found) {
-                                rets = fn(parent.parentNode || parent.defaultView, original, next);
+                                rets = fn(parent[PARENT_NODE] || parent[DEFAULT_VIEW], original, next);
                                 parent = rets[0];
                                 found = rets[1];
                                 next = rets[2];
@@ -7222,25 +6790,25 @@ application.scope().module('DOMM', function (module, app, _) {
                     },
                     speshal = {
                         document: function (parent, original, next) {
-                            return [parent, isDoc(parent)];
+                            return [parent, isDocument(parent)];
                         },
                         window: function (parent, original, next) {
-                            return [parent, isWin(parent)];
+                            return [parent, isWindow(parent)];
                         },
                         iframe: function (parent, original, next) {
                             var win, found = 1;
-                            if (isWin(parent) && parent !== window.top) {
+                            if (isWindow(parent) && parent !== window[TOP]) {
                                 if (parent.location.protocol.indexOf('http') === -1) {
                                     win = parent;
                                     found = 1;
-                                    try {
+                                    wraptry(function () {
                                         parent = win.frameElement;
                                         if (parent) {
                                             found = 0;
                                         }
-                                    } catch (e) {
+                                    }, function () {
                                         found = 1;
-                                    }
+                                    });
                                 }
                             }
                             return [parent, (!found && parent)];
@@ -7248,7 +6816,7 @@ application.scope().module('DOMM', function (module, app, _) {
                     };
                 return attachPrevious(function (original) {
                     var iterator, doDefault = 1,
-                        collect = coll();
+                        collect = Collection();
                     if (isNumber(original)) {
                         iterator = number;
                     } else {
@@ -7291,19 +6859,19 @@ application.scope().module('DOMM', function (module, app, _) {
                 if (_.isInstance(els, Collection)) {
                     els = els.unwrap();
                 } else {
-                    if (isDom(els)) {
+                    if (isElement(els)) {
                         els = [els];
                     }
                 }
-                if (els[LENGTH_STRING]) {
-                    has = els[LENGTH_STRING];
+                if (els[LENGTH]) {
+                    has = els[LENGTH];
                 }
                 find(els, function (el) {
                     if (domm.posit(el)) {
                         has--;
                     }
                 });
-                return has === 0 && els && els[LENGTH_STRING];
+                return has === 0 && els && els[LENGTH];
             },
             /**
              * @func
@@ -7313,7 +6881,7 @@ application.scope().module('DOMM', function (module, app, _) {
              */
             indexOf: function (el, lookAfter) {
                 if (isInstance(el, DOMM)) {
-                    el = el.get();
+                    el = el[INDEX]();
                 }
                 return indexOf(this[ITEMS], el, lookAfter);
             },
@@ -7345,12 +6913,12 @@ application.scope().module('DOMM', function (module, app, _) {
                     bR = box.borderRight,
                     bL = box.borderLeft;
                 return {
-                    bottom: box.bottom - pB - bB,
-                    height: box.height - pT - bT - pB - bB,
-                    right: box.right - pR - bR,
-                    width: box.width - pL - bL - pR - bR,
-                    left: box.left + pL - bL,
-                    top: box.top + pT - bT
+                    bottom: box[BOTTOM] - pB - bB,
+                    height: box[HEIGHT] - pT - bT - pB - bB,
+                    right: box[RIGHT] - pR - bR,
+                    width: box[WIDTH] - pL - bL - pR - bR,
+                    left: box[LEFT] + pL - bL,
+                    top: box[TOP] + pT - bT
                 };
             },
             /**
@@ -7365,42 +6933,24 @@ application.scope().module('DOMM', function (module, app, _) {
                     mB = box.marginBottom,
                     mR = box.marginRight;
                 return {
-                    height: box.height + mT + mB,
-                    bottom: box.bottom + mB,
-                    width: box.width + mR + mL,
-                    right: box.right + mR,
-                    left: box.left + mL,
-                    top: box.top + mT
+                    height: box[HEIGHT] + mT + mB,
+                    bottom: box[BOTTOM] + mB,
+                    width: box[WIDTH] + mR + mL,
+                    right: box[RIGHT] + mR,
+                    left: box[LEFT] + mL,
+                    top: box[TOP] + mT
                 };
-            },
-            /**
-             * @func
-             * @name DOMM#stopEvent
-             */
-            stopEvent: function (e, now) {
-                e = _.Event(e);
-                e.stopPropagation();
-                e.preventDefault();
-                if (!isBlank(e.cancelBubble)) {
-                    e.cancelBubble = BOOLEAN_TRUE;
-                }
-                if (!isBlank(e.cancel)) {
-                    e.cancel = BOOLEAN_TRUE;
-                }
-                if (now) {
-                    e.stopImmediatePropagation();
-                }
             },
             /**
              * @func
              * @name DOMM#childOf
              */
-            childOf: function (oParent) {
+            childOf: function (oParent_) {
                 var domm = this,
-                    _oParent = $(oParent),
-                    children = domm.unwrap();
-                oParent = _oParent.unwrap();
-                return !!domm.length() && !!_oParent.length() && !find(oParent, function (_parent) {
+                    _oParent = $(oParent_),
+                    children = domm.unwrap(),
+                    oParent = _oParent.unwrap();
+                return !!children[LENGTH] && !!oParent[LENGTH] && !find(oParent, function (_parent) {
                     return find(children, function (child) {
                         var parent = child,
                             finding = BOOLEAN_TRUE;
@@ -7408,7 +6958,7 @@ application.scope().module('DOMM', function (module, app, _) {
                             if (_parent === parent) {
                                 finding = BOOLEAN_FALSE;
                             }
-                            parent = parent.parentNode;
+                            parent = parent[PARENT_NODE];
                         }
                         return finding;
                     });
@@ -7417,13 +6967,13 @@ application.scope().module('DOMM', function (module, app, _) {
             serialize: function () {
                 var domm = this,
                     arr = [];
-                domm.each(function (idx, $node) {
-                    var node = $node.index(),
+                domm.each(function ($node) {
+                    var node = $node[INDEX](),
                         children = $node.children().serialize(),
                         obj = {
                             tag: node.localName
                         };
-                    if (children.length) {
+                    if (children[LENGTH]) {
                         obj.children = children;
                     }
                     if (node.innerText) {
@@ -7440,10 +6990,10 @@ application.scope().module('DOMM', function (module, app, _) {
                 return JSON.stringify(this.serialize());
             }
         }, _.wrap({
-            id: 0,
-            src: 0,
-            checked: 0,
-            disabled: 0,
+            id: BOOLEAN_FALSE,
+            src: BOOLEAN_FALSE,
+            checked: BOOLEAN_FALSE,
+            disabled: BOOLEAN_FALSE,
             tag: 'localName',
             classes: 'className'
         }, function (attr, api) {
@@ -7456,19 +7006,21 @@ application.scope().module('DOMM', function (module, app, _) {
                     setter[attr] = str;
                     return this.attr(setter);
                 }
-                item = this.get(str);
+                item = this[INDEX](str);
                 if (item) {
                     return item[attr];
                 }
             };
-        }), _.wrap({
+        }), wrap({
             play: 'playing',
             pause: 'paused'
-        }, triggerEventWrapper), _.wrap(gapSplit('blur focus focusin focusout load resize scroll unload click dblclick mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave change select submit keydown keypress keyup error contextmenu'), function (attr) {
+        }, triggerEventWrapper), wrap(gapSplit('blur focus focusin focusout load resize scroll unload click dblclick mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave change select submit keydown keypress keyup error contextmenu'), function (attr) {
             return triggerEventWrapper(attr);
         })), BOOLEAN_TRUE),
-        $ = _DOMM(sizzleDoc);
-    app.addModuleArgs([$]);
+        $ = _DOMM(sizzleDoc),
+        Sizzle = function (str, ctx) {
+            return (ctx || sizzleDoc).querySelectorAll(str);
+        };
     _.exports({
         covers: covers,
         center: center,
@@ -7476,107 +7028,42 @@ application.scope().module('DOMM', function (module, app, _) {
         distance: distance,
         css: css,
         box: box,
-        frag: frag,
-        isDom: isDom,
-        isNode: isNode,
-        isWin: isWin,
-        isWindow: isWin,
-        isDoc: isDoc,
-        isDocument: isDoc,
-        isFrag: isFrag,
-        device: deviceCheck,
-        makeEl: makeEl,
-        makeEls: makeEls,
-        createDocFrag: createDocFrag,
-        hasWebP: hasWebP,
-        makeTree: makeTree,
-        numToUnits: numToUnits,
-        unitsToNumConverters: unitsToNumConverters,
-        numToUnitsConverters: numToUnitsConverters,
-        position: position,
-        unitsToNum: unitsToNum,
-        buildStyles: buildStyles,
-        changeClass: changeClass,
-        unitRemoval: unitRemoval,
-        getStyleSize: getStyleSize,
-        htmlDataMatch: htmlDataMatch,
-        toStyleString: toStyleString,
-        trustedEvents: trustedEvents,
-        makeEmptyFrame: makeEmptyFrame,
-        isTrustedEvent: isTrustedEvent,
-        devicePxRatio: devicePixelRatio,
-        setAttribute: setAttribute,
-        getAttribute: getAttribute,
-        attributeInterface: attributeInterface,
-        attributeRegExpMaker: function (attr, regex) {
-            var stringified = regex.toString(),
-                converted = stringified.slice(1, stringified[LENGTH_STRING] - 1).replace(new RegExp('{{{}}}'), attr);
-            return new RegExp(converted, 'mgi');
-        },
-        Sizzle: function (str, ctx) {
-            return (ctx || sizzleDoc).querySelectorAll(str);
-        },
-        stashAttrs: function (el, extras) {
-            var data = _.stashedAttrs(el);
-            duff(gapSplit('id class maxWidth width minWidth maxHeight height minHeight style').concat(gapSplit(extras) || []), function (idx, attr) {
-                if (!_.has(data.backup, attr)) {
-                    data.stashedCount++;
-                }
-                data.backup[attr] = _.attributeInterface(el, unCamelCase(attr));
-            });
-        },
-        stashedAttrs: function (el) {
-            var obj = {},
-                data = elementData.get(el);
-            if (!data.backup) {
-                data.backup = {};
-            }
-            if (!data.stashedCount) {
-                data.stashedCount = 0;
-            }
-            return data;
-        },
-        resetAttrs: function (el) {
-            var data = elementData.get(el);
-            each(data.backup, function (key, val) {
-                attributeInterface(el, unCamelCase(key), val);
-            });
-        },
-        elementData: elementData,
-        eventLists: {
-            Event: Event,
-            SVGEvent: SVGEvent,
-            KeyboardEvent: KeyboardEvent,
-            GamePadEvent: GamePadEvent,
-            CompositionEvent: CompositionEvent,
-            MouseEvents: MouseEvents,
-            TouchEvents: TouchEvents,
-            DeviceEvents: DeviceEvents,
-            FocusEvent: FocusEvent,
-            TimeEvent: TimeEvent,
-            AnimationEvent: AnimationEvent,
-            AudioProcessingEvent: AudioProcessingEvent,
-            UIEvents: UIEvents,
-            ProgressEvent: ProgressEvent,
-            AllEvents: AllEvents
-        }
+        fragment: fragment,
+        isElement: isElement,
+        isWindow: isWindow,
+        isDocument: isDocument,
+        isFragment: isFrag,
+        createElement: createElement,
+        createElements: createElements,
+        createDocumentFragment: createDocumentFragment,
+        Sizzle: Sizzle,
+        unitToNumber: unitToNumber,
+        numberToUnit: numberToUnit
     });
+    app.addModuleArgs([$]);
 });
-application.scope().module('View', function (module, app, _, $) {
+application.scope().module('View', function (module, app, _, factories, $) {
     var blank, each = _.each,
-        isFn = _.isFn,
+        isFunction = _.isFunction,
         duff = _.duff,
-        factories = _.factories,
         Box = factories.Box,
-        extendFrom = _.extendFrom,
         isString = _.isString,
         gapSplit = _.gapSplit,
         isArray = _.isArray,
+        intendedObject = _.intendedObject,
+        reverseParams = _.reverseParams,
         bind = _.bind,
+        map = _.map,
+        isInstance = _.isInstance,
         has = _.has,
+        clone = _.clone,
+        result = _.result,
         protoProp = _.protoProp,
-        lengthString = 'length',
-        optionsString = 'options',
+        LENGTH = 'length',
+        OPTIONS = 'options',
+        PARENT = 'parent',
+        BOOLEAN_TRUE = !0,
+        BOOLEAN_FALSE = !1,
         templates = {},
         compile = function (id, force) {
             var matches, tag, template, attrs, templateFn = templates[id];
@@ -7584,7 +7071,7 @@ application.scope().module('View', function (module, app, _, $) {
                 tag = $(id);
                 template = tag.html();
                 matches = template.match(/\{\{([\w\s\d]*)\}\}/mgi);
-                attrs = _.map(matches, function (match) {
+                attrs = map(matches, function (match) {
                     return {
                         match: match,
                         attr: match.split('{{').join('').split('}}').join('').trim()
@@ -7593,7 +7080,7 @@ application.scope().module('View', function (module, app, _, $) {
                 template = template.trim();
                 templateFn = templates[id] = function (obj) {
                     var str = template,
-                        clone = _.clone(obj);
+                        clone = clone(obj);
                     duff(attrs, function (idx, match) {
                         if (!clone[match.attr]) {
                             clone[match.attr] = '';
@@ -7604,35 +7091,6 @@ application.scope().module('View', function (module, app, _, $) {
                 };
             }
             return templateFn;
-        },
-        scrapeData = function (model, el, attributes) {
-            var val, value, str = model.dataScrape;
-            if (str) {
-                value = el.data(str);
-                if (isString(value)) {
-                    val = {};
-                    val[_.camelCase(str)] = value;
-                    value = val;
-                }
-                _.extend(attributes, value);
-            }
-        },
-        ensureUIObj = function (fn) {
-            return function () {
-                var ui, view = this,
-                    viewEl = view.el;
-                if (!_.has(view, 'ui')) {
-                    ui = view.ui || {};
-                    view.ui = {};
-                    each(ui, function (domm, key) {
-                        view.ui[key] = $();
-                        viewEl.find(domm).duff(function (el) {
-                            view.attachUIElement(key, el);
-                        });
-                    });
-                }
-                return fn.apply(view, arguments);
-            };
         },
         makeDelegateEventKey = function (view, name) {
             return name + '.delegateEvents' + view.cid;
@@ -7653,7 +7111,7 @@ application.scope().module('View', function (module, app, _, $) {
                 return _key += namespace;
             }).join(' ');
         },
-        normalizeUIString = function(uiString, ui) {
+        normalizeUIString = function (uiString, ui) {
             return uiString.replace(/@ui\.[a-zA-Z_$0-9]*/g, function (r) {
                 return ui[r.slice(4)];
             });
@@ -7662,7 +7120,7 @@ application.scope().module('View', function (module, app, _, $) {
         // a given key for triggers and events
         // swaps the @ui with the associated selector.
         // Returns a new, non-mutated, parsed events hash.
-        normalizeUIKeys = function(hash, ui) {
+        normalizeUIKeys = function (hash, ui) {
             return _.reduce(hash, function (memo, val, key) {
                 var normalizedKey = Marionette.normalizeUIString(key, ui);
                 memo[normalizedKey] = val;
@@ -7691,11 +7149,10 @@ application.scope().module('View', function (module, app, _, $) {
             duff(props, function (idx, prop) {
                 if (has(from, prop)) {
                     to[prop] = from[prop];
-                    from[prop] = void 0;
                 }
             });
         },
-        View = extendFrom.Box('View', {
+        View = factories.Box.extend('View', {
             /**
              * @func
              * @name View#constructor
@@ -7711,11 +7168,8 @@ application.scope().module('View', function (module, app, _, $) {
                 var model = this;
                 pluckviews(secondary, model, viewplucks);
                 model._ensureElement();
-                Box.apply(model, arguments);
+                Box.constructor.apply(model, arguments);
                 return model;
-            },
-            childViewContainer: function () {
-                return this.el;
             },
             $: function (selector) {
                 return this.el.find(selector);
@@ -7737,24 +7191,26 @@ application.scope().module('View', function (module, app, _, $) {
                 return regionsManager;
             },
             _appendChildElements: function () {
-                var view = this,
-                    // scoped under view because it always has to be inside of view
-                    el = view.$(_.result(view, 'childViewContainer'));
-                // view.children.eachCall('render');
-                view.children.each(function (idx, child) {
-                    if (_.result(child, 'filter')) {
-                        child.render();
+                var parentView, view = this;
+                view.regionManager.each(function (region) {
+                    region.children.each(function (child) {
+                        if (result(child, 'filter')) {
+                            child.render();
+                        }
+                    });
+                    if (!parentView) {
+                        parentView = view.parentView();
                     }
+                    if (view[PARENT] && view[PARENT].rendered()) {
+                        region._passBufferedViews();
+                    }
+                    // if any were rendered
+                    el.append(view._bufferedEls);
                 });
-                if (view.parent && !view.parent.rendered()) {
-                    view._passBufferedViews();
-                }
-                // if any were rendered
-                el.append(view._bufferedEls);
             },
             _establishRegions: function () {
                 var regionsManager, view = this,
-                    regions = view._establishedRegions || _.result(view, 'regions');
+                    regions = view._establishedRegions || result(view, 'regions');
                 if (regions) {
                     view._establishedRegions = regions;
                 }
@@ -7768,17 +7224,16 @@ application.scope().module('View', function (module, app, _, $) {
             render: function () {
                 var frag = _.createDocFrag(),
                     view = this;
-                view.isRendered = !1;
+                view.isRendered = BOOLEAN_FALSE;
+                // prep the object with extra members (doc frags on regionviews,
+                // list of children to trigger events on)
                 view._ensureBufferedViews();
-                // detach this element so we don't cause more reflows than necessary
-                // view._detachElement();
-                // remove the child elements
-                // request extra data or something before rendering: is still intact
+                // request extra data or something before rendering: dom is still completely intact
                 view.dispatchEvent('before:render');
-                // set render flat
-                view.isRendered = !1;
                 // unbinds and rebinds element only if it changes
                 view.setElement(view.el);
+                // extra step to wipe element attributes?
+                // update new element's attributes
                 view._setElAttributes();
                 // renders the html
                 view._renderHTML();
@@ -7788,8 +7243,11 @@ application.scope().module('View', function (module, app, _, $) {
                 view._establishRegions();
                 // puts children back inside parent
                 view._appendChildElements();
+                // attach buffered children
                 view._attachBufferedViews();
-                view.isRendered = !0;
+                // mark the view as rendered
+                view.isRendered = BOOLEAN_TRUE;
+                // dispatch the render event
                 view.dispatchEvent('render');
                 return view;
             },
@@ -7826,18 +7284,18 @@ application.scope().module('View', function (module, app, _, $) {
             // an element from the `id`, `className` and `tagName` properties.
             _ensureElement: function () {
                 var el, view = this,
-                    _elementSelector = view._elementSelector || _.result(view, 'el');
+                    _elementSelector = view._elementSelector || result(view, 'el');
                 if (_elementSelector) {
                     view._elementSelector = _elementSelector;
                 }
-                if (!_.isInstance(_elementSelector, _.DOMM)) {
+                if (!isInstance(_elementSelector, _.DOMM)) {
                     if (_.isString(_elementSelector)) {
                         // sets external element
                         el = _elementSelector;
                     } else {
                         // defauts back to wrapping the element
                         // creates internal element
-                        el = view._createElement(_.result(view, 'tagName'));
+                        el = view._createElement(result(view, 'tagName'));
                         // subclassed to expand the attributes that can be used
                     }
                     view.setElement(el);
@@ -7845,9 +7303,9 @@ application.scope().module('View', function (module, app, _, $) {
             },
             _setElAttributes: function () {
                 var view = this;
-                var attrs = _.result(view, 'elementAttributes') || {};
+                var attrs = result(view, 'elementAttributes') || {};
                 if (view.className) {
-                    attrs['class'] = _.result(view, 'className');
+                    attrs['class'] = result(view, 'className');
                 }
                 view._setAttributes(attrs);
             },
@@ -7876,7 +7334,7 @@ application.scope().module('View', function (module, app, _, $) {
                             methods = [methods_];
                         }
                         __events[makeDelegateEventKeys(view, key)] = _.map(methods, function (idx, method) {
-                            return _.bind(view[method] || method, view);
+                            return bind(view[method] || method, view);
                         });
                     });
                     el.on(__events);
@@ -7900,7 +7358,7 @@ application.scope().module('View', function (module, app, _, $) {
                             methods = [methods_];
                         }
                         __events[makeDelegateEventKeys(view, key)] = _.map(methods, function (idx, method) {
-                            return _.bind(view[method] || method, view);
+                            return bind(view[method] || method, view);
                         });
                     });
                     el.on(__events);
@@ -7909,10 +7367,10 @@ application.scope().module('View', function (module, app, _, $) {
             },
             parentView: function () {
                 var found, view = this,
-                    parent = view.parent;
-                while (found && parent && !_.isInstance(parent, View)) {
-                    parent = parent.parent;
-                    if (_.isInstance(parent, View)) {
+                    parent = view[PARENT];
+                while (found && parent && !isInstance(parent, View)) {
+                    parent = parent[PARENT];
+                    if (isInstance(parent, View)) {
                         found = parent;
                     }
                 }
@@ -7920,7 +7378,7 @@ application.scope().module('View', function (module, app, _, $) {
             },
             _bindUIElements: function () {
                 var view = this,
-                    _uiBindings = view._uiBindings || _.result(view, 'ui');
+                    _uiBindings = view._uiBindings || result(view, 'ui');
                 view.ui = view.ui || {};
                 if (_uiBindings) {
                     // save it to skip the result call later
@@ -7985,7 +7443,7 @@ application.scope().module('View', function (module, app, _, $) {
                 var ret, _bufferedViews, view = this;
                 view._ensureBufferedViews();
                 ret = Box.prototype.add.call(view, _.isArrayLike(models_) ? models_ : [models_]);
-                _.duff(ret, function (view) {
+                duff(ret, function (view) {
                     view._attemptAttach();
                 });
                 return ret;
@@ -8016,11 +7474,11 @@ application.scope().module('View', function (module, app, _, $) {
             _attachBufferedChildren: function () {
                 var childView, idx = 0,
                     view = this,
-                    el = view.$(_.result(view, 'childViewContainer'));
+                    el = view.$(result(view, 'childViewContainer'));
                 if (view._bufferedEls) {
                     el.append(view._bufferedEls);
                 }
-                while (view._bufferedViews && view._bufferedViews[lengthString] && view._bufferedViews[idx]) {
+                while (view._bufferedViews && view._bufferedViews[LENGTH] && view._bufferedViews[idx]) {
                     childView = view._bufferedViews[idx];
                     idx++;
                     // appends children to parent el
@@ -8033,17 +7491,11 @@ application.scope().module('View', function (module, app, _, $) {
             _attachBufferedViews: function () {
                 var parent = this;
                 parent.el.append(parent._bufferedEls);
-                _.duff(parent._bufferedViews, function (idx, buffered) {
+                duff(parent._bufferedViews, function (idx, buffered) {
                     buffered.isAttached = true;
                     buffered.dispatchEvent('attach');
                 });
             },
-            // _attachTrigger: function () {
-            //     var parent = this;
-            //     // only has to happen once
-            //     parent._attachBufferedViews();
-            //     parent._resetBuffered();
-            // },
             attach: function (parent_) {
                 var view = this;
                 if (view.attached()) {
@@ -8066,18 +7518,14 @@ application.scope().module('View', function (module, app, _, $) {
                     }
                 }
             },
-            // _conditionallyDispachAttached: function () {
-            //     var view = this,
-            //         parent = view.parent;
-            //     if (!view.attached() && parent && parent.attached()) {
-            //         view.isAttached = true;
-            //         parent.el.append(view.el);
-            //         view.dispatchEvent('attach');
-            //     }
-            // },
             detach: function () {
                 var view = this;
+                if (view.isDetaching) {
+                    return;
+                }
+                view.isDetaching = BOOLEAN_TRUE;
                 view.dispatchEvent('before:detach');
+                view.isDetached = BOOLEAN_TRUE;
                 view._detachElement();
             },
             /**
@@ -8088,12 +7536,11 @@ application.scope().module('View', function (module, app, _, $) {
              */
             destroy: function (opts) {
                 var view = this;
-                view.isRendered = false;
-                // done here for redundancy when using iframes
+                view.isRendered = BOOLEAN_FALSE;
                 view.detach();
                 // remove all events
                 // should internally call remove
-                Box.prototype.destroy.call(view);
+                Box.constructor.prototype.destroy.call(view);
                 return view;
             },
             rendered: function () {
@@ -8105,7 +7552,7 @@ application.scope().module('View', function (module, app, _, $) {
             attached: function () {
                 return this.isAttached;
             }
-        }, !0),
+        }, BOOLEAN_TRUE),
         Region = factories.View.extend('Region', {
             Model: View,
             _delegateEvents: _.noop,
@@ -8131,14 +7578,14 @@ application.scope().module('View', function (module, app, _, $) {
                     currentView.detach();
                 }
             }
-        }, true),
+        }, BOOLEAN_TRUE),
         RegionManager = factories.Collection.extend('RegionManager', {
             Model: Region,
             createRegion: function (where, region_) {
                 var scope, regionManager = this,
                     // assume that it is a region
                     region = region_;
-                if (!(region instanceof regionManager.Model)){
+                if (!isInstance(region, regionManager.Model)) {
                     region = new regionManager.Model({
                         id: where
                     }, {
@@ -8164,7 +7611,7 @@ application.scope().module('View', function (module, app, _, $) {
                 this.$ = $;
             },
             _resetElementContext: function () {
-                this.$ = void 0;
+                this.$ = blank;
             },
             defaultContext: function () {
                 return $;
@@ -8174,77 +7621,69 @@ application.scope().module('View', function (module, app, _, $) {
                 var parent = regionManager.parent;
                 var _$ = _.has(regionManager, '$') ? regionManager.$ : $;
                 if (parent && parent.$ && !regionManager.$) {
-                    regionManager.$ = _.bind(parent.$, parent);
+                    regionManager.$ = bind(parent.$, parent);
                     _$ = regionManager.$;
                 }
                 return _$;
             },
             establishRegion: function (key, value) {
                 var regionManager = this;
-                var region = regionManager.get(key);
-                if (!region) {
-                    regionManager.createRegion(key, value);
-                }
-            },
-            establishRegions: function (regions) {
-                var regionManager = this;
-                var reversed = _.reverseParams(_.bind(regionManager.establishRegion, regionManager));
-                _.each(regions, reversed, regionManager);
+                intendedObject(key, value, function (key, value) {
+                    if (!regionManager.get(key)) {
+                        regionManager.createRegion(key, value);
+                    }
+                });
                 return regionManager;
             }
-        }, true);
-    _.exports({
-        htmlCompile: compile
-    });
+        }, BOOLEAN_TRUE);
     app.regionManager = new RegionManager();
     app.extend({
-        addRegion: function (where, selector) {
+        getRegion: viewGetRegion,
+        addRegion: function (id, selector) {
             var app = this;
             var regionManager = app.regionManager;
-            _.intendedObject(where, selector, function (key, value) {
+            intendedObject(id, selector, function (key, value) {
                 var region;
                 regionManager.establishRegion(key, value);
                 region = regionManager.get(key);
-                region.isAttached = true;
+                region.isAttached = BOOLEAN_TRUE;
             });
-            return app;
-        },
-        getRegion: viewGetRegion,
-        addRegions: function (obj) {
-            var app = this;
-            app.addRegion(obj);
             return app;
         }
     });
 });
-application.scope().module('Buster', function (module, app, _, $) {
+application.scope().module('Buster', function (module, app, _, factories, $) {
     var blank, isReceiving = 0,
         get = _.get,
         duff = _.duff,
+        Collection = factories.Collection,
         gapSplit = _.gapSplit,
         associator = _.associator,
         unitsToNum = _.unitsToNum,
         roundFloat = _.roundFloat,
         extend = _.extend,
-        factories = _.factories,
+        console = _.console,
         infin = 32767,
-        attributesString = 'attributes',
-        // 0 is first positive -1 is first non positive
+        ATTRIBUTES = 'attributes',
+        reference = _.reference,
+        now = _.now,
+        BOOLEAN_TRUE = !0,
+        BOOLEAN_FALSE = !1,
         nInfin = -infin - 1,
-        lengthString = 'length',
-        heightString = 'height',
-        widthString = 'width',
-        bottomString = 'bottom',
-        rightString = 'right',
-        leftString = 'left',
-        topString = 'top',
-        marginBottomString = 'marginBottom',
-        marginRightString = 'marginRight',
-        minHeightString = 'minHeight',
-        maxHeightString = 'maxHeight',
-        minWidthString = 'minWidth',
-        maxWidthString = 'minWidth',
-        queuedMessageIndexString = 'queuedMessageIndex',
+        LENGTH = 'length',
+        HEIGHT = 'height',
+        WIDTH = 'width',
+        BOTTOM = 'bottom',
+        RIGHT = 'right',
+        LEFT = 'left',
+        TOP = 'top',
+        MARGIN_BOTTOM = 'marginBottom',
+        MARGIN_RIGHT = 'marginRight',
+        MIN_HEIGHT = 'minHeight',
+        MAX_HEIGHT = 'maxHeight',
+        MIN_WIDTH = 'minWidth',
+        MAX_WIDTH = 'minWidth',
+        QUEUED_MESSAGE_INDEX = 'queuedMessageIndex',
         pI = _.pI,
         _setupInit = function (e) {
             var i, currentCheck, src, parentEl, frameWin, frameEl, allFrames, tippyTop, spFacts, spOFacts, shouldRespond, sameSide, topDoc, wrapper, buster = this,
@@ -8255,7 +7694,7 @@ application.scope().module('Buster', function (module, app, _, $) {
                 attrs = get(buster),
                 parts = buster.parts;
             if (app.topAccess) {
-                tippyTop = window[topString];
+                tippyTop = window[TOP];
                 topDoc = tippyTop.document;
                 wrapper = topDoc.body;
             }
@@ -8297,7 +7736,7 @@ application.scope().module('Buster', function (module, app, _, $) {
                     buster.set({
                         sameSide: 0,
                         id: data.from,
-                        referrer: _.getReference(parts.doc)
+                        referrer: reference(parts.doc)
                     });
                     extend(parts, {
                         srcElement: e.source,
@@ -8328,11 +7767,11 @@ application.scope().module('Buster', function (module, app, _, $) {
                 parentEl = buster.el.parent();
                 buster.respond(data, {
                     parent: {
-                        height: parentEl[heightString](),
-                        width: parentEl[widthString](),
+                        height: parentEl[HEIGHT](),
+                        width: parentEl[WIDTH](),
                         style: {
-                            height: parentEl.get(0).style[heightString],
-                            width: parentEl.get(0).style[widthString]
+                            height: parentEl.get(0).style[HEIGHT],
+                            width: parentEl.get(0).style[WIDTH]
                         }
                     }
                 });
@@ -8364,11 +7803,11 @@ application.scope().module('Buster', function (module, app, _, $) {
          * @arg {buster}
          */
         postMessage = function (base, buster) {
-            var busterAttrs = buster[attributesString],
+            var busterAttrs = buster[ATTRIBUTES],
                 sameSide = busterAttrs.sameSide,
                 parts = buster.parts,
                 message = JSON.stringify(base),
-                timestamp = _.nowish(),
+                timestamp = now(),
                 doReceive = function () {
                     receive({
                         data: message,
@@ -8382,7 +7821,7 @@ application.scope().module('Buster', function (module, app, _, $) {
                 if (busterAttrs.referrer) {
                     parts.sendWin.postMessage(message, busterAttrs.referrer);
                 } else {
-                    window.console.trace('missing referrer', buster);
+                    console.trace('missing referrer', buster);
                 }
             }
             if (sameSide) {
@@ -8400,27 +7839,27 @@ application.scope().module('Buster', function (module, app, _, $) {
              * @private
              */
             toInner: function (buster) {
-                var attrs = buster[attributesString],
+                var attrs = buster[ATTRIBUTES],
                     parts = buster.parts;
-                parts.sendWin = buster.parent.el.get(0).contentWindow;
-                attrs.referrer = attrs.referrer || _.getReference(parts.doc);
+                parts.sendWin = buster.parent.el.index(0).contentWindow;
+                attrs.referrer = attrs.referrer || reference(parts.doc);
                 attrs.sameSide = !buster.parent.parent.get('unfriendlyCreative');
             },
             /**
              * @private
              */
             fromInner: function (buster) {
-                var attrs = buster[attributesString],
+                var attrs = buster[ATTRIBUTES],
                     parts = buster.parts;
                 parts.sendWin = parts.receiveWin.parent;
-                attrs.referrer = attrs.referrer || _.getReference(parts.doc);
+                attrs.referrer = attrs.referrer || reference(parts.doc);
             },
             notInner: {
                 /**
                  * @private
                  */
                 noAccess: function (buster) {
-                    var url, attrs = buster[attributesString],
+                    var url, attrs = buster[ATTRIBUTES],
                         parts = buster.parts,
                         doc = parts.doc,
                         iframe = doc.createElement('iframe'),
@@ -8448,7 +7887,7 @@ application.scope().module('Buster', function (module, app, _, $) {
                             setTimeout(function () {
                                 // handle no buster file here
                                 var ret, ad = buster.parent,
-                                    adAttrs = ad[attributesString],
+                                    adAttrs = ad[ATTRIBUTES],
                                     banner = ad.children.index(1),
                                     panel = ad.children.index(2);
                                 if (!ad.busterLoaded) {
@@ -8467,8 +7906,8 @@ application.scope().module('Buster', function (module, app, _, $) {
                  * @private
                  */
                 topAccess: function (buster) {
-                    var commands, newParent = buster.el.get(0),
-                        attrs = buster[attributesString];
+                    var commands, newParent = buster.el.index(0),
+                        attrs = buster[ATTRIBUTES];
                     // if preventselfinit is true, then that means that
                     // this is being triggered by the buster file
                     if (!attrs.preventSelfInit) {
@@ -8508,13 +7947,13 @@ application.scope().module('Buster', function (module, app, _, $) {
                         preventScrollCounter = 1;
                     }
                     memo = {
-                        top: Math.min(memo[topString], calced[topString]),
-                        left: Math.min(memo[leftString], calced[leftString]),
-                        right: Math.max(memo[rightString], (calced[leftString] + calced[widthString])),
-                        bottom: Math.max(memo[bottomString], (calced[topString] + calced[heightString])),
+                        top: Math.min(memo[TOP], calced[TOP]),
+                        left: Math.min(memo[LEFT], calced[LEFT]),
+                        right: Math.max(memo[RIGHT], (calced[LEFT] + calced[WIDTH])),
+                        bottom: Math.max(memo[BOTTOM], (calced[TOP] + calced[HEIGHT])),
                         zIndex: Math.max(memo.zIndex, (+com.zIndex || 0)),
-                        marginRight: Math.max(memo[marginRightString], horizontalPush || 0),
-                        marginBottom: Math.max(memo[marginBottomString], verticalPush || 0),
+                        marginRight: Math.max(memo[MARGIN_RIGHT], horizontalPush || 0),
+                        marginBottom: Math.max(memo[MARGIN_BOTTOM], verticalPush || 0),
                         vPushCount: vPushCount + memo.vPushCount,
                         hPushCount: hPushCount + memo.hPushCount,
                         transitionDuration: Math.max(memo.transitionDuration, com.duration),
@@ -8537,7 +7976,7 @@ application.scope().module('Buster', function (module, app, _, $) {
             });
         };
     if (app.topAccess) {
-        $(window[topString]).on('message', receive);
+        $(window[TOP]).on('message', receive);
     }
     /**
      * @class Buster
@@ -8546,7 +7985,7 @@ application.scope().module('Buster', function (module, app, _, $) {
      * @augments View
      * @classDesc constructor for buster objects, which have the ability to talk across windows
      */
-    var Message = _.extendFrom.Container('Message', {
+    var Message = factories.Container.extend('Message', {
         // idAttribute: 'command',
         packet: function (data) {
             var ret = this;
@@ -8581,14 +8020,14 @@ application.scope().module('Buster', function (module, app, _, $) {
             return message;
         }
     });
-    factories.Buster = _.extendFrom.Box('Buster', {
+    factories.Buster = factories.Box.extend('Buster', {
         Model: Message,
         events: {
             unload: 'destroy',
-            'alter:isConnected': function () {
-                this.set(queuedMessageIndexString, 1);
+            'change:isConnected': function () {
+                this.set(QUEUED_MESSAGE_INDEX, 1);
             },
-            'alter:isConnected child:added': 'flush'
+            'change:isConnected child:added': 'flush'
         },
         parentEvents: {
             destroy: 'destroy'
@@ -8598,33 +8037,25 @@ application.scope().module('Buster', function (module, app, _, $) {
          * @name Buster#destroy
          */
         currentPoint: function () {
-            var currentPoint = this.get('currentPoint') || {};
-            return {
+            var currentPoint = this.get('currentPoint');
+            return currentPoint ? {
                 source: currentPoint.source,
                 srcElement: currentPoint.srcElement,
                 originTimestamp: currentPoint.timestamp,
                 frame: currentPoint.frame,
                 responder: currentPoint.responder
-            };
+            } : {};
         },
         destroy: function () {
             var buster = this,
                 attrs = get(buster);
-            buster.set({
-                isConnected: !1
-            });
-            buster.resetElements();
+            buster.set('isConnected', BOOLEAN_FALSE);
             clearTimeout(attrs.__lastMouseMovingTimeout__);
             _.AF.remove(attrs.elQueryId);
             _.AF.remove(attrs.componentTransitionAFID);
-            buster.allListeners.each(function (idx, obj) {
-                obj.els.off(obj.name, obj.fn, obj.capture);
-            });
-            buster.el.offAll();
-            buster.el.shift();
             buster.parts = {};
             associator.remove(buster.id);
-            factories.Box.prototype.destroy.apply(this, arguments);
+            factories.Box.constructor.prototype.destroy.apply(this, arguments);
             return buster;
         },
         tellMouseMovement: function () {
@@ -8637,15 +8068,15 @@ application.scope().module('Buster', function (module, app, _, $) {
                 buster = this,
                 attrs = get(buster);
             if (attrs.frameAlwaysFillHeight) {
-                hw[heightString] = '100%';
+                hw[HEIGHT] = '100%';
             }
             if (attrs.frameAlwaysFillWidth) {
-                hw[widthString] = '100%';
+                hw[WIDTH] = '100%';
             }
             hw = _.extend(buster.calculateContainerSize(), extend, hw);
             buster.el.css(hw);
             if (buster.get('applyImportant')) {
-                buster.applyImportantStyles(buster.el.get(0));
+                buster.applyImportantStyles(buster.el.index(0));
             }
             return buster;
         },
@@ -8705,23 +8136,23 @@ application.scope().module('Buster', function (module, app, _, $) {
                 };
             if (_sizing) {
                 if (_sizing.vPushCount) {
-                    margin[marginBottomString] = busterAttrs.pushVerticalVal;
+                    margin[MARGIN_BOTTOM] = busterAttrs.pushVerticalVal;
                     margin.transitionDuration = _sizing.transitionDuration;
                 } else {
                     if (set0) {
-                        margin[marginBottomString] = 0;
+                        margin[MARGIN_BOTTOM] = 0;
                     } else {
-                        margin[marginBottomString] = 'auto';
+                        margin[MARGIN_BOTTOM] = 'auto';
                     }
                 }
                 if (_sizing.hPushCount) {
-                    margin[marginRightString] = busterAttrs.pushHorizontalVal;
+                    margin[MARGIN_RIGHT] = busterAttrs.pushHorizontalVal;
                     margin.transitionDuration = _sizing.transitionDuration;
                 } else {
                     if (set0) {
-                        margin[marginRightString] = 0;
+                        margin[MARGIN_RIGHT] = 0;
                     } else {
-                        margin[marginRightString] = 'auto';
+                        margin[MARGIN_RIGHT] = 'auto';
                     }
                 }
             }
@@ -8734,9 +8165,9 @@ application.scope().module('Buster', function (module, app, _, $) {
          */
         initialize: function (opts, options) {
             var receiveWin, registered, buster = this,
-                attrs = buster[attributesString];
-            buster.components = _.Collection();
-            buster.showing = _.Collection();
+                attrs = buster[ATTRIBUTES];
+            buster.components = Collection();
+            buster.showing = Collection();
             buster.on('before:responded', attrs.every);
             buster.addCommand({
                 initialize: _setupInit,
@@ -8763,9 +8194,9 @@ application.scope().module('Buster', function (module, app, _, $) {
                     });
                     buster.components.each(function (idx, com) {
                         if (_.posit(packet.showing, com.registeredAs)) {
-                            com.isShowing = !0;
+                            com.isShowing = BOOLEAN_TRUE;
                         } else {
-                            com.isShowing = !1;
+                            com.isShowing = BOOLEAN_FALSE;
                         }
                     });
                     if (packet.shouldRespond) {
@@ -8773,7 +8204,7 @@ application.scope().module('Buster', function (module, app, _, $) {
                     }
                 }
             });
-            buster.allListeners = _.Collection();
+            buster.allListeners = Collection();
             extend(attrs, {
                 frame: null
             });
@@ -8821,7 +8252,7 @@ application.scope().module('Buster', function (module, app, _, $) {
          */
         getTargets: function (target) {
             var buster = this,
-                attrs = buster[attributesString],
+                attrs = buster[ATTRIBUTES],
                 parts = buster.parts,
                 top = parts.top,
                 targets = [],
@@ -8841,7 +8272,7 @@ application.scope().module('Buster', function (module, app, _, $) {
             if (target === 'parent') {
                 targets = buster.el.parent();
             }
-            if (!targets[lengthString]) {
+            if (!targets[LENGTH]) {
                 targets = parts.doc.querySelectorAll(target);
             }
             return $(targets);
@@ -8855,15 +8286,13 @@ application.scope().module('Buster', function (module, app, _, $) {
         flush: function () {
             var n, item, gah, childrenLen, queuedMsg, nuData, i = 0,
                 buster = this,
-                currentIdx = buster.get(queuedMessageIndexString),
+                currentIdx = buster.get(QUEUED_MESSAGE_INDEX),
                 connected = buster.get('isConnected'),
                 initedFrom = buster.get('initedFromPartner'),
                 flushing = buster.get('flushing');
             if (!initedFrom || connected && ((connected || !currentIdx) && !flushing)) {
-                buster.set({
-                    flushing: !0
-                });
-                childrenLen = buster.children.length();
+                buster.set('flushing', BOOLEAN_TRUE);
+                childrenLen = buster.children[LENGTH]();
                 queuedMsg = buster.children.index(currentIdx);
                 while (queuedMsg && currentIdx < childrenLen) {
                     queuedMsg.set({
@@ -8871,18 +8300,18 @@ application.scope().module('Buster', function (module, app, _, $) {
                     });
                     postMessage(queuedMsg, buster);
                     if (currentIdx) {
-                        currentIdx = (buster.get(queuedMessageIndexString) + 1) || 0;
-                        buster.set(queuedMessageIndexString, currentIdx);
+                        currentIdx = (buster.get(QUEUED_MESSAGE_INDEX) + 1) || 0;
+                        buster.set(QUEUED_MESSAGE_INDEX, currentIdx);
                         queuedMsg = buster.children.index(currentIdx);
                     } else {
                         childrenLen = false;
                     }
                 }
                 buster.set({
-                    flushing: !1
+                    flushing: BOOLEAN_FALSE
                 });
                 if (buster.get('isConnected')) {
-                    if (buster.children.length() > buster.get(queuedMessageIndexString)) {
+                    if (buster.children[LENGTH]() > buster.get(QUEUED_MESSAGE_INDEX)) {
                         buster.flush();
                     }
                 }
@@ -8924,7 +8353,7 @@ application.scope().module('Buster', function (module, app, _, $) {
          */
         run: function (data, currentPoint_) {
             var packet, format, retVal, messageJSON, responded, onResponse, originalMessage, responseType, methodName, buster = this,
-                attrs = buster[attributesString],
+                attrs = buster[ATTRIBUTES],
                 currentPoint = attrs.currentPoint = currentPoint_,
                 event = currentPoint,
                 messages = attrs.sent,
@@ -8984,7 +8413,7 @@ application.scope().module('Buster', function (module, app, _, $) {
                 fromInner: attrs.fromInner,
                 toInner: attrs.toInner,
                 // runCount: 0,
-                index: this.children.length(),
+                index: this.children[LENGTH](),
                 preventResponse: false
             };
         },
@@ -8994,15 +8423,15 @@ application.scope().module('Buster', function (module, app, _, $) {
          */
         shouldUpdate: function (args) {
             var ret, buster = this,
-                attrs = _.get(buster),
+                attrs = buster[ATTRIBUTES],
                 lastUpdate = attrs.lastRespondUpdate,
                 lastFrameRect = attrs.lastFrameRect,
                 top = buster.parts.top || {},
                 width = top.innerWidth,
                 height = top.innerHeight,
-                nowish = _.nowish();
+                nowish = now();
             if (lastUpdate > nowish - 1000 && _.isObject(lastFrameRect)) {
-                ret = !(lastFrameRect[bottomString] < -height * 0.5 || lastFrameRect.top > height * 1.5 || lastFrameRect[rightString] < -width * 0.5 || lastFrameRect[leftString] > width * 1.5);
+                ret = !(lastFrameRect[BOTTOM] < -height * 0.5 || lastFrameRect.top > height * 1.5 || lastFrameRect[RIGHT] < -width * 0.5 || lastFrameRect[LEFT] > width * 1.5);
             } else {
                 ret = 1;
             }
@@ -9024,7 +8453,7 @@ application.scope().module('Buster', function (module, app, _, $) {
          */
         respond: function (data, extendObj) {
             var lastRespondUpdate, message, buster = this,
-                attrs = buster[attributesString],
+                attrs = buster[ATTRIBUTES],
                 sameSide = attrs.sameSide,
                 base = {};
             if (!extendObj || !_.isObject(extendObj)) {
@@ -9063,7 +8492,7 @@ application.scope().module('Buster', function (module, app, _, $) {
          * @name Buster#getFrameRect
          */
         getFrameRect: function () {
-            var clientRect = this[attributesString].lastFrameRect = this.el.clientRect();
+            var clientRect = this[ATTRIBUTES].lastFrameRect = this.el.clientRect();
             return clientRect;
         },
         /**
@@ -9072,7 +8501,7 @@ application.scope().module('Buster', function (module, app, _, $) {
          * @name Buster#getParentRect
          */
         getParentRect: function () {
-            var parentRect = this[attributesString].lastParentRect = this.el.parent().clientRect();
+            var parentRect = this[ATTRIBUTES].lastParentRect = this.el.parent().clientRect();
             return parentRect;
         },
         updateTopData: function () {
@@ -9094,7 +8523,7 @@ application.scope().module('Buster', function (module, app, _, $) {
                         origin: location.origin,
                         pathname: location.pathname.slice(1),
                         port: location.port,
-                        protocol: location.protocol.slice(0, location.protocol.length - 1),
+                        protocol: location.protocol.slice(0, location.protocol[LENGTH] - 1),
                         search: location.search.slice(1)
                     },
                     innerHeight: topWin.innerHeight || 0,
@@ -9149,14 +8578,14 @@ application.scope().module('Buster', function (module, app, _, $) {
          * @name Buster#positionInDocument
          */
         positionInDocument: function () {
-            var attrs = this[attributesString],
+            var attrs = this[ATTRIBUTES],
                 wrapperInfo = attrs.wrapperInfo,
                 contentRect = attrs.lastParentRect,
                 pos = attrs.lastPosInDoc = {
-                    top: pI(contentRect[topString] - wrapperInfo[topString]),
-                    bottom: pI(wrapperInfo[heightString] - contentRect[topString] - wrapperInfo.scrollTop - contentRect[heightString]),
-                    left: pI(contentRect[leftString] - wrapperInfo[leftString]),
-                    right: pI(wrapperInfo[widthString] - contentRect[rightString] - wrapperInfo.scrollLeft - wrapperInfo[leftString])
+                    top: pI(contentRect[TOP] - wrapperInfo[TOP]),
+                    bottom: pI(wrapperInfo[HEIGHT] - contentRect[TOP] - wrapperInfo.scrollTop - contentRect[HEIGHT]),
+                    left: pI(contentRect[LEFT] - wrapperInfo[LEFT]),
+                    right: pI(wrapperInfo[WIDTH] - contentRect[RIGHT] - wrapperInfo.scrollLeft - wrapperInfo[LEFT])
                 };
             return pos;
         },
@@ -9174,7 +8603,7 @@ application.scope().module('Buster', function (module, app, _, $) {
             duff(gapSplit(showList), function (id) {
                 var com = buster.component(id);
                 if (com) {
-                    com.isShowing = !0;
+                    com.isShowing = BOOLEAN_TRUE;
                 }
             });
         },
@@ -9183,7 +8612,7 @@ application.scope().module('Buster', function (module, app, _, $) {
             duff(gapSplit(hideList), function (id) {
                 var com = buster.component(id);
                 if (com) {
-                    com.isShowing = !1;
+                    com.isShowing = BOOLEAN_FALSE;
                 }
             });
         },
@@ -9194,18 +8623,18 @@ application.scope().module('Buster', function (module, app, _, $) {
                 sizing = containerSize(components || buster.components);
             attrs._sizing = sizing;
             attrs.containerSize = {
-                top: sizing[topString],
-                left: sizing[leftString],
-                width: sizing[rightString] - sizing[leftString],
-                height: sizing[bottomString] - sizing[topString]
+                top: sizing[TOP],
+                left: sizing[LEFT],
+                width: sizing[RIGHT] - sizing[LEFT],
+                height: sizing[BOTTOM] - sizing[TOP]
             };
-            attrs.pushVerticalVal = Math.min(Math.max(sizing[bottomString] - parentRect[bottomString], 0), sizing[marginBottomString]);
-            attrs.pushHorizontalVal = Math.min(Math.max(sizing[rightString] - parentRect[rightString], 0), sizing[marginRightString]);
+            attrs.pushVerticalVal = Math.min(Math.max(sizing[BOTTOM] - parentRect[BOTTOM], 0), sizing[MARGIN_BOTTOM]);
+            attrs.pushHorizontalVal = Math.min(Math.max(sizing[RIGHT] - parentRect[RIGHT], 0), sizing[MARGIN_RIGHT]);
             sizing = attrs.containerCss = {
-                top: sizing[topString] - parentRect[topString],
-                left: sizing[leftString] - parentRect[leftString],
-                width: sizing[rightString] - sizing[leftString],
-                height: sizing[bottomString] - sizing[topString],
+                top: sizing[TOP] - parentRect[TOP],
+                left: sizing[LEFT] - parentRect[LEFT],
+                width: sizing[RIGHT] - sizing[LEFT],
+                height: sizing[BOTTOM] - sizing[TOP],
                 zIndex: sizing.zIndex || 'inherit'
             };
             return sizing;
@@ -9216,13 +8645,13 @@ application.scope().module('Buster', function (module, app, _, $) {
                 expansion = factories.expansion[component.dimensionType || 'match'],
                 parentRect = attrs.lastParentRect,
                 parentStyle = attrs.lastParentStyle,
-                result = (expansion || factories.expansion.match).call(buster, component, parentRect, parentStyle, buster.parts[topString]),
+                result = (expansion || factories.expansion.match).call(buster, component, parentRect, parentStyle, buster.parts[TOP]),
                 // these are always relative to the viewport
                 calcSize = component.calculatedSize = _.floor({
-                    top: result[topString],
-                    left: result[leftString],
-                    width: result[widthString],
-                    height: result[heightString]
+                    top: result[TOP],
+                    left: result[LEFT],
+                    width: result[WIDTH],
+                    height: result[HEIGHT]
                 }, 2);
             return calcSize;
         },
@@ -9261,16 +8690,6 @@ application.scope().module('Buster', function (module, app, _, $) {
             });
             return intervalId;
         },
-        resetElements: function () {
-            var buster = this,
-                nextEl = buster.el,
-                finalRes = buster.parts.finalResponsified;
-            do {
-                _.resetAttrs(nextEl.get(0));
-                nextEl = nextEl.parent();
-            } while (nextEl.childOf(finalRes));
-            _.resetAttrs(finalRes.get(0));
-        },
         /**
          * starts a relationship between two busters. simplifies the initialization process.
          * @returns {number} just for responding to the original message in case there's a handler
@@ -9279,7 +8698,7 @@ application.scope().module('Buster', function (module, app, _, $) {
          */
         begin: function () {
             var buster = this,
-                attrs = buster[attributesString],
+                attrs = buster[ATTRIBUTES],
                 inited = buster.initialized = 1,
                 message = buster.send('initialize', {
                     expandConfig: attrs.expandConfig,
@@ -9292,12 +8711,12 @@ application.scope().module('Buster', function (module, app, _, $) {
                     initParentData: packet.parent
                 });
                 buster.set({
-                    isConnected: !0
+                    isConnected: BOOLEAN_TRUE
                 });
             });
             return 1;
         }
-    }, !0);
+    }, BOOLEAN_TRUE);
     _.exports({
         containerSize: containerSize
     });

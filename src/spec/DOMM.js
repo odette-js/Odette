@@ -1,6 +1,5 @@
-application.scope().run(function (app, _, $) {
-    var factories = _.factories,
-        elementData = _.elementData;
+application.scope().run(function (app, _, factories, $) {
+    var elementData = _.associator;
     describe('DOMM', function () {
         var divs, $empty = $(),
             $win = $(window),
@@ -27,7 +26,7 @@ application.scope().run(function (app, _, $) {
                 $con.append(divs);
                 return divs;
             },
-            $con = _.makeEl('div').style({
+            $con = _.createElements('div').style({
                 height: '100%',
                 width: '100%'
             });
@@ -37,31 +36,63 @@ application.scope().run(function (app, _, $) {
             expect(_.isInstance($empty, factories.DOMM)).toEqual(true);
             expect(_.isInstance($empty, factories.Collection)).toEqual(true);
         });
+        it('it knows it\'s own client rect', function () {
+            var div = divs.eq(0);
+            expect(div.clientRect()).toEqual(_.extend({}, div.index().getBoundingClientRect()));
+        });
+        it('can show and hide elements', function () {
+            expect(divs.hide().map(function (el) {
+                if (el.style.display === 'none') {
+                    return '';
+                } else {
+                    return el.style.display;
+                }
+            }).join('')).toEqual('');
+            expect(divs.show().map(function (el) {
+                if (el.style.display === 'block') {
+                    return '';
+                } else {
+                    return el.style.display;
+                }
+            }).join('')).toEqual('');
+        });
+        it('can attach dom elements', function () {
+            var div = divs.eq();
+            div.append(divs.index(1));
+            expect(div.children().index()).toEqual(divs.index(1));
+        });
+        it('can remove dom elements', function () {
+            var div = divs.eq();
+            div.append(divs.index(1));
+            expect(div.children().index()).toEqual(divs.index(1));
+            div.children().remove();
+            expect(div.children().length()).toEqual(0);
+        });
         describe('except it has some methods that are highly pertinant to DOM manipulation... ergo: DOMM', function () {
             it('can check if its items are windows', function () {
-                expect($win.isWin()).toEqual(true);
-                expect($doc.isWin()).toEqual(false);
-                expect($body.isWin()).toEqual(false);
+                expect($win.isWindow()).toEqual(true);
+                expect($doc.isWindow()).toEqual(false);
+                expect($body.isWindow()).toEqual(false);
             });
             it('can check if its items are documents', function () {
-                expect($win.isDoc()).toEqual(false);
-                expect($doc.isDoc()).toEqual(true);
-                expect($body.isDoc()).toEqual(false);
+                expect($win.isDocument()).toEqual(false);
+                expect($doc.isDocument()).toEqual(true);
+                expect($body.isDocument()).toEqual(false);
             });
             it('can check if its items are actually elements', function () {
-                expect($win.allDom()).toEqual(false);
-                expect($doc.allDom()).toEqual(false);
-                expect($body.allDom()).toEqual(true);
-                expect($('a').allDom()).toEqual(true);
+                expect($win.allElements()).toEqual(false);
+                expect($doc.allElements()).toEqual(false);
+                expect($body.allElements()).toEqual(true);
+                expect($('a').allElements()).toEqual(true);
             });
             it('can check if its items are document fragments', function () {
                 var frag = document.createDocumentFragment();
                 frag.appendChild(document.createElement('div'));
-                expect($win.isFrag()).toEqual(false);
-                expect($doc.isFrag()).toEqual(false);
-                expect($body.isFrag()).toEqual(false);
-                expect($('a').isFrag()).toEqual(false);
-                expect($(frag).isFrag()).toEqual(true);
+                expect($win.isFragment()).toEqual(false);
+                expect($doc.isFragment()).toEqual(false);
+                expect($body.isFragment()).toEqual(false);
+                expect($('a').isFragment()).toEqual(false);
+                expect($(frag).isFragment()).toEqual(true);
             });
         });
         describe('it can filter itself', function () {
@@ -71,7 +102,7 @@ application.scope().run(function (app, _, $) {
             });
             it('by filtering against a function', function () {
                 var newDivs = divs.filter(function (item, idx) {
-                    return !((idx % 3) - 1);
+                    return ((idx % 3) - 1) === 0;
                 });
                 expect(newDivs.length()).toEqual(2);
                 expect(newDivs.get()).toEqual(divs.get(1));
@@ -83,15 +114,6 @@ application.scope().run(function (app, _, $) {
                 });
                 expect(newDivs.length()).toEqual(3);
             });
-            // it('can also simply get an element or a bunch of elements through eq', function () {
-            // 	var div = divs.eq(3);
-            // 	var dun = divs.unwrap();
-            // 	expect(div.get()).toEqual(dun[3]);
-            // 	var divz = divs.eq([1, 3, 4]);
-            // 	expect(divz.get()).toEqual(dun[1]);
-            // 	expect(divz.get(1)).toEqual(dun[3]);
-            // 	expect(divz.get(2)).toEqual(dun[4]);
-            // });
             it('can also get the first', function () {
                 expect(divs.first().get()).toEqual(divs.get());
             });
@@ -269,7 +291,7 @@ application.scope().run(function (app, _, $) {
         describe('the each function is special because', function () {
             it('it wraps each element in a DOMM object before passing it through your iterator', function () {
                 divs.each(function (el, idx) {
-                    expect(_.isInstance(el, _.DOMM)).toEqual(true);
+                    expect(_.isInstance(el, factories.DOMM)).toEqual(true);
                     expect(el.length()).toEqual(1);
                     expect(divs.index(idx) === el.index());
                 });
@@ -421,38 +443,6 @@ application.scope().run(function (app, _, $) {
                     expect(div.prop('align')).toEqual('left');
                 });
             });
-        });
-        it('it knows it\'s own client rect', function () {
-            var div = divs.eq(0);
-            expect(div.clientRect()).toEqual(_.extend({}, div.index().getBoundingClientRect()));
-        });
-        it('can show and hide elements', function () {
-            expect(divs.hide().map(function (el) {
-                if (el.style.display === 'none') {
-                    return '';
-                } else {
-                    return el.style.display;
-                }
-            }).join('')).toEqual('');
-            expect(divs.show().map(function (el) {
-                if (el.style.display === 'block') {
-                    return '';
-                } else {
-                    return el.style.display;
-                }
-            }).join('')).toEqual('');
-        });
-        it('can attach dom elements', function () {
-            var div = divs.eq();
-            div.append(divs.index(1));
-            expect(div.children().index()).toEqual(divs.index(1));
-        });
-        it('can remove dom elements', function () {
-            var div = divs.eq();
-            div.append(divs.index(1));
-            expect(div.children().index()).toEqual(divs.index(1));
-            div.children().remove();
-            expect(div.children().length()).toEqual(0);
         });
     });
 });

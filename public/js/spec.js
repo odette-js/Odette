@@ -209,11 +209,11 @@ application.scope().run(function (app, _, $) {
             });
             it('_.isInstance', function () {
                 var obj = {},
-                    newBox = _.Box();
+                    newBox = factories.Box();
                 expect(_.isInstance(obj, Object)).toEqual(true);
                 expect(_.isInstance(newBox, factories.Box)).toEqual(true);
-                expect(_.isInstance(newBox, _.Box)).toEqual(true);
-                expect(_.isInstance(newBox, _.Collection)).toEqual(false);
+                expect(_.isInstance(newBox, factories.Box)).toEqual(true);
+                expect(_.isInstance(newBox, factories.Collection)).toEqual(false);
             });
             it('_.negate', function () {
                 var falsey = _.negate(function () {
@@ -498,7 +498,7 @@ application.scope().run(function (app, _, $) {
                 })).toEqual('//google.com?some=where&und=efined&blank=undefined&under=statement&one=1&has=false&nully=null&even=%7B%22moar%22%3A%22things%22%7D');
             });
             it('_.protoProp', function () {
-                var box = _.Box();
+                var box = factories.Box();
                 box.idAttribute = 'something';
                 expect(_.protoProp(box, 'idAttribute')).toEqual(factories.Box.constructor.prototype.idAttribute);
             });
@@ -535,14 +535,13 @@ application.scope().run(function (app, _) {
         });
     });
 });
-application.scope().run(function (app, _, $) {
-    var factories = _.factories;
+application.scope().run(function (app, _, factories, $) {
     describe('Collection', function () {
         var collection, numberCollection, complexCollection, evenNumberList;
         beforeEach(function () {
-            collection = _.Collection();
-            numberCollection = _.Collection([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
-            complexCollection = _.Collection([_.Box(), _.Box({
+            collection = factories.Collection();
+            numberCollection = factories.Collection([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+            complexCollection = factories.Collection([factories.Box(), factories.Box({
                 one: 1,
                 two: 2,
                 three: 3
@@ -585,8 +584,8 @@ application.scope().run(function (app, _, $) {
             expect(JSON.stringify(complexCollection)).toEqual('[{},{"one":1,"two":2,"three":3}]');
         });
         it('can also concatonate itself with collections and arrays just like a regular array', function () {
-            var collection = _.Collection([0, 1, 2, 3, 4]),
-                list = _.Collection([5, 6, 7, 8, 9]);
+            var collection = factories.Collection([0, 1, 2, 3, 4]),
+                list = factories.Collection([5, 6, 7, 8, 9]);
             expect(collection.concat(list, evenNumberList).unwrap()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 2, 4, 6, 8]);
         });
         it('can also reverse itself momentarily', function () {
@@ -694,10 +693,10 @@ application.scope().run(function (app, _, $) {
                 })).toEqual(7);
             });
             it('findLast', function () {
-                expect(_.Collection([12, 1, 2, 1, 104, 2, 1, 5, 55, 6, 2, 7]).findLast(function (item) {
+                expect(factories.Collection([12, 1, 2, 1, 104, 2, 1, 5, 55, 6, 2, 7]).findLast(function (item) {
                     return item % 17 === 0;
                 })).toEqual(void 0);
-                expect(_.Collection([88, 2, 1, 5, 70, 23, 43, 9]).findLast(function (item) {
+                expect(factories.Collection([88, 2, 1, 5, 70, 23, 43, 9]).findLast(function (item) {
                     return item % 2 === 0;
                 })).toEqual(70);
             });
@@ -712,18 +711,18 @@ application.scope().run(function (app, _, $) {
                     four: 4
                 };
             it('findWhere', function () {
-                expect(_.Collection([firstFindObj, secondFindObj]).findWhere({
+                expect(factories.Collection([firstFindObj, secondFindObj]).findWhere({
                     one: 2
                 })).toEqual(void 0);
-                expect(_.Collection([firstFindObj, secondFindObj]).findWhere({
+                expect(factories.Collection([firstFindObj, secondFindObj]).findWhere({
                     two: 2
                 })).toEqual(firstFindObj);
             });
             it('findLastWhere', function () {
-                expect(_.Collection([firstFindObj, secondFindObj]).findLastWhere({
+                expect(factories.Collection([firstFindObj, secondFindObj]).findLastWhere({
                     one: 2
                 })).toEqual(void 0);
-                expect(_.Collection([firstFindObj, secondFindObj]).findLastWhere({
+                expect(factories.Collection([firstFindObj, secondFindObj]).findLastWhere({
                     two: 2
                 })).toEqual(secondFindObj);
             });
@@ -747,7 +746,7 @@ application.scope().run(function (app, _, $) {
                 expect(numberCollection.merge([0, 1, 2, 6, 7, 8]).unwrap()).toEqual([0, 1, 2, 6, 7, 8, 6, 7, 8, 9]);
             });
             it('range', function () {
-                expect(_.Collection().range(4, 9).unwrap()).toEqual([4, 5, 6, 7, 8]);
+                expect(factories.Collection().range(4, 9).unwrap()).toEqual([4, 5, 6, 7, 8]);
             });
             it('eq', function () {
                 expect(numberCollection.eq(4).unwrap()).toEqual([4]);
@@ -764,7 +763,7 @@ application.scope().run(function (app, _, $) {
                 }).unwrap()).toEqual([1, 3, 5, 7, 9]);
             });
             it('pluck', function () {
-                expect(_.Collection([{
+                expect(factories.Collection([{
                     one: 1
                 }, {
                     one: 2
@@ -775,7 +774,7 @@ application.scope().run(function (app, _, $) {
                 }]).pluck('one').unwrap()).toEqual([1, 2, 3, 4]);
             });
             it('where', function () {
-                expect(_.Collection([{
+                expect(factories.Collection([{
                     one: 1
                 }, {
                     one: 2
@@ -792,7 +791,7 @@ application.scope().run(function (app, _, $) {
                 }]);
             });
             it('flatten', function () {
-                expect(_.Collection([
+                expect(factories.Collection([
                     [0, 1, 2, 3],
                     [4, 5, 6, 7, 8],
                     [9, 10, 11, 12]
@@ -804,7 +803,7 @@ application.scope().run(function (app, _, $) {
 application.scope().run(function (app, _, factories, $) {
     describe('Events', function () {
         var blank, box,
-            Box = _.Box,
+            Box = factories.Box,
             handler = function () {
                 return !0;
             },
@@ -942,11 +941,11 @@ application.scope().run(function (app, _, factories, $) {
         });
     });
 });
-application.scope().run(function (app, _, $) {
-    var factories = _.factories;
+application.scope().run(function (app, _, factories, $) {
+    // var factories = _.factories;
     describe('Box', function () {
         var blank, box,
-            Box = _.Box,
+            Box = factories.Box,
             handler = function () {
                 return !0;
             },
@@ -1150,16 +1149,16 @@ application.scope().run(function (app, _, $) {
             });
             it('they can clone children into an array', function () {
                 var clone;
-                box.add([_.Box(), _.Box()]);
+                box.add([factories.Box(), factories.Box()]);
                 clone = box.children.toJSON();
                 expect(clone).toEqual([{}, {}]);
             });
             it('they can even clone their deep, underlying structure', function () {
-                box = _.Box(data);
+                box = factories.Box(data);
                 expect(box.treeToJSON()).toEqual(data);
             });
             it('they can stringify themselves', function () {
-                box = _.Box({
+                box = factories.Box({
                     some: 'thing'
                 });
                 expect(box.toString()).toEqual(JSON.stringify({
@@ -1167,16 +1166,16 @@ application.scope().run(function (app, _, $) {
                 }));
             });
             it('they can stringify their children', function () {
-                box = _.Box();
+                box = factories.Box();
                 box.add(data.children);
                 expect(box.children.toString()).toEqual(JSON.stringify(data.children));
             });
             // it('they can stringify themselves as a tree structure', function () {
-            //     box = _.Box(data);
+            //     box = factories.Box(data);
             //     expect(box.stringifyTree()).toEqual(JSON.stringify(data));
             // });
             // it('they can stringify themselves as a tree structure', function () {
-            //     box = _.Box(data);
+            //     box = factories.Box(data);
             //     expect(box.stringifyTree()).toEqual(JSON.stringify(data));
             // });
         });
@@ -1185,7 +1184,7 @@ application.scope().run(function (app, _, $) {
                 box.children.register('registering', {
                     myObj: 1
                 });
-                expect(box.children._byId.registering.myObj).toEqual(1);
+                expect(box.children._byId.id.registering.myObj).toEqual(1);
             });
             it('and retreive information', function () {
                 var data = {
@@ -1213,12 +1212,12 @@ application.scope().run(function (app, _, $) {
                     expect(box.children.length()).toEqual(2);
                 });
                 it('you can also remove them', function () {
-                    box = _.Box();
+                    box = factories.Box();
                     box.add(data.children);
                     expect(box.children.length()).toEqual(2);
                 });
                 it('or many at the same time', function () {
-                    box = _.Box();
+                    box = factories.Box();
                     box.add([{
                         one: 1
                     }, {
@@ -1236,7 +1235,7 @@ application.scope().run(function (app, _, $) {
             });
             describe('they can', function () {
                 it('destroy themselves', function () {
-                    box = _.Box();
+                    box = factories.Box();
                     box.add([{
                         one: 1
                     }, {
@@ -1324,7 +1323,7 @@ application.scope().run(function (app, _, $) {
                 expect(box._events.event1.length).toEqual(0);
             });
             it('if they are listening to something then those listeners will also be removed', function () {
-                var box2 = _.Box(),
+                var box2 = factories.Box(),
                     events = {};
                 box.listenTo(box2, {
                     event1: function () {},
@@ -1342,7 +1341,7 @@ application.scope().run(function (app, _, $) {
                 expect(_.keys(events).length).toEqual(0);
             });
             it('conversely, if the box has listening objects, it will remove it\'s handlers from other objects', function () {
-                var box2 = _.Box(),
+                var box2 = factories.Box(),
                     events = {};
                 box.listenTo(box2, {
                     event1: function () {},
@@ -1369,7 +1368,7 @@ application.scope().run(function (app, _, factories, $) {
         var madeit, promise;
         beforeEach(function () {
             madeit = 0;
-            promise = _.Promise();
+            promise = factories.Promise();
         });
         it('allows for async resolution of state', function () {
             expect(_.isObject(promise)).toEqual(true);
@@ -1483,8 +1482,91 @@ application.scope().run(function (app, _, factories, $) {
     });
 });
 application.scope().run(function (app, _, factories, $) {
+    var BOOLEAN_TRUE = true,
+        isObject = _.isObject;
     describe('Ajax', function () {
-        //
+        var ajax;
+        beforeEach(function () {
+            ajax = factories.Ajax();
+        });
+        it('is an object', function () {
+            expect(isObject(ajax)).toEqual(BOOLEAN_TRUE);
+        });
+        it('can accept an object as a first argument', function (done) {
+            factories.Ajax({
+                url: '/json/reporting.json'
+            }).success(function (json) {
+                expect(isObject(json)).toEqual(BOOLEAN_TRUE);
+                done();
+            });
+        });
+        it('can accept a string as a first argument', function (done) {
+            var original, handlerCounter = 0;
+            factories.Ajax('/json/reporting.json').handle('status:200', function (json) {
+                handlerCounter++;
+                original = json;
+            }).success(function (json) {
+                handlerCounter++;
+                expect(original === json).toEqual(BOOLEAN_TRUE);
+            }).always(function () {
+                handlerCounter++;
+                expect(handlerCounter).toEqual(3);
+                done();
+            });
+        });
+        describe('can handle', function () {
+            it('failures', function (done) {
+                var handlerCounter = 0;
+                var prom = factories.Ajax().failure(function () {
+                    handlerCounter++;
+                }).always(function () {
+                    handlerCounter++;
+                    expect(handlerCounter).toEqual(2);
+                    done();
+                });
+                prom.reject();
+            });
+            it('errors', function (done) {
+                var handlerCounter = 0;
+                factories.Ajax('/json/reporting.json').success(function (json) {
+                    handlerCounter++;
+                    expect(handlerCounter).toEqual(1);
+                    throw new Error('some message here');
+                }).error(function () {
+                    handlerCounter++;
+                }).always(function () {
+                    handlerCounter++;
+                    expect(handlerCounter).toEqual(3);
+                    done();
+                });
+            });
+            describe('status codes (more than the ones listed here)', function () {
+                it('404', function (done) {
+                    var handlerCounter = 0;
+                    factories.Ajax('/gibberish/404').handle('status:404', function () {
+                        handlerCounter++;
+                    }).failure(function () {
+                        handlerCounter++;
+                    }).always(function () {
+                        handlerCounter++;
+                        expect(handlerCounter).toEqual(3);
+                        done();
+                    });
+                });
+                it('500', function (done) {
+                    var handlerCounter = 0;
+                    factories.Ajax('/gibberish/500').handle('status:500', function () {
+                        handlerCounter++;
+                    }).failure(function () {
+                        handlerCounter++;
+                    }).always(function () {
+                        handlerCounter++;
+                        expect(handlerCounter).toEqual(3);
+                        done();
+                    });
+                });
+            });
+        });
     });
 });
 application.scope().run(function (app, _, $) {
@@ -1535,9 +1617,8 @@ application.scope().run(function (app, _, $) {
         });
     });
 });
-application.scope().run(function (app, _, $) {
-    var factories = _.factories,
-        elementData = _.elementData;
+application.scope().run(function (app, _, factories, $) {
+    var elementData = _.associator;
     describe('DOMM', function () {
         var divs, $empty = $(),
             $win = $(window),
@@ -1564,7 +1645,7 @@ application.scope().run(function (app, _, $) {
                 $con.append(divs);
                 return divs;
             },
-            $con = _.makeEl('div').style({
+            $con = _.createElements('div').style({
                 height: '100%',
                 width: '100%'
             });
@@ -1574,31 +1655,63 @@ application.scope().run(function (app, _, $) {
             expect(_.isInstance($empty, factories.DOMM)).toEqual(true);
             expect(_.isInstance($empty, factories.Collection)).toEqual(true);
         });
+        it('it knows it\'s own client rect', function () {
+            var div = divs.eq(0);
+            expect(div.clientRect()).toEqual(_.extend({}, div.index().getBoundingClientRect()));
+        });
+        it('can show and hide elements', function () {
+            expect(divs.hide().map(function (el) {
+                if (el.style.display === 'none') {
+                    return '';
+                } else {
+                    return el.style.display;
+                }
+            }).join('')).toEqual('');
+            expect(divs.show().map(function (el) {
+                if (el.style.display === 'block') {
+                    return '';
+                } else {
+                    return el.style.display;
+                }
+            }).join('')).toEqual('');
+        });
+        it('can attach dom elements', function () {
+            var div = divs.eq();
+            div.append(divs.index(1));
+            expect(div.children().index()).toEqual(divs.index(1));
+        });
+        it('can remove dom elements', function () {
+            var div = divs.eq();
+            div.append(divs.index(1));
+            expect(div.children().index()).toEqual(divs.index(1));
+            div.children().remove();
+            expect(div.children().length()).toEqual(0);
+        });
         describe('except it has some methods that are highly pertinant to DOM manipulation... ergo: DOMM', function () {
             it('can check if its items are windows', function () {
-                expect($win.isWin()).toEqual(true);
-                expect($doc.isWin()).toEqual(false);
-                expect($body.isWin()).toEqual(false);
+                expect($win.isWindow()).toEqual(true);
+                expect($doc.isWindow()).toEqual(false);
+                expect($body.isWindow()).toEqual(false);
             });
             it('can check if its items are documents', function () {
-                expect($win.isDoc()).toEqual(false);
-                expect($doc.isDoc()).toEqual(true);
-                expect($body.isDoc()).toEqual(false);
+                expect($win.isDocument()).toEqual(false);
+                expect($doc.isDocument()).toEqual(true);
+                expect($body.isDocument()).toEqual(false);
             });
             it('can check if its items are actually elements', function () {
-                expect($win.allDom()).toEqual(false);
-                expect($doc.allDom()).toEqual(false);
-                expect($body.allDom()).toEqual(true);
-                expect($('a').allDom()).toEqual(true);
+                expect($win.allElements()).toEqual(false);
+                expect($doc.allElements()).toEqual(false);
+                expect($body.allElements()).toEqual(true);
+                expect($('a').allElements()).toEqual(true);
             });
             it('can check if its items are document fragments', function () {
                 var frag = document.createDocumentFragment();
                 frag.appendChild(document.createElement('div'));
-                expect($win.isFrag()).toEqual(false);
-                expect($doc.isFrag()).toEqual(false);
-                expect($body.isFrag()).toEqual(false);
-                expect($('a').isFrag()).toEqual(false);
-                expect($(frag).isFrag()).toEqual(true);
+                expect($win.isFragment()).toEqual(false);
+                expect($doc.isFragment()).toEqual(false);
+                expect($body.isFragment()).toEqual(false);
+                expect($('a').isFragment()).toEqual(false);
+                expect($(frag).isFragment()).toEqual(true);
             });
         });
         describe('it can filter itself', function () {
@@ -1608,7 +1721,7 @@ application.scope().run(function (app, _, $) {
             });
             it('by filtering against a function', function () {
                 var newDivs = divs.filter(function (item, idx) {
-                    return !((idx % 3) - 1);
+                    return ((idx % 3) - 1) === 0;
                 });
                 expect(newDivs.length()).toEqual(2);
                 expect(newDivs.get()).toEqual(divs.get(1));
@@ -1620,15 +1733,6 @@ application.scope().run(function (app, _, $) {
                 });
                 expect(newDivs.length()).toEqual(3);
             });
-            // it('can also simply get an element or a bunch of elements through eq', function () {
-            // 	var div = divs.eq(3);
-            // 	var dun = divs.unwrap();
-            // 	expect(div.get()).toEqual(dun[3]);
-            // 	var divz = divs.eq([1, 3, 4]);
-            // 	expect(divz.get()).toEqual(dun[1]);
-            // 	expect(divz.get(1)).toEqual(dun[3]);
-            // 	expect(divz.get(2)).toEqual(dun[4]);
-            // });
             it('can also get the first', function () {
                 expect(divs.first().get()).toEqual(divs.get());
             });
@@ -1806,7 +1910,7 @@ application.scope().run(function (app, _, $) {
         describe('the each function is special because', function () {
             it('it wraps each element in a DOMM object before passing it through your iterator', function () {
                 divs.each(function (el, idx) {
-                    expect(_.isInstance(el, _.DOMM)).toEqual(true);
+                    expect(_.isInstance(el, factories.DOMM)).toEqual(true);
                     expect(el.length()).toEqual(1);
                     expect(divs.index(idx) === el.index());
                 });
@@ -1958,38 +2062,6 @@ application.scope().run(function (app, _, $) {
                     expect(div.prop('align')).toEqual('left');
                 });
             });
-        });
-        it('it knows it\'s own client rect', function () {
-            var div = divs.eq(0);
-            expect(div.clientRect()).toEqual(_.extend({}, div.index().getBoundingClientRect()));
-        });
-        it('can show and hide elements', function () {
-            expect(divs.hide().map(function (el) {
-                if (el.style.display === 'none') {
-                    return '';
-                } else {
-                    return el.style.display;
-                }
-            }).join('')).toEqual('');
-            expect(divs.show().map(function (el) {
-                if (el.style.display === 'block') {
-                    return '';
-                } else {
-                    return el.style.display;
-                }
-            }).join('')).toEqual('');
-        });
-        it('can attach dom elements', function () {
-            var div = divs.eq();
-            div.append(divs.index(1));
-            expect(div.children().index()).toEqual(divs.index(1));
-        });
-        it('can remove dom elements', function () {
-            var div = divs.eq();
-            div.append(divs.index(1));
-            expect(div.children().index()).toEqual(divs.index(1));
-            div.children().remove();
-            expect(div.children().length()).toEqual(0);
         });
     });
 });

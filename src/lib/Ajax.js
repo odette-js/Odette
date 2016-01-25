@@ -1,10 +1,26 @@
 application.scope().module('Ajax', function (module, app, _, factories) {
     var gapSplit = _.gapSplit,
         duff = _.duff,
+        each = _.each,
+        unCamelCase = _.unCamelCase,
         posit = _.posit,
-        extendFrom = _.extendFrom,
+        result = _.result,
+        wraptry = _.wraptry,
+        BOOLEAN_TRUE = !0,
+        BOOLEAN_FALSE = !1,
+        STATUS = 'status',
+        // ERROR = 'error',
+        FAILURE = 'failure',
+        SUCCESS = 'success',
+        READY_STATE = 'readyState',
+        isObject = _.isObject,
+        isArray = _.isArray,
+        stringify = _.stringify,
+        parse = _.parse,
+        extend = _.extend,
+        stringifyQuery = _.stringifyQuery,
         validTypes = gapSplit('GET POST PUT DELETE'),
-        baseEvents = gapSplit('progress timeout error abort'),
+        baseEvents = gapSplit('progress timeout abort error'),
         cache = {},
         /**
          * @description helper function to attach a bunch of event listeners to the request object as well as help them trigger the appropriate events on the Ajax object itself
@@ -20,7 +36,7 @@ application.scope().module('Ajax', function (module, app, _, factories) {
                 if (evnt === 'progress') {
                     req['on' + evnt] = function (e) {
                         prog++;
-                        ajax.dispatchEvent(evnt, {
+                        ajax.executeHandlers(evnt, {
                             percent: (e.loaded / e.total) || (prog / (prog + 1)),
                             counter: prog
                         });
@@ -34,12 +50,12 @@ application.scope().module('Ajax', function (module, app, _, factories) {
         },
         sendthething = function (xhrReq, args) {
             return function () {
-                try {
+                wraptry(function () {
                     xhrReq.send.apply(xhrReq, args);
-                } catch (e) {
-                    // reports on send error
-                    factories.reportError('xhr', e + '');
-                }
+                    // }, function (e) {
+                    // handle an xhr req send error here
+                    // factories.reportError('xhr', e + '');
+                });
             };
         },
         sendRequest = function (ajax, xhrReq, type, url) {
@@ -48,7 +64,7 @@ application.scope().module('Ajax', function (module, app, _, factories) {
             if (url) {
                 xhrReq.open(type, url, ajax.get('async'));
                 if (data) {
-                    args.push(_.stringify(data));
+                    args.push(stringify(data));
                 }
                 ajax.setHeaders(ajax.get('headers'));
                 attachBaseListeners(ajax);
@@ -86,6 +102,15 @@ application.scope().module('Ajax', function (module, app, _, factories) {
              */
             DELETE: function () {}
         },
+        alterurlHandler = function () {
+            var ajax = this,
+                xhrReq = ajax.requestObject,
+                type = ajax.get('type'),
+                thingToDo = decide[type] || decide.GET;
+            if (thingToDo) {
+                thingToDo(ajax, xhrReq, type);
+            }
+        },
         /**
          * @class Ajax
          * @alias _.Ajax
@@ -93,28 +118,7 @@ application.scope().module('Ajax', function (module, app, _, factories) {
          * @augments Model
          * @classdesc XHR object wrapper Triggers events based on xhr state changes and abstracts many anomalies that have to do with IE
          */
-        Ajax = _.factories.Ajax = _.extendFrom.Promise('Ajax', {
-            events: {
-                'alter:url': function () {
-                    var ajax = this,
-                        xhrReq = ajax.requestObject,
-                        type = ajax.get('type'),
-                        thingToDo = decide[type] || decide.GET;
-                    if (thingToDo) {
-                        thingToDo(ajax, xhrReq, type);
-                    }
-                }
-            },
-            associativeStates: {
-                timeout: true,
-                abort: true
-            },
-            defaults: function () {
-                return {
-                    async: true,
-                    type: 'GET'
-                };
-            },
+        Ajax = factories.Promise.extend('Ajax', {
             /**
              * @func
              * @name Ajax#constructor
@@ -125,7 +129,7 @@ application.scope().module('Ajax', function (module, app, _, factories) {
                 var promise, url, thingToDo, typeThing, type, xhrReq, ajax = this,
                     method = 'onreadystatechange';
                 // Add a cache buster to the url
-                // ajax.async = true;
+                // ajax.async = BOOLEAN_TRUE;
                 xhrReq = new XMLHttpRequest();
                 // covers ie9
                 if (typeof XDomainRequest !== 'undefined') {
@@ -146,26 +150,26 @@ application.scope().module('Ajax', function (module, app, _, factories) {
                         type: type
                     };
                 }
+                str = extend({
+                    async: BOOLEAN_TRUE
+                }, str);
                 str.type = (str.type || 'GET').toUpperCase();
                 str.method = method;
-                factories.Promise.apply(ajax);
-                _.extend(ajax, secondary);
-                /** @member {XMLHttpRequest} */
+                factories.Promise.constructor.apply(ajax);
+                ajax.on('change:url', alterurlHandler);
+                extend(ajax, secondary);
                 ajax.requestObject = xhrReq;
-                return ajax.on('error abort timeout', function (e) {
-                    factories.reportError('xhr error', e.type);
-                }).set(str).always(function (evnt) {
-                    ajax.dispatchEvent('status:' + evnt.status, evnt);
-                });
+                ajax.set(str);
+                return ajax;
             },
             status: function (code, handler) {
-                return this.once(_.simpleObject('status:' + code, handler));
+                return this.handle('status:' + code, handler);
             },
             setHeaders: function (headers) {
                 var ajax = this,
                     xhrReq = ajax.requestObject;
-                _.each(headers, function (val, key) {
-                    xhrReq.setRequestHeader(_.unCamelCase(key), val);
+                each(headers, function (val, key) {
+                    xhrReq.setRequestHeader(unCamelCase(key), val);
                 });
                 return ajax;
             },
@@ -176,8 +180,8 @@ application.scope().module('Ajax', function (module, app, _, factories) {
              */
             getUrl: function () {
                 var url = this.get('url');
-                if (_.isObject(url) && !_.isArray(url)) {
-                    url = _.stringifyQuery(url);
+                if (isObject(url) && !isArray(url)) {
+                    url = stringifyQuery(url);
                 }
                 return url;
             },
@@ -187,39 +191,56 @@ application.scope().module('Ajax', function (module, app, _, factories) {
              * @returns {ajax}
              * @name Ajax#attachResponseHandler
              */
-            attachResponseHandler: function (fn) {
+            auxilaryStates: function () {
+                return {
+                    'status:200': SUCCESS,
+                    'status:202': SUCCESS,
+                    'status:205': SUCCESS,
+                    'status:302': SUCCESS,
+                    'status:304': SUCCESS,
+                    'status:400': FAILURE,
+                    'status:401': FAILURE,
+                    'status:403': FAILURE,
+                    'status:404': FAILURE,
+                    'status:405': FAILURE,
+                    'status:406': FAILURE,
+                    'status:500': FAILURE,
+                    'status:502': FAILURE,
+                    'status:505': FAILURE,
+                    'status:511': FAILURE,
+                    timeout: FAILURE,
+                    abort: FAILURE
+                };
+            },
+            parse: function (rawData) {
+                return parse(rawData);
+            },
+            attachResponseHandler: function () {
                 var ajax = this,
                     xhrReqObj = ajax.requestObject,
-                    hasSucceeded = 0,
+                    hasFinished = BOOLEAN_FALSE,
                     method = ajax.get('method'),
                     handler = function (evnt) {
-                        var doIt, responseTxt, xhrReqObj = this;
-                        if (xhrReqObj && !hasSucceeded) {
-                            responseTxt = xhrReqObj.responseText;
-                            ajax.dispatchEvent('readychange', [evnt, xhrReqObj]);
-                            if (method === 'onreadystatechange') {
-                                if (xhrReqObj.readyState === 4) {
-                                    doIt = 1;
-                                }
+                        var status, doIt, allStates, rawData, readystate, xhrReqObj = this;
+                        if (!xhrReqObj || hasFinished) {
+                            return;
+                        }
+                        status = xhrReqObj[STATUS];
+                        readystate = xhrReqObj[READY_STATE];
+                        rawData = xhrReqObj.responseText;
+                        ajax.currentEvent = evnt;
+                        ajax.set('readystate', readystate);
+                        if (method === 'onload' || (method === 'onreadystatechange' && readystate === 4)) {
+                            ajax.set('status', status);
+                            allStates = result(ajax, 'allStates');
+                            if (allStates[STATUS + ':' + xhrReqObj[STATUS]] === SUCCESS) {
+                                rawData = result(ajax, 'parse', rawData);
                             }
-                            if (method === 'onload') {
-                                doIt = 1;
-                            }
-                            if (doIt) {
-                                if ((xhrReqObj.status >= 200 && xhrReqObj.status <= 205) || xhrReqObj.status === 304 || xhrReqObj.status === 302) {
-                                    responseTxt = _.parse(responseTxt);
-                                    ajax.resolve(responseTxt);
-                                    ajax.dispatchEvent('load', [responseTxt, evnt, xhrReqObj]);
-                                    hasSucceeded = 1;
-                                } else {
-                                    ajax.reject(evnt, responseTxt);
-                                }
-                            }
+                            rawData = parse(rawData);
+                            hasFinished = BOOLEAN_TRUE;
+                            ajax.resolveAs(STATUS + ':' + xhrReqObj[STATUS], rawData);
                         }
                     };
-                if (_.isFunction(fn)) {
-                    handler = fn;
-                }
                 if (!xhrReqObj[method]) {
                     xhrReqObj[method] = handler;
                 }

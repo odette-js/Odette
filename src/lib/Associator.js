@@ -1,4 +1,4 @@
-application.scope().module('Associator', function (module, app, _) {
+application.scope().module('Associator', function (module, app, _, factories) {
     /**
      * @class Associator
      * @augments Model
@@ -7,7 +7,7 @@ application.scope().module('Associator', function (module, app, _) {
         extend = _.extend,
         isObject = _.isObject,
         removeAt = _.removeAt,
-        Associator = _.extendFrom.Model('Associator', {
+        Associator = factories.Model.extend('Associator', {
             /**
              * @func
              * @name Associator#get
@@ -87,6 +87,6 @@ application.scope().module('Associator', function (module, app, _) {
             }
         }, !0);
     _.exports({
-        associator: _.Associator()
+        associator: factories.Associator()
     });
 });
