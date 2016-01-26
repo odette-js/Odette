@@ -33,16 +33,21 @@ application.scope(function (app) {
         isArray = _.isArray,
         intendedObject = _.intendedObject,
         uniqueId = _.uniqueId,
+        ID = 'id',
         SORT = 'sort',
+        REMOVED = 'removed',
         LENGTH = 'length',
         PARENT = 'parent',
         DESTROY = 'destroy',
         BEFORE_COLON = 'before:',
         INTERNAL_EVENTS = '_events',
         ATTRIBUTES = 'attributes',
+        STOP_LISTENING = 'stopListening',
         DISPATCH_EVENT = 'dispatchEvent',
         EVENT_REMOVE = '_removeEventList',
         ATTRIBUTE_HISTORY = '_attributeHistory',
+        _DELEGATED_CHILD_EVENTS = '_delegatedParentEvents',
+        _PARENT_DELEGATED_CHILD_EVENTS = '_parentDelgatedChildEvents',
         BOOLEAN_FALSE = !1,
         BOOLEAN_TRUE = !0,
         CHILDREN = 'children',
@@ -56,7 +61,7 @@ application.scope(function (app) {
          */
         Container = factories.Events.extend('Container', {
             cidPrefix: 'c',
-            idAttribute: 'id',
+            idAttribute: ID,
             constructor: function (attributes, secondary) {
                 var model = this;
                 model.cid = model.cid = uniqueId(model.cidPrefix);
@@ -90,7 +95,7 @@ application.scope(function (app) {
                 return ret;
             },
             /**
-             * @description remove attributes from the Box object. Does not completely remove from object with delete, but instead simply sets it to void 0 / undefined
+             * @description remove attributes from the Box object. Does not completely remove from object with delete, but instead simply sets it to blank / undefined
              * @param {String} attr - property string that is on the attributes object
              * @returns {Box} instance the method was called on
              * @func
@@ -211,7 +216,7 @@ application.scope(function (app) {
             },
             _setId: function (id_) {
                 var model = this,
-                    id = id_ === void 0 ? uniqueId(BOOLEAN_FALSE) : id_ + '';
+                    id = id_ === blank ? uniqueId(BOOLEAN_FALSE) : id_ + '';
                 model.id = id;
             },
             reset: function (attrs) {
@@ -247,29 +252,31 @@ application.scope(function (app) {
              */
             _registerChild: function (category, id, model) {
                 var parent = this;
-                if (id !== void 0) {
+                if (id !== blank) {
                     parent[CHILDREN].register(category, id, model);
                 }
             },
             _unRegisterChild: function (category, id) {
                 var parent = this;
-                if (id !== void 0) {
+                if (id !== blank) {
                     parent[CHILDREN].unRegister(category, id);
                 }
             },
             resetChildren: function (newChildren) {
-                var child, box = this,
+                var length, child, box = this,
                     children = box[CHILDREN],
                     arr = children.unwrap();
+                // this can be made far more efficient
                 while (arr[LENGTH]) {
                     child = arr[0];
+                    length = arr[LENGTH];
                     if (child) {
                         result(child, DESTROY);
                     }
                     // if it didn't remove itself,
                     // then you should remove it here
                     // this gets run if the child is a basic data type
-                    if (arr[0] === child) {
+                    if (arr[0] === child && arr[LENGTH] === length) {
                         remove(arr, child);
                     }
                 }
@@ -325,7 +332,7 @@ application.scope(function (app) {
                 // add to collection
                 children.add(newModel);
                 // register with parent
-                parent._registerChild('id', newModel.id, newModel);
+                parent._registerChild(ID, newModel.id, newModel);
                 parent._registerChild('cid', newModel.cid, newModel);
             },
             // ties child events to new child
@@ -333,29 +340,29 @@ application.scope(function (app) {
                 var parent = this,
                     childEvents = _.result(parent, 'childEvents');
                 if (model && childEvents) {
-                    model._parentDelgatedChildEvents = childEvents;
+                    model[_PARENT_DELEGATED_CHILD_EVENTS] = childEvents;
                     parent.listenTo(model, childEvents);
                 }
             },
             // ties child events to new child
             _unDelegateChildEvents: function (model) {
-                if (model && model._parentDelgatedChildEvents && this.stopListening) {
-                    this.stopListening(model, model._parentDelgatedChildEvents);
+                if (model && model[_PARENT_DELEGATED_CHILD_EVENTS] && this[STOP_LISTENING]) {
+                    this[STOP_LISTENING](model, model[_PARENT_DELEGATED_CHILD_EVENTS]);
                 }
             },
             _delegateParentEvents: function (model) {
                 var parent = model[PARENT],
                     parentEvents = _.result(model, 'parentEvents');
                 if (parent && parentEvents) {
-                    model._delegatedParentEvents = parentEvents;
+                    model[_DELEGATED_CHILD_EVENTS] = parentEvents;
                     model.listenTo(parent, parentEvents);
                 }
             },
             // ties child events to new child
             _unDelegateParentEvents: function (model) {
                 var parent = this;
-                if (model.stopListening && model._delegatedParentEvents) {
-                    model.stopListening(parent, model._delegatedParentEvents);
+                if (model[STOP_LISTENING] && model[_DELEGATED_CHILD_EVENTS]) {
+                    model[STOP_LISTENING](parent, model[_DELEGATED_CHILD_EVENTS]);
                 }
             },
             _isChildType: function (child) {
@@ -395,12 +402,13 @@ application.scope(function (app) {
                 list = list.foldl(function (memo, obj) {
                     var isChildType = parent._isChildType(obj),
                         // create a new model
+                        // call it with new in case they use a constructor
                         newModel = isChildType ? obj : new parent.Model(obj, secondary),
                         // find by the newly created's id
                         foundModel = children.get(newModel.id);
                     if (foundModel) {
                         // update the old
-                        foundModel.set(newModel.toJSON());
+                        foundModel.set(obj);
                         newModel = foundModel;
                     } else {
                         // add the new
@@ -423,7 +431,7 @@ application.scope(function (app) {
                 }
                 // remove the child from the children hash
                 children.remove(child);
-                parent._unRegisterChild('id', child.id);
+                parent._unRegisterChild(ID, child.id);
                 // unregister from the child hash keys
                 parent._unRegisterChild('cid', child.cid);
             },
@@ -462,7 +470,7 @@ application.scope(function (app) {
                 // cache the parent
                 var parent = this;
                 // let everyone know that this object is about to be removed
-                model[DISPATCH_EVENT](BEFORE_COLON + 'removed');
+                model[DISPATCH_EVENT](BEFORE_COLON + REMOVED);
                 // notify the child that the remove pipeline is starting
                 // remove the parent events
                 parent._unDelegateParentEvents(model);
@@ -471,9 +479,9 @@ application.scope(function (app) {
                 // attach events from parent
                 parent._removeFromHash(model);
                 // void out the parent member tied directly to the model
-                model[PARENT] = void 0;
+                model[PARENT] = blank;
                 // let everyone know that you've offically separated
-                model[DISPATCH_EVENT]('removed');
+                model[DISPATCH_EVENT](REMOVED);
                 // notify the child that the remove pipeline is done
                 return model;
             },
@@ -485,7 +493,7 @@ application.scope(function (app) {
                     idModel = idModel_;
                 if (!isObject(idModel)) {
                     // it's a string
-                    idModel = parent[CHILDREN].get(idModel + '');
+                    idModel = parent[CHILDREN].get(ID, idModel + '');
                 }
                 if (!idModel || !isObject(idModel)) {
                     return retList;
@@ -501,7 +509,7 @@ application.scope(function (app) {
                     retList.add(model);
                 });
                 if (retList[LENGTH]()) {
-                    parent[DISPATCH_EVENT]('child:removed');
+                    parent[DISPATCH_EVENT]('child:' + REMOVED);
                 }
                 return retList;
             },
@@ -522,7 +530,7 @@ application.scope(function (app) {
                 // stop listening to other views
                 box[DISPATCH_EVENT](DESTROY);
                 // stops listening to everything
-                box.stopListening();
+                box[STOP_LISTENING]();
                 // takes off all other event handlers
                 box.offAll();
                 return box;
