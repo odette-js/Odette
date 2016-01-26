@@ -303,11 +303,11 @@ application.scope().run(function (app, _, factories, $) {
                         one: 4
                     }]);
                     var destroyer = box.children.index(2);
-                    expect(box.children.get(destroyer.cid) === destroyer).toEqual(true);
-                    expect(box.children.get(destroyer.id) === destroyer).toEqual(true);
+                    expect(box.children.get('cid', destroyer.cid) === destroyer).toEqual(true);
+                    expect(box.children.get('id', destroyer.id) === destroyer).toEqual(true);
                     destroyer.destroy();
-                    expect(box.children.get(destroyer.cid)).toEqual(void 0);
-                    expect(box.children.get(destroyer.id)).toEqual(void 0);
+                    expect(box.children.get('cid', destroyer.cid)).toEqual(void 0);
+                    expect(box.children.get('id', destroyer.id)).toEqual(void 0);
                 });
                 it('sort their children', function () {
                     box.add([{

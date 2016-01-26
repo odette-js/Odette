@@ -231,7 +231,7 @@ application.scope().module('Ajax', function (module, app, _, factories) {
                         ajax.currentEvent = evnt;
                         ajax.set('readystate', readystate);
                         if (method === 'onload' || (method === 'onreadystatechange' && readystate === 4)) {
-                            ajax.set('status', status);
+                            ajax.set(STATUS, status);
                             allStates = result(ajax, 'allStates');
                             if (allStates[STATUS + ':' + xhrReqObj[STATUS]] === SUCCESS) {
                                 rawData = result(ajax, 'parse', rawData);

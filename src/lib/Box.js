@@ -33,9 +33,11 @@ application.scope(function (app) {
         isArray = _.isArray,
         intendedObject = _.intendedObject,
         uniqueId = _.uniqueId,
+        SORT = 'sort',
         LENGTH = 'length',
         PARENT = 'parent',
         DESTROY = 'destroy',
+        BEFORE_COLON = 'before:',
         INTERNAL_EVENTS = '_events',
         ATTRIBUTES = 'attributes',
         DISPATCH_EVENT = 'dispatchEvent',
@@ -78,7 +80,7 @@ application.scope(function (app) {
                     ret = model[ATTRIBUTES] || {},
                     history = model[ATTRIBUTE_HISTORY] = {};
                 // set id and let parent know what your new id is
-                this[DISPATCH_EVENT]('before:reset');
+                this[DISPATCH_EVENT](BEFORE_COLON + 'reset');
                 model._setId(newAttributes[idAttr] || uniqueId());
                 model[PREVIOUS_ATTRIBUTES] = {};
                 // swaps attributes hash
@@ -150,9 +152,9 @@ application.scope(function (app) {
             digester: function (fn) {
                 var ret, model = this;
                 model[CHANGE_COUNTER] = model[CHANGE_COUNTER] || 0;
-                model[CHANGE_COUNTER]++;
+                ++model[CHANGE_COUNTER];
                 ret = fn();
-                model[CHANGE_COUNTER]--;
+                --model[CHANGE_COUNTER];
                 // this event should only ever exist here
                 if (!model[CHANGE_COUNTER]) {
                     model[DISPATCH_EVENT]('digest', model[PREVIOUS_ATTRIBUTES]);
@@ -174,7 +176,7 @@ application.scope(function (app) {
                     // do not digest
                     return model;
                 }
-                return model.digester(function () {
+                model.digester(function () {
                     duff(changedList, function (name) {
                         model[DISPATCH_EVENT](CHANGED_STRING + ':' + name, {
                             key: name,
@@ -183,8 +185,8 @@ application.scope(function (app) {
                         });
                     });
                     model[DISPATCH_EVENT](CHANGED_STRING, compiled);
-                    return model;
                 });
+                return model;
             },
             /**
              * @description basic json clone of the attributes object
@@ -220,6 +222,7 @@ application.scope(function (app) {
         ModelMaker = function (attributes, secondary) {
             return new Box(attributes, secondary);
         },
+        constuctor = ModelMaker.constructor = Box,
         Box = factories.Container.extend('Box', {
             /**
              * @description constructor function for the Box Object
@@ -242,16 +245,16 @@ application.scope(function (app) {
              * @param {Object} attributes - non circular hash that is extended onto what the defaults object produces
              * @returns {Box} instance the method was called on
              */
-            _registerChild: function (id, model) {
+            _registerChild: function (category, id, model) {
                 var parent = this;
                 if (id !== void 0) {
-                    parent.children.register(id, model);
+                    parent[CHILDREN].register(category, id, model);
                 }
             },
-            _unRegisterChild: function (id) {
+            _unRegisterChild: function (category, id) {
                 var parent = this;
                 if (id !== void 0) {
-                    parent.children.unRegister(id);
+                    parent[CHILDREN].unRegister(category, id);
                 }
             },
             resetChildren: function (newChildren) {
@@ -318,12 +321,12 @@ application.scope(function (app) {
             // registers and actually adds child to hash
             _addToHash: function (newModel) {
                 var parent = this,
-                    children = this.children;
+                    children = this[CHILDREN];
                 // add to collection
                 children.add(newModel);
                 // register with parent
-                parent._registerChild(newModel.id, newModel);
-                parent._registerChild(newModel.cid, newModel);
+                parent._registerChild('id', newModel.id, newModel);
+                parent._registerChild('cid', newModel.cid, newModel);
             },
             // ties child events to new child
             _delegateChildEvents: function (model) {
@@ -362,7 +365,7 @@ application.scope(function (app) {
             _add: function (model) {
                 var parent = this,
                     children = parent[CHILDREN],
-                    evt = model[DISPATCH_EVENT] && model[DISPATCH_EVENT]('before:added');
+                    evt = model[DISPATCH_EVENT] && model[DISPATCH_EVENT](BEFORE_COLON + 'added');
                 // let the child know it's about to be added
                 // (tied to it's parent via events)
                 // unties boxes
@@ -381,7 +384,7 @@ application.scope(function (app) {
             Model: ModelMaker,
             // public facing version filters
             add: function (objs_, secondary_) {
-                var parent = this,
+                var childAdded, parent = this,
                     children = parent[CHILDREN],
                     secondary = extend(result(parent, 'childOptions'), secondary_ || {}),
                     list = Collection(objs_);
@@ -401,27 +404,28 @@ application.scope(function (app) {
                         newModel = foundModel;
                     } else {
                         // add the new
+                        childAdded = BOOLEAN_TRUE;
                         parent._add(newModel);
                     }
                     memo.push(newModel);
                     return memo;
                 }, []);
-                if (list[LENGTH]) {
+                if (childAdded) {
                     parent[DISPATCH_EVENT]('child:added');
                 }
                 return list;
             },
             _removeFromHash: function (child) {
                 var parent = this,
-                    children = parent.children;
+                    children = parent[CHILDREN];
                 if (!children || !child) {
                     return;
                 }
                 // remove the child from the children hash
                 children.remove(child);
-                parent._unRegisterChild(child.id);
+                parent._unRegisterChild('id', child.id);
                 // unregister from the child hash keys
-                parent._unRegisterChild(child.cid);
+                parent._unRegisterChild('cid', child.cid);
             },
             // only place that we mention parents
             _collectParents: function () {
@@ -458,7 +462,7 @@ application.scope(function (app) {
                 // cache the parent
                 var parent = this;
                 // let everyone know that this object is about to be removed
-                model[DISPATCH_EVENT]('before:removed');
+                model[DISPATCH_EVENT](BEFORE_COLON + 'removed');
                 // notify the child that the remove pipeline is starting
                 // remove the parent events
                 parent._unDelegateParentEvents(model);
@@ -481,7 +485,7 @@ application.scope(function (app) {
                     idModel = idModel_;
                 if (!isObject(idModel)) {
                     // it's a string
-                    idModel = parent.children.get(idModel + '');
+                    idModel = parent[CHILDREN].get(idModel + '');
                 }
                 if (!idModel || !isObject(idModel)) {
                     return retList;
@@ -510,7 +514,7 @@ application.scope(function (app) {
             destroy: function () {
                 var removeRet, box = this;
                 // notify things like parent that it's about to destroy itself
-                box[DISPATCH_EVENT]('before:destroy');
+                box[DISPATCH_EVENT](BEFORE_COLON + 'destroy');
                 // destroys it's children
                 box.resetChildren();
                 // removes all parent / parent's child listeners
@@ -530,12 +534,10 @@ application.scope(function (app) {
              * @func
              * @name Box#sort
              */
-            sort: function (comparator) {
+            sort: function (comparator_) {
                 var compString, isReversed, model = this,
-                    children = model[CHILDREN];
-                if (!comparator) {
-                    comparator = result(model, 'comparator');
-                }
+                    children = model[CHILDREN],
+                    comparator = comparator_ || result(model, 'comparator');
                 if (isString(comparator)) {
                     isReversed = comparator[0] === '!';
                     compString = comparator;
@@ -543,21 +545,20 @@ application.scope(function (app) {
                         compString = comparator.slice(1);
                     }
                     comparator = function (a, b) {
-                        var val, valA = a.get(compString),
-                            valB = b.get(compString);
+                        var val_, val_A = a.get(compString),
+                            val_B = b.get(compString);
                         if (isReversed) {
-                            val = valB - valA;
+                            val_ = val_B - val_A;
                         } else {
-                            val = valA - valB;
+                            val_ = val_A - val_B;
                         }
-                        return val;
+                        return val_;
                     };
                 }
-                model[DISPATCH_EVENT]('before:sort', model);
-                children.sort(comparator);
-                model[DISPATCH_EVENT]('sort', model);
+                model[DISPATCH_EVENT](BEFORE_COLON + SORT, model);
+                children[SORT](comparator);
+                model[DISPATCH_EVENT](SORT, model);
                 return model;
             }
-        }, !0);
-    ModelMaker.constructor = Box;
+        }, BOOLEAN_TRUE);
 });
