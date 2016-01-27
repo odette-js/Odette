@@ -1,6 +1,5 @@
 application.scope().module('Promise', function (module, app, _, factories) {
-    var blank, flatten = _.flatten,
-        LENGTH = 'length',
+    var blank, LENGTH = 'length',
         FAILURE = 'failure',
         SUCCESS = 'success',
         STATE = 'state',
@@ -8,6 +7,7 @@ application.scope().module('Promise', function (module, app, _, factories) {
         IS_EMPTYING = 'isEmptying',
         ALL_STATES = 'allStates',
         STASHED_ARGUMENT = 'stashedArgument',
+        flatten = _.flatten,
         bind = _.bind,
         isString = _.isString,
         intendedObject = _.intendedObject,
@@ -19,10 +19,12 @@ application.scope().module('Promise', function (module, app, _, factories) {
         foldl = _.foldl,
         result = _.result,
         wraptry = _.wraptry,
+        indexOf = _.indexOf,
         BOOLEAN_TRUE = !0,
         BOOLEAN_FALSE = !1,
+        NULL = null,
         when = function () {
-            var promise = _.Promise();
+            var promise = factories.Promise();
             promise.add(foldl(flatten(arguments), function (memo, pro) {
                 if (promise._isChildType(pro)) {
                     memo.push(pro);
@@ -33,16 +35,17 @@ application.scope().module('Promise', function (module, app, _, factories) {
         },
         dispatch = function (promise, name, opts) {
             var shouldstop, finalName = name,
-                everalways = BOOLEAN_FALSE,
-                allstates = result(promise, ALL_STATES);
+                allstates = result(promise, ALL_STATES),
+                collected = [];
             while (!shouldstop) {
-                everalways = everalways || finalName === ALWAYS;
-                promise.executeHandlers(finalName);
-                finalName = allstates[finalName];
+                if (indexOf(collected, finalName) === -1) {
+                    collected.push(finalName);
+                    promise.executeHandlers(finalName);
+                    finalName = allstates[finalName];
+                } else {
+                    finalName = BOOLEAN_FALSE;
+                }
                 shouldstop = !isString(finalName);
-            }
-            if (!everalways) {
-                promise.executeHandlers(ALWAYS);
             }
         },
         executeIfNeeded = function (promise, name) {
@@ -55,12 +58,6 @@ application.scope().module('Promise', function (module, app, _, factories) {
                 return promise;
             };
         },
-        // associativeStates = {
-        //     success: BOOLEAN_TRUE,
-        //     failure: BOOLEAN_FALSE,
-        //     error: FAILURE,
-        //     always: BOOLEAN_TRUE
-        // },
         addState = function (key) {
             var promise = this;
             // if you haven't already attached a method, then do so now
@@ -68,6 +65,19 @@ application.scope().module('Promise', function (module, app, _, factories) {
                 promise[key] = executeIfNeeded(promise, key);
             }
             return promise;
+        },
+        stateChecker = function (lookingfor) {
+            return function () {
+                var resulting = BOOLEAN_FALSE,
+                    allstates = result(this, ALL_STATES),
+                    next = this.get(STATE);
+                while (isString(next) && !resulting) {
+                    if (next === lookingfor) {
+                        resulting = BOOLEAN_TRUE;
+                    }
+                }
+                return resulting;
+            };
         },
         Promise = factories.Box.extend('Promise', {
             addState: addState,
@@ -79,9 +89,9 @@ application.scope().module('Promise', function (module, app, _, factories) {
             },
             baseStates: function () {
                 return {
-                    success: BOOLEAN_TRUE,
-                    failure: BOOLEAN_FALSE,
-                    error: BOOLEAN_FALSE,
+                    success: ALWAYS,
+                    failure: ALWAYS,
+                    error: ALWAYS,
                     always: BOOLEAN_TRUE
                 };
             },
@@ -90,7 +100,7 @@ application.scope().module('Promise', function (module, app, _, factories) {
                 factories.Box.constructor.call(promise);
                 promise.restart();
                 // cannot have been resolved in any way yet
-                intendedObject(extend({}, result(promise, 'baseStates'), result(promise, 'associativeStates')), null, bind(addState, promise));
+                intendedObject(extend({}, result(promise, 'baseStates'), result(promise, 'associativeStates')), NULL, bind(addState, promise));
                 // add passed in success handlers
                 promise.success(arguments);
                 return promise;
@@ -108,13 +118,13 @@ application.scope().module('Promise', function (module, app, _, factories) {
                 }
             },
             _isChildType: function (promise) {
-                return promise.success && promise.failure && promise.resolve;
+                return promise[SUCCESS] && promise[FAILURE] && promise[ALWAYS];
             },
             defaults: function () {
                 return {
                     state: 'pending',
                     resolved: BOOLEAN_FALSE,
-                    stashedArgument: null,
+                    stashedArgument: NULL,
                     stashedHandlers: {}
                 };
             },
@@ -151,12 +161,8 @@ application.scope().module('Promise', function (module, app, _, factories) {
                 // allows resolved to be defined in a different way
                 return this.get('resolved');
             },
-            isFulfilled: function () {
-                return result(this, ALL_STATES)[this.get(STATE)] === BOOLEAN_TRUE;
-            },
-            isRejected: function () {
-                return result(this, ALL_STATES)[this.get(STATE)] === BOOLEAN_FALSE;
-            },
+            isFulfilled: stateChecker(SUCCESS),
+            isRejected: stateChecker(FAILURE),
             isPending: function () {
                 return this.get(STATE) === 'pending';
             },

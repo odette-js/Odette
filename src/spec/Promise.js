@@ -114,5 +114,23 @@ application.scope().run(function (app, _, factories, $) {
                 }, 100);
             });
         });
+        describe('creates a tree of dependencies', function () {
+            it('always is a nonstring', function () {
+                var allstates = promise.allStates();
+                expect(!_.isString(allstates.always)).toEqual(true);
+            });
+            it('success is set to always', function () {
+                var allstates = promise.allStates();
+                expect(allstates.success).toEqual('always');
+            });
+            it('failure is set to always', function () {
+                var allstates = promise.allStates();
+                expect(allstates.failure).toEqual('always');
+            });
+            it('error is set to always', function () {
+                var allstates = promise.allStates();
+                expect(allstates.error).toEqual('always');
+            });
+        });
     });
 });

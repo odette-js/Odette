@@ -2222,23 +2222,23 @@ application.scope(function (app) {
                 });
             };
         },
-        merge = splat(function (item, idx, list) {
-            var len, collection = this,
-                last = collection[LENGTH];
-            if (isArrayLike(item)) {
-                len = item[LENGTH];
-                duff(item, function (key, val) {
-                    if (val !== void 0) {
-                        // removes any undefined items
-                        len = key + 1;
-                        collection[key] = val;
-                    }
-                });
-                if (len > (last || 0)) {
-                    collection[LENGTH] = len;
-                }
-            }
-        }),
+        // merge = splat(function (item, idx, list) {
+        //     var len, collection = this,
+        //         last = collection[LENGTH];
+        //     if (isArrayLike(item)) {
+        //         len = item[LENGTH];
+        //         duff(item, function (key, val) {
+        //             if (val !== blank) {
+        //                 // removes any undefined items
+        //                 len = key + 1;
+        //                 collection[key] = val;
+        //             }
+        //         });
+        //         if (len > (last || 0)) {
+        //             collection[LENGTH] = len;
+        //         }
+        //     }
+        // }),
         eq = function (list, num) {
             var n, thisNum, items = [],
                 numb = num || 0,
@@ -2432,7 +2432,7 @@ application.scope(function (app) {
             mamboWrap: internalMambo,
             mambo: externalMambo,
             concat: concat,
-            listMerge: merge,
+            // listMerge: merge,
             pluck: pluck,
             where: where,
             findWhere: findWhere,
@@ -4135,8 +4135,7 @@ application.scope().module('Looper', function (module, app, _, factories) {
     });
 });
 application.scope().module('Promise', function (module, app, _, factories) {
-    var blank, flatten = _.flatten,
-        LENGTH = 'length',
+    var blank, LENGTH = 'length',
         FAILURE = 'failure',
         SUCCESS = 'success',
         STATE = 'state',
@@ -4144,6 +4143,7 @@ application.scope().module('Promise', function (module, app, _, factories) {
         IS_EMPTYING = 'isEmptying',
         ALL_STATES = 'allStates',
         STASHED_ARGUMENT = 'stashedArgument',
+        flatten = _.flatten,
         bind = _.bind,
         isString = _.isString,
         intendedObject = _.intendedObject,
@@ -4155,10 +4155,12 @@ application.scope().module('Promise', function (module, app, _, factories) {
         foldl = _.foldl,
         result = _.result,
         wraptry = _.wraptry,
+        indexOf = _.indexOf,
         BOOLEAN_TRUE = !0,
         BOOLEAN_FALSE = !1,
+        NULL = null,
         when = function () {
-            var promise = _.Promise();
+            var promise = factories.Promise();
             promise.add(foldl(flatten(arguments), function (memo, pro) {
                 if (promise._isChildType(pro)) {
                     memo.push(pro);
@@ -4169,16 +4171,17 @@ application.scope().module('Promise', function (module, app, _, factories) {
         },
         dispatch = function (promise, name, opts) {
             var shouldstop, finalName = name,
-                everalways = BOOLEAN_FALSE,
-                allstates = result(promise, ALL_STATES);
+                allstates = result(promise, ALL_STATES),
+                collected = [];
             while (!shouldstop) {
-                everalways = everalways || finalName === ALWAYS;
-                promise.executeHandlers(finalName);
-                finalName = allstates[finalName];
+                if (indexOf(collected, finalName) === -1) {
+                    collected.push(finalName);
+                    promise.executeHandlers(finalName);
+                    finalName = allstates[finalName];
+                } else {
+                    finalName = BOOLEAN_FALSE;
+                }
                 shouldstop = !isString(finalName);
-            }
-            if (!everalways) {
-                promise.executeHandlers(ALWAYS);
             }
         },
         executeIfNeeded = function (promise, name) {
@@ -4191,12 +4194,6 @@ application.scope().module('Promise', function (module, app, _, factories) {
                 return promise;
             };
         },
-        // associativeStates = {
-        //     success: BOOLEAN_TRUE,
-        //     failure: BOOLEAN_FALSE,
-        //     error: FAILURE,
-        //     always: BOOLEAN_TRUE
-        // },
         addState = function (key) {
             var promise = this;
             // if you haven't already attached a method, then do so now
@@ -4204,6 +4201,19 @@ application.scope().module('Promise', function (module, app, _, factories) {
                 promise[key] = executeIfNeeded(promise, key);
             }
             return promise;
+        },
+        stateChecker = function (lookingfor) {
+            return function () {
+                var resulting = BOOLEAN_FALSE,
+                    allstates = result(this, ALL_STATES),
+                    next = this.get(STATE);
+                while (isString(next) && !resulting) {
+                    if (next === lookingfor) {
+                        resulting = BOOLEAN_TRUE;
+                    }
+                }
+                return resulting;
+            };
         },
         Promise = factories.Box.extend('Promise', {
             addState: addState,
@@ -4215,9 +4225,9 @@ application.scope().module('Promise', function (module, app, _, factories) {
             },
             baseStates: function () {
                 return {
-                    success: BOOLEAN_TRUE,
-                    failure: BOOLEAN_FALSE,
-                    error: BOOLEAN_FALSE,
+                    success: ALWAYS,
+                    failure: ALWAYS,
+                    error: ALWAYS,
                     always: BOOLEAN_TRUE
                 };
             },
@@ -4226,7 +4236,7 @@ application.scope().module('Promise', function (module, app, _, factories) {
                 factories.Box.constructor.call(promise);
                 promise.restart();
                 // cannot have been resolved in any way yet
-                intendedObject(extend({}, result(promise, 'baseStates'), result(promise, 'associativeStates')), null, bind(addState, promise));
+                intendedObject(extend({}, result(promise, 'baseStates'), result(promise, 'associativeStates')), NULL, bind(addState, promise));
                 // add passed in success handlers
                 promise.success(arguments);
                 return promise;
@@ -4244,13 +4254,13 @@ application.scope().module('Promise', function (module, app, _, factories) {
                 }
             },
             _isChildType: function (promise) {
-                return promise.success && promise.failure && promise.resolve;
+                return promise[SUCCESS] && promise[FAILURE] && promise[ALWAYS];
             },
             defaults: function () {
                 return {
                     state: 'pending',
                     resolved: BOOLEAN_FALSE,
-                    stashedArgument: null,
+                    stashedArgument: NULL,
                     stashedHandlers: {}
                 };
             },
@@ -4287,12 +4297,8 @@ application.scope().module('Promise', function (module, app, _, factories) {
                 // allows resolved to be defined in a different way
                 return this.get('resolved');
             },
-            isFulfilled: function () {
-                return result(this, ALL_STATES)[this.get(STATE)] === BOOLEAN_TRUE;
-            },
-            isRejected: function () {
-                return result(this, ALL_STATES)[this.get(STATE)] === BOOLEAN_FALSE;
-            },
+            isFulfilled: stateChecker(SUCCESS),
+            isRejected: stateChecker(FAILURE),
             isPending: function () {
                 return this.get(STATE) === 'pending';
             },
@@ -4392,7 +4398,6 @@ application.scope().module('Ajax', function (module, app, _, factories) {
         BOOLEAN_TRUE = !0,
         BOOLEAN_FALSE = !1,
         STATUS = 'status',
-        // ERROR = 'error',
         FAILURE = 'failure',
         SUCCESS = 'success',
         READY_STATE = 'readyState',
@@ -4435,68 +4440,35 @@ application.scope().module('Ajax', function (module, app, _, factories) {
             return function () {
                 wraptry(function () {
                     xhrReq.send.apply(xhrReq, args);
-                    // }, function (e) {
+                }, function (e) {
                     // handle an xhr req send error here
-                    // factories.reportError('xhr', e + '');
+                    factories.reportError('xhr', e + '');
                 });
             };
-        },
-        sendRequest = function (ajax, xhrReq, type, url) {
-            var args = [],
-                data = ajax.get('data');
-            if (url) {
-                xhrReq.open(type, url, ajax.get('async'));
-                if (data) {
-                    args.push(stringify(data));
-                }
-                ajax.setHeaders(ajax.get('headers'));
-                attachBaseListeners(ajax);
-                // have to wrap in set timeout for ie
-                setTimeout(sendthething(xhrReq, args));
-            }
-        },
-        decide = {
-            /**
-             * @description get pathway for actually sending out a get request
-             * @private
-             */
-            GET: function (ajax, xhrReq, type) {
-                var url = ajax.getUrl();
-                ajax.attachResponseHandler();
-                sendRequest(ajax, xhrReq, type, url);
-            },
-            /**
-             * @description pathway for actually sending out a put request
-             * @private
-             */
-            PUT: function () {},
-            /**
-             * @description pathway for actually sending out a post request
-             * @private
-             */
-            POST: function (ajax, xhrReq, type) {
-                var url = ajax.getUrl();
-                ajax.attachResponseHandler();
-                sendRequest(ajax, xhrReq, type, url);
-            },
-            /**
-             * @description pathway for actually sending out a delete request
-             * @private
-             */
-            DELETE: function () {}
         },
         alterurlHandler = function () {
             var ajax = this,
                 xhrReq = ajax.requestObject,
                 type = ajax.get('type'),
-                thingToDo = decide[type] || decide.GET;
-            if (thingToDo) {
-                thingToDo(ajax, xhrReq, type);
+                url = ajax.getUrl(),
+                args = [],
+                data = ajax.get('data');
+            if (!url) {
+                return;
             }
+            ajax.attachResponseHandler();
+            xhrReq.open(type, url, ajax.get('async'));
+            if (data) {
+                args.push(stringify(data));
+            }
+            ajax.setHeaders(ajax.get('headers'));
+            attachBaseListeners(ajax);
+            // have to wrap in set timeout for ie
+            setTimeout(sendthething(xhrReq, args));
         },
         /**
          * @class Ajax
-         * @alias _.Ajax
+         * @alias factories.Ajax
          * @augments Box
          * @augments Model
          * @classdesc XHR object wrapper Triggers events based on xhr state changes and abstracts many anomalies that have to do with IE
@@ -4546,7 +4518,7 @@ application.scope().module('Ajax', function (module, app, _, factories) {
                 return ajax;
             },
             status: function (code, handler) {
-                return this.handle('status:' + code, handler);
+                return this.handle(STATUS + ':' + code, handler);
             },
             setHeaders: function (headers) {
                 var ajax = this,
@@ -4629,7 +4601,7 @@ application.scope().module('Ajax', function (module, app, _, factories) {
                 }
                 return ajax;
             }
-        }, !0);
+        }, BOOLEAN_TRUE);
 });
 application.scope().module('Associator', function (module, app, _, factories) {
     /**
@@ -7665,20 +7637,28 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
     var blank, isReceiving = 0,
         get = _.get,
         duff = _.duff,
-        Collection = factories.Collection,
+        collection = factories.Collection,
         gapSplit = _.gapSplit,
         associator = _.associator,
         unitsToNum = _.unitsToNum,
         roundFloat = _.roundFloat,
+        isFunction = _.isFunction,
         extend = _.extend,
         console = _.console,
-        infin = 32767,
-        ATTRIBUTES = 'attributes',
         reference = _.reference,
         now = _.now,
+        parse = _.parse,
+        foldl = _.foldl,
+        stringify = _.stringify,
         BOOLEAN_TRUE = !0,
         BOOLEAN_FALSE = !1,
+        infin = 32767,
         nInfin = -infin - 1,
+        ATTRIBUTES = 'attributes',
+        COMPONENT = 'component',
+        COMPONENTS = COMPONENT + 's',
+        RESPONSE_OPTIONS = 'responseOptions',
+        PARENT = 'parent',
         LENGTH = 'length',
         HEIGHT = 'height',
         WIDTH = 'width',
@@ -7686,12 +7666,14 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
         RIGHT = 'right',
         LEFT = 'left',
         TOP = 'top',
+        DISPATCH_EVENT = 'dispatchEvent',
         MARGIN_BOTTOM = 'marginBottom',
         MARGIN_RIGHT = 'marginRight',
         MIN_HEIGHT = 'minHeight',
         MAX_HEIGHT = 'maxHeight',
         MIN_WIDTH = 'minWidth',
         MAX_WIDTH = 'minWidth',
+        BEFORE_RESPONDED = 'before:responded',
         QUEUED_MESSAGE_INDEX = 'queuedMessageIndex',
         pI = _.pI,
         _setupInit = function (e) {
@@ -7729,7 +7711,7 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                                         if (frameWin === currentCheck) {
                                             return frame;
                                         }
-                                        currentCheck = currentCheck.parent;
+                                        currentCheck = currentCheck[PARENT];
                                     }
                                 }
                             }
@@ -7773,14 +7755,14 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                 });
             }
             if (shouldRespond) {
-                parentEl = buster.el.parent();
+                parentEl = buster.el[PARENT]();
                 buster.respond(data, {
                     parent: {
                         height: parentEl[HEIGHT](),
                         width: parentEl[WIDTH](),
                         style: {
-                            height: parentEl.get(0).style[HEIGHT],
-                            width: parentEl.get(0).style[WIDTH]
+                            height: parentEl.index(0).style[HEIGHT],
+                            width: parentEl.index(0).style[WIDTH]
                         }
                     }
                 });
@@ -7792,7 +7774,7 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
          * @arg {event} event object passed in by browser
          */
         receive = function (evt) {
-            var buster, bustersCache, data = _.parse(evt.data),
+            var buster, bustersCache, data = parse(evt.data),
                 postTo = data.postTo;
             if (data && postTo && !app.isDestroying) {
                 bustersCache = associator.get(postTo);
@@ -7815,7 +7797,7 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
             var busterAttrs = buster[ATTRIBUTES],
                 sameSide = busterAttrs.sameSide,
                 parts = buster.parts,
-                message = JSON.stringify(base),
+                message = stringify(base),
                 timestamp = now(),
                 doReceive = function () {
                     receive({
@@ -7850,9 +7832,9 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
             toInner: function (buster) {
                 var attrs = buster[ATTRIBUTES],
                     parts = buster.parts;
-                parts.sendWin = buster.parent.el.index(0).contentWindow;
+                parts.sendWin = buster[PARENT].el.index(0).contentWindow;
                 attrs.referrer = attrs.referrer || reference(parts.doc);
-                attrs.sameSide = !buster.parent.parent.get('unfriendlyCreative');
+                attrs.sameSide = !buster[PARENT][PARENT].get('unfriendlyCreative');
             },
             /**
              * @private
@@ -7860,7 +7842,7 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
             fromInner: function (buster) {
                 var attrs = buster[ATTRIBUTES],
                     parts = buster.parts;
-                parts.sendWin = parts.receiveWin.parent;
+                parts.sendWin = parts.receiveWin[PARENT];
                 attrs.referrer = attrs.referrer || reference(parts.doc);
             },
             notInner: {
@@ -7874,42 +7856,43 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                         iframe = doc.createElement('iframe'),
                         allMods = _.clone(app.allModules);
                     allMods.push('initPublisherConfig');
-                    if (attrs.busterLocation) {
-                        iframe.style.display = 'none';
-                        url = attrs.referrer + attrs.busterLocation;
-                        iframe.src = _.stringifyQuery({
-                            url: attrs.referrer + attrs.busterLocation,
-                            query: {
-                                origin: doc.location.href,
-                                sessionId: attrs.sessionId,
-                                src: app.BASEURL + buster.get('scriptUrl') + app.addVersionNumber(allMods).join()
-                            }
-                        });
-                        parts.wrapper.appendChild(iframe);
-                        parts.sendWin = iframe.contentWindow;
-                        buster.el = $(iframe);
-                        _.Ajax(url).failure(function () {
-                            var time = 2000;
-                            if (_.isMobile) {
-                                time = 10000;
-                            }
-                            setTimeout(function () {
-                                // handle no buster file here
-                                var ret, ad = buster.parent,
-                                    adAttrs = ad[ATTRIBUTES],
-                                    banner = ad.children.index(1),
-                                    panel = ad.children.index(2);
-                                if (!ad.busterLoaded) {
-                                    if (!banner) {
-                                        banner = panel;
-                                    }
-                                    ret = panel.destroy && panel.destroy();
-                                    buster.unSendAll();
-                                    buster.on('message:queued', buster.unSendAll);
-                                }
-                            }, time);
-                        });
+                    if (!attrs.busterLocation) {
+                        return;
                     }
+                    iframe.style.display = 'none';
+                    url = attrs.referrer + attrs.busterLocation;
+                    iframe.src = _.stringifyQuery({
+                        url: attrs.referrer + attrs.busterLocation,
+                        query: {
+                            origin: doc.location.href,
+                            sessionId: attrs.sessionId,
+                            src: app.BASEURL + buster.get('scriptUrl') + app.addVersionNumber(allMods).join()
+                        }
+                    });
+                    parts.wrapper.appendChild(iframe);
+                    parts.sendWin = iframe.contentWindow;
+                    buster.el = $(iframe);
+                    promise.Ajax(url).failure(function () {
+                        var time = 2000;
+                        if (_.isMobile) {
+                            time = 10000;
+                        }
+                        setTimeout(function () {
+                            // handle no buster file here
+                            var ret, ad = buster[PARENT],
+                                adAttrs = ad[ATTRIBUTES],
+                                banner = ad.children.index(1),
+                                panel = ad.children.index(2);
+                            if (!ad.busterLoaded) {
+                                if (!banner) {
+                                    banner = panel;
+                                }
+                                ret = panel.destroy && panel.destroy();
+                                buster.unSendAll();
+                                buster.on('message:queued', buster.unSendAll);
+                            }
+                        }, time);
+                    });
                 },
                 /**
                  * @private
@@ -7983,749 +7966,674 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                 transitionDuration: 0,
                 preventScrollCount: 0
             });
-        };
+        },
+        /**
+         * @class Buster
+         * @augments Model
+         * @augments Box
+         * @augments View
+         * @classDesc constructor for buster objects, which have the ability to talk across windows
+         */
+        Message = factories.Container.extend('Message', {
+            initialize: function () {
+                var message = this;
+                message.deferredHandlers = [];
+                message.respondHandlers = [];
+            },
+            packet: function (data) {
+                var ret = this;
+                if (arguments[0]) {
+                    this.set('packet', data || {});
+                } else {
+                    ret = parse(stringify(this.get('packet')));
+                }
+                return ret;
+            },
+            defaults: function () {
+                return {
+                    command: 'null',
+                    packet: {}
+                };
+            },
+            deferred: function (fn) {
+                this.on('deferred', fn);
+                return this;
+            },
+            respond: function (fn) {
+                var message = this,
+                    buster = message[PARENT];
+                if (isFunction(fn)) {
+                    message.respondHandlers.push(bind(fn, message));
+                }
+                if (message[RESPONSE_OPTIONS]) {
+                    while (message.respondHandlers[0]) {
+                        handler = message.respondHandlers.shift();
+                        handler(message[RESPONSE_OPTIONS]);
+                    }
+                }
+                return message;
+            }
+        }),
+        Buster = factories.Buster = factories.Box.extend('Buster', {
+            Model: Message,
+            events: {
+                unload: 'destroy',
+                'change:isConnected': function () {
+                    this.set(QUEUED_MESSAGE_INDEX, 1);
+                },
+                'change:isConnected child:added': 'flush'
+            },
+            parentEvents: {
+                destroy: 'destroy'
+            },
+            /**
+             * @func
+             * @name Buster#destroy
+             */
+            currentPoint: function () {
+                var currentPoint = this.get('currentPoint');
+                return currentPoint ? {
+                    source: currentPoint.source,
+                    srcElement: currentPoint.srcElement,
+                    originTimestamp: currentPoint.timestamp,
+                    frame: currentPoint.frame,
+                    responder: currentPoint.responder
+                } : {};
+            },
+            destroy: function () {
+                var buster = this,
+                    attrs = buster[ATTRIBUTES];
+                buster.set('isConnected', BOOLEAN_FALSE);
+                clearTimeout(attrs.__lastMouseMovingTimeout__);
+                _.AF.remove(attrs.elQueryId);
+                _.AF.remove(attrs.componentTransitionAFID);
+                buster.parts = {};
+                associator.remove(buster.id);
+                factories.Box.constructor.prototype.destroy.apply(this, arguments);
+                return buster;
+            },
+            tellMouseMovement: function () {
+                if (this.get('mouseMoveDataObject')) {
+                    this.respond(this.get('mouseMoveDataObject'));
+                }
+            },
+            /**
+             * @func
+             * @name Buster#defaults
+             */
+            defaults: function () {
+                return {
+                    currentState: 'collapse',
+                    connectedUnder: [],
+                    isConnected: 0,
+                    sameSide: 0,
+                    queuedMessageIndex: 0,
+                    sent: []
+                };
+            },
+            // belongs on the outside
+            _stateCss: function (set0) {
+                var busterAttrs = this[ATTRIBUTES],
+                    _sizing = busterAttrs._sizing,
+                    margin = {
+                        transitionProperty: 'all'
+                    };
+                if (_sizing) {
+                    if (_sizing.vPushCount) {
+                        margin[MARGIN_BOTTOM] = busterAttrs.pushVerticalVal;
+                        margin.transitionDuration = _sizing.transitionDuration;
+                    } else {
+                        if (set0) {
+                            margin[MARGIN_BOTTOM] = 0;
+                        } else {
+                            margin[MARGIN_BOTTOM] = 'auto';
+                        }
+                    }
+                    if (_sizing.hPushCount) {
+                        margin[MARGIN_RIGHT] = busterAttrs.pushHorizontalVal;
+                        margin.transitionDuration = _sizing.transitionDuration;
+                    } else {
+                        if (set0) {
+                            margin[MARGIN_RIGHT] = 0;
+                        } else {
+                            margin[MARGIN_RIGHT] = 'auto';
+                        }
+                    }
+                }
+                return margin;
+            },
+            /**
+             * initial setup for all busters
+             * @func
+             * @name Buster#initialize
+             */
+            initialize: function (opts, options) {
+                var receiveWin, registered, buster = this,
+                    attrs = buster[ATTRIBUTES];
+                buster[COMPONENTS] = collection();
+                buster.showing = collection();
+                buster.on(BEFORE_RESPONDED, attrs.every);
+                buster.addCommand({
+                    initialize: _setupInit,
+                    begin: this.begin,
+                    update: function (e) {
+                        this.respond(e.data());
+                    },
+                    unload: function () {
+                        this.destroy();
+                    },
+                    // belongs on the outside
+                    updateAttributes: function (e) {
+                        var buster = this,
+                            data = e.data(),
+                            packet = data.packet;
+                        buster.set(packet.update);
+                        duff(packet[COMPONENTS], function (com) {
+                            var component = buster[COMPONENT](com.registeredAs);
+                            if (!component) {
+                                buster[COMPONENTS].add(com);
+                            } else {
+                                extend(component, com);
+                            }
+                        });
+                        buster[COMPONENTS].each(function (com) {
+                            if (_.posit(packet.showing, com.registeredAs)) {
+                                com.isShowing = BOOLEAN_TRUE;
+                            } else {
+                                com.isShowing = BOOLEAN_FALSE;
+                            }
+                        });
+                        if (packet.shouldRespond) {
+                            buster.respond();
+                        }
+                    }
+                });
+                buster.allListeners = collection();
+                attrs.frame = null;
+                buster.el = $(buster.parts.frame);
+                registered = associator.get(attrs.id);
+                registered.buster = buster;
+                registered.postListener = receive;
+                receiveWin = $(buster.parts.receiveWin);
+                receiveWin.on('message', receive);
+                buster.allListeners.push({
+                    els: receiveWin,
+                    fn: receive,
+                    name: 'message'
+                });
+                if (attrs.type === 'buster') {
+                    if (!attrs.sameSide) {
+                        setups.notInner.noAccess(buster);
+                    } else {
+                        setups.notInner.topAccess(buster);
+                    }
+                }
+                // always assume the need to bust for these two
+                if (attrs.type !== 'buster') {
+                    if (attrs.toInner) {
+                        setups.toInner(buster);
+                    }
+                    if (attrs.fromInner) {
+                        setups.fromInner(buster);
+                    }
+                }
+                return buster;
+            },
+            component: function (registeredAs) {
+                return this[COMPONENTS].find(function (com, idx) {
+                    return com.registeredAs === registeredAs || idx === registeredAs;
+                });
+            },
+            // this belongs on the outside
+            /**
+             * quick get parser to figure out if the wrapper, the frame element, it's parent, the document, or an other item is being selected by a post message
+             * @arg {string} target selector
+             * @returns {DOMM} with targets
+             * @func
+             * @name Buster#getTargets
+             */
+            getTargets: function (target) {
+                var buster = this,
+                    attrs = buster[ATTRIBUTES],
+                    parts = buster.parts,
+                    top = parts[TOP],
+                    targets = [],
+                    wrapper = parts.wrapper;
+                if (!target) {
+                    targets = [top];
+                }
+                if (target === 'wrapper') {
+                    targets = [wrapper];
+                }
+                if (target === 'self') {
+                    targets = buster.el;
+                }
+                if (target === 'document') {
+                    targets = [parts.doc];
+                }
+                if (target === PARENT) {
+                    targets = buster.el[PARENT]();
+                }
+                if (!targets[LENGTH]) {
+                    targets = parts.doc.querySelectorAll(target);
+                }
+                return $(targets);
+            },
+            /**
+             * tries to flush the cache. only works if the isConnected attribute is set to true. If it is, then the post message pipeline begins
+             * @returns {buster} returns this;
+             * @func
+             * @name Buster#flush
+             */
+            flush: function () {
+                var n, item, gah, childrenLen, queuedMsg, nuData, i = 0,
+                    buster = this,
+                    currentIdx = buster.get(QUEUED_MESSAGE_INDEX),
+                    connected = buster.get('isConnected'),
+                    initedFrom = buster.get('initedFromPartner'),
+                    flushing = buster.get('flushing');
+                if (!initedFrom || connected && ((connected || !currentIdx) && !flushing)) {
+                    buster.set('flushing', BOOLEAN_TRUE);
+                    childrenLen = buster.children[LENGTH]();
+                    queuedMsg = buster.children.index(currentIdx);
+                    while (queuedMsg && currentIdx < childrenLen) {
+                        queuedMsg.set({
+                            runCount: 0
+                        });
+                        postMessage(queuedMsg, buster);
+                        if (currentIdx) {
+                            currentIdx = (buster.get(QUEUED_MESSAGE_INDEX) + 1) || 0;
+                            buster.set(QUEUED_MESSAGE_INDEX, currentIdx);
+                            queuedMsg = buster.children.index(currentIdx);
+                        } else {
+                            childrenLen = BOOLEAN_FALSE;
+                        }
+                    }
+                    buster.set({
+                        flushing: BOOLEAN_FALSE
+                    });
+                    if (buster.get('isConnected')) {
+                        if (buster.children[LENGTH]() > buster.get(QUEUED_MESSAGE_INDEX)) {
+                            buster.flush();
+                        }
+                    }
+                }
+                return buster;
+            },
+            /**
+             * basic send message function, adds to queue, then calls flush
+             * @arg {string} can be string or object. if object, must have command property as string
+             * @arg {object} base object to be sent
+             * @returns {buster}
+             * @func
+             * @name Buster#send
+             */
+            send: function (command, packet, extra) {
+                var message, buster = this,
+                    defaultObj = buster.defaultMessage();
+                message = buster.add(extend({
+                    command: command,
+                    packet: packet
+                }, defaultObj, extra));
+                return buster.children.index(defaultObj.index);
+            },
+            /**
+             * shorthand for creating a function that gets called after the buster's partner has responded
+             * @func
+             * @name Buster#sync
+             */
+            sync: function (fn) {
+                return this.send('update').respond(fn);
+            },
+            /**
+             * if a buster is found on the receive function, by the data's postTo property, then the run method is called
+             * @arg {object} the parsed data object
+             * @arg {event} the event object that wrapped the stringified data object
+             * @returns {buster}
+             * @func
+             * @name Buster#run
+             */
+            run: function (data, currentPoint_) {
+                var packet, format, retVal, responded, onResponse, originalMessage, responseType, methodName, buster = this,
+                    attrs = buster[ATTRIBUTES],
+                    currentPoint = attrs.currentPoint = currentPoint_,
+                    event = currentPoint,
+                    messages = attrs.sent,
+                    runCount = data.runCount,
+                    children = buster.children,
+                    eventname = 'respond',
+                    args = _.toArray(arguments);
+                if (runCount) {
+                    originalMessage = children.index(data.index);
+                    if (originalMessage) {
+                        // found the message that i originally sent you
+                        // packet = originalMessage.packet;
+                        // allow the buster to set some things up
+                        buster[DISPATCH_EVENT](BEFORE_RESPONDED);
+                        if (runCount === 1) {
+                            // stash it for later
+                            originalMessage[RESPONSE_OPTIONS] = data;
+                        } else {
+                            eventname = 'deferred';
+                        }
+                        originalMessage[DISPATCH_EVENT](eventname);
+                    }
+                } else {
+                    buster[DISPATCH_EVENT]('receive:' + data.command);
+                    buster[DISPATCH_EVENT]('receive');
+                }
+                return buster;
+            },
+            /**
+             * skip the queue, and simply send a message
+             * @arg {object} message object to be sent
+             * @arg {object} optional object that is the original object. Usually only applicable when passed in through the send function, so that the response event can have all of the correct information
+             * @returns {buster}
+             * @func
+             * @name Buster#sendMessage
+             */
+            // sendMessage: function (message) {
+            //     var buster = this;
+            //     // set again to make sure that it has all the right info
+            //     // message.set(buster.defaultMessage());
+            //     postMessage(_.fullClone(message), buster);
+            //     return buster;
+            // },
+            /**
+             * creates a default message based on the attributes of the buster
+             * @returns {object} blank / default message object
+             * @func
+             * @name Buster#defaultMessage
+             */
+            defaultMessage: function () {
+                var attrs = this[ATTRIBUTES];
+                return {
+                    from: attrs.id,
+                    postTo: attrs.postTo,
+                    sameSide: attrs.sameSide,
+                    fromInner: attrs.fromInner,
+                    toInner: attrs.toInner,
+                    // runCount: 0,
+                    index: this.children[LENGTH](),
+                    preventResponse: BOOLEAN_FALSE
+                };
+            },
+            /**
+             * @func
+             * @name Buster#shouldUpdate
+             */
+            shouldUpdate: function (args) {
+                var ret, buster = this,
+                    attrs = buster[ATTRIBUTES],
+                    lastUpdate = attrs.lastRespondUpdate,
+                    lastFrameRect = attrs.lastFrameRect,
+                    top = buster.parts[TOP] || {},
+                    width = top.innerWidth,
+                    height = top.innerHeight,
+                    nowish = now();
+                if (lastUpdate > nowish - 1000 && _.isObject(lastFrameRect)) {
+                    ret = !(lastFrameRect[BOTTOM] < -height * 0.5 || lastFrameRect.top > height * 1.5 || lastFrameRect[RIGHT] < -width * 0.5 || lastFrameRect[LEFT] > width * 1.5);
+                } else {
+                    ret = 1;
+                }
+                clearTimeout(attrs.lastUpdateThrottledId);
+                if (!ret) {
+                    attrs.lastUpdateThrottledId = setTimeout(function () {
+                        buster.respond.apply(buster, args);
+                    }, -(nowish - lastUpdate - 1000));
+                }
+                return !buster.startThrottle || ret;
+            },
+            /**
+             * respond trigger.
+             * @arg {object} original data object (same pointer) that was sent over
+             * @arg {object} extend object, that will be applied to a base object, that is created by the responseExtend attribute set on the buster object
+             * @returns {buster}
+             * @func
+             * @name Buster#respond
+             */
+            respond: function (data, extendObj) {
+                var lastRespondUpdate, message, buster = this,
+                    attrs = buster[ATTRIBUTES],
+                    sameSide = attrs.sameSide,
+                    base = {};
+                if (!extendObj || !_.isObject(extendObj)) {
+                    extendObj = {};
+                }
+                if (buster.el && (!data.canThrottle || buster.shouldUpdate(arguments))) {
+                    // on the inner functions, we don't want to allow this
+                    // module to be present, so the inner does not influence the outer
+                    if (attrs.responseExtend) {
+                        base = attrs.responseExtend(buster, data);
+                    }
+                    ++data.runCount;
+                    base = {
+                        from: data.postTo,
+                        postTo: data.from,
+                        index: data.index,
+                        isResponse: 1,
+                        isDeferred: data.isDeferred,
+                        runCount: data.runCount,
+                        command: data.command,
+                        packet: extend(base, extendObj)
+                    };
+                    // used for throttling
+                    attrs.lastRespondUpdate = postMessage(base, buster);
+                    buster[DISPATCH_EVENT]('respond:' + data.command);
+                    if (data.isDeferred) {
+                        buster[DISPATCH_EVENT]('deferred:' + data.command);
+                    }
+                    data.isDeferred = 1;
+                }
+                return buster;
+            },
+            /**
+             * @returns {object} client rect duplicate of element
+             * @func
+             * @name Buster#getFrameRect
+             */
+            getFrameRect: function () {
+                var clientRect = this[ATTRIBUTES].lastFrameRect = this.el.clientRect();
+                return clientRect;
+            },
+            /**
+             * @returns {object} client rect duplicate of parent element
+             * @func
+             * @name Buster#getParentRect
+             */
+            getParentRect: function () {
+                var parentRect = this[ATTRIBUTES].lastParentRect = this.el[PARENT]().clientRect();
+                return parentRect;
+            },
+            updateTopData: function () {
+                var buster = this,
+                    attrs = get(buster),
+                    parts = buster.parts,
+                    topWin = parts.top || {},
+                    location = topWin.location || {
+                        hash: '',
+                        pathname: '',
+                        protocol: '',
+                        search: ''
+                    },
+                    topData = attrs.topData = {
+                        location: {
+                            hash: location.hash.slice(1),
+                            host: location.host,
+                            href: location.href,
+                            origin: location.origin,
+                            pathname: location.pathname.slice(1),
+                            port: location.port,
+                            protocol: location.protocol.slice(0, location.protocol[LENGTH] - 1),
+                            search: location.search.slice(1)
+                        },
+                        innerHeight: topWin.innerHeight || 0,
+                        outerHeight: topWin.outerHeight || 0,
+                        innerWidth: topWin.innerWidth || 0,
+                        outerWidth: topWin.outerWidth || 0,
+                        scrollX: topWin.scrollX || 0,
+                        scrollY: topWin.scrollY || 0
+                    };
+                return topData;
+            },
+            /**
+             * gets the wrapper info, such as scroll height, id, and the classname
+             * @returns {object} key value pairs of all of the data that defines the wrapper
+             * @func
+             * @name Buster#wrapperInfo
+             */
+            wrapperInfo: function () {
+                var info, buster = this,
+                    parts = buster.parts,
+                    el = parts.wrapper || {},
+                    doc = parts.doc || {
+                        body: {}
+                    },
+                    root = doc.body.parentNode,
+                    getBoundingClientRect = {},
+                    attrs = get(buster);
+                if (el.tagName) {
+                    getBoundingClientRect = $(el).clientRect();
+                }
+                info = attrs.wrapperInfo = {
+                    readyState: (doc.readyState === 'complete'),
+                    scrollHeight: el.scrollHeight,
+                    scrollWidth: el.scrollWidth,
+                    scrollLeft: el.scrollLeft,
+                    scrollTop: el.scrollTop,
+                    className: el.className,
+                    pageTitle: doc.title,
+                    id: el.id,
+                    height: pI(getBoundingClientRect.height),
+                    bottom: pI(getBoundingClientRect.bottom),
+                    width: pI(getBoundingClientRect.width),
+                    right: pI(getBoundingClientRect.right),
+                    left: pI(getBoundingClientRect.left),
+                    top: pI(getBoundingClientRect[TOP])
+                };
+                return info;
+            },
+            /**
+             * @returns {object} position in document as calculated by the buster attributes
+             * @func
+             * @name Buster#positionInDocument
+             */
+            positionInDocument: function () {
+                var attrs = this[ATTRIBUTES],
+                    wrapperInfo = attrs.wrapperInfo,
+                    contentRect = attrs.lastParentRect,
+                    pos = attrs.lastPosInDoc = {
+                        top: pI(contentRect[TOP] - wrapperInfo[TOP]),
+                        bottom: pI(wrapperInfo[HEIGHT] - contentRect[TOP] - wrapperInfo.scrollTop - contentRect[HEIGHT]),
+                        left: pI(contentRect[LEFT] - wrapperInfo[LEFT]),
+                        right: pI(wrapperInfo[WIDTH] - contentRect[RIGHT] - wrapperInfo.scrollLeft - wrapperInfo[LEFT])
+                    };
+                return pos;
+            },
+            calculateSizes: function () {
+                var buster = this,
+                    attrs = get(buster),
+                    parentStyle = attrs.lastParentStyle = buster.el[PARENT]().getStyle(),
+                    comSizes = attrs[COMPONENTS] = buster[COMPONENTS].map(function (idx, com) {
+                        return buster.calculateSize(com);
+                    });
+                return comSizes;
+            },
+            showComponents: function (showList) {
+                var buster = this;
+                duff(gapSplit(showList), function (id) {
+                    var com = buster[COMPONENT](id);
+                    if (com) {
+                        com.isShowing = BOOLEAN_TRUE;
+                    }
+                });
+            },
+            hideComponents: function (hideList) {
+                var buster = this;
+                duff(gapSplit(hideList), function (id) {
+                    var com = buster[COMPONENT](id);
+                    if (com) {
+                        com.isShowing = BOOLEAN_FALSE;
+                    }
+                });
+            },
+            calculateContainerSize: function (components) {
+                var buster = this,
+                    attrs = get(buster),
+                    parentRect = attrs.lastParentRect,
+                    sizing = containerSize(components || buster[COMPONENTS]);
+                attrs._sizing = sizing;
+                attrs.containerSize = {
+                    top: sizing[TOP],
+                    left: sizing[LEFT],
+                    width: sizing[RIGHT] - sizing[LEFT],
+                    height: sizing[BOTTOM] - sizing[TOP]
+                };
+                attrs.pushVerticalVal = Math.min(Math.max(sizing[BOTTOM] - parentRect[BOTTOM], 0), sizing[MARGIN_BOTTOM]);
+                attrs.pushHorizontalVal = Math.min(Math.max(sizing[RIGHT] - parentRect[RIGHT], 0), sizing[MARGIN_RIGHT]);
+                sizing = attrs.containerCss = {
+                    top: sizing[TOP] - parentRect[TOP],
+                    left: sizing[LEFT] - parentRect[LEFT],
+                    width: sizing[RIGHT] - sizing[LEFT],
+                    height: sizing[BOTTOM] - sizing[TOP],
+                    zIndex: sizing.zIndex || 'inherit'
+                };
+                return sizing;
+            },
+            calculateSize: function (component) {
+                var buster = this,
+                    attrs = get(buster),
+                    expansion = factories.expansion[component.dimensionType || 'match'],
+                    parentRect = attrs.lastParentRect,
+                    parentStyle = attrs.lastParentStyle,
+                    result = (expansion || factories.expansion.match).call(buster, component, parentRect, parentStyle, buster.parts[TOP]),
+                    // these are always relative to the viewport
+                    calcSize = component.calculatedSize = _.floor({
+                        top: result[TOP],
+                        left: result[LEFT],
+                        width: result[WIDTH],
+                        height: result[HEIGHT]
+                    }, 2);
+                return calcSize;
+            },
+            /**
+             * constantly posts until it gets a response
+             * @arg {object} message to go to the opposite buster pair
+             * @arg {number} optionally pass a number to change the setInterval time
+             * @returns {number} interval id that corresponds to the setInterval call id
+             * @func
+             * @name Buster#shout
+             */
+            shout: function (command, obj, extra, timer) {
+                var intervalId, buster = this,
+                    message = buster.send(command, obj, extra);
+                intervalId = _.AF.time(timer || 100, function () {
+                    postMessage(obj, buster);
+                });
+                return intervalId;
+            },
+            /**
+             * starts a relationship between two busters. simplifies the initialization process.
+             * @returns {number} just for responding to the original message in case there's a handler
+             * @func
+             * @name Buster#begin
+             */
+            begin: function () {
+                var buster = this,
+                    attrs = buster[ATTRIBUTES],
+                    message = buster.send('initialize', {
+                        referrer: attrs.publisher
+                    });
+                message.respond(function (e) {
+                    var data = e.data(),
+                        packet = data.packet;
+                    buster.set('isConnected', BOOLEAN_TRUE);
+                });
+            }
+        }, BOOLEAN_TRUE);
     if (app.topAccess) {
         $(window[TOP]).on('message', receive);
     }
-    /**
-     * @class Buster
-     * @augments Model
-     * @augments Box
-     * @augments View
-     * @classDesc constructor for buster objects, which have the ability to talk across windows
-     */
-    var Message = factories.Container.extend('Message', {
-        // idAttribute: 'command',
-        packet: function (data) {
-            var ret = this;
-            if (arguments[0]) {
-                this.set({
-                    packet: data || {}
-                });
-            } else {
-                ret = _.parse(_.stringify(this.get('packet')));
-            }
-            return ret;
-        },
-        defaults: function () {
-            return {
-                command: 'null',
-                packet: {}
-            };
-        },
-        deferred: function (fn) {
-            this.on('deferred', fn);
-            return this;
-        },
-        respond: function (fn) {
-            var message = this,
-                buster = message.parent;
-            if (_.isFunction(fn)) {
-                message.once('respond', fn);
-            }
-            if (message.responseOptions) {
-                message.dispatchEvent('respond', message.responseOptions, buster.currentPoint());
-            }
-            return message;
-        }
-    });
-    factories.Buster = factories.Box.extend('Buster', {
-        Model: Message,
-        events: {
-            unload: 'destroy',
-            'change:isConnected': function () {
-                this.set(QUEUED_MESSAGE_INDEX, 1);
-            },
-            'change:isConnected child:added': 'flush'
-        },
-        parentEvents: {
-            destroy: 'destroy'
-        },
-        /**
-         * @func
-         * @name Buster#destroy
-         */
-        currentPoint: function () {
-            var currentPoint = this.get('currentPoint');
-            return currentPoint ? {
-                source: currentPoint.source,
-                srcElement: currentPoint.srcElement,
-                originTimestamp: currentPoint.timestamp,
-                frame: currentPoint.frame,
-                responder: currentPoint.responder
-            } : {};
-        },
-        destroy: function () {
-            var buster = this,
-                attrs = get(buster);
-            buster.set('isConnected', BOOLEAN_FALSE);
-            clearTimeout(attrs.__lastMouseMovingTimeout__);
-            _.AF.remove(attrs.elQueryId);
-            _.AF.remove(attrs.componentTransitionAFID);
-            buster.parts = {};
-            associator.remove(buster.id);
-            factories.Box.constructor.prototype.destroy.apply(this, arguments);
-            return buster;
-        },
-        tellMouseMovement: function () {
-            if (this.get('mouseMoveDataObject')) {
-                this.respond(this.get('mouseMoveDataObject'));
-            }
-        },
-        reapplyCss: function (extend) {
-            var containerSize, hw = {},
-                buster = this,
-                attrs = get(buster);
-            if (attrs.frameAlwaysFillHeight) {
-                hw[HEIGHT] = '100%';
-            }
-            if (attrs.frameAlwaysFillWidth) {
-                hw[WIDTH] = '100%';
-            }
-            hw = _.extend(buster.calculateContainerSize(), extend, hw);
-            buster.el.css(hw);
-            if (buster.get('applyImportant')) {
-                buster.applyImportantStyles(buster.el.index(0));
-            }
-            return buster;
-        },
-        applyImportantStyles: function (el) {
-            var panel = buster.components.get(2);
-            var hasDuration;
-            var style = (el.getAttribute('style') || '').split(' !important').join('').split('!important').join('').split('important').join('').split('!').join('').split(';');
-            el.setAttribute('style', _.foldl(style, function (memo, idx, val) {
-                var split;
-                if (val) {
-                    split = val.trim().split(': ');
-                    if (val && split[0] && split[1]) {
-                        memo.push(split[0].trim() + ': ' + split[1].trim() + ' !important;');
-                    }
-                }
-                return memo;
-            }, []).join(' '));
-        },
-        unSend: function (obj) {
-            var buster = this,
-                every = buster.get('every');
-            every.apply(buster, [obj, {},
-                buster.parent
-            ]);
-            if (obj.packet.onRespond) {
-                obj.packet.onRespond.apply(buster, [obj, {},
-                    buster.parent
-                ]);
-            }
-        },
-        unSendAll: function () {
-            var queued = this.get('queued');
-            while (queued[0]) {
-                this.unSend(queued.shift());
-            }
-        },
-        /**
-         * @func
-         * @name Buster#defaults
-         */
-        defaults: function () {
-            return {
-                currentState: 'collapse',
-                connectedUnder: [],
-                isConnected: 0,
-                sameSide: 0,
-                queuedMessageIndex: 0,
-                sent: []
-            };
-        },
-        // belongs on the outside
-        _stateCss: function (set0) {
-            var busterAttrs = get(this),
-                _sizing = busterAttrs._sizing,
-                margin = {
-                    transitionProperty: 'all'
-                };
-            if (_sizing) {
-                if (_sizing.vPushCount) {
-                    margin[MARGIN_BOTTOM] = busterAttrs.pushVerticalVal;
-                    margin.transitionDuration = _sizing.transitionDuration;
-                } else {
-                    if (set0) {
-                        margin[MARGIN_BOTTOM] = 0;
-                    } else {
-                        margin[MARGIN_BOTTOM] = 'auto';
-                    }
-                }
-                if (_sizing.hPushCount) {
-                    margin[MARGIN_RIGHT] = busterAttrs.pushHorizontalVal;
-                    margin.transitionDuration = _sizing.transitionDuration;
-                } else {
-                    if (set0) {
-                        margin[MARGIN_RIGHT] = 0;
-                    } else {
-                        margin[MARGIN_RIGHT] = 'auto';
-                    }
-                }
-            }
-            return margin;
-        },
-        /**
-         * initial setup for all busters
-         * @func
-         * @name Buster#initialize
-         */
-        initialize: function (opts, options) {
-            var receiveWin, registered, buster = this,
-                attrs = buster[ATTRIBUTES];
-            buster.components = Collection();
-            buster.showing = Collection();
-            buster.on('before:responded', attrs.every);
-            buster.addCommand({
-                initialize: _setupInit,
-                begin: this.begin,
-                update: function (e) {
-                    this.respond(e.data());
-                },
-                unload: function () {
-                    this.destroy();
-                },
-                // belongs on the outside
-                updateAttributes: function (e) {
-                    var buster = this,
-                        data = e.data(),
-                        packet = data.packet;
-                    buster.set(packet.update);
-                    duff(packet.components, function (idx, com) {
-                        var component = buster.component(com.registeredAs);
-                        if (!component) {
-                            buster.components.add(com);
-                        } else {
-                            extend(component, com);
-                        }
-                    });
-                    buster.components.each(function (idx, com) {
-                        if (_.posit(packet.showing, com.registeredAs)) {
-                            com.isShowing = BOOLEAN_TRUE;
-                        } else {
-                            com.isShowing = BOOLEAN_FALSE;
-                        }
-                    });
-                    if (packet.shouldRespond) {
-                        buster.respond();
-                    }
-                }
-            });
-            buster.allListeners = Collection();
-            extend(attrs, {
-                frame: null
-            });
-            buster.el = $(buster.parts.frame);
-            registered = associator.get(attrs.id);
-            registered.buster = buster;
-            registered.postListener = receive;
-            receiveWin = $(buster.parts.receiveWin);
-            receiveWin.on('message', receive);
-            buster.allListeners.push({
-                els: receiveWin,
-                fn: receive,
-                name: 'message'
-            });
-            if (attrs.type === 'buster') {
-                if (!attrs.sameSide) {
-                    setups.notInner.noAccess(buster);
-                } else {
-                    setups.notInner.topAccess(buster);
-                }
-            }
-            // always assume the need to bust for these two
-            if (attrs.type !== 'buster') {
-                if (attrs.toInner) {
-                    setups.toInner(buster);
-                }
-                if (attrs.fromInner) {
-                    setups.fromInner(buster);
-                }
-            }
-            return buster;
-        },
-        component: function (registeredAs) {
-            return this.components.find(function (com, idx) {
-                return com.registeredAs === registeredAs || idx === registeredAs;
-            });
-        },
-        // this belongs on the outside
-        /**
-         * quick get parser to figure out if the wrapper, the frame element, it's parent, the document, or an other item is being selected by a post message
-         * @arg {string} target selector
-         * @returns {DOMM} with targets
-         * @func
-         * @name Buster#getTargets
-         */
-        getTargets: function (target) {
-            var buster = this,
-                attrs = buster[ATTRIBUTES],
-                parts = buster.parts,
-                top = parts.top,
-                targets = [],
-                wrapper = parts.wrapper;
-            if (!target) {
-                targets = [top];
-            }
-            if (target === 'wrapper') {
-                targets = [wrapper];
-            }
-            if (target === 'self') {
-                targets = buster.el;
-            }
-            if (target === 'document') {
-                targets = [parts.doc];
-            }
-            if (target === 'parent') {
-                targets = buster.el.parent();
-            }
-            if (!targets[LENGTH]) {
-                targets = parts.doc.querySelectorAll(target);
-            }
-            return $(targets);
-        },
-        /**
-         * tries to flush the cache. only works if the isConnected attribute is set to true. If it is, then the post message pipeline begins
-         * @returns {buster} returns this;
-         * @func
-         * @name Buster#flush
-         */
-        flush: function () {
-            var n, item, gah, childrenLen, queuedMsg, nuData, i = 0,
-                buster = this,
-                currentIdx = buster.get(QUEUED_MESSAGE_INDEX),
-                connected = buster.get('isConnected'),
-                initedFrom = buster.get('initedFromPartner'),
-                flushing = buster.get('flushing');
-            if (!initedFrom || connected && ((connected || !currentIdx) && !flushing)) {
-                buster.set('flushing', BOOLEAN_TRUE);
-                childrenLen = buster.children[LENGTH]();
-                queuedMsg = buster.children.index(currentIdx);
-                while (queuedMsg && currentIdx < childrenLen) {
-                    queuedMsg.set({
-                        runCount: 0
-                    });
-                    postMessage(queuedMsg, buster);
-                    if (currentIdx) {
-                        currentIdx = (buster.get(QUEUED_MESSAGE_INDEX) + 1) || 0;
-                        buster.set(QUEUED_MESSAGE_INDEX, currentIdx);
-                        queuedMsg = buster.children.index(currentIdx);
-                    } else {
-                        childrenLen = false;
-                    }
-                }
-                buster.set({
-                    flushing: BOOLEAN_FALSE
-                });
-                if (buster.get('isConnected')) {
-                    if (buster.children[LENGTH]() > buster.get(QUEUED_MESSAGE_INDEX)) {
-                        buster.flush();
-                    }
-                }
-            }
-            return buster;
-        },
-        /**
-         * basic send message function, adds to queue, then calls flush
-         * @arg {string} can be string or object. if object, must have command property as string
-         * @arg {object} base object to be sent
-         * @returns {buster}
-         * @func
-         * @name Buster#send
-         */
-        send: function (command, packet, extra) {
-            var message, buster = this,
-                defaultObj = buster.defaultMessage();
-            message = buster.add(_.extend({
-                command: command,
-                packet: packet
-            }, defaultObj, extra));
-            return buster.children.index(defaultObj.index);
-        },
-        /**
-         * shorthand for creating a function that gets called after the buster's partner has responded
-         * @func
-         * @name Buster#sync
-         */
-        sync: function (fn) {
-            return this.send('update').respond(fn);
-        },
-        /**
-         * if a buster is found on the receive function, by the data's postTo property, then the run method is called
-         * @arg {object} the parsed data object
-         * @arg {event} the event object that wrapped the stringified data object
-         * @returns {buster}
-         * @func
-         * @name Buster#run
-         */
-        run: function (data, currentPoint_) {
-            var packet, format, retVal, messageJSON, responded, onResponse, originalMessage, responseType, methodName, buster = this,
-                attrs = buster[ATTRIBUTES],
-                currentPoint = attrs.currentPoint = currentPoint_,
-                event = currentPoint,
-                messages = attrs.sent,
-                runCount = data.runCount,
-                children = buster.children,
-                eventname = 'respond',
-                args = _.toArray(arguments);
-            if (runCount) {
-                originalMessage = children.index(data.index);
-                if (originalMessage) {
-                    // messageJSON = originalMessage.toJSON();
-                    // found the message that i originally sent you
-                    // packet = originalMessage.packet;
-                    // allow the buster to set some things up
-                    buster.dispatchEvent('before:responded', data, buster.currentPoint());
-                    if (runCount === 1) {
-                        // stash it for later
-                        originalMessage.responseOptions = data;
-                    } else {
-                        eventname = 'deferred';
-                    }
-                    originalMessage.dispatchEvent(eventname, data, buster.currentPoint());
-                }
-            } else {
-                buster.dispatchEvent('receive:' + data.command, data, buster.currentPoint());
-                buster.dispatchEvent('receive', data, buster.currentPoint());
-            }
-            return buster;
-        },
-        /**
-         * skip the queue, and simply send a message
-         * @arg {object} message object to be sent
-         * @arg {object} optional object that is the original object. Usually only applicable when passed in through the send function, so that the response event can have all of the correct information
-         * @returns {buster}
-         * @func
-         * @name Buster#sendMessage
-         */
-        // sendMessage: function (message) {
-        //     var buster = this;
-        //     // set again to make sure that it has all the right info
-        //     // message.set(buster.defaultMessage());
-        //     postMessage(_.fullClone(message), buster);
-        //     return buster;
-        // },
-        /**
-         * creates a default message based on the attributes of the buster
-         * @returns {object} blank / default message object
-         * @func
-         * @name Buster#defaultMessage
-         */
-        defaultMessage: function () {
-            var attrs = get(this);
-            return {
-                from: attrs.id,
-                postTo: attrs.postTo,
-                sameSide: attrs.sameSide,
-                fromInner: attrs.fromInner,
-                toInner: attrs.toInner,
-                // runCount: 0,
-                index: this.children[LENGTH](),
-                preventResponse: false
-            };
-        },
-        /**
-         * @func
-         * @name Buster#shouldUpdate
-         */
-        shouldUpdate: function (args) {
-            var ret, buster = this,
-                attrs = buster[ATTRIBUTES],
-                lastUpdate = attrs.lastRespondUpdate,
-                lastFrameRect = attrs.lastFrameRect,
-                top = buster.parts.top || {},
-                width = top.innerWidth,
-                height = top.innerHeight,
-                nowish = now();
-            if (lastUpdate > nowish - 1000 && _.isObject(lastFrameRect)) {
-                ret = !(lastFrameRect[BOTTOM] < -height * 0.5 || lastFrameRect.top > height * 1.5 || lastFrameRect[RIGHT] < -width * 0.5 || lastFrameRect[LEFT] > width * 1.5);
-            } else {
-                ret = 1;
-            }
-            clearTimeout(attrs.lastUpdateThrottledId);
-            if (!ret) {
-                attrs.lastUpdateThrottledId = setTimeout(function () {
-                    buster.respond.apply(buster, args);
-                }, -(nowish - lastUpdate - 1000));
-            }
-            return !buster.startThrottle || ret;
-        },
-        /**
-         * respond trigger.
-         * @arg {object} original data object (same pointer) that was sent over
-         * @arg {object} extend object, that will be applied to a base object, that is created by the responseExtend attribute set on the buster object
-         * @returns {buster}
-         * @func
-         * @name Buster#respond
-         */
-        respond: function (data, extendObj) {
-            var lastRespondUpdate, message, buster = this,
-                attrs = buster[ATTRIBUTES],
-                sameSide = attrs.sameSide,
-                base = {};
-            if (!extendObj || !_.isObject(extendObj)) {
-                extendObj = {};
-            }
-            if (buster.el && (!data.canThrottle || buster.shouldUpdate(arguments))) {
-                // on the inner functions, we don't want to allow this
-                // module to be present, so the inner does not influence the outer
-                if (attrs.responseExtend) {
-                    base = attrs.responseExtend(buster, data);
-                }
-                ++data.runCount;
-                base = {
-                    from: data.postTo,
-                    postTo: data.from,
-                    index: data.index,
-                    isResponse: 1,
-                    isDeferred: data.isDeferred,
-                    runCount: data.runCount,
-                    command: data.command,
-                    packet: extend(base, extendObj)
-                };
-                // used for throttling
-                attrs.lastRespondUpdate = postMessage(base, buster);
-                buster.dispatchEvent('respond:' + data.command, buster, buster.currentPoint());
-                if (data.isDeferred) {
-                    buster.dispatchEvent('deferred:' + data.command, buster, buster.currentPoint());
-                }
-                data.isDeferred = 1;
-            }
-            return buster;
-        },
-        /**
-         * @returns {object} client rect duplicate of element
-         * @func
-         * @name Buster#getFrameRect
-         */
-        getFrameRect: function () {
-            var clientRect = this[ATTRIBUTES].lastFrameRect = this.el.clientRect();
-            return clientRect;
-        },
-        /**
-         * @returns {object} client rect duplicate of parent element
-         * @func
-         * @name Buster#getParentRect
-         */
-        getParentRect: function () {
-            var parentRect = this[ATTRIBUTES].lastParentRect = this.el.parent().clientRect();
-            return parentRect;
-        },
-        updateTopData: function () {
-            var buster = this,
-                attrs = get(buster),
-                parts = buster.parts,
-                topWin = parts.top || {},
-                location = topWin.location || {
-                    hash: '',
-                    pathname: '',
-                    protocol: '',
-                    search: ''
-                },
-                topData = attrs.topData = {
-                    location: {
-                        hash: location.hash.slice(1),
-                        host: location.host,
-                        href: location.href,
-                        origin: location.origin,
-                        pathname: location.pathname.slice(1),
-                        port: location.port,
-                        protocol: location.protocol.slice(0, location.protocol[LENGTH] - 1),
-                        search: location.search.slice(1)
-                    },
-                    innerHeight: topWin.innerHeight || 0,
-                    outerHeight: topWin.outerHeight || 0,
-                    innerWidth: topWin.innerWidth || 0,
-                    outerWidth: topWin.outerWidth || 0,
-                    scrollX: topWin.scrollX || 0,
-                    scrollY: topWin.scrollY || 0
-                };
-            return topData;
-        },
-        /**
-         * gets the wrapper info, such as scroll height, id, and the classname
-         * @returns {object} key value pairs of all of the data that defines the wrapper
-         * @func
-         * @name Buster#wrapperInfo
-         */
-        wrapperInfo: function () {
-            var info, buster = this,
-                parts = buster.parts,
-                el = parts.wrapper || {},
-                doc = parts.doc || {
-                    body: {}
-                },
-                root = doc.body.parentNode,
-                getBoundingClientRect = {},
-                attrs = get(buster);
-            if (el.tagName) {
-                getBoundingClientRect = $(el).clientRect();
-            }
-            info = attrs.wrapperInfo = {
-                readyState: (doc.readyState === 'complete'),
-                scrollHeight: el.scrollHeight,
-                scrollWidth: el.scrollWidth,
-                scrollLeft: el.scrollLeft,
-                scrollTop: el.scrollTop,
-                className: el.className,
-                pageTitle: doc.title,
-                id: el.id,
-                height: pI(getBoundingClientRect.height),
-                bottom: pI(getBoundingClientRect.bottom),
-                width: pI(getBoundingClientRect.width),
-                right: pI(getBoundingClientRect.right),
-                left: pI(getBoundingClientRect.left),
-                top: pI(getBoundingClientRect.top)
-            };
-            return info;
-        },
-        /**
-         * @returns {object} position in document as calculated by the buster attributes
-         * @func
-         * @name Buster#positionInDocument
-         */
-        positionInDocument: function () {
-            var attrs = this[ATTRIBUTES],
-                wrapperInfo = attrs.wrapperInfo,
-                contentRect = attrs.lastParentRect,
-                pos = attrs.lastPosInDoc = {
-                    top: pI(contentRect[TOP] - wrapperInfo[TOP]),
-                    bottom: pI(wrapperInfo[HEIGHT] - contentRect[TOP] - wrapperInfo.scrollTop - contentRect[HEIGHT]),
-                    left: pI(contentRect[LEFT] - wrapperInfo[LEFT]),
-                    right: pI(wrapperInfo[WIDTH] - contentRect[RIGHT] - wrapperInfo.scrollLeft - wrapperInfo[LEFT])
-                };
-            return pos;
-        },
-        calculateSizes: function () {
-            var buster = this,
-                attrs = get(buster),
-                parentStyle = attrs.lastParentStyle = buster.el.parent().getStyle(),
-                comSizes = attrs.componentSizes = buster.components.map(function (idx, com) {
-                    return buster.calculateSize(com);
-                });
-            return comSizes;
-        },
-        showComponents: function (showList) {
-            var buster = this;
-            duff(gapSplit(showList), function (id) {
-                var com = buster.component(id);
-                if (com) {
-                    com.isShowing = BOOLEAN_TRUE;
-                }
-            });
-        },
-        hideComponents: function (hideList) {
-            var buster = this;
-            duff(gapSplit(hideList), function (id) {
-                var com = buster.component(id);
-                if (com) {
-                    com.isShowing = BOOLEAN_FALSE;
-                }
-            });
-        },
-        calculateContainerSize: function (components) {
-            var buster = this,
-                attrs = get(buster),
-                parentRect = attrs.lastParentRect,
-                sizing = containerSize(components || buster.components);
-            attrs._sizing = sizing;
-            attrs.containerSize = {
-                top: sizing[TOP],
-                left: sizing[LEFT],
-                width: sizing[RIGHT] - sizing[LEFT],
-                height: sizing[BOTTOM] - sizing[TOP]
-            };
-            attrs.pushVerticalVal = Math.min(Math.max(sizing[BOTTOM] - parentRect[BOTTOM], 0), sizing[MARGIN_BOTTOM]);
-            attrs.pushHorizontalVal = Math.min(Math.max(sizing[RIGHT] - parentRect[RIGHT], 0), sizing[MARGIN_RIGHT]);
-            sizing = attrs.containerCss = {
-                top: sizing[TOP] - parentRect[TOP],
-                left: sizing[LEFT] - parentRect[LEFT],
-                width: sizing[RIGHT] - sizing[LEFT],
-                height: sizing[BOTTOM] - sizing[TOP],
-                zIndex: sizing.zIndex || 'inherit'
-            };
-            return sizing;
-        },
-        calculateSize: function (component) {
-            var buster = this,
-                attrs = get(buster),
-                expansion = factories.expansion[component.dimensionType || 'match'],
-                parentRect = attrs.lastParentRect,
-                parentStyle = attrs.lastParentStyle,
-                result = (expansion || factories.expansion.match).call(buster, component, parentRect, parentStyle, buster.parts[TOP]),
-                // these are always relative to the viewport
-                calcSize = component.calculatedSize = _.floor({
-                    top: result[TOP],
-                    left: result[LEFT],
-                    width: result[WIDTH],
-                    height: result[HEIGHT]
-                }, 2);
-            return calcSize;
-        },
-        /**
-         * uses the object condense utility to compress key, function pairs and applies them to the .commands object that handles all receive method commands
-         * @returns {buster}
-         * @func
-         * @name Buster#addCommand
-         */
-        addCommand: function (obj) {
-            this.on(_.foldl(obj, function (memo, name, handler) {
-                memo['receive:' + name] = handler;
-                return memo;
-            }, {}));
-            return this;
-        },
-        /**
-         * constantly posts until it gets a response
-         * @arg {object} message to go to the opposite buster pair
-         * @arg {number} optionally pass a number to change the setInterval time
-         * @returns {number} interval id that corresponds to the setInterval call id
-         * @func
-         * @name Buster#shout
-         */
-        shout: function (command, obj, extra, timer) {
-            var intervalId, buster = this,
-                message = buster.send(command, obj, extra);
-            // message.respond(_.once(function () {
-            //     _.AF.remove(intervalId);
-            //     if (_.isFunction(respondFn)) {
-            //         respondFn.apply(this, arguments);
-            //     }
-            // }));
-            intervalId = _.AF.time(timer || 100, function () {
-                postMessage(obj, buster);
-            });
-            return intervalId;
-        },
-        /**
-         * starts a relationship between two busters. simplifies the initialization process.
-         * @returns {number} just for responding to the original message in case there's a handler
-         * @func
-         * @name Buster#begin
-         */
-        begin: function () {
-            var buster = this,
-                attrs = buster[ATTRIBUTES],
-                inited = buster.initialized = 1,
-                message = buster.send('initialize', {
-                    expandConfig: attrs.expandConfig,
-                    referrer: attrs.publisher
-                });
-            message.respond(function (e) {
-                var data = e.data(),
-                    packet = data.packet;
-                buster.parent.set({
-                    initParentData: packet.parent
-                });
-                buster.set({
-                    isConnected: BOOLEAN_TRUE
-                });
-            });
-            return 1;
-        }
-    }, BOOLEAN_TRUE);
     _.exports({
         containerSize: containerSize
     });

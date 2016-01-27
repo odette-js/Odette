@@ -297,23 +297,23 @@ application.scope(function (app) {
                 });
             };
         },
-        merge = splat(function (item, idx, list) {
-            var len, collection = this,
-                last = collection[LENGTH];
-            if (isArrayLike(item)) {
-                len = item[LENGTH];
-                duff(item, function (key, val) {
-                    if (val !== void 0) {
-                        // removes any undefined items
-                        len = key + 1;
-                        collection[key] = val;
-                    }
-                });
-                if (len > (last || 0)) {
-                    collection[LENGTH] = len;
-                }
-            }
-        }),
+        // merge = splat(function (item, idx, list) {
+        //     var len, collection = this,
+        //         last = collection[LENGTH];
+        //     if (isArrayLike(item)) {
+        //         len = item[LENGTH];
+        //         duff(item, function (key, val) {
+        //             if (val !== blank) {
+        //                 // removes any undefined items
+        //                 len = key + 1;
+        //                 collection[key] = val;
+        //             }
+        //         });
+        //         if (len > (last || 0)) {
+        //             collection[LENGTH] = len;
+        //         }
+        //     }
+        // }),
         eq = function (list, num) {
             var n, thisNum, items = [],
                 numb = num || 0,
@@ -507,7 +507,7 @@ application.scope(function (app) {
             mamboWrap: internalMambo,
             mambo: externalMambo,
             concat: concat,
-            listMerge: merge,
+            // listMerge: merge,
             pluck: pluck,
             where: where,
             findWhere: findWhere,

@@ -9,7 +9,6 @@ application.scope().module('Ajax', function (module, app, _, factories) {
         BOOLEAN_TRUE = !0,
         BOOLEAN_FALSE = !1,
         STATUS = 'status',
-        // ERROR = 'error',
         FAILURE = 'failure',
         SUCCESS = 'success',
         READY_STATE = 'readyState',
@@ -52,68 +51,35 @@ application.scope().module('Ajax', function (module, app, _, factories) {
             return function () {
                 wraptry(function () {
                     xhrReq.send.apply(xhrReq, args);
-                    // }, function (e) {
+                }, function (e) {
                     // handle an xhr req send error here
-                    // factories.reportError('xhr', e + '');
+                    factories.reportError('xhr', e + '');
                 });
             };
-        },
-        sendRequest = function (ajax, xhrReq, type, url) {
-            var args = [],
-                data = ajax.get('data');
-            if (url) {
-                xhrReq.open(type, url, ajax.get('async'));
-                if (data) {
-                    args.push(stringify(data));
-                }
-                ajax.setHeaders(ajax.get('headers'));
-                attachBaseListeners(ajax);
-                // have to wrap in set timeout for ie
-                setTimeout(sendthething(xhrReq, args));
-            }
-        },
-        decide = {
-            /**
-             * @description get pathway for actually sending out a get request
-             * @private
-             */
-            GET: function (ajax, xhrReq, type) {
-                var url = ajax.getUrl();
-                ajax.attachResponseHandler();
-                sendRequest(ajax, xhrReq, type, url);
-            },
-            /**
-             * @description pathway for actually sending out a put request
-             * @private
-             */
-            PUT: function () {},
-            /**
-             * @description pathway for actually sending out a post request
-             * @private
-             */
-            POST: function (ajax, xhrReq, type) {
-                var url = ajax.getUrl();
-                ajax.attachResponseHandler();
-                sendRequest(ajax, xhrReq, type, url);
-            },
-            /**
-             * @description pathway for actually sending out a delete request
-             * @private
-             */
-            DELETE: function () {}
         },
         alterurlHandler = function () {
             var ajax = this,
                 xhrReq = ajax.requestObject,
                 type = ajax.get('type'),
-                thingToDo = decide[type] || decide.GET;
-            if (thingToDo) {
-                thingToDo(ajax, xhrReq, type);
+                url = ajax.getUrl(),
+                args = [],
+                data = ajax.get('data');
+            if (!url) {
+                return;
             }
+            ajax.attachResponseHandler();
+            xhrReq.open(type, url, ajax.get('async'));
+            if (data) {
+                args.push(stringify(data));
+            }
+            ajax.setHeaders(ajax.get('headers'));
+            attachBaseListeners(ajax);
+            // have to wrap in set timeout for ie
+            setTimeout(sendthething(xhrReq, args));
         },
         /**
          * @class Ajax
-         * @alias _.Ajax
+         * @alias factories.Ajax
          * @augments Box
          * @augments Model
          * @classdesc XHR object wrapper Triggers events based on xhr state changes and abstracts many anomalies that have to do with IE
@@ -163,7 +129,7 @@ application.scope().module('Ajax', function (module, app, _, factories) {
                 return ajax;
             },
             status: function (code, handler) {
-                return this.handle('status:' + code, handler);
+                return this.handle(STATUS + ':' + code, handler);
             },
             setHeaders: function (headers) {
                 var ajax = this,
@@ -246,5 +212,5 @@ application.scope().module('Ajax', function (module, app, _, factories) {
                 }
                 return ajax;
             }
-        }, !0);
+        }, BOOLEAN_TRUE);
 });
