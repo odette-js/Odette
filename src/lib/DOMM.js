@@ -93,7 +93,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         isDocument = function (obj) {
             return obj && isNumber(obj[NODE_TYPE]) && obj[NODE_TYPE] === obj.DOCUMENT_NODE;
         },
-        isFrag = function (frag) {
+        isFragment = function (frag) {
             return frag && frag[NODE_TYPE] === sizzleDoc.DOCUMENT_FRAGMENT_NODE;
         },
         getClosestWindow = function (windo_) {
@@ -1554,7 +1554,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             return matchers;
         }),
         canBeProcessed = function (item) {
-            return isElement(item) || isWindow(item) || isDocument(item) || isFrag(item);
+            return isElement(item) || isWindow(item) || isDocument(item) || isFragment(item);
         },
         append = function (el) {
             var dom = this,
@@ -1632,7 +1632,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 return isDocument(this[INDEX](num || 0) || {});
             },
             isFragment: function (num) {
-                return isFrag(this[INDEX](num || 0) || {});
+                return isFragment(this[INDEX](num || 0) || {});
             },
             fragment: function (el) {
                 return fragment(el || (this && this[ITEMS]));
@@ -2316,7 +2316,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         isElement: isElement,
         isWindow: isWindow,
         isDocument: isDocument,
-        isFragment: isFrag,
+        isFragment: isFragment,
         createElement: createElement,
         createElements: createElements,
         createDocumentFragment: createDocumentFragment,
