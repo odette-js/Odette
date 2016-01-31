@@ -25,5 +25,5 @@ application.scope().module('playground', function (module, app, _, factories, $)
     var bottomLayer4 = SomeView();
     middleHighRegion.add([bottomLayer1, bottomLayer2, bottomLayer3, bottomLayer4]);
     topLayer.add(middleLayer);
-    console.log(topLayer);
+    topLayer.render();
 });

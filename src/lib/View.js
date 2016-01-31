@@ -23,6 +23,7 @@ application.scope().module('View', function (module, app, _, factories, $) {
         createDocumentFragment = _.createDocumentFragment,
         INDEX = 'index',
         LENGTH = 'length',
+        RENDER = 'render',
         OPTIONS = 'options',
         PARENT = 'parent',
         CHILDREN = 'children',
@@ -143,7 +144,7 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 var model = this;
                 Box[CONSTRUCTOR].apply(model, arguments);
                 model._ensureElement();
-                model.render();
+                model[RENDER]();
                 return model;
             },
             _ensureChildren: function () {
@@ -199,7 +200,7 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 // mark the view as rendered
                 view.isRendered = BOOLEAN_TRUE;
                 // dispatch the render event
-                view[DISPATCH_EVENT]('render');
+                view[DISPATCH_EVENT](RENDER);
                 return view;
             },
             setElement: function (element) {
@@ -395,7 +396,6 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 var ret, _bufferedViews, view = this;
                 view._ensureBufferedViews();
                 ret = Box[CONSTRUCTOR][PROTOTYPE].add.call(view, models_);
-                view.render();
                 return ret;
             },
             _add: function (view) {
@@ -486,7 +486,7 @@ application.scope().module('View', function (module, app, _, factories, $) {
                     parentView = region.parentView();
                 region[CHILDREN].duff(function (child) {
                     if (result(child, 'filter')) {
-                        child.render();
+                        child[RENDER]();
                         region._addBufferedView(child);
                     }
                 });

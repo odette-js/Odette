@@ -3135,11 +3135,13 @@ application.scope(function (app) {
          * @augments Model
          */
         Container = factories.Events.extend('Container', {
-            cidPrefix: 'c',
+            // this id prefix is nonsense
+            // define the actual key
+            uniqueKey: 'c',
             idAttribute: ID,
             constructor: function (attributes, secondary) {
                 var model = this;
-                model.cid = model.cid = uniqueId(model.cidPrefix);
+                model[model.uniqueKey] = model[model.uniqueKey] = uniqueId(model.uniqueKey);
                 extend(model, secondary);
                 model.reset(attributes);
                 Events.constructor.apply(this, arguments);
@@ -3253,16 +3255,12 @@ application.scope(function (app) {
                     }
                 });
                 if (!changedList[LENGTH]) {
-                    // do not digest
+                    // do not digest... this time
                     return model;
                 }
                 model.digester(function () {
                     duff(changedList, function (name) {
-                        model[DISPATCH_EVENT](CHANGE + ':' + name, {
-                            key: name,
-                            // uses get to prevent stale data
-                            value: model.get(name)
-                        });
+                        model[DISPATCH_EVENT](CHANGE + ':' + name);
                     });
                     model[DISPATCH_EVENT](CHANGE, compiled);
                 });
@@ -3369,7 +3367,7 @@ application.scope(function (app) {
                 children.add(newModel);
                 // register with parent
                 children.register(newModel.id, newModel);
-                children.register('cid', newModel.cid, newModel);
+                children.register(newModel.uniqueKey, newModel[newModel.uniqueKey], newModel);
             },
             // ties child events to new child
             _delegateChildEvents: function (model) {
@@ -3469,7 +3467,7 @@ application.scope(function (app) {
                 children.remove(child);
                 parent[CHILDREN].unRegister(ID, child.id);
                 // unregister from the child hash keys
-                parent[CHILDREN].unRegister('cid', child.cid);
+                parent[CHILDREN].unRegister(child.uniqueKey, child[child.uniqueKey]);
             },
             // only place that we mention parents
             _collectParents: function () {
@@ -7021,6 +7019,7 @@ application.scope().module('View', function (module, app, _, factories, $) {
         createDocumentFragment = _.createDocumentFragment,
         INDEX = 'index',
         LENGTH = 'length',
+        RENDER = 'render',
         OPTIONS = 'options',
         PARENT = 'parent',
         CHILDREN = 'children',
@@ -7141,7 +7140,7 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 var model = this;
                 Box[CONSTRUCTOR].apply(model, arguments);
                 model._ensureElement();
-                model.render();
+                model[RENDER]();
                 return model;
             },
             _ensureChildren: function () {
@@ -7197,7 +7196,7 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 // mark the view as rendered
                 view.isRendered = BOOLEAN_TRUE;
                 // dispatch the render event
-                view[DISPATCH_EVENT]('render');
+                view[DISPATCH_EVENT](RENDER);
                 return view;
             },
             setElement: function (element) {
@@ -7393,7 +7392,6 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 var ret, _bufferedViews, view = this;
                 view._ensureBufferedViews();
                 ret = Box[CONSTRUCTOR][PROTOTYPE].add.call(view, models_);
-                view.render();
                 return ret;
             },
             _add: function (view) {
@@ -7484,7 +7482,7 @@ application.scope().module('View', function (module, app, _, factories, $) {
                     parentView = region.parentView();
                 region[CHILDREN].duff(function (child) {
                     if (result(child, 'filter')) {
-                        child.render();
+                        child[RENDER]();
                         region._addBufferedView(child);
                     }
                 });
