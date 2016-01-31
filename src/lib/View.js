@@ -487,6 +487,7 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 region[CHILDREN].duff(function (child) {
                     if (result(child, 'filter')) {
                         child.render();
+                        region._addBufferedView(child);
                     }
                 });
             }
