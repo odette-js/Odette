@@ -1029,6 +1029,16 @@ application.scope('dev', function (app) {
                 });
             return cryptoCheck ? sid : 'SF' + sid;
         },
+        intendedArray = function (array, fn_) {
+            var fn = fn_;
+            if (isArrayLike(array)) {
+                duff(array, fn);
+            } else {
+                if (array) {
+                    fn(array, 0, [array]);
+                }
+            }
+        },
         intendedObject = function (key, value, fn_) {
             var fn = fn_,
                 obj = isObject(key) ? key : BOOLEAN_FALSE;
@@ -1155,6 +1165,7 @@ application.scope('dev', function (app) {
         constructorWrapper: constructorWrapper,
         stringifyQuery: stringifyQuery,
         intendedObject: intendedObject,
+        intendedArray: intendedArray,
         ensureFunction: ensureFunction,
         parseDecimal: parseDecimal,
         reference: reference,

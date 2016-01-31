@@ -42,7 +42,7 @@ application.scope().module('Ajax', function (module, app, _, factories) {
                     };
                 } else {
                     req['on' + evnt] = function (e) {
-                        ajax.rejectAs(evnt);
+                        ajax.resolveAs(evnt);
                     };
                 }
             });
@@ -116,9 +116,7 @@ application.scope().module('Ajax', function (module, app, _, factories) {
                         type: type
                     };
                 }
-                str = extend({
-                    async: BOOLEAN_TRUE
-                }, str);
+                str.async = BOOLEAN_TRUE;
                 str.type = (str.type || 'GET').toUpperCase();
                 str.method = method;
                 factories.Promise.constructor.apply(ajax);
@@ -213,4 +211,15 @@ application.scope().module('Ajax', function (module, app, _, factories) {
                 return ajax;
             }
         }, BOOLEAN_TRUE);
+    _.exports(_.foldl(validTypes, function (memo, key_) {
+        var key = key_;
+        key = key.toLowerCase();
+        memo[key] = function (url) {
+            return Ajax({
+                type: key,
+                url: url
+            });
+        };
+        return memo;
+    }, {}));
 });

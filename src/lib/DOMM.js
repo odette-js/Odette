@@ -17,6 +17,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         trace = _.trace,
         posit = _.posit,
         foldl = _.foldl,
+        filter = _.filter,
         isString = _.isString,
         isObject = _.isObject,
         isNumber = _.isNumber,
@@ -239,7 +240,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
          */
         htmlDataMatch = function (string, regexp, callback, nameFinder) {
             var matches = string.trim().match(regexp);
-            duff(matches, function (idx, match) {
+            duff(matches, function (match) {
                 var value;
                 match = match.trim();
                 value = match.match(/~*=[\'|\"](.*?)[\'|\"]/);
@@ -863,10 +864,15 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             }, []));
         },
         fragment = function (el) {
-            var frag = createDocumentFragment();
-            $(el).duff(function (el) {
-                frag.appendChild(el);
-            });
+            var frag;
+            if (isFragment(el)) {
+                frag = el;
+            } else {
+                frag = createDocumentFragment();
+                $(el).duff(ensureDOM(function (el) {
+                    frag.appendChild(el);
+                }));
+            }
             return frag;
         },
         // createElements = function (arr, tag, style, props, attrs) {
@@ -1192,10 +1198,11 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         addEventListener = expandEventListenerArguments(function (name, namespace, selector, callback, capture) {
             var dom = this;
             if (isFunction(callback)) {
-                dom.duff(function (el) {
-                    _addEventListener(el, name, namespace, selector, callback, capture);
-                });
+                return dom;
             }
+            dom.duff(function (el) {
+                _addEventListener(el, name, namespace, selector, callback, capture);
+            });
             return dom;
         }),
         eventToNamespace = function (evnt) {
@@ -1229,25 +1236,26 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                     };
                     el.addEventListener(name, eventHandler, capture);
                 }
-                attach = _.find(namespaceCache, function (obj) {
+                attach = find(namespaceCache, function (obj) {
                     // remove any duplicates
                     if (fn === obj.fn && obj.namespace === namespace && selector === obj.selector) {
                         return BOOLEAN_TRUE;
                     }
                 });
-                if (!attach) {
-                    addEventQueue({
-                        fn: fn,
-                        persist: BOOLEAN_TRUE,
-                        disabled: BOOLEAN_FALSE,
-                        list: namespaceCache,
-                        namespace: namespace,
-                        mainHandler: mainHandler,
-                        selector: selector,
-                        name: name,
-                        passedName: passedName
-                    });
+                if (attach) {
+                    return;
                 }
+                addEventQueue({
+                    fn: fn,
+                    persist: BOOLEAN_TRUE,
+                    disabled: BOOLEAN_FALSE,
+                    list: namespaceCache,
+                    namespace: namespace,
+                    mainHandler: mainHandler,
+                    selector: selector,
+                    name: name,
+                    passedName: passedName
+                });
             }));
         },
         addEventQueue = function (obj) {
@@ -1290,7 +1298,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             return function (name) {
                 // var args = toArray(arguments);
                 var args = ['', blank, []],
-                    origArgs = _.filter(arguments, negate(isBlank)),
+                    origArgs = filter(arguments, negate(isBlank)),
                     argLen = origArgs[LENGTH];
                 if (!isObject(name)) {
                     if (argLen === 1) {
@@ -1307,7 +1315,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             };
         },
         removeEventListener = ensureHandlers(expandEventListenerArguments(function (name, namespace, selector, handler, capture) {
-            this.duff(function (idx, el) {
+            this.duff(function (el) {
                 _removeEventListener(el, name, namespace, selector, handler, capture);
             });
         })),
@@ -1481,19 +1489,13 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 this.stopPropagation();
             }
         }, BOOLEAN_TRUE),
-        createDomFilter = function (items, filtr) {
+        createDomFilter = function (filtr) {
             var filter;
             if (isFunction(filtr)) {
                 filter = filtr;
             } else {
                 if (isObject(filtr)) {
-                    if (isElement(filtr)) {
-                        filter = function (el) {
-                            return !!posit(items, el);
-                        };
-                    } else {
-                        filter = objectMatches(filtr);
-                    }
+                    filter = objectMatches(filtr);
                 } else {
                     if (isString(filtr)) {
                         filter = filterExpressions[filtr];
@@ -1518,7 +1520,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             return filter;
         },
         domFilter = function (items, filtr) {
-            var filter = createDomFilter(items, filtr);
+            var filter = createDomFilter(filtr);
             return _.filter(items, filter);
         },
         dimFinder = function (element, doc, win) {
@@ -1558,10 +1560,10 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         },
         append = function (el) {
             var dom = this,
-                frag = fragment(el);
-            dom.duff(function (el) {
-                el.appendChild(frag);
-            });
+                firstEl = dom.first();
+            if (firstEl) {
+                firstEl.appendChild(fragment(el));
+            }
             return dom;
         },
         DOMM = factories.DOMM = factories.Collection.extend('DOMM', extend({
@@ -1663,7 +1665,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             children: attachPrevious(function (eq) {
                 var dom = this,
                     items = dom.unwrap(),
-                    filter = createDomFilter(items, eq);
+                    filter = createDomFilter(eq);
                 return foldl(items, function (memo, el) {
                     return foldl(el.children || el.childNodes, function (memo, child, idx, children) {
                         if (filter(child, idx, children)) {
@@ -1678,7 +1680,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
              * @name DOMM#offAll
              * @returns {DOMM} instance
              */
-            offAll: function () {
+            wipeEvents: function () {
                 return this.duff(function (el) {
                     var data = elementData.get(el);
                     each(data.handlers, function (key, fn, eH) {
@@ -1824,22 +1826,6 @@ application.scope().module('DOMM', function (module, app, _, factories) {
              */
             eq: attachPrevious(function (num) {
                 return eq(this.unwrap(), num);
-            }),
-            /**
-             * @func
-             * @name DOMM#first
-             * @returns {DOMM} instance
-             */
-            first: attachPrevious(function () {
-                return eq(this.unwrap(), 0);
-            }),
-            /**
-             * @func
-             * @name DOMM#last
-             * @returns {DOMM} instance
-             */
-            last: attachPrevious(function () {
-                return eq(this.unwrap(), this[LENGTH]() - 1);
             }),
             /**
              * @func
@@ -2263,7 +2249,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                     if (node.innerText) {
                         obj.innerText = node.innerText;
                     }
-                    duff(node.attributes, function (idx, attr) {
+                    duff(node.attributes, function (attr) {
                         obj[camelCase(attr.localName)] = attr.nodeValue;
                     });
                     arr.push(obj);

@@ -33,8 +33,12 @@ application.scope(function (app) {
         isArray = _.isArray,
         intendedObject = _.intendedObject,
         uniqueId = _.uniqueId,
+        BOOLEAN_FALSE = !1,
+        BOOLEAN_TRUE = !0,
         ID = 'id',
         SORT = 'sort',
+        ADDED = 'added',
+        UNWRAP = 'unwrap',
         REMOVED = 'removed',
         LENGTH = 'length',
         PARENT = 'parent',
@@ -48,11 +52,10 @@ application.scope(function (app) {
         ATTRIBUTE_HISTORY = '_attributeHistory',
         _DELEGATED_CHILD_EVENTS = '_delegatedParentEvents',
         _PARENT_DELEGATED_CHILD_EVENTS = '_parentDelgatedChildEvents',
-        BOOLEAN_FALSE = !1,
-        BOOLEAN_TRUE = !0,
-        CHILDREN = 'children',
+        CHILD = 'child',
+        CHILDREN = CHILD + 'ren',
+        CHANGE = 'change',
         CHANGE_COUNTER = '_changeCounter',
-        CHANGED_STRING = 'change',
         PREVIOUS_ATTRIBUTES = '_previousAttributes',
         /**
          * @class Box
@@ -65,8 +68,8 @@ application.scope(function (app) {
             constructor: function (attributes, secondary) {
                 var model = this;
                 model.cid = model.cid = uniqueId(model.cidPrefix);
-                model.reset(attributes);
                 extend(model, secondary);
+                model.reset(attributes);
                 Events.constructor.apply(this, arguments);
                 return model;
             },
@@ -86,7 +89,7 @@ application.scope(function (app) {
                     history = model[ATTRIBUTE_HISTORY] = {};
                 // set id and let parent know what your new id is
                 this[DISPATCH_EVENT](BEFORE_COLON + 'reset');
-                model._setId(newAttributes[idAttr] || uniqueId());
+                model._setId(model.id || newAttributes[idAttr] || uniqueId());
                 model[PREVIOUS_ATTRIBUTES] = {};
                 // swaps attributes hash
                 model[ATTRIBUTES] = newAttributes;
@@ -183,13 +186,13 @@ application.scope(function (app) {
                 }
                 model.digester(function () {
                     duff(changedList, function (name) {
-                        model[DISPATCH_EVENT](CHANGED_STRING + ':' + name, {
+                        model[DISPATCH_EVENT](CHANGE + ':' + name, {
                             key: name,
                             // uses get to prevent stale data
                             value: model.get(name)
                         });
                     });
-                    model[DISPATCH_EVENT](CHANGED_STRING, compiled);
+                    model[DISPATCH_EVENT](CHANGE, compiled);
                 });
                 return model;
             },
@@ -236,9 +239,12 @@ application.scope(function (app) {
              */
             constructor: function (attributes, secondary) {
                 var model = this;
-                model[CHILDREN] = Collection();
+                model._ensureChildren();
                 Container.constructor.apply(model, arguments);
                 return model;
+            },
+            _ensureChildren: function () {
+                this[CHILDREN] = Collection();
             },
             _gatherChildren: function () {
                 return [];
@@ -250,22 +256,22 @@ application.scope(function (app) {
              * @param {Object} attributes - non circular hash that is extended onto what the defaults object produces
              * @returns {Box} instance the method was called on
              */
-            _registerChild: function (category, id, model) {
-                var parent = this;
-                if (id !== blank) {
-                    parent[CHILDREN].register(category, id, model);
-                }
-            },
-            _unRegisterChild: function (category, id) {
-                var parent = this;
-                if (id !== blank) {
-                    parent[CHILDREN].unRegister(category, id);
-                }
-            },
+            // _registerChild: function (category, id, model) {
+            //     var parent = this;
+            //     if (id !== blank) {
+            //         parent[CHILDREN].register(category, id, model);
+            //     }
+            // },
+            // _unRegisterChild: function (category, id) {
+            //     var parent = this;
+            //     if (id !== blank) {
+            //         parent[CHILDREN].unRegister(category, id);
+            //     }
+            // },
             resetChildren: function (newChildren) {
                 var length, child, box = this,
                     children = box[CHILDREN],
-                    arr = children.unwrap();
+                    arr = children[UNWRAP]();
                 // this can be made far more efficient
                 while (arr[LENGTH]) {
                     child = arr[0];
@@ -283,62 +289,20 @@ application.scope(function (app) {
                 box.add(newChildren);
                 return box;
             },
-            /**
-             * @description calls toJSON on all children and creates an array of clones
-             * @func
-             * @name Box#childrenToJSON
-             * @returns {Object} array of toJSON'ed children
-             */
-            childrenToJSON: function () {
-                return this[CHILDREN].toJSON();
-            },
-            /**
-             * @description conbination of toJSON and kids to JSON, applied recurisvely. "kids" are applied as the children property
-             * @func
-             * @name Box#treeToJSON
-             * @returns {Object} JSON clone of attributes and children
-             */
-            treeToJSON: function () {
-                var model = this,
-                    attrClone = model.toJSON(),
-                    children = model[CHILDREN];
-                if (children[LENGTH]()) {
-                    attrClone[CHILDREN] = children.toJSON();
-                }
-                return attrClone;
-            },
-            /**
-             * @description stringified version of children array
-             * @func
-             * @name Box#stringifyChildren
-             * @returns {String} string version of children
-             */
-            stringifyChildren: function () {
-                return stringify(this.childrenToJSON());
-            },
-            /**
-             * @description stringifies parent, child, attributes tree
-             * @func
-             * @name Box#stringifyTree
-             * @returns {String} string version of tree
-             */
-            stringifyTree: function () {
-                return stringify(this.treeToJSON());
-            },
             // registers and actually adds child to hash
-            _addToHash: function (newModel) {
+            _addToHash: function (newModel, where) {
                 var parent = this,
-                    children = this[CHILDREN];
+                    children = this[where || CHILDREN];
                 // add to collection
                 children.add(newModel);
                 // register with parent
-                parent._registerChild(ID, newModel.id, newModel);
-                parent._registerChild('cid', newModel.cid, newModel);
+                children.register(newModel.id, newModel);
+                children.register('cid', newModel.cid, newModel);
             },
             // ties child events to new child
             _delegateChildEvents: function (model) {
                 var parent = this,
-                    childEvents = _.result(parent, 'childEvents');
+                    childEvents = _.result(parent, CHILD + 'Events');
                 if (model && childEvents) {
                     model[_PARENT_DELEGATED_CHILD_EVENTS] = childEvents;
                     parent.listenTo(model, childEvents);
@@ -372,7 +336,7 @@ application.scope(function (app) {
             _add: function (model) {
                 var parent = this,
                     children = parent[CHILDREN],
-                    evt = model[DISPATCH_EVENT] && model[DISPATCH_EVENT](BEFORE_COLON + 'added');
+                    evt = model[DISPATCH_EVENT] && model[DISPATCH_EVENT](BEFORE_COLON + ADDED);
                 // let the child know it's about to be added
                 // (tied to it's parent via events)
                 // unties boxes
@@ -384,7 +348,7 @@ application.scope(function (app) {
                 // ties boxes together
                 parent._delegateParentEvents(model);
                 parent._delegateChildEvents(model);
-                evt = model[DISPATCH_EVENT] && model[DISPATCH_EVENT]('added');
+                evt = model[DISPATCH_EVENT] && model[DISPATCH_EVENT](ADDED);
                 // notify that you were added
                 return model;
             },
@@ -393,11 +357,11 @@ application.scope(function (app) {
             add: function (objs_, secondary_) {
                 var childAdded, parent = this,
                     children = parent[CHILDREN],
-                    secondary = extend(result(parent, 'childOptions'), secondary_ || {}),
+                    secondary = extend(result(parent, CHILD + 'Options'), secondary_ || {}),
                     list = Collection(objs_);
                 // unwrap it if you were passed a collection
                 if (!parent.Model || !list[LENGTH]()) {
-                    return list.unwrap();
+                    return list[UNWRAP]();
                 }
                 list = list.foldl(function (memo, obj) {
                     var isChildType = parent._isChildType(obj),
@@ -419,7 +383,7 @@ application.scope(function (app) {
                     return memo;
                 }, []);
                 if (childAdded) {
-                    parent[DISPATCH_EVENT]('child:added');
+                    parent[DISPATCH_EVENT](CHILD + ':' + ADDED);
                 }
                 return list;
             },
@@ -431,9 +395,9 @@ application.scope(function (app) {
                 }
                 // remove the child from the children hash
                 children.remove(child);
-                parent._unRegisterChild(ID, child.id);
+                parent[CHILDREN].unRegister(ID, child.id);
                 // unregister from the child hash keys
-                parent._unRegisterChild('cid', child.cid);
+                parent[CHILDREN].unRegister('cid', child.cid);
             },
             // only place that we mention parents
             _collectParents: function () {
@@ -499,7 +463,7 @@ application.scope(function (app) {
                     return retList;
                 }
                 if (isInstance(idModel, Collection)) {
-                    idModel = idModel.unwrap();
+                    idModel = idModel[UNWRAP]();
                 }
                 if (!isArray(idModel)) {
                     idModel = [idModel];
@@ -509,7 +473,7 @@ application.scope(function (app) {
                     retList.add(model);
                 });
                 if (retList[LENGTH]()) {
-                    parent[DISPATCH_EVENT]('child:' + REMOVED);
+                    parent[DISPATCH_EVENT](CHILD + ':' + REMOVED);
                 }
                 return retList;
             },
@@ -532,7 +496,7 @@ application.scope(function (app) {
                 // stops listening to everything
                 box[STOP_LISTENING]();
                 // takes off all other event handlers
-                box.offAll();
+                box.wipeEvents();
                 return box;
             },
             /**

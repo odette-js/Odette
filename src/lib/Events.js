@@ -37,8 +37,8 @@ application.scope(function (app) {
         modifiedTriggerString = 'change:',
         IMMEDIATE_PROP_IS_STOPPED = 'immediatePropagationIsStopped',
         SERIALIZED_DATA = 'serializedData',
-        BOOLEAN_FALSE = !1,
         BOOLEAN_TRUE = !0,
+        BOOLEAN_FALSE = !1,
         iterateOverObject = function (box, ctx, key, value, iterator, firstarg, allowNonFn) {
             intendedObject(key, value, function (evnts, funs_) {
                 // only accepts a string or a function
@@ -334,7 +334,7 @@ application.scope(function (app) {
              * @name Box#off
              * @returns {Box} instance
              */
-            offAll: function () {
+            wipeEvents: function () {
                 var box = this;
                 each(box[_EVENTS], function (array, key, obj) {
                     duffRev(array, removeEvent);

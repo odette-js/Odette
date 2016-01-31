@@ -125,7 +125,8 @@ application.scope().module('Promise', function (module, app, _, factories) {
                     state: 'pending',
                     resolved: BOOLEAN_FALSE,
                     stashedArgument: NULL,
-                    stashedHandlers: {}
+                    stashedHandlers: {},
+                    reason: BOOLEAN_FALSE
                 };
             },
             restart: function () {
@@ -153,20 +154,16 @@ application.scope().module('Promise', function (module, app, _, factories) {
                 });
                 return results;
             },
-            recognizedState: function (state, states_) {
-                var states = states_ || result(this, ALL_STATES);
-                return states[state] === BOOLEAN_FALSE || states[state] === BOOLEAN_TRUE;
-            },
+            isFulfilled: stateChecker(SUCCESS),
+            isRejected: stateChecker(FAILURE),
             resolved: function () {
                 // allows resolved to be defined in a different way
                 return this.get('resolved');
             },
-            isFulfilled: stateChecker(SUCCESS),
-            isRejected: stateChecker(FAILURE),
             isPending: function () {
                 return this.get(STATE) === 'pending';
             },
-            resolveAs: function (resolveAs_, opts_) {
+            resolveAs: function (resolveAs_, opts_, reason_) {
                 var opts = opts_,
                     resolveAs = resolveAs_,
                     promise = this;
@@ -181,7 +178,8 @@ application.scope().module('Promise', function (module, app, _, factories) {
                     resolved: BOOLEAN_TRUE,
                     // default state if none is given, is to have it succeed
                     state: resolveAs || FAILURE,
-                    stashedArgument: opts
+                    stashedArgument: opts,
+                    reason: reason_ ? reason_ : BOOLEAN_FALSE
                 });
                 resolveAs = promise.get(STATE);
                 return wraptry(function () {

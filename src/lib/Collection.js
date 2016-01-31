@@ -432,6 +432,7 @@ application.scope(function (app) {
         unwrap = function () {
             return this[ITEMS];
         },
+        canRunHash = {},
         wrappedCollectionMethods = extend(wrap({
             each: duff,
             duff: duff,
@@ -439,9 +440,13 @@ application.scope(function (app) {
             eachRev: duffRev,
             duffRev: duffRev,
             forEachRev: duffRev
-        }, function (fn, val) {
+        }, function (fn, key) {
+            canRunHash[key] = 1;
             return function (iterator) {
-                fn(this[ITEMS], iterator, this);
+                var items = this[ITEMS];
+                if (canRunHash[key] <= items[LENGTH]) {
+                    fn(this[ITEMS], iterator, this);
+                }
                 return this;
             };
         }), wrap(gapSplit('addAll removeAll'), function (name) {
@@ -555,7 +560,7 @@ application.scope(function (app) {
                 return this[ITEMS][LENGTH];
             },
             first: function () {
-                return [this[ITEMS][0]];
+                return this[ITEMS][0];
             },
             last: function () {
                 return this[ITEMS][this[LENGTH]() - 1];
