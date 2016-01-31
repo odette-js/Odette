@@ -65,7 +65,7 @@ application.scope(function (app) {
         Container = factories.Events.extend('Container', {
             // this id prefix is nonsense
             // define the actual key
-            uniqueKey: 'c',
+            uniqueKey: 'cid',
             idAttribute: ID,
             constructor: function (attributes, secondary) {
                 var model = this;

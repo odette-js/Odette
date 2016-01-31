@@ -1,37 +1,41 @@
 application.scope(function (app) {
     var blank, _ = app._,
         factories = _.factories,
-        Box = _.factories.Box,
+        Box = factories.Box,
+        Collection = factories.Collection,
         isFunction = _.isFunction,
         extend = _.extend,
         BOOLEAN_TRUE = !0,
         BOOLEAN_FALSE = !1,
+        PARENT = 'parent',
+        STOP = 'stop',
+        START = 'start',
         _EXTRA_MODULE_ARGS = '_extraModuleArgs',
         startableMethods = {
             start: function (evnt) {
                 var startable = this;
                 if (!startable.started) {
-                    startable.dispatchEvent('before:start', evnt);
+                    startable.dispatchEvent('before:' + START, evnt);
                     startable.started = BOOLEAN_TRUE;
-                    startable.dispatchEvent('start', evnt);
+                    startable.dispatchEvent(START, evnt);
                 }
                 return startable;
             },
             stop: function (evnt) {
                 var startable = this;
                 if (startable.started) {
-                    startable.dispatchEvent('before:stop', evnt);
+                    startable.dispatchEvent('before:' + STOP, evnt);
                     startable.started = BOOLEAN_FALSE;
-                    startable.dispatchEvent('stop', evnt);
+                    startable.dispatchEvent(STOP, evnt);
                 }
                 return startable;
             },
             toggle: function () {
                 var startable = this;
                 if (startable.started) {
-                    startable.stop(evnt);
+                    startable[STOP](evnt);
                 } else {
-                    startable.start(evnt);
+                    startable[START](evnt);
                 }
                 return startable;
             }
@@ -39,81 +43,82 @@ application.scope(function (app) {
         Startable = factories.Box.extend('Startable', startableMethods, BOOLEAN_TRUE),
         doStart = function (e) {
             if (this.get('startWithParent')) {
-                this.start(e);
+                this[START](e);
             }
         },
         doStop = function (e) {
             if (this.get('stopWithParent')) {
-                this.stop(e);
+                this[STOP](e);
             }
         },
-        moduleHandler = function (name_, fn) {
-            var module, attrs, parentIsModule, nametree, parent = this,
-                originalParent = parent,
-                name = name_,
-                namespace = name.split('.');
-            while (namespace.length > 1) {
-                parent = parent.module(namespace[0]);
-                namespace.shift();
-            }
-            name = namespace.join('.');
-            module = parent.children.get(name);
-            // module = parent.submodules[name];
-            if (!module) {
-                parentIsModule = _.isInstance(parent, Module);
-                if (parentIsModule) {
-                    namespace.unshift(parent.get('globalname'));
+        // moduleHandler = ,
+        // moduleRunner = ,
+        moduleMethods = extend({}, startableMethods, {
+            // idAttribute: 'name',
+            module: function (name_, fn) {
+                var module, modules, attrs, parentIsModule, nametree, parent = this,
+                    originalParent = parent,
+                    name = name_,
+                    globalname = name,
+                    namespace = name.split('.');
+                while (namespace.length > 1) {
+                    parent = parent.module(namespace[0]);
+                    namespace.shift();
                 }
-                namespace = namespace.join('.');
-                attrs = {
-                    id: name,
-                    name: name,
-                    globalname: namespace
-                };
-                if (parentIsModule) {
-                    module = parent.add(attrs)[0];
-                } else {
-                    module = new Module(attrs, {
+                modules = parent.modules;
+                name = namespace.join('.');
+                module = parent.modules.get(name);
+                if (!module) {
+                    parentIsModule = _.isInstance(parent, Module);
+                    if (parentIsModule) {
+                        namespace.unshift(globalname);
+                    }
+                    namespace = namespace.join('.');
+                    module = Module({
+                        id: name,
+                        globalname: namespace
+                    }, {
                         application: app,
                         parent: parent
                     });
-                    parent.children.add(module);
+                    if (module.topLevel()) {
+                        modules.add(module);
+                    } else {
+                        parent.add(module);
+                    }
+                    modules.register(name, module);
+                    app.modules.register(globalname, module);
                 }
-                // parent.children.register(name, module);
-            }
-            if (!module.hasInitialized && isFunction(fn)) {
-                module.hasInitialized = BOOLEAN_TRUE;
-                module.handler(fn);
-            }
-            return module;
-        },
-        moduleRunner = function (fn) {
-            var module = this;
-            fn.apply(module, module.createArguments());
-            return module;
-        },
-        moduleMethods = extend({}, startableMethods, {
-            idAttribute: 'name',
-            module: moduleHandler,
-            parentEvents: {
-                start: doStart,
-                stop: doStop
+                if (!module.hasInitialized && isFunction(fn)) {
+                    module.hasInitialized = BOOLEAN_TRUE;
+                    module.handler(fn);
+                }
+                return module;
+            },
+            run: function (fn) {
+                var module = this;
+                fn.apply(module, module.createArguments());
+                return module;
+            },
+            parentEvents: function () {
+                return {
+                    start: doStart,
+                    stop: doStop
+                };
             },
             exports: function (obj) {
-                extend(this.get('exports'), obj);
+                extend(BOOLEAN_TRUE, this.get('exports'), obj);
                 return this;
             },
-            run: moduleRunner,
             createArguments: function () {
                 return [this].concat(this.application.createArguments());
             },
             constructor: function (attrs, opts) {
                 var module = this;
-                // module.submodules = {};
-                module.name = attrs.name;
                 module.application = opts.application;
-                module.handlers = factories.Collection();
+                module.handlers = Collection();
                 factories.Messenger(this);
+                module.modules = Collection();
                 Box.constructor.apply(this, arguments);
                 return module;
             },
@@ -123,6 +128,9 @@ application.scope(function (app) {
                     stopWithParent: BOOLEAN_TRUE,
                     exports: {}
                 };
+            },
+            topLevel: function () {
+                return this.application === this[PARENT];
             },
             childOptions: function () {
                 return {
@@ -140,14 +148,9 @@ application.scope(function (app) {
         Module = factories.Box.extend('Module', moduleMethods, BOOLEAN_TRUE),
         appextendresult = app.extend(extend({}, factories.Events.constructor.prototype, moduleMethods, {
             _extraModuleArgs: [],
-            children: factories.Collection(),
-            module: moduleHandler,
-            /**
-             * @func
-             * @name Specless#run
-             * @returns {*}
-             */
-            run: moduleRunner,
+            children: Collection(),
+            // module: moduleHandler,
+            modules: Collection(),
             /**
              * @func
              * @name Specless#baseModuleArguments
