@@ -173,11 +173,11 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                         timestamp: timestamp
                     });
                 };
-            if (!sameSide) {
+            if (sameSide) {
                 if (busterAttrs.referrer) {
-                    parts.sendWin.postMessage(message, busterAttrs.referrer);
+                    throw new Error('missing referrer: ' + buster.get('sessionId'));
                 } else {
-                    console.trace('missing referrer', buster);
+                    parts.sendWin.postMessage(message, busterAttrs.referrer);
                 }
             }
             if (sameSide) {
@@ -379,6 +379,17 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                 return message;
             }
         }),
+        showHideBoolean = function (bool) {
+            return function (showList) {
+                var buster = this;
+                duff(gapSplit(showList), function (id) {
+                    var com = buster[COMPONENT](id);
+                    if (com) {
+                        com.isShowing = bool;
+                    }
+                });
+            };
+        },
         Buster = factories.Buster = factories.Box.extend('Buster', {
             Model: Message,
             events: {
@@ -388,8 +399,10 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                 },
                 'change:isConnected child:added': 'flush'
             },
-            parentEvents: {
-                destroy: 'destroy'
+            parentEvents: function () {
+                return {
+                    destroy: 'destroy'
+                };
             },
             /**
              * @func
@@ -544,12 +557,6 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                 }
                 return buster;
             },
-            component: function (registeredAs) {
-                return this[COMPONENTS].find(function (com, idx) {
-                    return com.registeredAs === registeredAs || idx === registeredAs;
-                });
-            },
-            // this belongs on the outside
             /**
              * quick get parser to figure out if the wrapper, the frame element, it's parent, the document, or an other item is being selected by a post message
              * @arg {string} target selector
@@ -634,12 +641,12 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
              * @name Buster#send
              */
             send: function (command, packet, extra) {
-                var message, buster = this,
-                    defaultObj = buster.defaultMessage();
-                message = buster.add(extend({
-                    command: command,
-                    packet: packet
-                }, defaultObj, extra));
+                var buster = this,
+                    defaultObj = buster.defaultMessage(),
+                    message = buster.add(extend({
+                        command: command,
+                        packet: packet
+                    }, defaultObj, extra));
                 return buster.children.index(defaultObj.index);
             },
             /**
@@ -670,19 +677,20 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                     args = _.toArray(arguments);
                 if (runCount) {
                     originalMessage = children.index(data.index);
-                    if (originalMessage) {
-                        // found the message that i originally sent you
-                        // packet = originalMessage.packet;
-                        // allow the buster to set some things up
-                        buster[DISPATCH_EVENT](BEFORE_RESPONDED);
-                        if (runCount === 1) {
-                            // stash it for later
-                            originalMessage[RESPONSE_OPTIONS] = data;
-                        } else {
-                            eventname = 'deferred';
-                        }
-                        originalMessage[DISPATCH_EVENT](eventname);
+                    if (!originalMessage) {
+                        return buster;
                     }
+                    // found the message that i originally sent you
+                    // packet = originalMessage.packet;
+                    // allow the buster to set some things up
+                    buster[DISPATCH_EVENT](BEFORE_RESPONDED);
+                    if (runCount === 1) {
+                        // stash it for later
+                        originalMessage[RESPONSE_OPTIONS] = data;
+                    } else {
+                        eventname = 'deferred';
+                    }
+                    originalMessage[DISPATCH_EVENT](eventname);
                 } else {
                     buster[DISPATCH_EVENT]('receive:' + data.command);
                     buster[DISPATCH_EVENT]('receive');
@@ -718,7 +726,6 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                     sameSide: attrs.sameSide,
                     fromInner: attrs.fromInner,
                     toInner: attrs.toInner,
-                    // runCount: 0,
                     index: this.children[LENGTH](),
                     preventResponse: BOOLEAN_FALSE
                 };
@@ -822,6 +829,12 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                         search: ''
                     },
                     topData = attrs.topData = {
+                        innerHeight: topWin.innerHeight || 0,
+                        outerHeight: topWin.outerHeight || 0,
+                        innerWidth: topWin.innerWidth || 0,
+                        outerWidth: topWin.outerWidth || 0,
+                        scrollX: topWin.scrollX || 0,
+                        scrollY: topWin.scrollY || 0,
                         location: {
                             hash: location.hash.slice(1),
                             host: location.host,
@@ -831,13 +844,7 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                             port: location.port,
                             protocol: location.protocol.slice(0, location.protocol[LENGTH] - 1),
                             search: location.search.slice(1)
-                        },
-                        innerHeight: topWin.innerHeight || 0,
-                        outerHeight: topWin.outerHeight || 0,
-                        innerWidth: topWin.innerWidth || 0,
-                        outerWidth: topWin.outerWidth || 0,
-                        scrollX: topWin.scrollX || 0,
-                        scrollY: topWin.scrollY || 0
+                        }
                     };
                 return topData;
             },
@@ -869,11 +876,11 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                     className: el.className,
                     pageTitle: doc.title,
                     id: el.id,
-                    height: pI(getBoundingClientRect.height),
-                    bottom: pI(getBoundingClientRect.bottom),
-                    width: pI(getBoundingClientRect.width),
-                    right: pI(getBoundingClientRect.right),
-                    left: pI(getBoundingClientRect.left),
+                    height: pI(getBoundingClientRect[HEIGHT]),
+                    bottom: pI(getBoundingClientRect[BOTTOM]),
+                    width: pI(getBoundingClientRect[WIDTH]),
+                    right: pI(getBoundingClientRect[RIGHT]),
+                    left: pI(getBoundingClientRect[LEFT]),
                     top: pI(getBoundingClientRect[TOP])
                 };
                 return info;
@@ -904,24 +911,8 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                     });
                 return comSizes;
             },
-            showComponents: function (showList) {
-                var buster = this;
-                duff(gapSplit(showList), function (id) {
-                    var com = buster[COMPONENT](id);
-                    if (com) {
-                        com.isShowing = BOOLEAN_TRUE;
-                    }
-                });
-            },
-            hideComponents: function (hideList) {
-                var buster = this;
-                duff(gapSplit(hideList), function (id) {
-                    var com = buster[COMPONENT](id);
-                    if (com) {
-                        com.isShowing = BOOLEAN_FALSE;
-                    }
-                });
-            },
+            showComponents: showHideBoolean(BOOLEAN_TRUE),
+            hideComponents: showHideBoolean(BOOLEAN_FALSE),
             calculateContainerSize: function (components) {
                 var buster = this,
                     attrs = get(buster),
@@ -951,7 +942,8 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                     expansion = factories.expansion[component.dimensionType || 'match'],
                     parentRect = attrs.lastParentRect,
                     parentStyle = attrs.lastParentStyle,
-                    result = (expansion || factories.expansion.match).call(buster, component, parentRect, parentStyle, buster.parts[TOP]),
+                    method = (expansion || factories.expansion.match),
+                    result = method.call(buster, component, parentRect, parentStyle, buster.parts[TOP]),
                     // these are always relative to the viewport
                     calcSize = component.calculatedSize = _.floor({
                         top: result[TOP],
@@ -960,22 +952,6 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                         height: result[HEIGHT]
                     }, 2);
                 return calcSize;
-            },
-            /**
-             * constantly posts until it gets a response
-             * @arg {object} message to go to the opposite buster pair
-             * @arg {number} optionally pass a number to change the setInterval time
-             * @returns {number} interval id that corresponds to the setInterval call id
-             * @func
-             * @name Buster#shout
-             */
-            shout: function (command, obj, extra, timer) {
-                var intervalId, buster = this,
-                    message = buster.send(command, obj, extra);
-                intervalId = _.AF.time(timer || 100, function () {
-                    postMessage(obj, buster);
-                });
-                return intervalId;
             },
             /**
              * starts a relationship between two busters. simplifies the initialization process.
@@ -994,9 +970,10 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                         packet = data.packet;
                     buster.set('isConnected', BOOLEAN_TRUE);
                 });
+                return message;
             }
         }, BOOLEAN_TRUE);
-    if (app.topAccess) {
+    if (app.topAccess()) {
         $(window[TOP]).on('message', receive);
     }
     _.exports({

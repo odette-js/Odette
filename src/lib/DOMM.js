@@ -1050,7 +1050,6 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 // if there's nothing selected, then do nothing
                 args = toArray(arguments);
                 obj = args.shift();
-                // intendedObject(obj, null, function () {});
                 if (isObject(obj)) {
                     if (isString(args[0])) {
                         selector = args.shift();
@@ -1197,7 +1196,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         },
         addEventListener = expandEventListenerArguments(function (name, namespace, selector, callback, capture) {
             var dom = this;
-            if (isFunction(callback)) {
+            if (!isFunction(callback)) {
                 return dom;
             }
             dom.duff(function (el) {
@@ -2287,10 +2286,10 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         }, triggerEventWrapper), wrap(gapSplit('blur focus focusin focusout load resize scroll unload click dblclick mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave change select submit keydown keypress keyup error contextmenu'), function (attr) {
             return triggerEventWrapper(attr);
         })), BOOLEAN_TRUE),
-        $ = _DOMM(sizzleDoc),
         Sizzle = function (str, ctx) {
             return (ctx || sizzleDoc).querySelectorAll(str);
-        };
+        },
+        $;
     _.exports({
         covers: covers,
         center: center,
@@ -2310,5 +2309,6 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         unitToNumber: unitToNumber,
         numberToUnit: numberToUnit
     });
+    $ = _DOMM(sizzleDoc);
     app.addModuleArgs([$]);
 });

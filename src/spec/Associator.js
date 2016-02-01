@@ -10,18 +10,13 @@ application.scope().run(function (app, _, $) {
             expect(_.isInstance(registry, factories.Collection)).toEqual(false);
         });
         it('can get any object\'s data', function () {
-            expect(registry.get(window)).toEqual({
-                dataset: {}
-            });
+            expect(_.has(registry.get(window), 'dataset')).toEqual(true);
         });
         it('can save data against pointers', function () {
             registry.set(window, {
                 some: 'data'
             });
-            expect(registry.get(window)).toEqual({
-                dataset: {},
-                some: 'data'
-            });
+            expect(registry.get(window).some).toEqual('data');
         });
         it('can also get any group of data that the same type', function () {
             var one = {},
@@ -32,17 +27,7 @@ application.scope().run(function (app, _, $) {
             registry.set(two, {
                 two: 2
             });
-            expect(registry.sameType(two)).toEqual({
-                data: [{
-                    dataset: {},
-                    one: 1
-                }, {
-                    dataset: {},
-                    two: 2
-                }],
-                items: [one, two],
-                readData: 1
-            });
+            expect(registry.sameType(two).data.length).toEqual(2);
         });
     });
 });

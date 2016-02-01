@@ -17,7 +17,9 @@ application.scope().module('playground', function (module, app, _, factories, $)
         main: '#main-region'
     });
     var topLayer = app.getRegion('main');
-    var middleLayer = SomeView();
+    var middleLayer = SomeView({
+        text: 'here'
+    });
     var middleHighRegion = middleLayer.getRegion('high');
     var bottomLayer1 = SomeView();
     var bottomLayer2 = SomeView();

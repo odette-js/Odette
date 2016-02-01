@@ -432,20 +432,22 @@ application.scope(function (app) {
         unwrap = function () {
             return this[ITEMS];
         },
-        canRunHash = {},
+        // canRunHash = {},
         wrappedCollectionMethods = extend(wrap({
             each: duff,
             duff: duff,
             forEach: duff,
             eachRev: duffRev,
             duffRev: duffRev,
-            forEachRev: duffRev
-        }, function (fn, key) {
-            canRunHash[key] = 1;
-            return function (iterator) {
+            forEachRev: duffRev,
+            eachCall: eachCall,
+            eachRevCall: eachRevCall
+        }, function (handler) {
+            // canRunHash[key] = 1;
+            return function (iterator, context) {
                 var items = this[ITEMS];
-                if (canRunHash[key] <= items[LENGTH]) {
-                    fn(this[ITEMS], iterator, this);
+                if (items[LENGTH]) {
+                    handler(items, iterator, context);
                 }
                 return this;
             };
@@ -464,7 +466,7 @@ application.scope(function (app) {
                 _[name].apply(_, args);
                 return this;
             };
-        }), wrap(gapSplit('sort unshift push cycle uncycle reverse count countTo countFrom eachCall eachRevCall'), function (name) {
+        }), wrap(gapSplit('sort unshift push cycle uncycle reverse count countTo countFrom'), function (name) {
             return function () {
                 var args = toArray(arguments);
                 args.unshift(this[ITEMS]);
@@ -494,7 +496,6 @@ application.scope(function (app) {
             eachCall: eachCall,
             eachRevCall: eachRevCall,
             closest: closest,
-            // map: map,
             filter: filter,
             reduce: foldl,
             foldl: foldl,
@@ -512,7 +513,6 @@ application.scope(function (app) {
             mamboWrap: internalMambo,
             mambo: externalMambo,
             concat: concat,
-            // listMerge: merge,
             pluck: pluck,
             where: where,
             findWhere: findWhere,
@@ -553,7 +553,7 @@ application.scope(function (app) {
                     base = this[ITEMS];
                 // this allows us to mix collections with regular arguments
                 return base.concat.apply(base, map(arguments, function (arg) {
-                    return Collection(arg)[ITEMS];
+                    return Collection(arg).unwrap();
                 }));
             }),
             length: function () {

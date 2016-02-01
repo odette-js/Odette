@@ -98,6 +98,24 @@ application.scope('dev', function (app) {
             }
             return -1;
         },
+        binaryIndexOf = function (array, searchElement, minIndex_, maxIndex_) {
+            var currentIndex, currentElement, resultIndex, found,
+                minIndex = minIndex_ || 0,
+                maxIndex = maxIndex_ || array[LENGTH] - 1;
+            while (minIndex <= maxIndex) {
+                resultIndex = currentIndex = (minIndex + maxIndex) / 2 | 0;
+                currentElement = array[currentIndex];
+                if (currentElement < searchElement) {
+                    minIndex = currentIndex + 1;
+                } else if (currentElement > searchElement) {
+                    maxIndex = currentIndex - 1;
+                } else {
+                    return currentIndex;
+                }
+            }
+            found = ~maxIndex;
+            return found;
+        },
         /**
          * @func
          */
@@ -1152,7 +1170,7 @@ application.scope('dev', function (app) {
     /**
      * @class Model
      */
-    function Model(attributes, secondary) {
+    function Model(attributes, options) {
         return this;
     }
     factories.Model = Model;
@@ -1188,6 +1206,7 @@ application.scope('dev', function (app) {
         debounce: debounce,
         protoProp: protoProp,
         reverse: reverse,
+        binaryIndexOf: binaryIndexOf,
         indexOfNaN: indexOfNaN,
         indexOf: indexOf,
         joinGen: joinGen,

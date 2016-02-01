@@ -1,17 +1,38 @@
-(function (win, where) {
+(function (win, WHERE, version, fn) {
     'use strict';
+    var blank, topmostDoc, app, MAKE_SCRIPT = 'makeScript',
+        LENGTH = 'length',
+        PARENT = 'parent',
+        doc = document,
+        BOOLEAN_TRUE = !0,
+        BOOLEAN_FALSE = !1,
+        now = function () {
+            return +(new Date());
+        },
+        executionTime = now(),
+        makeParody = function (parent, fn) {
+            return function () {
+                return fn.apply(parent, arguments);
+            };
+        },
+        wraptry = function (fn, try_, finally_) {
+            try {
+                return fn();
+            } catch (e) {
+                console.log(e);
+                return try_ && try_(e);
+            } finally {
+                return finally_ && finally_();
+            }
+        };
 
     function Application(name, parent) {
         this.version = name;
-        this.scoped = true;
-        this.global = false;
+        this.scoped = BOOLEAN_TRUE;
+        this.global = BOOLEAN_FALSE;
         return this;
     }
-    var makeParody = function (parent, fn) {
-        return function () {
-            return fn.apply(parent, arguments);
-        };
-    };
+    Application.prototype.wraptry = wraptry;
     Application.prototype.extend = function (obj) {
         var n, app = this;
         for (n in obj) {
@@ -31,162 +52,479 @@
         this.extend(extendor);
         return this;
     };
-    var topmostDoc, MAKE_SCRIPT = 'makeScript',
+    var application = win[WHERE] = win[WHERE] || {
+        versions: {},
+        executionTime: executionTime,
+        versionOrder: [],
+        global: BOOLEAN_TRUE,
+        scoped: BOOLEAN_FALSE,
+        wraptry: wraptry,
+        registerVersion: function (name) {
+            var application = this,
+                cachedOrCreated = application.versions[name],
+                newApp = application.versions[name] = cachedOrCreated || new Application(name, application);
+            newApp[PARENT] = application;
+            application.upsetDefaultVersion(name);
+            if (!cachedOrCreated) {
+                application.versionOrder.push(name);
+            }
+            return newApp;
+        },
+        upsetDefaultVersion: function (version) {
+            var application = this;
+            if (application.defaultVersion) {
+                // keyword version only works the first time then it's set for the lifespan
+                if (+application.defaultVersion === +application.defaultVersion) {
+                    // keyword version overwrites default (dev / hotfix)
+                    if (+version !== +version) {
+                        application.defaultVersion = version;
+                    }
+                }
+            } else {
+                application.defaultVersion = version;
+            }
+        },
+        unRegisterVersion: function (name) {
+            var application = this,
+                saved = application.versions[name],
+                orderIdx = application.versionOrder.indexOf(name);
+            if (orderIdx !== -1) {
+                application.versionOrder.splice(orderIdx, 1);
+            }
+            saved[PARENT] = blank;
+            application.versions[name] = blank;
+            return saved;
+        },
+        scope: function (name_, fn_) {
+            var ret, app = this,
+                hash = app.versions,
+                name = fn_ ? name_ : app.defaultVersion,
+                fn = fn_ ? fn_ : name_;
+            if (typeof name_ === 'string') {
+                app.currentVersion = name_;
+            }
+            app.registerVersion(name);
+            if (typeof fn === 'function') {
+                this.wraptry(function () {
+                    fn.call(app, hash[name]);
+                });
+            }
+            return hash[name];
+        },
+        map: function (arra, fn, ctx) {
+            var i = 0,
+                len = arra[LENGTH],
+                arr = [];
+            while (len > i) {
+                arr[i] = fn.call(ctx, arra[i], i, arra);
+                i++;
+            }
+            return arr;
+        },
+        registerScopedMethod: function (name, expects_) {
+            var application = this,
+                expects = expects_ || 3,
+                method = application[name] = application[name] || function () {
+                    var version, i = 1,
+                        args = arguments,
+                        args_ = args,
+                        argLen = args[LENGTH];
+                    // expects is equivalent to what it would be if the version was passed in
+                    if (argLen < expects) {
+                        version = application.defaultVersion;
+                    } else {
+                        args_ = [];
+                        version = args[1];
+                        for (; i < args[LENGTH]; i++) {
+                            args_.push(args[i]);
+                        }
+                    }
+                    application.applyTo(version, name, args_);
+                };
+            return application;
+        },
+        get: function (version) {
+            return this.versions[version];
+        },
+        applyTo: function (which, method, args) {
+            var application = this,
+                app = application.get(which);
+            if (app) {
+                return app[method].apply(app, args);
+            }
+        },
+        getCurrentScript: function (d) {
+            var allScripts = (d || doc).scripts,
+                currentScript = d.currentScript,
+                lastScript = allScripts[allScripts[LENGTH] - 1];
+            return currentScript || lastScript;
+        },
+        loadScript: function (url, callback, docu_) {
+            var scriptTag, application = this,
+                // allow top doc to be overwritten
+                docu = docu_ || topmostDoc || doc;
+            scriptTag = application[MAKE_SCRIPT](url, callback);
+            docu.head.appendChild(scriptTag);
+            return application;
+        },
+        makeScript: function (src, onload, docu_, preventappend) {
+            var docu = docu_ || topmostDoc || doc,
+                script = docu.createElement('script');
+            script.type = 'text/javascript';
+            if (!preventappend) {
+                docu.head.appendChild(script);
+            }
+            if (src) {
+                if (onload) {
+                    script.onload = onload;
+                }
+                // src applied last for ie
+                script.src = src;
+            }
+            return script;
+        },
+        touchTop: function (win) {
+            // assume you have top access
+            var href, topAccess = 1,
+                application = this;
+            if (application.topAccess === blank) {
+                application.wraptry(function () {
+                    href = win.top.location.href;
+                    // safari bug WHERE unfriendly frame returns undefined
+                    if (href) {
+                        topAccess = BOOLEAN_TRUE;
+                        application = win.top[WHERE] || application;
+                    }
+                }, function () {
+                    topAccess = BOOLEAN_FALSE;
+                });
+                if (win === win.top) {
+                    topAccess = BOOLEAN_TRUE;
+                }
+                if (topAccess) {
+                    topmostDoc = win.top.document;
+                    win.top[WHERE] = application;
+                }
+                application.topAccess = topAccess;
+            }
+            win[WHERE] = application;
+            return application;
+        }
+    };
+    if (!application.get(version)) {
+        app = application.registerVersion(version);
+        fn(application, app);
+    }
+}(window, 'application', 'dev', function (application, app) {
+    var blank, win = window,
+        doc = document,
+        BOOLEAN_TRUE = !0,
+        BOOLEAN_FALSE = !1,
+        configCacheparams = 3,
+        cacheparams = 78,
+        timestamp = +(new Date()),
+        pushString = 'push',
+        CONCAT = 'concat',
         LENGTH = 'length',
-        application = win[where] = win[where] || {
-            versions: {},
-            versionOrder: [],
-            global: true,
-            scoped: false,
-            registerVersion: function (name) {
-                var application = this,
-                    cachedOrCreated = application.versions[name],
-                    newApp = application.versions[name] = cachedOrCreated || new Application(name, application);
-                newApp.parent = application;
-                application.upsetDefaultVersion(name);
-                if (!cachedOrCreated) {
-                    application.versionOrder.push(name);
-                }
-                return newApp;
-            },
-            upsetDefaultVersion: function (version) {
-                var application = this;
-                if (application.defaultVersion) {
-                    // keyword version only works the first time then it's set for the lifespan
-                    if (+application.defaultVersion === +application.defaultVersion) {
-                        // keyword version overwrites default (dev / hotfix)
-                        if (+version !== +version) {
-                            application.defaultVersion = version;
-                        }
-                    }
-                } else {
-                    application.defaultVersion = version;
-                }
-            },
-            unRegisterVersion: function (name) {
-                var application = this,
-                    saved = application.versions[name],
-                    orderIdx = application.versionOrder.indexOf(name);
-                if (orderIdx !== -1) {
-                    application.versionOrder.splice(orderIdx, 1);
-                }
-                saved.parent = void 0;
-                application.versions[name] = void 0;
-                return saved;
-            },
-            scope: function (name_, fn_) {
-                var ret, app = this,
-                    hash = app.versions,
-                    name = fn_ ? name_ : app.defaultVersion,
-                    fn = fn_ ? fn_ : name_;
-                if (typeof name_ === 'string') {
-                    app.currentVersion = name_;
-                }
-                app.registerVersion(name);
-                ret = typeof fn === 'function' && fn(hash[name]);
-                return hash[name];
-            },
-            map: function (arra, fn, ctx) {
-                var i = 0,
-                    len = arra[LENGTH],
-                    arr = [];
-                while (len > i) {
-                    arr[i] = fn.call(ctx, i, arra[i], arra);
-                    i++;
-                }
-                return arr;
-            },
-            registerScopedMethod: function (name, expects_) {
-                var application = this,
-                    expects = expects_ || 3,
-                    method = application[name] = application[name] || function () {
-                        var version, i = 1,
-                            args = arguments,
-                            args_ = args,
-                            argLen = args[LENGTH];
-                        // expects is equivalent to what it would be if the version was passed in
-                        if (argLen < expects) {
-                            version = application.defaultVersion;
-                        } else {
-                            args_ = [];
-                            version = args[1];
-                            for (; i < args[LENGTH]; i++) {
-                                args_.push(args[i]);
-                            }
-                        }
-                        application.applyTo(version, name, args_);
-                    };
-                return application;
-            },
-            get: function (version) {
-                return this.versions[version];
-            },
-            applyTo: function (which, method, args) {
-                var application = this,
-                    app = application.get(which);
-                if (app) {
-                    return app[method].apply(app, args);
-                }
-            },
-            getCurrentScript: function (d) {
-                var allScripts = (d || doc).scripts,
-                    currentScript = d.currentScript,
-                    lastScript = allScripts[allScripts[LENGTH] - 1];
-                return currentScript || lastScript;
-            },
-            loadScript: function (url, callback, docu_) {
-                var scriptTag, application = this,
-                    // allow top doc to be overwritten
-                    docu = docu_ || topmostDoc || doc;
-                scriptTag = application[MAKE_SCRIPT](url, callback);
-                docu.head.appendChild(scriptTag);
-                return application;
-            },
-            makeScript: function (src, onload, docu_, preventappend) {
-                var docu = docu_ || topmostDoc || doc,
-                    script = docu.createElement('script');
-                script.type = 'text/javascript';
-                if (!preventappend) {
-                    docu.body.appendChild(script);
-                }
-                if (src) {
-                    if (onload) {
-                        script.onload = onload;
-                    }
-                    // src applied last for ie
-                    script.src = src;
-                }
-                return script;
-            },
-            touchTop: function (win) {
-                // assume you have top access
-                var href, topAccess = 1,
-                    application = this;
-                if (application.topAccess === void 0) {
-                    try {
-                        href = win.top.location.href;
-                        // safari bug where unfriendly frame returns undefined
-                        if (href) {
-                            topAccess = 0;
-                            application = win.top[where];
-                        }
-                    } catch (e) {
-                        topAccess = 1;
-                    }
-                    if (win === win.top) {
-                        topAccess = 0;
-                    }
-                    if (!topAccess) {
-                        topmostDoc = win.top.document;
-                        win.top[where] = application;
-                    }
-                    application.topAccess = !topAccess;
-                }
-                win[where] = application;
-                return application;
-            },
+        OUTER_AD = 'OuterAd',
+        MAKE_SCRIPT = 'makeScript',
+        READY_STATE = 'readyState',
+        RECEIVED_CONFIG = 'receivedConfig',
+        LOCATION = 'location',
+        PARENT = 'parent',
+        REGISTER_SCOPED_METHOD = 'registerScopedMethod',
+        getType = function (obj) {
+            return typeof obj;
+        },
+        typeConstructor = function (type) {
+            return function (thing) {
+                return getType(thing) === type;
+            };
+        },
+        isObject = typeConstructor('object'),
+        isString = typeConstructor('string'),
+        isFunction = typeConstructor('function'),
+        gapSplit = function (str) {
+            if (isString(str)) {
+                str = str.split(' ');
+            }
+            return str;
+        },
+        configList = gapSplit('loaderConfig creativeConfig formatConfig publisherConfig placementConfig'),
+        /**
+         * list of modules, broken up by where they are used in the framework
+         */
+        extraModules = [],
+        libraryModules = gapSplit('shims utils Strings Collection Events Messenger Box Module speclessExtend Looper Promise Ajax Associator DOMM View Cookie'),
+        baseModules = gapSplit('Buster Ad Timer BustedData expansion publisherConfig reporting tagTranslation autoExpandCollapse'),
+        outerModules = gapSplit('outerAdProto creativeDataConvert visibility xpDirProx creativeToSpeclessMethods'),
+        innerModules = gapSplit('contextList innerAdProto speclessToCreativeMethods AttributesManager exiting'),
+        allModules = libraryModules[CONCAT](baseModules, outerModules, innerModules),
+        allScopedModules = ['scopeStart'][CONCAT](allModules, ['scopeEnd']),
+        startFn = function (key, config) {
+            var sp = this;
+            sp.configs[key] = config || {};
+            sp[RECEIVED_CONFIG](key);
+            return sp;
+        },
+        scopedToWindow = function (name, number) {
+            number = number || 0;
+            return function () {
+                var search = this.parseSearch(arguments[number].location.search);
+                var scope = this.scope(search.version);
+                return scope[name].apply(scope, arguments);
+            };
         };
-}(window, 'application'));
+    app.ads = [];
+    app._byId = {};
+    app.configs = {};
+    app.parody(gapSplit('map loadScript makeScript'));
+    app.extend({
+        CDNURL: '//c.specless.io',
+        SERVERURL: '//s.specless.io',
+        SCRIPTPATH: '/frame/2/scripts/',
+        CONFIGPATH: '/ads/2/config/',
+        plugins: {},
+        _startHandlers: [],
+        allModules: allModules,
+        baseModules: baseModules,
+        outerModules: outerModules,
+        innerModules: innerModules,
+        extraModules: extraModules,
+        allScopedModules: allScopedModules,
+        configList: configList,
+        start: startFn,
+        config: startFn,
+        userJS: scopedToWindow('userJS'),
+        scope: function (name, fn_) {
+            var fn = name && (isFunction(name) ? name : (isFunction(fn_) ? fn_ : null));
+            if (fn) {
+                this[PARENT].scope(this.version, fn);
+            }
+            return this;
+        },
+        touchTop: function () {
+            // allows the top part of this script to be swapped out against different windows
+            return this[PARENT].touchTop(win);
+        },
+        // parseSearch: function (search) {
+        //     return this[PARENT].parseSearch(search || win.location.search);
+        // },
+        getCurrentScript: function (d) {
+            return this[PARENT].getCurrentScript(d || doc);
+        },
+        topAccess: function () {
+            this.touchTop();
+            return this[PARENT].topAccess;
+        },
+        /**
+         * @func
+         * @name Specless#parseSearch
+         * @param {String} [search] - search string from the location.search attribute on the window object
+         * @returns {Object} key value pairs of the search string
+         */
+        parseSearch: function (search) {
+            var parms, temp, items, val, converted, i = 0,
+                dcUriComp = win.decodeURIComponent;
+            if (!search) {
+                search = win[LOCATION].search;
+            }
+            items = search.slice(1).split("&");
+            parms = {};
+            for (; i < items[LENGTH]; i++) {
+                temp = items[i].split("=");
+                if (temp[0]) {
+                    if (temp[LENGTH] < 2) {
+                        temp[pushString]("");
+                    }
+                    val = temp[1];
+                    val = dcUriComp(val);
+                    if (val[0] === "'" || val[0] === '"') {
+                        val = val.slice(1, val[LENGTH] - 1);
+                    }
+                    if (val === BOOLEAN_TRUE + '') {
+                        val = BOOLEAN_TRUE;
+                    }
+                    if (val === BOOLEAN_FALSE + '') {
+                        val = BOOLEAN_FALSE;
+                    }
+                    if (isString(val)) {
+                        converted = +val;
+                        if (converted == val && converted + '' === val) {
+                            val = converted;
+                        }
+                    }
+                    parms[dcUriComp(temp[0])] = val;
+                }
+            }
+            return parms;
+        },
+        receivedConfig: function (key) {
+            var app = this,
+                _ = app._ || {},
+                factories = _.factories,
+                configs = app.configs,
+                config = configs[key],
+                keySplit = key.split(':'),
+                configType = keySplit[0],
+                configName = keySplit[1];
+            if (config && isObject(config) && isString(key)) {
+                app.each(function (ad) {
+                    if (factories && factories[OUTER_AD]) {
+                        if (ad instanceof factories[OUTER_AD]) {
+                            return;
+                        }
+                    }
+                    ad = ad.attrs;
+                    if (ad[configType] === configName) {
+                        ad[READY_STATE] = Math.max(--ad[READY_STATE], 0);
+                    }
+                });
+            }
+            return app;
+        },
+        each: function (fn) {
+            this.map(this.ads, fn, this);
+            return this;
+        },
+        makeModuleUrl: function (subfolder, modules, preventprepend) {
+            var url = this.map(modules, function (module) {
+                return [currentVersion, subfolder, module].join('_');
+            }).join(',');
+            if (!preventprepend) {
+                url = this.CDNURL + this.SCRIPTPATH + url;
+            }
+            return url;
+        },
+        loadModules: function (modules, callback, subfolder, debug, docu) {
+            var url, app = this;
+            subfolder = subfolder || 'lib';
+            url = app.makeModuleUrl(subfolder, modules, BOOLEAN_FALSE);
+            if (!debug) {
+                url += '?t=' + cacheparams + '&f=' + cacheparams;
+            }
+            app.loadScript(url, callback, docu);
+            return app;
+        },
+        addStartHandler: function (func) {
+            var app = this,
+                _startHandlers = app._startHandlers;
+            _startHandlers.push(func);
+            return app;
+        },
+        load: function (sAdTag, attrs) {
+            var scriptTag, configType, src, data, module, list, item, endUrl, configsUrl, itemName, i = 0,
+                configItems = [],
+                application = this.touchTop(),
+                app = application.get(currentVersion),
+                parts = {},
+                getById = app._byId,
+                getModules = function () {
+                    if (app.tryToMakeAds) {
+                        app.tryToMakeAds();
+                    }
+                };
+            if (!attrs) {
+                attrs = {};
+            }
+            if (!sAdTag) {
+                sAdTag = application.parseSearch(win[LOCATION].search);
+            }
+            if (isObject(sAdTag)) {
+                attrs = sAdTag;
+                sAdTag = attrs.ad || attrs.serverAdId;
+                attrs.ad = blank;
+                attrs.serverAdId = blank;
+            }
+            attrs.requestTime = attrs.requestTime || timestamp;
+            attrs.serverAdId = sAdTag;
+            parts.win = win;
+            parts.doc = doc;
+            attrs[READY_STATE] = 0;
+            attrs.neededModules = allModules[CONCAT](attrs.modules || []);
+            if ((currentVersion.indexOf('dev') !== -1 || currentVersion === 'hotfix') && !attrs.hasOwnProperty('debug')) {
+                attrs.debug = BOOLEAN_TRUE;
+            }
+            if (attrs.wrapperId) {
+                parts.slot = (doc.getElementById(attrs.wrapperId) || doc.body);
+                parts.scriptTag = parts.slot;
+            }
+            parts.scriptTag = app.getCurrentScript(doc);
+            if (parts.scriptTag) {
+                // have you loaded the lib yet?
+                if (!app[READY_STATE]) {
+                    app[READY_STATE] = 1;
+                    // readyState = 1 === modules are being loaded
+                    app.loadModules(allScopedModules, function () {
+                        app[READY_STATE]++;
+                        getModules();
+                    }, null, attrs.debug, doc, attrs);
+                }
+                if (!attrs.loaderConfig) {
+                    attrs.loaderConfig = sAdTag + '00';
+                }
+                if (!attrs.creativeConfig) {
+                    attrs.creativeConfig = sAdTag;
+                    if (attrs.creativeConfig.length < 8) {
+                        attrs.creativeConfig += '01';
+                    }
+                }
+                data = {
+                    parts: parts,
+                    attrs: attrs
+                };
+                if (!getById[sAdTag]) {
+                    getById[sAdTag] = [];
+                }
+                app.ads[pushString](data);
+                getById[sAdTag][pushString](data);
+                for (; i < configList[LENGTH]; i++) {
+                    configType = configList[i];
+                    item = attrs[configType];
+                    // if it has a config
+                    if (item) {
+                        itemName = configType + ':' + item;
+                        // always count up on the ready state number
+                        attrs[READY_STATE]++;
+                        // if the config has not already been requested
+                        if (!isObject(app.configs[itemName])) {
+                            // then push it to the request and create an object to
+                            // prevent it from being requested again
+                            configItems[pushString]({
+                                type: configType.slice(0, configType[LENGTH] - 6),
+                                name: item
+                            });
+                        } else {
+                            app[RECEIVED_CONFIG](itemName);
+                        }
+                    }
+                }
+                if (configItems[LENGTH]) {
+                    configsUrl = (attrs.CDNURL || this.CDNURL) + (attrs.CONFIGPATH || app.CONFIGPATH) + app.map(configItems, function (item) {
+                        return item.type + '_' + item.name;
+                    }).join(',');
+                    if (!attrs.debug) {
+                        configsUrl += '?t=' + configCacheparams;
+                    }
+                    doc.head.appendChild(application[MAKE_SCRIPT](configsUrl, getModules));
+                }
+            }
+            getModules();
+            return app;
+        }
+    });
+    application[REGISTER_SCOPED_METHOD]('load');
+    application[REGISTER_SCOPED_METHOD]('start');
+    application[REGISTER_SCOPED_METHOD]('run');
+    application[REGISTER_SCOPED_METHOD]('module');
+    application[REGISTER_SCOPED_METHOD]('addStartHandler', 2);
+    // make inner specless object
+    application[REGISTER_SCOPED_METHOD]('makeInner');
+    // handles user js
+    application[REGISTER_SCOPED_METHOD]('userJS');
+    // plugins
+    application[REGISTER_SCOPED_METHOD]('component', 4);
+}));
 application.scope('dev', function (app) {
     var blank, _, object = Object,
         win = window,
@@ -286,6 +624,24 @@ application.scope('dev', function (app) {
                 }
             }
             return -1;
+        },
+        binaryIndexOf = function (array, searchElement, minIndex_, maxIndex_) {
+            var currentIndex, currentElement, resultIndex, found,
+                minIndex = minIndex_ || 0,
+                maxIndex = maxIndex_ || array[LENGTH] - 1;
+            while (minIndex <= maxIndex) {
+                resultIndex = currentIndex = (minIndex + maxIndex) / 2 | 0;
+                currentElement = array[currentIndex];
+                if (currentElement < searchElement) {
+                    minIndex = currentIndex + 1;
+                } else if (currentElement > searchElement) {
+                    maxIndex = currentIndex - 1;
+                } else {
+                    return currentIndex;
+                }
+            }
+            found = ~maxIndex;
+            return found;
         },
         /**
          * @func
@@ -1341,7 +1697,7 @@ application.scope('dev', function (app) {
     /**
      * @class Model
      */
-    function Model(attributes, secondary) {
+    function Model(attributes, options) {
         return this;
     }
     factories.Model = Model;
@@ -1377,6 +1733,7 @@ application.scope('dev', function (app) {
         debounce: debounce,
         protoProp: protoProp,
         reverse: reverse,
+        binaryIndexOf: binaryIndexOf,
         indexOfNaN: indexOfNaN,
         indexOf: indexOf,
         joinGen: joinGen,
@@ -2368,20 +2725,22 @@ application.scope(function (app) {
         unwrap = function () {
             return this[ITEMS];
         },
-        canRunHash = {},
+        // canRunHash = {},
         wrappedCollectionMethods = extend(wrap({
             each: duff,
             duff: duff,
             forEach: duff,
             eachRev: duffRev,
             duffRev: duffRev,
-            forEachRev: duffRev
-        }, function (fn, key) {
-            canRunHash[key] = 1;
-            return function (iterator) {
+            forEachRev: duffRev,
+            eachCall: eachCall,
+            eachRevCall: eachRevCall
+        }, function (handler) {
+            // canRunHash[key] = 1;
+            return function (iterator, context) {
                 var items = this[ITEMS];
-                if (canRunHash[key] <= items[LENGTH]) {
-                    fn(this[ITEMS], iterator, this);
+                if (items[LENGTH]) {
+                    handler(items, iterator, context);
                 }
                 return this;
             };
@@ -2400,7 +2759,7 @@ application.scope(function (app) {
                 _[name].apply(_, args);
                 return this;
             };
-        }), wrap(gapSplit('sort unshift push cycle uncycle reverse count countTo countFrom eachCall eachRevCall'), function (name) {
+        }), wrap(gapSplit('sort unshift push cycle uncycle reverse count countTo countFrom'), function (name) {
             return function () {
                 var args = toArray(arguments);
                 args.unshift(this[ITEMS]);
@@ -2430,7 +2789,6 @@ application.scope(function (app) {
             eachCall: eachCall,
             eachRevCall: eachRevCall,
             closest: closest,
-            // map: map,
             filter: filter,
             reduce: foldl,
             foldl: foldl,
@@ -2448,7 +2806,6 @@ application.scope(function (app) {
             mamboWrap: internalMambo,
             mambo: externalMambo,
             concat: concat,
-            // listMerge: merge,
             pluck: pluck,
             where: where,
             findWhere: findWhere,
@@ -2489,7 +2846,7 @@ application.scope(function (app) {
                     base = this[ITEMS];
                 // this allows us to mix collections with regular arguments
                 return base.concat.apply(base, map(arguments, function (arg) {
-                    return Collection(arg)[ITEMS];
+                    return Collection(arg).unwrap();
                 }));
             }),
             length: function () {
@@ -2705,34 +3062,6 @@ application.scope(function (app) {
             // attached so event can remove itself
             eventObject.list = list;
             list.push(eventObject);
-        },
-        extrapolateContext = function (fn) {
-            return function () {
-                var args = toArray(arguments);
-                if (!args[2]) {
-                    args.push(this);
-                }
-                return fn.apply(this, args);
-            };
-        },
-        listenToWrap = function (fn) {
-            return function () {
-                var args = toArray(arguments);
-                if (!args[3]) {
-                    args.push(this);
-                }
-                args = _.cycle(args, 1);
-                return fn.apply(this, args);
-            };
-        },
-        unrollName = function (fn, expectsNameAt) {
-            return function () {
-                var args = toArray(arguments);
-                if (isString(args[expectsNameAt])) {
-                    args[expectsNameAt] = this[args[expectsNameAt]];
-                }
-                fn.apply(this, args);
-            };
         },
         retreiveListeningObject = function (thing, obj) {
             var listeningTo, listening, thisId, id = obj._listenId;
@@ -3002,7 +3331,7 @@ application.scope(function (app) {
                 evnt.finished();
                 return evnt;
             }
-        }, !0);
+        }, BOOLEAN_TRUE);
 });
 application.scope(function (app) {
     var blank, _ = app._,
@@ -3163,7 +3492,7 @@ application.scope(function (app) {
                     history = model[ATTRIBUTE_HISTORY] = {};
                 // set id and let parent know what your new id is
                 this[DISPATCH_EVENT](BEFORE_COLON + 'reset');
-                model._setId(model.id || newAttributes[idAttr] || uniqueId());
+                model._setId(model.id || newAttributes[idAttr] || uniqueId(BOOLEAN_FALSE, BOOLEAN_TRUE));
                 model[PREVIOUS_ATTRIBUTES] = {};
                 // swaps attributes hash
                 model[ATTRIBUTES] = newAttributes;
@@ -3205,9 +3534,9 @@ application.scope(function (app) {
             has: function (attrs) {
                 var box = this,
                     attributes = box[ATTRIBUTES];
-                return !find(gapSplit(attrs), function (attr) {
+                return find(gapSplit(attrs), function (attr) {
                     return attributes[attr] === blank;
-                });
+                }) === blank;
             },
             /**
              * @description collects a splat of arguments and condenses them into a single object. Object is then extended onto the attributes object and any items that are different will be fired as events
@@ -3230,6 +3559,25 @@ application.scope(function (app) {
                     didChange = BOOLEAN_TRUE;
                 }
                 return didChange;
+            },
+            _destroy: function () {
+                var container = this,
+                    // removes all parent / parent's child listeners
+                    removeRet = container[PARENT] && container[PARENT].remove(container);
+            },
+            destroy: function () {
+                var removeRet, box = this;
+                // notify things like parent that it's about to destroy itself
+                box[DISPATCH_EVENT](BEFORE_COLON + 'destroy');
+                // actually detach
+                box._destroy();
+                // stop listening to other views
+                box[DISPATCH_EVENT](DESTROY);
+                // stops listening to everything
+                box[STOP_LISTENING]();
+                // takes off all other event handlers
+                box.wipeEvents();
+                return box;
             },
             digester: function (fn) {
                 var ret, model = this;
@@ -3278,6 +3626,17 @@ application.scope(function (app) {
                 // to prevent circular dependencies
                 return clone(this[ATTRIBUTES]);
             },
+            comparator: 'id',
+            valueOf: function () {
+                var datapoint = +this.attributes[this.comparator];
+                if (datapoint === blank) {
+                    datapoint = +this[this.comparator];
+                }
+                if (datapoint === blank) {
+                    datapoint = +this.id;
+                }
+                return datapoint;
+            },
             /**
              * @description stringified version of attributes object
              * @func
@@ -3289,7 +3648,7 @@ application.scope(function (app) {
             },
             _setId: function (id_) {
                 var model = this,
-                    id = id_ === blank ? uniqueId(BOOLEAN_FALSE) : id_ + '';
+                    id = id_ === blank ? uniqueId(BOOLEAN_FALSE) : id_;
                 model.id = id;
             },
             reset: function (attrs) {
@@ -3297,11 +3656,11 @@ application.scope(function (app) {
                 return this;
             }
         }, BOOLEAN_TRUE),
-        ModelMaker = function (attributes, secondary) {
-            return new Box(attributes, secondary);
+        modelMaker = function (attributes, options) {
+            return Box(attributes, options);
         },
-        constuctor = ModelMaker.constructor = Box,
         Box = factories.Container.extend('Box', {
+            Model: modelMaker,
             /**
              * @description constructor function for the Box Object
              * @name Box#constructor
@@ -3326,18 +3685,6 @@ application.scope(function (app) {
              * @param {Object} attributes - non circular hash that is extended onto what the defaults object produces
              * @returns {Box} instance the method was called on
              */
-            // _registerChild: function (category, id, model) {
-            //     var parent = this;
-            //     if (id !== blank) {
-            //         parent[CHILDREN].register(category, id, model);
-            //     }
-            // },
-            // _unRegisterChild: function (category, id) {
-            //     var parent = this;
-            //     if (id !== blank) {
-            //         parent[CHILDREN].unRegister(category, id);
-            //     }
-            // },
             resetChildren: function (newChildren) {
                 var length, child, box = this,
                     children = box[CHILDREN],
@@ -3422,7 +3769,6 @@ application.scope(function (app) {
                 // notify that you were added
                 return model;
             },
-            Model: ModelMaker,
             // public facing version filters
             add: function (objs_, secondary_) {
                 var childAdded, parent = this,
@@ -3553,21 +3899,12 @@ application.scope(function (app) {
              * @name Box#destroy
              * @returns {Box} instance
              */
-            destroy: function () {
-                var removeRet, box = this;
-                // notify things like parent that it's about to destroy itself
-                box[DISPATCH_EVENT](BEFORE_COLON + 'destroy');
+            _destroy: function () {
+                var box = this,
+                    // removes all parent / parent's child listeners
+                    removeRet = box[PARENT] && box[PARENT].remove(box);
                 // destroys it's children
                 box.resetChildren();
-                // removes all parent / parent's child listeners
-                removeRet = box[PARENT] && box[PARENT].remove(box);
-                // stop listening to other views
-                box[DISPATCH_EVENT](DESTROY);
-                // stops listening to everything
-                box[STOP_LISTENING]();
-                // takes off all other event handlers
-                box.wipeEvents();
-                return box;
             },
             /**
              * @description basic sort function
@@ -3603,6 +3940,7 @@ application.scope(function (app) {
                 return model;
             }
         }, BOOLEAN_TRUE);
+    modelMaker.constructor = Box;
 });
 application.scope(function (app) {
     var blank, _ = app._,
@@ -3662,11 +4000,12 @@ application.scope(function (app) {
         moduleMethods = extend({}, startableMethods, {
             // idAttribute: 'name',
             module: function (name_, fn) {
-                var module, modules, attrs, parentIsModule, nametree, parent = this,
+                var modules, attrs, parentIsModule, nametree, parent = this,
                     originalParent = parent,
                     name = name_,
                     globalname = name,
-                    namespace = name.split('.');
+                    namespace = name.split('.'),
+                    module = parent.modules.get(name_);
                 while (namespace.length > 1) {
                     parent = parent.module(namespace[0]);
                     namespace.shift();
@@ -4299,9 +4638,8 @@ application.scope().module('Promise', function (module, app, _, factories) {
                     reason: reason_ ? reason_ : BOOLEAN_FALSE
                 });
                 resolveAs = promise.get(STATE);
-                return wraptry(function () {
+                wraptry(function () {
                     dispatch(promise, resolveAs);
-                    return promise;
                 }, function () {
                     promise.set(STASHED_ARGUMENT, {
                         // nest the sucker again in case it's an array or something else
@@ -4309,10 +4647,8 @@ application.scope().module('Promise', function (module, app, _, factories) {
                         message: 'javascript execution error'
                     });
                     dispatch(promise, 'error');
-                    return promise;
-                }, function () {
-                    return promise;
                 });
+                return promise;
             },
             // convenience functions
             resolve: function (opts) {
@@ -4596,7 +4932,14 @@ application.scope().module('Associator', function (module, app, _, factories) {
      * @class Associator
      * @augments Model
      */
-    var LENGTH = 'length',
+    var blank, DATA = 'data',
+        ITEMS = 'items',
+        LENGTH = 'length',
+        DATASET = DATA + 'set',
+        IS_ELEMENT = 'isElement',
+        INDEX_OF = 'indexOf',
+        __ELID__ = '__elid__',
+        BOOLEAN_TRUE = !0,
         extend = _.extend,
         isObject = _.isObject,
         removeAt = _.removeAt,
@@ -4608,35 +4951,35 @@ application.scope().module('Associator', function (module, app, _, factories) {
              * @param {String} [type] - toString version of the object being passed in
              */
             get: function (obj, type) {
-                var returnData, idxOf, dataset, n, els, dataArray, current,
-                    instance = this,
+                var returnData, idxOf, dataset, n, key, instance = this,
                     canRead = 0,
                     data = {
                         dataset: {}
-                    };
-                current = this.sameType(obj);
-                els = current.items;
-                dataArray = current.data;
-                if (!els) {
-                    els = current.items = [];
-                }
-                if (!dataArray) {
-                    dataArray = current.data = [];
-                }
-                if (obj && _.isDom && current.readData) {
-                    dataset = obj.dataset;
-                    // copy dataset over from one to the other
-                    if (isObject(dataset) && _.isDom(obj)) {
-                        data.dataset = extend(data.dataset, dataset);
+                    },
+                    current = instance.sameType(obj),
+                    els = current[ITEMS] = current[ITEMS] || [],
+                    eldata = current[__ELID__] = current[__ELID__] || {},
+                    dataArray = current[DATA] = current[DATA] || [];
+                if (obj && current.readData) {
+                    dataset = obj[DATASET];
+                    key = obj[__ELID__] = obj[__ELID__] || _.uniqueId('el');
+                    if (key) {
+                        data = eldata[key] = eldata[key] = {};
                     }
+                    // copy dataset over from one to the other
+                    if (isObject(dataset) && _[IS_ELEMENT](obj)) {
+                        data[DATASET] = extend(data[DATASET], dataset);
+                    }
+                    return data;
+                } else {
+                    idxOf = current[ITEMS][INDEX_OF](obj);
+                    if (idxOf === blank || idxOf === -1) {
+                        idxOf = current[ITEMS][LENGTH];
+                        current[ITEMS].push(obj);
+                        dataArray[idxOf] = data;
+                    }
+                    return dataArray[idxOf];
                 }
-                idxOf = current.items.indexOf(obj);
-                if (idxOf === -1) {
-                    idxOf = current.items[LENGTH];
-                    current.items.push(obj);
-                    dataArray[idxOf] = data;
-                }
-                return dataArray[idxOf];
             },
             /**
              * @func
@@ -4652,10 +4995,10 @@ application.scope().module('Associator', function (module, app, _, factories) {
                 return data;
             },
             remove: function (el) {
-                var type = this.sameType(el);
-                var idx = _.indexOf(type.items, el);
-                var ret = removeAt(type.data, idx);
-                removeAt(type.items, idx);
+                var type = this.sameType(el),
+                    idx = _[INDEX_OF](type[ITEMS], el),
+                    ret = removeAt(type[DATA], idx);
+                removeAt(type[ITEMS], idx);
                 return ret;
             },
             /**
@@ -4666,19 +5009,16 @@ application.scope().module('Associator', function (module, app, _, factories) {
             sameType: function (obj) {
                 var instance = this,
                     type = _.toString(obj),
-                    current = instance[type],
-                    lowerType = type.toLowerCase();
-                if (!current) {
-                    // makes things easier to find
-                    current = instance[type] = {};
-                }
+                    current = instance[type] = instance[type] || {},
+                    lowerType = type.toLowerCase(),
+                    globalindex = lowerType[INDEX_OF]('global');
                 // skip reading data
-                if (lowerType.indexOf('global') === -1 && lowerType.indexOf('window') === -1) {
-                    current.readData = 1;
+                if (globalindex === -1 && lowerType[INDEX_OF]('window') === -1) {
+                    current.readData = BOOLEAN_TRUE;
                 }
                 return current;
             }
-        }, !0);
+        }, BOOLEAN_TRUE);
     _.exports({
         associator: factories.Associator()
     });
@@ -5735,7 +6075,6 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 // if there's nothing selected, then do nothing
                 args = toArray(arguments);
                 obj = args.shift();
-                // intendedObject(obj, null, function () {});
                 if (isObject(obj)) {
                     if (isString(args[0])) {
                         selector = args.shift();
@@ -5882,7 +6221,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         },
         addEventListener = expandEventListenerArguments(function (name, namespace, selector, callback, capture) {
             var dom = this;
-            if (isFunction(callback)) {
+            if (!isFunction(callback)) {
                 return dom;
             }
             dom.duff(function (el) {
@@ -6972,10 +7311,10 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         }, triggerEventWrapper), wrap(gapSplit('blur focus focusin focusout load resize scroll unload click dblclick mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave change select submit keydown keypress keyup error contextmenu'), function (attr) {
             return triggerEventWrapper(attr);
         })), BOOLEAN_TRUE),
-        $ = _DOMM(sizzleDoc),
         Sizzle = function (str, ctx) {
             return (ctx || sizzleDoc).querySelectorAll(str);
-        };
+        },
+        $;
     _.exports({
         covers: covers,
         center: center,
@@ -6995,6 +7334,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         unitToNumber: unitToNumber,
         numberToUnit: numberToUnit
     });
+    $ = _DOMM(sizzleDoc);
     app.addModuleArgs([$]);
 });
 application.scope().module('View', function (module, app, _, factories, $) {
@@ -7020,14 +7360,18 @@ application.scope().module('View', function (module, app, _, factories, $) {
         reverseParams = _.reverseParams,
         intendedObject = _.intendedObject,
         createDocumentFragment = _.createDocumentFragment,
+        EMPTY = '',
         INDEX = 'index',
         LENGTH = 'length',
         RENDER = 'render',
-        OPTIONS = 'options',
         PARENT = 'parent',
+        OPTIONS = 'options',
         CHILDREN = 'children',
+        IS_RENDERED = '_isRendered',
         PARENT_NODE = 'parentNode',
         CONSTRUCTOR = 'constructor',
+        ESTABLISH_REGIONS = 'establishRegions',
+        ESTABLISHED_REGIONS = '_establishedRegions',
         APPEND_CHILD_ELEMENTS = '_appendChildElements',
         PROTOTYPE = 'prototype',
         DISPATCH_EVENT = 'dispatchEvent',
@@ -7047,7 +7391,7 @@ application.scope().module('View', function (module, app, _, factories, $) {
             attrs = map(matches || [], function (match) {
                 return {
                     match: match,
-                    attr: match.split('{{').join('').split('}}').join('').trim()
+                    attr: match.split('{{').join(EMPTY).split('}}').join(EMPTY).trim()
                 };
             });
             // template = template.trim();
@@ -7056,7 +7400,7 @@ application.scope().module('View', function (module, app, _, factories, $) {
                     cloneResult = clone(obj);
                 duff(attrs, function (match) {
                     if (!cloneResult[match.attr]) {
-                        cloneResult[match.attr] = '';
+                        cloneResult[match.attr] = EMPTY;
                     }
                     str = str.replace(match.match, cloneResult[match.attr]);
                 });
@@ -7071,7 +7415,7 @@ application.scope().module('View', function (module, app, _, factories, $) {
             if (namespace) {
                 namespace = '.' + namespace;
             } else {
-                namespace = '';
+                namespace = EMPTY;
             }
             var viewNamespace = 'delegateEvents' + view.cid;
             return map(gapSplit(key), function (_key) {
@@ -7118,14 +7462,6 @@ application.scope().module('View', function (module, app, _, factories, $) {
         // region views are useful if you're constructing different components
         // from a separate place and just want it to be in the attach pipeline
         // very useful for componentizing your ui
-        viewplucks = ['el', 'regionViews'],
-        pluckviews = function (from, to, props) {
-            duff(props, function (prop, idx) {
-                if (has(from, prop)) {
-                    to[prop] = from[prop];
-                }
-            });
-        },
         View = factories.Box.extend('View', {
             /**
              * @func
@@ -7143,7 +7479,7 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 var model = this;
                 Box[CONSTRUCTOR].apply(model, arguments);
                 model._ensureElement();
-                model[RENDER]();
+                model._establishRegions();
                 return model;
             },
             _ensureChildren: function () {
@@ -7154,7 +7490,7 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 return this.el.find(selector);
             },
             template: function (ctx) {
-                return '';
+                return EMPTY;
             },
             _renderHTML: function () {
                 var view = this,
@@ -7168,21 +7504,21 @@ application.scope().module('View', function (module, app, _, factories, $) {
             },
             _establishRegions: function () {
                 var regionsManager, view = this,
-                    regions = view._establishedRegions = view._establishedRegions || result(view, 'regions');
-                if (!view._establishedRegions) {
+                    regions = view[ESTABLISHED_REGIONS] = view[ESTABLISHED_REGIONS] || result(view, 'regions');
+                if (!view[ESTABLISHED_REGIONS]) {
                     return;
                 }
                 // add regions to the region manager
-                view[CHILDREN].establishRegions(regions);
+                view[CHILDREN][ESTABLISH_REGIONS](regions);
             },
             render: function () {
                 var view = this;
-                view.isRendered = BOOLEAN_FALSE;
+                view[IS_RENDERED] = BOOLEAN_FALSE;
                 // prep the object with extra members (doc frags on regionviews,
                 // list of children to trigger events on)
                 // view._ensureBufferedViews();
                 // request extra data or something before rendering: dom is still completely intact
-                view[DISPATCH_EVENT]('before:render');
+                view[DISPATCH_EVENT]('before:' + RENDER);
                 // unbinds and rebinds element only if it changes
                 view.setElement(view.el);
                 // update new element's attributes
@@ -7195,9 +7531,9 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 view._establishRegions();
                 // console.log(view.parent.parent);
                 // tie the children of the region the the region's el
-                view[CHILDREN].eachCall('render');
+                view[CHILDREN].eachCall(RENDER);
                 // mark the view as rendered
-                view.isRendered = BOOLEAN_TRUE;
+                view[IS_RENDERED] = BOOLEAN_TRUE;
                 // dispatch the render event
                 view[DISPATCH_EVENT](RENDER);
                 return view;
@@ -7374,7 +7710,7 @@ application.scope().module('View', function (module, app, _, factories, $) {
             },
             destroy: function (opts) {
                 var view = this;
-                view.isRendered = BOOLEAN_FALSE;
+                view[IS_RENDERED] = BOOLEAN_FALSE;
                 view.detach();
                 // remove all events
                 // should internally call remove
@@ -7382,15 +7718,23 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 return view;
             },
             rendered: function () {
-                return this.isRendered;
+                return this[IS_RENDERED];
             },
             destroyed: function () {
                 return this.isDestroyed;
             }
         }, BOOLEAN_TRUE),
-        Region = factories.View.extend('Region', {
-            Model: View,
-            _ensureElement: _.noop,
+        _View = factories.View,
+        Region = View.extend('Region', {
+            Model: _View,
+            _ensureElement: function () {
+                this._setElement();
+            },
+            constructor: function (options) {
+                var view = this;
+                _View[CONSTRUCTOR].call(view, {}, options);
+                return view;
+            },
             add: function (models_) {
                 var ret, _bufferedViews, view = this;
                 view._ensureBufferedViews();
@@ -7410,8 +7754,9 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 this[CHILDREN] = this[CHILDREN] || Collection();
             },
             _ensureBufferedViews: function () {
-                var bufferedViews = isArray(this._bufferedViews) ? 1 : this._resetBufferedViews();
-                var _bufferedEls = isFragment(this._bufferedEls) ? 1 : this._resetBufferedEls();
+                var view = this,
+                    bufferedViews = isArray(view._bufferedViews) ? 1 : view._resetBufferedViews(),
+                    _bufferedEls = isFragment(view._bufferedEls) ? 1 : view._resetBufferedEls();
             },
             _addBufferedView: function (view) {
                 var parent = this;
@@ -7440,11 +7785,11 @@ application.scope().module('View', function (module, app, _, factories, $) {
             },
             render: function () {
                 var region = this;
-                region.isRendered = BOOLEAN_FALSE;
+                region[IS_RENDERED] = BOOLEAN_FALSE;
                 // doc frags on regionviews, list of children to trigger events on
                 region._ensureBufferedViews();
                 // request extra data or something before rendering: dom is still completely intact
-                region[DISPATCH_EVENT]('before:render');
+                region[DISPATCH_EVENT]('before:' + RENDER);
                 // unbinds and rebinds element only if it changes
                 region._setElement();
                 // update new element's attributes
@@ -7455,11 +7800,11 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 // appends child elements
                 region[APPEND_CHILD_ELEMENTS]();
                 // mark the view as rendered
-                region.isRendered = BOOLEAN_TRUE;
+                region[IS_RENDERED] = BOOLEAN_TRUE;
                 // reset buffered objects
                 region._resetBuffered();
                 // dispatch the render event
-                region[DISPATCH_EVENT]('render');
+                region[DISPATCH_EVENT](RENDER);
                 return region;
             },
             _appendChildElements: function () {
@@ -7500,9 +7845,9 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 if (isInstance(region, Region)) {
                     return region;
                 }
-                region = Region({}, {
+                region = Region({
                     id: where,
-                    selector: isString(region) ? region : '',
+                    selector: isString(region) ? region : EMPTY,
                     parent: parent
                 });
                 key = REGION_MANAGER;
@@ -7517,7 +7862,7 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 var regionManager = this;
                 var region = isString(region_) ? regionManager.get(region_) : region_;
                 regionManager.remove(region);
-                regionManager.unregister(region.id, region);
+                regionManager.unRegister(region.id, region);
             },
             establishRegions: function (key, value) {
                 var regionManager = this,
@@ -7544,7 +7889,7 @@ application.scope().module('View', function (module, app, _, factories, $) {
             var blank = app.getRegion();
             var regionManager = app[REGION_MANAGER];
             regionManager[PARENT] = app;
-            regionManager.establishRegions(id, selector);
+            regionManager[ESTABLISH_REGIONS](id, selector);
             return app;
         }
     });
@@ -7724,11 +8069,11 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                         timestamp: timestamp
                     });
                 };
-            if (!sameSide) {
+            if (sameSide) {
                 if (busterAttrs.referrer) {
-                    parts.sendWin.postMessage(message, busterAttrs.referrer);
+                    throw new Error('missing referrer: ' + buster.get('sessionId'));
                 } else {
-                    console.trace('missing referrer', buster);
+                    parts.sendWin.postMessage(message, busterAttrs.referrer);
                 }
             }
             if (sameSide) {
@@ -7930,6 +8275,17 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                 return message;
             }
         }),
+        showHideBoolean = function (bool) {
+            return function (showList) {
+                var buster = this;
+                duff(gapSplit(showList), function (id) {
+                    var com = buster[COMPONENT](id);
+                    if (com) {
+                        com.isShowing = bool;
+                    }
+                });
+            };
+        },
         Buster = factories.Buster = factories.Box.extend('Buster', {
             Model: Message,
             events: {
@@ -7939,8 +8295,10 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                 },
                 'change:isConnected child:added': 'flush'
             },
-            parentEvents: {
-                destroy: 'destroy'
+            parentEvents: function () {
+                return {
+                    destroy: 'destroy'
+                };
             },
             /**
              * @func
@@ -8095,12 +8453,6 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                 }
                 return buster;
             },
-            component: function (registeredAs) {
-                return this[COMPONENTS].find(function (com, idx) {
-                    return com.registeredAs === registeredAs || idx === registeredAs;
-                });
-            },
-            // this belongs on the outside
             /**
              * quick get parser to figure out if the wrapper, the frame element, it's parent, the document, or an other item is being selected by a post message
              * @arg {string} target selector
@@ -8185,12 +8537,12 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
              * @name Buster#send
              */
             send: function (command, packet, extra) {
-                var message, buster = this,
-                    defaultObj = buster.defaultMessage();
-                message = buster.add(extend({
-                    command: command,
-                    packet: packet
-                }, defaultObj, extra));
+                var buster = this,
+                    defaultObj = buster.defaultMessage(),
+                    message = buster.add(extend({
+                        command: command,
+                        packet: packet
+                    }, defaultObj, extra));
                 return buster.children.index(defaultObj.index);
             },
             /**
@@ -8221,19 +8573,20 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                     args = _.toArray(arguments);
                 if (runCount) {
                     originalMessage = children.index(data.index);
-                    if (originalMessage) {
-                        // found the message that i originally sent you
-                        // packet = originalMessage.packet;
-                        // allow the buster to set some things up
-                        buster[DISPATCH_EVENT](BEFORE_RESPONDED);
-                        if (runCount === 1) {
-                            // stash it for later
-                            originalMessage[RESPONSE_OPTIONS] = data;
-                        } else {
-                            eventname = 'deferred';
-                        }
-                        originalMessage[DISPATCH_EVENT](eventname);
+                    if (!originalMessage) {
+                        return buster;
                     }
+                    // found the message that i originally sent you
+                    // packet = originalMessage.packet;
+                    // allow the buster to set some things up
+                    buster[DISPATCH_EVENT](BEFORE_RESPONDED);
+                    if (runCount === 1) {
+                        // stash it for later
+                        originalMessage[RESPONSE_OPTIONS] = data;
+                    } else {
+                        eventname = 'deferred';
+                    }
+                    originalMessage[DISPATCH_EVENT](eventname);
                 } else {
                     buster[DISPATCH_EVENT]('receive:' + data.command);
                     buster[DISPATCH_EVENT]('receive');
@@ -8269,7 +8622,6 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                     sameSide: attrs.sameSide,
                     fromInner: attrs.fromInner,
                     toInner: attrs.toInner,
-                    // runCount: 0,
                     index: this.children[LENGTH](),
                     preventResponse: BOOLEAN_FALSE
                 };
@@ -8373,6 +8725,12 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                         search: ''
                     },
                     topData = attrs.topData = {
+                        innerHeight: topWin.innerHeight || 0,
+                        outerHeight: topWin.outerHeight || 0,
+                        innerWidth: topWin.innerWidth || 0,
+                        outerWidth: topWin.outerWidth || 0,
+                        scrollX: topWin.scrollX || 0,
+                        scrollY: topWin.scrollY || 0,
                         location: {
                             hash: location.hash.slice(1),
                             host: location.host,
@@ -8382,13 +8740,7 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                             port: location.port,
                             protocol: location.protocol.slice(0, location.protocol[LENGTH] - 1),
                             search: location.search.slice(1)
-                        },
-                        innerHeight: topWin.innerHeight || 0,
-                        outerHeight: topWin.outerHeight || 0,
-                        innerWidth: topWin.innerWidth || 0,
-                        outerWidth: topWin.outerWidth || 0,
-                        scrollX: topWin.scrollX || 0,
-                        scrollY: topWin.scrollY || 0
+                        }
                     };
                 return topData;
             },
@@ -8420,11 +8772,11 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                     className: el.className,
                     pageTitle: doc.title,
                     id: el.id,
-                    height: pI(getBoundingClientRect.height),
-                    bottom: pI(getBoundingClientRect.bottom),
-                    width: pI(getBoundingClientRect.width),
-                    right: pI(getBoundingClientRect.right),
-                    left: pI(getBoundingClientRect.left),
+                    height: pI(getBoundingClientRect[HEIGHT]),
+                    bottom: pI(getBoundingClientRect[BOTTOM]),
+                    width: pI(getBoundingClientRect[WIDTH]),
+                    right: pI(getBoundingClientRect[RIGHT]),
+                    left: pI(getBoundingClientRect[LEFT]),
                     top: pI(getBoundingClientRect[TOP])
                 };
                 return info;
@@ -8455,24 +8807,8 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                     });
                 return comSizes;
             },
-            showComponents: function (showList) {
-                var buster = this;
-                duff(gapSplit(showList), function (id) {
-                    var com = buster[COMPONENT](id);
-                    if (com) {
-                        com.isShowing = BOOLEAN_TRUE;
-                    }
-                });
-            },
-            hideComponents: function (hideList) {
-                var buster = this;
-                duff(gapSplit(hideList), function (id) {
-                    var com = buster[COMPONENT](id);
-                    if (com) {
-                        com.isShowing = BOOLEAN_FALSE;
-                    }
-                });
-            },
+            showComponents: showHideBoolean(BOOLEAN_TRUE),
+            hideComponents: showHideBoolean(BOOLEAN_FALSE),
             calculateContainerSize: function (components) {
                 var buster = this,
                     attrs = get(buster),
@@ -8502,7 +8838,8 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                     expansion = factories.expansion[component.dimensionType || 'match'],
                     parentRect = attrs.lastParentRect,
                     parentStyle = attrs.lastParentStyle,
-                    result = (expansion || factories.expansion.match).call(buster, component, parentRect, parentStyle, buster.parts[TOP]),
+                    method = (expansion || factories.expansion.match),
+                    result = method.call(buster, component, parentRect, parentStyle, buster.parts[TOP]),
                     // these are always relative to the viewport
                     calcSize = component.calculatedSize = _.floor({
                         top: result[TOP],
@@ -8511,22 +8848,6 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                         height: result[HEIGHT]
                     }, 2);
                 return calcSize;
-            },
-            /**
-             * constantly posts until it gets a response
-             * @arg {object} message to go to the opposite buster pair
-             * @arg {number} optionally pass a number to change the setInterval time
-             * @returns {number} interval id that corresponds to the setInterval call id
-             * @func
-             * @name Buster#shout
-             */
-            shout: function (command, obj, extra, timer) {
-                var intervalId, buster = this,
-                    message = buster.send(command, obj, extra);
-                intervalId = _.AF.time(timer || 100, function () {
-                    postMessage(obj, buster);
-                });
-                return intervalId;
             },
             /**
              * starts a relationship between two busters. simplifies the initialization process.
@@ -8545,9 +8866,10 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                         packet = data.packet;
                     buster.set('isConnected', BOOLEAN_TRUE);
                 });
+                return message;
             }
         }, BOOLEAN_TRUE);
-    if (app.topAccess) {
+    if (app.topAccess()) {
         $(window[TOP]).on('message', receive);
     }
     _.exports({

@@ -56,11 +56,12 @@ application.scope(function (app) {
         moduleMethods = extend({}, startableMethods, {
             // idAttribute: 'name',
             module: function (name_, fn) {
-                var module, modules, attrs, parentIsModule, nametree, parent = this,
+                var modules, attrs, parentIsModule, nametree, parent = this,
                     originalParent = parent,
                     name = name_,
                     globalname = name,
-                    namespace = name.split('.');
+                    namespace = name.split('.'),
+                    module = parent.modules.get(name_);
                 while (namespace.length > 1) {
                     parent = parent.module(namespace[0]);
                     namespace.shift();

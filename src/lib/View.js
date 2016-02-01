@@ -21,14 +21,18 @@ application.scope().module('View', function (module, app, _, factories, $) {
         reverseParams = _.reverseParams,
         intendedObject = _.intendedObject,
         createDocumentFragment = _.createDocumentFragment,
+        EMPTY = '',
         INDEX = 'index',
         LENGTH = 'length',
         RENDER = 'render',
-        OPTIONS = 'options',
         PARENT = 'parent',
+        OPTIONS = 'options',
         CHILDREN = 'children',
+        IS_RENDERED = '_isRendered',
         PARENT_NODE = 'parentNode',
         CONSTRUCTOR = 'constructor',
+        ESTABLISH_REGIONS = 'establishRegions',
+        ESTABLISHED_REGIONS = '_establishedRegions',
         APPEND_CHILD_ELEMENTS = '_appendChildElements',
         PROTOTYPE = 'prototype',
         DISPATCH_EVENT = 'dispatchEvent',
@@ -48,7 +52,7 @@ application.scope().module('View', function (module, app, _, factories, $) {
             attrs = map(matches || [], function (match) {
                 return {
                     match: match,
-                    attr: match.split('{{').join('').split('}}').join('').trim()
+                    attr: match.split('{{').join(EMPTY).split('}}').join(EMPTY).trim()
                 };
             });
             // template = template.trim();
@@ -57,7 +61,7 @@ application.scope().module('View', function (module, app, _, factories, $) {
                     cloneResult = clone(obj);
                 duff(attrs, function (match) {
                     if (!cloneResult[match.attr]) {
-                        cloneResult[match.attr] = '';
+                        cloneResult[match.attr] = EMPTY;
                     }
                     str = str.replace(match.match, cloneResult[match.attr]);
                 });
@@ -72,7 +76,7 @@ application.scope().module('View', function (module, app, _, factories, $) {
             if (namespace) {
                 namespace = '.' + namespace;
             } else {
-                namespace = '';
+                namespace = EMPTY;
             }
             var viewNamespace = 'delegateEvents' + view.cid;
             return map(gapSplit(key), function (_key) {
@@ -119,14 +123,6 @@ application.scope().module('View', function (module, app, _, factories, $) {
         // region views are useful if you're constructing different components
         // from a separate place and just want it to be in the attach pipeline
         // very useful for componentizing your ui
-        viewplucks = ['el', 'regionViews'],
-        pluckviews = function (from, to, props) {
-            duff(props, function (prop, idx) {
-                if (has(from, prop)) {
-                    to[prop] = from[prop];
-                }
-            });
-        },
         View = factories.Box.extend('View', {
             /**
              * @func
@@ -144,7 +140,7 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 var model = this;
                 Box[CONSTRUCTOR].apply(model, arguments);
                 model._ensureElement();
-                model[RENDER]();
+                model._establishRegions();
                 return model;
             },
             _ensureChildren: function () {
@@ -155,7 +151,7 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 return this.el.find(selector);
             },
             template: function (ctx) {
-                return '';
+                return EMPTY;
             },
             _renderHTML: function () {
                 var view = this,
@@ -169,21 +165,21 @@ application.scope().module('View', function (module, app, _, factories, $) {
             },
             _establishRegions: function () {
                 var regionsManager, view = this,
-                    regions = view._establishedRegions = view._establishedRegions || result(view, 'regions');
-                if (!view._establishedRegions) {
+                    regions = view[ESTABLISHED_REGIONS] = view[ESTABLISHED_REGIONS] || result(view, 'regions');
+                if (!view[ESTABLISHED_REGIONS]) {
                     return;
                 }
                 // add regions to the region manager
-                view[CHILDREN].establishRegions(regions);
+                view[CHILDREN][ESTABLISH_REGIONS](regions);
             },
             render: function () {
                 var view = this;
-                view.isRendered = BOOLEAN_FALSE;
+                view[IS_RENDERED] = BOOLEAN_FALSE;
                 // prep the object with extra members (doc frags on regionviews,
                 // list of children to trigger events on)
                 // view._ensureBufferedViews();
                 // request extra data or something before rendering: dom is still completely intact
-                view[DISPATCH_EVENT]('before:render');
+                view[DISPATCH_EVENT]('before:' + RENDER);
                 // unbinds and rebinds element only if it changes
                 view.setElement(view.el);
                 // update new element's attributes
@@ -196,9 +192,9 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 view._establishRegions();
                 // console.log(view.parent.parent);
                 // tie the children of the region the the region's el
-                view[CHILDREN].eachCall('render');
+                view[CHILDREN].eachCall(RENDER);
                 // mark the view as rendered
-                view.isRendered = BOOLEAN_TRUE;
+                view[IS_RENDERED] = BOOLEAN_TRUE;
                 // dispatch the render event
                 view[DISPATCH_EVENT](RENDER);
                 return view;
@@ -375,7 +371,7 @@ application.scope().module('View', function (module, app, _, factories, $) {
             },
             destroy: function (opts) {
                 var view = this;
-                view.isRendered = BOOLEAN_FALSE;
+                view[IS_RENDERED] = BOOLEAN_FALSE;
                 view.detach();
                 // remove all events
                 // should internally call remove
@@ -383,15 +379,23 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 return view;
             },
             rendered: function () {
-                return this.isRendered;
+                return this[IS_RENDERED];
             },
             destroyed: function () {
                 return this.isDestroyed;
             }
         }, BOOLEAN_TRUE),
-        Region = factories.View.extend('Region', {
-            Model: View,
-            _ensureElement: _.noop,
+        _View = factories.View,
+        Region = View.extend('Region', {
+            Model: _View,
+            _ensureElement: function () {
+                this._setElement();
+            },
+            constructor: function (options) {
+                var view = this;
+                _View[CONSTRUCTOR].call(view, {}, options);
+                return view;
+            },
             add: function (models_) {
                 var ret, _bufferedViews, view = this;
                 view._ensureBufferedViews();
@@ -411,8 +415,9 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 this[CHILDREN] = this[CHILDREN] || Collection();
             },
             _ensureBufferedViews: function () {
-                var bufferedViews = isArray(this._bufferedViews) ? 1 : this._resetBufferedViews();
-                var _bufferedEls = isFragment(this._bufferedEls) ? 1 : this._resetBufferedEls();
+                var view = this,
+                    bufferedViews = isArray(view._bufferedViews) ? 1 : view._resetBufferedViews(),
+                    _bufferedEls = isFragment(view._bufferedEls) ? 1 : view._resetBufferedEls();
             },
             _addBufferedView: function (view) {
                 var parent = this;
@@ -441,11 +446,11 @@ application.scope().module('View', function (module, app, _, factories, $) {
             },
             render: function () {
                 var region = this;
-                region.isRendered = BOOLEAN_FALSE;
+                region[IS_RENDERED] = BOOLEAN_FALSE;
                 // doc frags on regionviews, list of children to trigger events on
                 region._ensureBufferedViews();
                 // request extra data or something before rendering: dom is still completely intact
-                region[DISPATCH_EVENT]('before:render');
+                region[DISPATCH_EVENT]('before:' + RENDER);
                 // unbinds and rebinds element only if it changes
                 region._setElement();
                 // update new element's attributes
@@ -456,11 +461,11 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 // appends child elements
                 region[APPEND_CHILD_ELEMENTS]();
                 // mark the view as rendered
-                region.isRendered = BOOLEAN_TRUE;
+                region[IS_RENDERED] = BOOLEAN_TRUE;
                 // reset buffered objects
                 region._resetBuffered();
                 // dispatch the render event
-                region[DISPATCH_EVENT]('render');
+                region[DISPATCH_EVENT](RENDER);
                 return region;
             },
             _appendChildElements: function () {
@@ -501,9 +506,9 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 if (isInstance(region, Region)) {
                     return region;
                 }
-                region = Region({}, {
+                region = Region({
                     id: where,
-                    selector: isString(region) ? region : '',
+                    selector: isString(region) ? region : EMPTY,
                     parent: parent
                 });
                 key = REGION_MANAGER;
@@ -518,7 +523,7 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 var regionManager = this;
                 var region = isString(region_) ? regionManager.get(region_) : region_;
                 regionManager.remove(region);
-                regionManager.unregister(region.id, region);
+                regionManager.unRegister(region.id, region);
             },
             establishRegions: function (key, value) {
                 var regionManager = this,
@@ -545,7 +550,7 @@ application.scope().module('View', function (module, app, _, factories, $) {
             var blank = app.getRegion();
             var regionManager = app[REGION_MANAGER];
             regionManager[PARENT] = app;
-            regionManager.establishRegions(id, selector);
+            regionManager[ESTABLISH_REGIONS](id, selector);
             return app;
         }
     });

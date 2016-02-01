@@ -132,34 +132,6 @@ application.scope(function (app) {
             eventObject.list = list;
             list.push(eventObject);
         },
-        extrapolateContext = function (fn) {
-            return function () {
-                var args = toArray(arguments);
-                if (!args[2]) {
-                    args.push(this);
-                }
-                return fn.apply(this, args);
-            };
-        },
-        listenToWrap = function (fn) {
-            return function () {
-                var args = toArray(arguments);
-                if (!args[3]) {
-                    args.push(this);
-                }
-                args = _.cycle(args, 1);
-                return fn.apply(this, args);
-            };
-        },
-        unrollName = function (fn, expectsNameAt) {
-            return function () {
-                var args = toArray(arguments);
-                if (isString(args[expectsNameAt])) {
-                    args[expectsNameAt] = this[args[expectsNameAt]];
-                }
-                fn.apply(this, args);
-            };
-        },
         retreiveListeningObject = function (thing, obj) {
             var listeningTo, listening, thisId, id = obj._listenId;
             if (!id) {
@@ -428,5 +400,5 @@ application.scope(function (app) {
                 evnt.finished();
                 return evnt;
             }
-        }, !0);
+        }, BOOLEAN_TRUE);
 });

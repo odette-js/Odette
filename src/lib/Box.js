@@ -91,7 +91,7 @@ application.scope(function (app) {
                     history = model[ATTRIBUTE_HISTORY] = {};
                 // set id and let parent know what your new id is
                 this[DISPATCH_EVENT](BEFORE_COLON + 'reset');
-                model._setId(model.id || newAttributes[idAttr] || uniqueId());
+                model._setId(model.id || newAttributes[idAttr] || uniqueId(BOOLEAN_FALSE, BOOLEAN_TRUE));
                 model[PREVIOUS_ATTRIBUTES] = {};
                 // swaps attributes hash
                 model[ATTRIBUTES] = newAttributes;
@@ -133,9 +133,9 @@ application.scope(function (app) {
             has: function (attrs) {
                 var box = this,
                     attributes = box[ATTRIBUTES];
-                return !find(gapSplit(attrs), function (attr) {
+                return find(gapSplit(attrs), function (attr) {
                     return attributes[attr] === blank;
-                });
+                }) === blank;
             },
             /**
              * @description collects a splat of arguments and condenses them into a single object. Object is then extended onto the attributes object and any items that are different will be fired as events
@@ -158,6 +158,25 @@ application.scope(function (app) {
                     didChange = BOOLEAN_TRUE;
                 }
                 return didChange;
+            },
+            _destroy: function () {
+                var container = this,
+                    // removes all parent / parent's child listeners
+                    removeRet = container[PARENT] && container[PARENT].remove(container);
+            },
+            destroy: function () {
+                var removeRet, box = this;
+                // notify things like parent that it's about to destroy itself
+                box[DISPATCH_EVENT](BEFORE_COLON + 'destroy');
+                // actually detach
+                box._destroy();
+                // stop listening to other views
+                box[DISPATCH_EVENT](DESTROY);
+                // stops listening to everything
+                box[STOP_LISTENING]();
+                // takes off all other event handlers
+                box.wipeEvents();
+                return box;
             },
             digester: function (fn) {
                 var ret, model = this;
@@ -206,6 +225,17 @@ application.scope(function (app) {
                 // to prevent circular dependencies
                 return clone(this[ATTRIBUTES]);
             },
+            comparator: 'id',
+            valueOf: function () {
+                var datapoint = +this.attributes[this.comparator];
+                if (datapoint === blank) {
+                    datapoint = +this[this.comparator];
+                }
+                if (datapoint === blank) {
+                    datapoint = +this.id;
+                }
+                return datapoint;
+            },
             /**
              * @description stringified version of attributes object
              * @func
@@ -217,7 +247,7 @@ application.scope(function (app) {
             },
             _setId: function (id_) {
                 var model = this,
-                    id = id_ === blank ? uniqueId(BOOLEAN_FALSE) : id_ + '';
+                    id = id_ === blank ? uniqueId(BOOLEAN_FALSE) : id_;
                 model.id = id;
             },
             reset: function (attrs) {
@@ -225,11 +255,11 @@ application.scope(function (app) {
                 return this;
             }
         }, BOOLEAN_TRUE),
-        ModelMaker = function (attributes, secondary) {
-            return new Box(attributes, secondary);
+        modelMaker = function (attributes, options) {
+            return Box(attributes, options);
         },
-        constuctor = ModelMaker.constructor = Box,
         Box = factories.Container.extend('Box', {
+            Model: modelMaker,
             /**
              * @description constructor function for the Box Object
              * @name Box#constructor
@@ -254,18 +284,6 @@ application.scope(function (app) {
              * @param {Object} attributes - non circular hash that is extended onto what the defaults object produces
              * @returns {Box} instance the method was called on
              */
-            // _registerChild: function (category, id, model) {
-            //     var parent = this;
-            //     if (id !== blank) {
-            //         parent[CHILDREN].register(category, id, model);
-            //     }
-            // },
-            // _unRegisterChild: function (category, id) {
-            //     var parent = this;
-            //     if (id !== blank) {
-            //         parent[CHILDREN].unRegister(category, id);
-            //     }
-            // },
             resetChildren: function (newChildren) {
                 var length, child, box = this,
                     children = box[CHILDREN],
@@ -350,7 +368,6 @@ application.scope(function (app) {
                 // notify that you were added
                 return model;
             },
-            Model: ModelMaker,
             // public facing version filters
             add: function (objs_, secondary_) {
                 var childAdded, parent = this,
@@ -481,21 +498,12 @@ application.scope(function (app) {
              * @name Box#destroy
              * @returns {Box} instance
              */
-            destroy: function () {
-                var removeRet, box = this;
-                // notify things like parent that it's about to destroy itself
-                box[DISPATCH_EVENT](BEFORE_COLON + 'destroy');
+            _destroy: function () {
+                var box = this,
+                    // removes all parent / parent's child listeners
+                    removeRet = box[PARENT] && box[PARENT].remove(box);
                 // destroys it's children
                 box.resetChildren();
-                // removes all parent / parent's child listeners
-                removeRet = box[PARENT] && box[PARENT].remove(box);
-                // stop listening to other views
-                box[DISPATCH_EVENT](DESTROY);
-                // stops listening to everything
-                box[STOP_LISTENING]();
-                // takes off all other event handlers
-                box.wipeEvents();
-                return box;
             },
             /**
              * @description basic sort function
@@ -531,4 +539,5 @@ application.scope(function (app) {
                 return model;
             }
         }, BOOLEAN_TRUE);
+    modelMaker.constructor = Box;
 });

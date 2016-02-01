@@ -115,10 +115,10 @@ application.scope().run(function (app, _, factories, $) {
                 expect(newDivs.length()).toEqual(3);
             });
             it('can also get the first', function () {
-                expect(divs.first().get()).toEqual(divs.get());
+                expect(divs.first()).toEqual(divs.index(0));
             });
             it('and the last element in the list', function () {
-                expect(divs.last().get()).toEqual(divs.get(divs.length() - 1));
+                expect(divs.last()).toEqual(divs.index(divs.length() - 1));
             });
         });
         describe('it can find it\'s children', function () {

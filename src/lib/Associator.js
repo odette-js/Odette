@@ -3,7 +3,14 @@ application.scope().module('Associator', function (module, app, _, factories) {
      * @class Associator
      * @augments Model
      */
-    var LENGTH = 'length',
+    var blank, DATA = 'data',
+        ITEMS = 'items',
+        LENGTH = 'length',
+        DATASET = DATA + 'set',
+        IS_ELEMENT = 'isElement',
+        INDEX_OF = 'indexOf',
+        __ELID__ = '__elid__',
+        BOOLEAN_TRUE = !0,
         extend = _.extend,
         isObject = _.isObject,
         removeAt = _.removeAt,
@@ -15,35 +22,35 @@ application.scope().module('Associator', function (module, app, _, factories) {
              * @param {String} [type] - toString version of the object being passed in
              */
             get: function (obj, type) {
-                var returnData, idxOf, dataset, n, els, dataArray, current,
-                    instance = this,
+                var returnData, idxOf, dataset, n, key, instance = this,
                     canRead = 0,
                     data = {
                         dataset: {}
-                    };
-                current = this.sameType(obj);
-                els = current.items;
-                dataArray = current.data;
-                if (!els) {
-                    els = current.items = [];
-                }
-                if (!dataArray) {
-                    dataArray = current.data = [];
-                }
-                if (obj && _.isDom && current.readData) {
-                    dataset = obj.dataset;
-                    // copy dataset over from one to the other
-                    if (isObject(dataset) && _.isDom(obj)) {
-                        data.dataset = extend(data.dataset, dataset);
+                    },
+                    current = instance.sameType(obj),
+                    els = current[ITEMS] = current[ITEMS] || [],
+                    eldata = current[__ELID__] = current[__ELID__] || {},
+                    dataArray = current[DATA] = current[DATA] || [];
+                if (obj && current.readData) {
+                    dataset = obj[DATASET];
+                    key = obj[__ELID__] = obj[__ELID__] || _.uniqueId('el');
+                    if (key) {
+                        data = eldata[key] = eldata[key] = {};
                     }
+                    // copy dataset over from one to the other
+                    if (isObject(dataset) && _[IS_ELEMENT](obj)) {
+                        data[DATASET] = extend(data[DATASET], dataset);
+                    }
+                    return data;
+                } else {
+                    idxOf = current[ITEMS][INDEX_OF](obj);
+                    if (idxOf === blank || idxOf === -1) {
+                        idxOf = current[ITEMS][LENGTH];
+                        current[ITEMS].push(obj);
+                        dataArray[idxOf] = data;
+                    }
+                    return dataArray[idxOf];
                 }
-                idxOf = current.items.indexOf(obj);
-                if (idxOf === -1) {
-                    idxOf = current.items[LENGTH];
-                    current.items.push(obj);
-                    dataArray[idxOf] = data;
-                }
-                return dataArray[idxOf];
             },
             /**
              * @func
@@ -59,10 +66,10 @@ application.scope().module('Associator', function (module, app, _, factories) {
                 return data;
             },
             remove: function (el) {
-                var type = this.sameType(el);
-                var idx = _.indexOf(type.items, el);
-                var ret = removeAt(type.data, idx);
-                removeAt(type.items, idx);
+                var type = this.sameType(el),
+                    idx = _[INDEX_OF](type[ITEMS], el),
+                    ret = removeAt(type[DATA], idx);
+                removeAt(type[ITEMS], idx);
                 return ret;
             },
             /**
@@ -73,19 +80,16 @@ application.scope().module('Associator', function (module, app, _, factories) {
             sameType: function (obj) {
                 var instance = this,
                     type = _.toString(obj),
-                    current = instance[type],
-                    lowerType = type.toLowerCase();
-                if (!current) {
-                    // makes things easier to find
-                    current = instance[type] = {};
-                }
+                    current = instance[type] = instance[type] || {},
+                    lowerType = type.toLowerCase(),
+                    globalindex = lowerType[INDEX_OF]('global');
                 // skip reading data
-                if (lowerType.indexOf('global') === -1 && lowerType.indexOf('window') === -1) {
-                    current.readData = 1;
+                if (globalindex === -1 && lowerType[INDEX_OF]('window') === -1) {
+                    current.readData = BOOLEAN_TRUE;
                 }
                 return current;
             }
-        }, !0);
+        }, BOOLEAN_TRUE);
     _.exports({
         associator: factories.Associator()
     });

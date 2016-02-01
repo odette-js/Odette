@@ -210,10 +210,6 @@ application.scope().run(function (app, _, factories, $) {
                 clone = box.children.toJSON();
                 expect(clone).toEqual([{}, {}]);
             });
-            it('they can even clone their deep, underlying structure', function () {
-                box = factories.Box(data);
-                expect(box.treeToJSON()).toEqual(data);
-            });
             it('they can stringify themselves', function () {
                 box = factories.Box({
                     some: 'thing'

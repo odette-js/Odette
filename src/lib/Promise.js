@@ -182,9 +182,8 @@ application.scope().module('Promise', function (module, app, _, factories) {
                     reason: reason_ ? reason_ : BOOLEAN_FALSE
                 });
                 resolveAs = promise.get(STATE);
-                return wraptry(function () {
+                wraptry(function () {
                     dispatch(promise, resolveAs);
-                    return promise;
                 }, function () {
                     promise.set(STASHED_ARGUMENT, {
                         // nest the sucker again in case it's an array or something else
@@ -192,10 +191,8 @@ application.scope().module('Promise', function (module, app, _, factories) {
                         message: 'javascript execution error'
                     });
                     dispatch(promise, 'error');
-                    return promise;
-                }, function () {
-                    return promise;
                 });
+                return promise;
             },
             // convenience functions
             resolve: function (opts) {
