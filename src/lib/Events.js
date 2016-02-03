@@ -111,11 +111,8 @@ application.scope(function (app) {
             var list = model[EVENT_REMOVE] = model[EVENT_REMOVE] = [];
             return list;
         },
-        getCurrentEventList = function (box) {
-            var list = box[CURRENT_EVENTS];
-            if (!list) {
-                list = box[CURRENT_EVENTS] = [];
-            }
+        getCurrentEventList = function (model) {
+            var list = model[CURRENT_EVENTS] = model[CURRENT_EVENTS] || [];
             return list;
         },
         attachEventObject = function (obj, name, eventObject) {

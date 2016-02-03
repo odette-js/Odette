@@ -1,5 +1,5 @@
 application.scope().module('DOMM', function (module, app, _, factories) {
-    var blank, sizzleDoc = document,
+    var sizzleDoc = document,
         eq = _.eq,
         once = _.once,
         elementData = _.associator,
@@ -50,31 +50,14 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         addAll = _.addAll,
         NODE_TYPE = 'nodeType',
         PARENT_NODE = 'parentNode',
-        LENGTH = 'length',
         ITEMS = '_items',
         DELEGATE_COUNT = '__delegateCount',
         REMOVE_QUEUE = 'removeQueue',
         ADD_QUEUE = 'addQueue',
         CLASSNAME = 'className',
         DEFAULT_VIEW = 'defaultView',
-        WINDOW = 'window',
-        DOCUMENT = 'document',
-        CLASS = 'class',
         STYLE = 'style',
         BODY = 'body',
-        TOP = 'top',
-        LEFT = 'left',
-        RIGHT = 'right',
-        BOTTOM = 'bottom',
-        WIDTH = 'width',
-        HEIGHT = 'height',
-        INDEX = 'index',
-        INNER_HEIGHT = 'innerHeight',
-        INNER_WIDTH = 'innerWidth',
-        BOOLEAN_TRUE = !0,
-        BOOLEAN_FALSE = !1,
-        NULL = null,
-        win = window,
         devicePixelRatio = (win.devicePixelRatio || 1),
         ua = navigator.userAgent,
         isElement = function (object) {
@@ -161,18 +144,18 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         setAttribute = function (el, key, val_) {
             var val = val_;
             if (val === BOOLEAN_TRUE) {
-                val = '';
+                val = EMPTY_STRING;
             } else {
                 val = stringify(val);
             }
-            val += '';
+            val += EMPTY_STRING;
             el.setAttribute(key, val);
         },
-        getAttribute = function (el, key, val) {
+        getAttribute = function (el, key) {
             var converted;
-            val = parse(el.getAttribute(key));
+            var val = parse(el.getAttribute(key));
             val = +val == val ? +val : val;
-            if (val === '') {
+            if (val === EMPTY_STRING) {
                 val = BOOLEAN_TRUE;
             }
             if (isBlank(val)) {
@@ -202,7 +185,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             if (!isString(className)) {
                 className = getAttribute(el, CLASS);
             }
-            return (className || '').split(' ');
+            return (className || EMPTY_STRING).split(' ');
         },
         setClassName = function (el, val) {
             var value = val.join(' ').trim();
@@ -211,6 +194,16 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             } else {
                 setAttribute(el, CLASS, value);
             }
+        },
+        DO_NOT_TRUST = BOOLEAN_FALSE,
+        cannotTrust = function (fn) {
+            return function () {
+                var ret, cachedTrust = DO_NOT_TRUST;
+                DO_NOT_TRUST = BOOLEAN_TRUE;
+                ret = fn.apply(this, arguments);
+                DO_NOT_TRUST = cachedTrust;
+                return ret;
+            };
         },
         triggerEventWrapper = function (attr, api) {
             attr = attr || api;
@@ -222,14 +215,14 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                     args.unshift(attr);
                     domm.on.apply(domm, args);
                 } else {
-                    domm.duff(function (el) {
+                    domm.duff(cannotTrust(function (el) {
                         var whichever = api || attr;
                         if (isFunction(el[whichever])) {
                             el[whichever]();
                         } else {
                             $(el).dispatchEvent(whichever);
                         }
-                    });
+                    }));
                 }
                 return domm;
             };
@@ -245,7 +238,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 match = match.trim();
                 value = match.match(/~*=[\'|\"](.*?)[\'|\"]/);
                 name = match.match(/(.*)(?:~*=)/igm);
-                name = _.join(_.split(name, '='), '').trim();
+                name = _.join(_.split(name, '='), EMPTY_STRING).trim();
                 callback(value[1], name, match);
             });
         },
@@ -258,7 +251,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         TouchEvents = gapSplit('touchcancel touchend touchenter touchleave touchmove touchstart'),
         DeviceEvents = gapSplit('devicemotion deviceorientation deviceproximity devicelight'),
         FocusEvent = gapSplit('blur focus'),
-        // BeforeUnloadEvent = gapSplit(''),
+        // BeforeUnloadEvent = gapSplit(EMPTY_STRING),
         TimeEvent = gapSplit('beginEvent endEvent repeatEvent'),
         AnimationEvent = gapSplit('animationend animationiteration animationstart transitionend'),
         AudioProcessingEvent = gapSplit('audioprocess complete'),
@@ -269,15 +262,6 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         trustedEvents = gapSplit('load scroll resize orientationchange click dblclick mousedown mouseup mouseover mouseout mouseenter mouseleave mousemove change contextmenu hashchange load mousewheel wheel readystatechange'),
         ALL_EVENTS_HASH = wrap(AllEvents, BOOLEAN_TRUE),
         knownPrefixesHash = wrap(knownPrefixes, BOOLEAN_TRUE),
-        /**
-         * @private
-         * @func
-         */
-        // changeClass = function (el, remove, add) {
-        //     var subdata = queuedata.className.get(el);
-        //     queuedata.className.remove(el, remove, subdata);
-        //     queuedata.className.add(el, add, subdata);
-        // },
         changeClass = function (el, remove, add) {
             var n, val, command, classList;
             if (el) {
@@ -293,15 +277,6 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 return el;
             }
         },
-        // removeClass = function (el, remove) {
-        //     var subdata = queuedata.className.get(el);
-        //     queuedata.className.remove(el, remove, subdata);
-        // },
-        // addClass = function (el, add) {
-        //     var subdata = queuedata.className.get(el);
-        //     queuedata.className.add(el, add, subdata);
-        // },
-        eventNameProperties = function (str) {},
         /**
          * @private
          * @func
@@ -313,14 +288,13 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 name = unCamelCase(name);
                 nameSplit = name.split('-');
                 if (knownPrefixesHash[nameSplit[0]]) {
-                    nameSplit.unshift('');
+                    nameSplit.unshift(EMPTY_STRING);
                 }
                 name = nameSplit.join('-');
                 cssString.push(name + ': ' + val + ';');
             });
             return cssString.join(' ');
         },
-        // toCssObject = function () {},
         /**
          * @private
          * @func
@@ -422,8 +396,8 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             }
             for (n in allStyles) {
                 found = 0;
-                currentCheck = '';
-                __prefix = '';
+                currentCheck = EMPTY_STRING;
+                __prefix = EMPTY_STRING;
                 if (isNumber(+n)) {
                     styleName = allStyles[n];
                 } else {
@@ -435,13 +409,13 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                     prefixIndex = indexOf(knownPrefixes, currentCheck);
                     if (prefixIndex !== -1) {
                         __prefix = knownPrefixes[prefixIndex];
-                        deprefixed = styleName.split(__prefix).join('');
+                        deprefixed = styleName.split(__prefix).join(EMPTY_STRING);
                         found = 1;
                     }
                     prefixIndex = indexOf(knownPrefixes, '-' + currentCheck);
                     if (prefixIndex !== -1) {
                         __prefix = knownPrefixes[prefixIndex];
-                        deprefixed = styleName.split(currentCheck).join('');
+                        deprefixed = styleName.split(currentCheck).join(EMPTY_STRING);
                         found = 1;
                     }
                 }
@@ -468,7 +442,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 intendedObject(key, value, function (key, value) {
                     if (!isBlank(value)) {
                         count++;
-                        prefixes = [''];
+                        prefixes = [EMPTY_STRING];
                         if (prefixed[m]) {
                             prefixes = prefixed[m].concat(prefixes);
                         }
@@ -524,12 +498,11 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         style = function (els, key, value) {
             var ensuredDom;
             if (els[LENGTH]) {
-                ensuredDom = ensureDOM(function (el) {
-                    el[STYLE][key] = value;
-                });
                 intendedObject(key, value, function (key, value_) {
                     var value = convertStyleValue(value_);
-                    duff(els, ensuredDom);
+                    duff(els, ensureDOM(function (el) {
+                        el[STYLE][key] = value;
+                    }));
                 });
             }
         },
@@ -606,7 +579,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
          * @func
          */
         unitRemoval = function (str, unit) {
-            return +(str.split(unit || 'px').join('').trim()) || 0;
+            return +(str.split(unit || 'px').join(EMPTY_STRING).trim()) || 0;
         },
         /**
          * @private
@@ -698,6 +671,58 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             }
             return number;
         },
+        SIXTY = 60,
+        SEVEN = 7,
+        THIRTY = 30,
+        TWENTY_FOUR = 24,
+        ONE_THOUSAND = 1000,
+        THREE_HUNDRED_SIXTY_FIVE = 365,
+        ONE_THOUSAND_SIXTY = ONE_THOUSAND * SIXTY,
+        THREE_HUNDRED_SIXTY_THOUSAND = ONE_THOUSAND_SIXTY * SIXTY,
+        EIGHTY_SIX_MILLION_FOUR_HUNDRED_THOUSAND = THREE_HUNDRED_SIXTY_THOUSAND * TWENTY_FOUR,
+        SIX_HUNDRED_FOUR_MILLION_EIGHT_HUNDRED_THOUSAND = THREE_HUNDRED_SIXTY_THOUSAND * SEVEN,
+        TWO_BILLION_FIVE_HUNDRED_NINETY_TWO_MILLION = THREE_HUNDRED_SIXTY_THOUSAND * THIRTY,
+        THIRTY_ONE_BILLION_FIVE_HUNDRED_THIRTY_SIX_MILLION = THREE_HUNDRED_SIXTY_THOUSAND * THREE_HUNDRED_SIXTY_FIVE,
+        NUMBERS_LENGTH = {
+            ms: 1,
+            secs: ONE_THOUSAND,
+            s: ONE_THOUSAND,
+            mins: ONE_THOUSAND_SIXTY,
+            hrs: THREE_HUNDRED_SIXTY_THOUSAND,
+            days: EIGHTY_SIX_MILLION_FOUR_HUNDRED_THOUSAND,
+            wks: SIX_HUNDRED_FOUR_MILLION_EIGHT_HUNDRED_THOUSAND,
+            mnths: TWO_BILLION_FIVE_HUNDRED_NINETY_TWO_MILLION,
+            yrs: THIRTY_ONE_BILLION_FIVE_HUNDRED_THIRTY_SIX_MILLION
+        },
+        timeUnits = [],
+        timeUnitToNumber = foldl(NUMBERS_LENGTH, function (memo, number, unit) {
+            timeUnits.push(unit);
+            memo[unit] = function (input) {
+                return input * number;
+            };
+            return memo;
+        }, {}),
+        time = _.cacheable(function (number_) {
+            var number = number_ + EMPTY_STRING,
+                time = 0;
+            if (isString(number)) {
+                number = number.split(',');
+            }
+            duff(number, function (num_) {
+                var num = num_,
+                    unit = _.customUnits(num, timeUnits),
+                    number = +(num.split(unit || EMPTY_STRING).join(EMPTY_STRING)),
+                    handler = timeUnitToNumber[unit];
+                // there's a handler for this unit, adn it's not NaN
+                if (number === number) {
+                    if (handler) {
+                        number = handler(number);
+                    }
+                    time += number;
+                }
+            });
+            return time;
+        }),
         /**
          * @private
          * @func
@@ -750,7 +775,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             if (!unit) {
                 return str;
             }
-            number = +(str.split(unit).join('')) || 0;
+            number = +(str.split(unit).join(EMPTY_STRING)) || 0;
             if (unitToNumber[unit]) {
                 number = unitToNumber[unit](number, el, winTop, styleAttr) || 0;
             }
@@ -875,24 +900,6 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             }
             return frag;
         },
-        // createElements = function (arr, tag, style, props, attrs) {
-        //     var frag = createDocumentFragment();
-        //     map(arr, function (str) {
-        //         var div = createElement(tag || 'div');
-        //         div.innerHTML = str;
-        //         each(style, function (key, val) {
-        //             div[STYLE][key] = val;
-        //         });
-        //         each(props, function (key, val) {
-        //             div[key] = val;
-        //         });
-        //         each(attrs, function (key, val) {
-        //             attributeInterface(div, key, val);
-        //         });
-        //         frag.appendChild(div);
-        //     });
-        //     return frag;
-        // },
         /**
          * @private
          * @func
@@ -900,7 +907,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         htmlTextManipulator = function (attr) {
             return function (str) {
                 var dom = this,
-                    nuStr = '';
+                    nuStr = EMPTY_STRING;
                 if (isString(str)) {
                     return dom.duff(function (el) {
                         el[attr] = str;
@@ -1070,7 +1077,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 eventPhase: 2,
                 cancelable: BOOLEAN_FALSE,
                 defaultPrevented: BOOLEAN_FALSE,
-                data: '',
+                data: EMPTY_STRING,
                 isTrusted: BOOLEAN_FALSE,
                 timeStamp: now(),
                 target: el
@@ -1167,6 +1174,8 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 addEventQueue(mainHandler[ADD_QUEUE][0]);
                 gah = mainHandler[ADD_QUEUE].shift();
             }
+            e.isTrusted = BOOLEAN_FALSE;
+            return e.returnValue;
         },
         matchesHandler = function (handler, obj) {
             return !handler || obj.fn === handler;
@@ -1296,7 +1305,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         ensureHandlers = function (fn) {
             return function (name) {
                 // var args = toArray(arguments);
-                var args = ['', blank, []],
+                var args = [EMPTY_STRING, blank, []],
                     origArgs = filter(arguments, negate(isBlank)),
                     argLen = origArgs[LENGTH];
                 if (!isObject(name)) {
@@ -1437,7 +1446,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                     fixHook.filter(evnt, originalEvent);
                 }
                 evnt.type = distilledEventName[originalEvent.type] || originalEvent.type;
-                evnt.data = originalEvent.data || '';
+                evnt.data = originalEvent.data || EMPTY_STRING;
                 evnt.isImmediatePropagationStopped = evnt.isPropagationStopped = evnt.isDefaultPrevented = BOOLEAN_FALSE;
                 // special
                 if (evnt.type === 'fullscreenchange') {
@@ -1454,6 +1463,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                         evnt.isFullScreen = (doc.fullScreen || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.fullscreenElement) ? BOOLEAN_TRUE : BOOLEAN_FALSE;
                     }
                 }
+                evnt.isTrusted = _.has(originalEvent, 'isTrusted') ? originalEvent.isTrusted : !DO_NOT_TRUST;
                 return evnt;
             }
         },
@@ -1593,6 +1603,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                             });
                             els = dom.unwrap();
                         }
+                        return $doc;
                     }
                 } else {
                     if (isString(str)) {
@@ -1703,7 +1714,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             off: removeEventListener,
             addEventListener: addEventListener,
             removeEventListener: removeEventListener,
-            dispatchEvent: expandEventListenerArguments(eachProc(dispatchEvent)),
+            dispatchEvent: cannotTrust(expandEventListenerArguments(eachProc(dispatchEvent))),
             /**
              * @func
              * @name DOMM#once
@@ -2291,6 +2302,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         },
         $;
     _.exports({
+        time: time,
         covers: covers,
         center: center,
         closer: closer,

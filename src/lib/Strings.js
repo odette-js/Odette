@@ -7,7 +7,7 @@ application.scope(function (app) {
         isString = _.isString,
         slice = _.slice,
         split = _.split,
-        extend = _.extend,
+        extend = _[EXTEND],
         wrap = _.wrap,
         has = _.has,
         join = _.join,
@@ -33,7 +33,7 @@ application.scope(function (app) {
             return cacheable(function (item) {
                 return item[method]();
             });
-        }), wrap(gapSplit('indexOf match search'), function (method) {
+        }), wrap(gapSplit('match search'), function (method) {
             return categoricallyCacheable(function (input) {
                 return function (item) {
                     return item[method](input);
@@ -124,36 +124,85 @@ application.scope(function (app) {
          * @func
          */
         customUnits = categoricallyCacheable(function (unitList_) {
-            var unitList = gapSplit(unitList_);
-            return function (str) {
-                var i, ch, unitStr, unit = [];
-                // make sure it's a string
-                str += '';
-                // make sure there is no trailing whitespace
-                str = str.trim();
-                i = str[LENGTH];
-                // work from the back
-                while (str[--i]) {
-                    // for (i = str[LENGTH] - 1; i >= 0; i--) {
-                    unit.unshift(str[i]);
-                    unitStr = unit.join('');
-                    if (indexOf(unitList, unitStr) >= 0) {
-                        if (unitStr === 'em') {
-                            if (str[i - 1] === 'r') {
-                                unitStr = 'rem';
-                            }
-                        }
-                        if (unitStr === 'in') {
-                            if (str[i - 2] === 'v' && str[i - 1] === 'm') {
-                                unitStr = 'vmin';
-                            }
-                        }
-                        return unitStr;
+            var lengthHash = {},
+                hash = {},
+                lengths = [],
+                unitList = gapSplit(unitList_),
+                sortedUnitList = unitList.sort(function (a, b) {
+                    var aLength = a[LENGTH],
+                        bLength = b[LENGTH],
+                        value = _.max([-1, _.min([1, aLength - bLength])]);
+                    hash[a] = hash[b] = BOOLEAN_TRUE;
+                    if (!lengthHash[aLength]) {
+                        lengthHash[aLength] = BOOLEAN_TRUE;
+                        lengths.push(aLength);
                     }
+                    if (!lengthHash[bLength]) {
+                        lengthHash[bLength] = BOOLEAN_TRUE;
+                        lengths.push(bLength);
+                    }
+                    return -1 * (value === 0 ? (a > b ? -1 : 1) : value);
+                });
+            lengths.sort(function (a, b) {
+                return -1 * _.max([-1, _.min([1, a - b])]);
+            });
+            return function (str_) {
+                var ch, unitStr, unit,
+                    i = 0,
+                    str = (str_ + '').trim(),
+                    length = str[LENGTH];
+                while (lengths[i]) {
+                    unit = str.substr(length - lengths[i], length);
+                    if (hash[unit]) {
+                        return unit;
+                    }
+                    i++;
                 }
                 return BOOLEAN_FALSE;
             };
         }),
+        // customUnits = categoricallyCacheable(function (unitList_) {
+        //     var hash = {},
+        //         maxLength = 0,
+        //         unitList = gapSplit(unitList_).sort(function (a, b) {
+        //             var aLength = a[LENGTH],
+        //                 bLength = b[LENGTH],
+        //                 value = _.max([-1, _.min([1, aLength - bLength])]);
+        //             lengthHash[aLength] = lengthHash[bLength] = BOOLEAN_TRUE;
+        //             return -1 * (value === 0 ? (a > b ? -1 : 1) : value);
+        //         }),
+        //         lengths = keys(lengthHash);
+        //     return function (str_) {
+        //         var ch, unitStr, unit,
+        //             i = 0,
+        //             str = (str_ + '').trim(),
+        //             length = str[LENGTH];
+        //         while (maxLength[i]) {
+        //             unit = str.substr(i);
+        //             // if (hash) {};
+        //             // return unitList[i];
+        //             i++;
+        //         }
+        //         // while (str[--i]) {
+        //         //     unit.unshift(str[i]);
+        //         //     unitStr = unit.join('');
+        //         //     if (indexOf(unitList, unitStr) >= 0) {
+        //         //         if (unitStr === 'em') {
+        //         //             if (str[i - 1] === 'r') {
+        //         //                 unitStr = 'rem';
+        //         //             }
+        //         //         }
+        //         //         if (unitStr === 'in') {
+        //         //             if (str[i - 2] === 'v' && str[i - 1] === 'm') {
+        //         //                 unitStr = 'vmin';
+        //         //             }
+        //         //         }
+        //         //         return unitStr;
+        //         //     }
+        //         // }
+        //         return BOOLEAN_FALSE;
+        //     };
+        // }),
         baseUnitList = gapSplit('px em ex in cm % vh vw pc pt mm vmax vmin'),
         units = function (str) {
             return customUnits(str, baseUnitList);

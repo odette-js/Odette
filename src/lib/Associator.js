@@ -35,7 +35,7 @@ application.scope().module('Associator', function (module, app, _, factories) {
                     dataset = obj[DATASET];
                     key = obj[__ELID__] = obj[__ELID__] || _.uniqueId('el');
                     if (key) {
-                        data = eldata[key] = eldata[key] = {};
+                        data = eldata[key] = eldata[key] || {};
                     }
                     // copy dataset over from one to the other
                     if (isObject(dataset) && _[IS_ELEMENT](obj)) {

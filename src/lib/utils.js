@@ -1,5 +1,5 @@
-'use strict';
 var blank, win = window,
+    EMPTY_STRING = '',
     TO_STRING = 'toString',
     VALUE_OF = 'valueOf',
     PROTOTYPE = 'prototype',
@@ -18,6 +18,18 @@ var blank, win = window,
     BOOLEAN = 'boolean',
     FUNCTION = 'function',
     INDEX_OF = 'indexOf',
+    WINDOW = 'window',
+    DOCUMENT = 'document',
+    CLASS = 'class',
+    TOP = 'top',
+    LEFT = 'left',
+    RIGHT = 'right',
+    BOTTOM = 'bottom',
+    WIDTH = 'width',
+    HEIGHT = 'height',
+    INDEX = 'index',
+    INNER_HEIGHT = 'innerHeight',
+    INNER_WIDTH = 'innerWidth',
     DISPATCH_EVENT = 'dispatchEvent',
     HTTP = 'http',
     TO_ARRAY = 'toArray',
@@ -1042,9 +1054,10 @@ application.scope(function (app) {
         result = function (obj, str, arg) {
             return isFunction(obj[str]) ? obj[str](arg) : obj[str];
         },
+        maths = Math,
         mathArray = function (method) {
             return function (args) {
-                return Math[method].apply(maths, args);
+                return maths[method].apply(maths, args);
             };
         },
         ensureFunction = function (fn) {

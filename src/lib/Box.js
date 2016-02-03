@@ -1,5 +1,5 @@
 application.scope(function (app) {
-    var blank, _ = app._,
+    var _ = app._,
         factories = _.factories,
         Collection = factories.Collection,
         Events = factories.Events,
@@ -86,6 +86,7 @@ application.scope(function (app) {
                 model[ATTRIBUTES] = newAttributes;
                 // let everything know that it is changing
                 model[DISPATCH_EVENT](RESET);
+                // return the attributes
                 return ret;
             },
             /**
@@ -97,6 +98,7 @@ application.scope(function (app) {
              */
             unset: function (attrs) {
                 var attrObj = this[ATTRIBUTES];
+                // blindly wipe the attributes
                 duff(gapSplit(attrs), function (attr) {
                     attrObj[attr] = blank;
                 });
@@ -214,9 +216,10 @@ application.scope(function (app) {
             },
             comparator: 'id',
             valueOf: function () {
-                var datapoint = +this.attributes[this.comparator];
-                if (datapoint === blank) {
-                    datapoint = +this[this.comparator];
+                var datapoint = +result(this.attributes, this.comparator);
+                // if it's NaN
+                if (datapoint !== datapoint) {
+                    datapoint = blank;
                 }
                 if (datapoint === blank) {
                     datapoint = +this.id;
