@@ -1,23 +1,44 @@
-application.scope('dev', function (app) {
-    var blank, _, object = Object,
-        win = window,
-        factories = {},
+'use strict';
+var blank, win = window,
+    TO_STRING = 'toString',
+    VALUE_OF = 'valueOf',
+    PROTOTYPE = 'prototype',
+    CONSTRUCTOR = 'constructor',
+    CHILD = 'child',
+    CHILDREN = CHILD + 'ren',
+    CHANGE = 'change',
+    BEFORE_COLON = 'before:',
+    RESET = 'reset',
+    ATTRIBUTES = 'attributes',
+    PARENT = 'parent',
+    DESTROY = 'destroy',
+    LENGTH = 'length',
+    OBJECT = 'object',
+    STRING = 'string',
+    BOOLEAN = 'boolean',
+    FUNCTION = 'function',
+    INDEX_OF = 'indexOf',
+    DISPATCH_EVENT = 'dispatchEvent',
+    HTTP = 'http',
+    TO_ARRAY = 'toArray',
+    CONSTRUCTOR_KEY = '__' + CONSTRUCTOR + '__',
+    LOCATION = 'location',
+    EXTEND = 'extend',
+    BOOLEAN_TRUE = !0,
+    BOOLEAN_FALSE = !1,
+    NULL = null;
+application.scope(function (app) {
+    var blank, _, factories = {},
+        object = Object,
         fn = Function,
         array = Array,
         string = String,
-        TO_STRING = 'toString',
-        PROTOTYPE = 'prototype',
-        CONSTRUCTOR = 'constructor',
-        LENGTH = 'length',
-        CONSTRUCTOR_KEY = '__constructor__',
+        BRACKET_OBJECT_SPACE = '[object ',
         stringProto = string[PROTOTYPE],
         objectProto = object[PROTOTYPE],
         arrayProto = array[PROTOTYPE],
         funcProto = fn[PROTOTYPE],
         nativeKeys = object.keys,
-        BOOLEAN_TRUE = !0,
-        BOOLEAN_FALSE = !1,
-        NULL = null,
         hasEnumBug = !{
             toString: NULL
         }.propertyIsEnumerable(TO_STRING),
@@ -233,26 +254,26 @@ application.scope('dev', function (app) {
         /**
          * @func
          */
-        isFunction = isWrap('function'),
+        isFunction = isWrap(FUNCTION),
         /**
          * @func
          */
-        isBoolean = isWrap('boolean'),
+        isBoolean = isWrap(BOOLEAN),
         /**
          * @func
          */
-        isString = isWrap('string'),
+        isString = isWrap(STRING),
         /**
          * @func
          */
         // isBlank = isWrap('undefined', function (thing) {
-        //     return thing === null;
+        //     return thing === NULL;
         // }),
         isNull = function (thing) {
-            return thing === null;
+            return thing === NULL;
         },
         isUndefined = function (thing) {
-            return thing === void 0;
+            return thing === blank;
         },
         isBlank = function (thing) {
             return isUndefined(thing) || isNull(thing);
@@ -276,7 +297,7 @@ application.scope('dev', function (app) {
         /**
          * @func
          */
-        isObject = isWrap('object', function (thing) {
+        isObject = isWrap(OBJECT, function (thing) {
             return !!thing;
         }),
         /**
@@ -311,7 +332,7 @@ application.scope('dev', function (app) {
             var constructor = obj[CONSTRUCTOR];
             var proto = (isFunction(constructor) && constructor[PROTOTYPE]) || ObjProto;
             // Constructor is a special case.
-            var prop = 'constructor';
+            var prop = CONSTRUCTOR;
             if (has(obj, prop) && !contains(keys, prop)) keys.push(prop);
             while (nonEnumIdx--) {
                 prop = nonEnumerableProps[nonEnumIdx];
@@ -446,7 +467,7 @@ application.scope('dev', function (app) {
                         if (context) {
                             iteratee = bind(iterator, context);
                         }
-                        context = null;
+                        context = NULL;
                         iterator = function (key, idx, list) {
                             // gives you the key, use that to get the value
                             return iteratee(obj[key], key, obj);
@@ -487,7 +508,7 @@ application.scope('dev', function (app) {
         validKey = function (key) {
             // -1 for arrays
             // any other data type ensures string
-            return key !== -1 && key === key && key !== blank && key !== null && key !== BOOLEAN_FALSE && key !== BOOLEAN_TRUE;
+            return key !== -1 && key === key && key !== blank && key !== NULL && key !== BOOLEAN_FALSE && key !== BOOLEAN_TRUE;
         },
         finder = function (findHelper) {
             return function (obj, predicate, context, startpoint) {
@@ -574,43 +595,6 @@ application.scope('dev', function (app) {
         pI = function (num) {
             return parseInt(num, 10) || 0;
         },
-        // math = Math,
-        // mathMix = function (method) {
-        //     return function (arr) {
-        //         return math[method].apply(math, arr);
-        //     };
-        // },
-        // random = function () {
-        //     return math.random();
-        // },
-        // mathMixCaller = function (method) {
-        //     return function (num) {
-        //         math[method](num);
-        //     };
-        // },
-        // mathMixComparer = function (method) {
-        //     return function (num, num2) {
-        //         math[method](num, num2);
-        //     };
-        // },
-        // min = mathMix('min'),
-        // max = mathMix('max'),
-        // abs = mathMixCaller('abs'),
-        // acos = mathMixCaller('acos'),
-        // asin = mathMixCaller('asin'),
-        // atan = mathMixCaller('atan'),
-        // ceil = mathMixCaller('ceil'),
-        // cos = mathMixCaller('cos'),
-        // exp = mathMixCaller('exp'),
-        // floor = mathMixCaller('floor'),
-        // log = mathMixCaller('log'),
-        // round = mathMixCaller('round'),
-        // sin = mathMixCaller('sin'),
-        // sqrt = mathMixCaller('sqrt'),
-        // tan = mathMixCaller('tan'),
-        /**
-         * @func
-         */
         keys = function (obj) {
             var key, keys = [];
             if (!obj || (!isObject(obj) && !isFunction(obj))) {
@@ -656,7 +640,7 @@ application.scope('dev', function (app) {
                 };
             }
             // extend(child, parent);
-            child.extend = constructorExtend;
+            child[EXTEND] = constructorExtend;
             var Surrogate = function () {
                 this[CONSTRUCTOR] = child;
             };
@@ -683,8 +667,8 @@ application.scope('dev', function (app) {
                 return new Constructor(attributes, options);
             };
             __[CONSTRUCTOR] = Constructor;
-            __.extend = function () {
-                return Constructor.extend.apply(Constructor, arguments);
+            __[EXTEND] = function () {
+                return Constructor[EXTEND].apply(Constructor, arguments);
             };
             return __;
         },
@@ -710,8 +694,8 @@ application.scope('dev', function (app) {
             if (a === b) {
                 return a !== 0 || 1 / a === 1 / b;
             }
-            // A strict comparison is necessary because `null == undefined`.
-            if (a === null || a === blank || b === blank || b === null) {
+            // A strict comparison is necessary because `NULL == undefined`.
+            if (a === NULL || a === blank || b === blank || b === NULL) {
                 return a === b;
             }
             // Unwrap any wrapped objects.
@@ -722,33 +706,33 @@ application.scope('dev', function (app) {
             if (className !== toString.call(b)) return BOOLEAN_FALSE;
             switch (className) {
                 // Strings, numbers, regular expressions, dates, and booleans are compared by value.
-            case '[object RegExp]':
+            case BRACKET_OBJECT_SPACE + 'RegExp]':
                 // RegExps are coerced to strings for comparison (Note: '' + /a/i === '/a/i')
-            case '[object String]':
+            case BRACKET_OBJECT_SPACE + 'String]':
                 // Primitives and their corresponding object wrappers are equivalent; thus, `"5"` is
                 // equivalent to `new String("5")`.
                 return '' + a === '' + b;
-            case '[object Number]':
+            case BRACKET_OBJECT_SPACE + 'Number]':
                 // `NaN`s are equivalent, but non-reflexive.
                 // Object(NaN) is equivalent to NaN
                 if (+a !== +a) return +b !== +b;
                 // An `egal` comparison is performed for other numeric values.
                 return +a === 0 ? 1 / +a === 1 / b : +a === +b;
-            case '[object Date]':
-            case '[object Boolean]':
+            case BRACKET_OBJECT_SPACE + 'Date]':
+            case BRACKET_OBJECT_SPACE + 'Boolean]':
                 // Coerce dates and booleans to numeric primitive values. Dates are compared by their
                 // millisecond representations. Note that invalid dates with millisecond representations
                 // of `NaN` are not equivalent.
                 return +a === +b;
             }
-            var areArrays = className === '[object Array]';
+            var areArrays = className === BRACKET_OBJECT_SPACE + 'Array]';
             if (!areArrays) {
-                if (typeof a != 'object' || typeof b != 'object') return BOOLEAN_FALSE;
+                if (typeof a != OBJECT || typeof b != OBJECT) return BOOLEAN_FALSE;
                 // Objects with different constructors are not equivalent, but `Object`s or `Array`s
                 // from different frames are.
                 var aCtor = a[CONSTRUCTOR],
                     bCtor = b[CONSTRUCTOR];
-                if (aCtor !== bCtor && !(isFunction(aCtor) && nativeIsInstance(aCtor, aCtor) && isFunction(bCtor) && nativeIsInstance(bCtor, bCtor)) && ('constructor' in a && 'constructor' in b)) {
+                if (aCtor !== bCtor && !(isFunction(aCtor) && nativeIsInstance(aCtor, aCtor) && isFunction(bCtor) && nativeIsInstance(bCtor, bCtor)) && (CONSTRUCTOR in a && CONSTRUCTOR in b)) {
                     return BOOLEAN_FALSE;
                 }
             }
@@ -857,17 +841,6 @@ application.scope('dev', function (app) {
         exports = function (obj) {
             return extend(_, obj);
         },
-        mix = function () {},
-        // cachable = function (fn) {
-        //     var cache = {};
-        //     return function () {
-        //         var key = JSON.stringify(arguments);
-        //         if (!cache[key]) {
-        //             cache[key] = JSON.stringify(fn.apply(this, arguments));
-        //         }
-        //         return JSON.parse(cache[key]);
-        //     };
-        // },
         /**
          * @func
          */
@@ -884,34 +857,6 @@ application.scope('dev', function (app) {
             img.src = url;
             return img;
         },
-        /**
-         * @func
-         */
-        // returnBuild = function (obj, array, def) {
-        //     var attach, last, depth = obj;
-        //     duff(gapSplit(array), function (key, idx) {
-        //         last = key;
-        //         if (!isObject(depth[key])) {
-        //             if (def[idx] === blank) {
-        //                 depth[key] = {};
-        //             } else {
-        //                 depth[key] = def[idx];
-        //             }
-        //             attach = 1;
-        //         }
-        //         depth = depth[key];
-        //     });
-        //     return depth;
-        // },
-        // log = function (type, args) {
-        //     if (!_.isFunction(console[type])) {
-        //         type = 'log';
-        //     }
-        //     console[type].apply(console, args);
-        // },
-        /**
-         * @func
-         */
         parse = function (val_) {
             var val = val_;
             if (isString(val)) {
@@ -919,8 +864,6 @@ application.scope('dev', function (app) {
                 if (val[0] === '{' || val[0] === '[') {
                     wraptry(function () {
                         val = JSON.parse(val);
-                    }, function () {
-                        console.error('could not parse', val);
                     });
                 }
             }
@@ -933,7 +876,7 @@ application.scope('dev', function (app) {
                     args = arguments,
                     callNow = immediate && !timeout,
                     later = function () {
-                        timeout = null;
+                        timeout = NULL;
                         if (!immediate) {
                             func.apply(context, args);
                         }
@@ -1034,7 +977,7 @@ application.scope('dev', function (app) {
                     if (cryptoCheck) {
                         rnd = win.crypto.getRandomValues(new Uint32Array(1));
                         if (rnd === blank) {
-                            cryptoCheck = false;
+                            cryptoCheck = BOOLEAN_FALSE;
                         }
                     }
                     if (!cryptoCheck) {
@@ -1096,16 +1039,6 @@ application.scope('dev', function (app) {
             mult = Math.pow(base || 10, power);
             return (parseInt((mult * val), 10) / mult);
         },
-        /**
-         * @func
-         */
-        cssTemplater = function (str, obj) {
-            str += '';
-            each(obj, function (key, val) {
-                str = str.split('\\\\' + key + '\\\\').join(val);
-            });
-            return str;
-        },
         result = function (obj, str, arg) {
             return isFunction(obj[str]) ? obj[str](arg) : obj[str];
         },
@@ -1114,32 +1047,6 @@ application.scope('dev', function (app) {
                 return Math[method].apply(maths, args);
             };
         },
-        mathMix = function (key) {
-            var doIt = function (x, mult) {
-                var ret;
-                if (isArrayLike(x)) {
-                    ret = Math[key].apply(Math, x);
-                } else {
-                    ret = Math[key](x * mult);
-                    ret = ret / mult;
-                }
-                return ret;
-            };
-            return function (thing, mult) {
-                if (!isNumber(mult)) {
-                    mult = 1;
-                }
-                if (isNumber(thing) || isString(thing)) {
-                    return doIt(thing, mult);
-                } else {
-                    return duff(thing, function (val, key, obj) {
-                        obj[key] = doIt(val, mult);
-                    });
-                }
-            };
-        },
-        floor = mathMix('floor'),
-        ceil = mathMix('ceil'),
         ensureFunction = function (fn) {
             return function (_fn) {
                 _fn = _fn || function () {};
@@ -1175,7 +1082,7 @@ application.scope('dev', function (app) {
     }
     factories.Model = Model;
     Model[PROTOTYPE] = {};
-    Model.extend = constructorExtend;
+    Model[EXTEND] = constructorExtend;
     _ = app._ = {
         noop: noop,
         months: gapSplit('january feburary march april may june july august september october november december'),
@@ -1187,7 +1094,6 @@ application.scope('dev', function (app) {
         ensureFunction: ensureFunction,
         parseDecimal: parseDecimal,
         reference: reference,
-        cssTemplater: cssTemplater,
         isArrayLike: isArrayLike,
         isInstance: isInstance,
         hasEnumBug: hasEnumBug,
@@ -1223,31 +1129,31 @@ application.scope('dev', function (app) {
         now: now,
         map: map,
         result: result,
-        isBlank: isBlank,
         isUndefined: isUndefined,
+        isFunction: isFunction,
+        isObject: isObject,
+        isNumber: isNumber,
+        isFinite: isFinite,
+        isString: isString,
+        isBlank: isBlank,
         isNull: isNull,
+        isNaN: isNaN,
+        eachProxy: eachProxy,
+        exports: exports,
+        allKeys: allKeys,
+        slice: slice,
+        parse: parse,
+        shift: shift,
         merge: merge,
         fetch: fetch,
         split: split,
         clone: clone,
-        isObject: isObject,
-        isNaN: isNaN,
-        isNumber: isNumber,
-        isFinite: isFinite,
-        isString: isString,
-        isFunction: isFunction,
-        parse: parse,
-        shift: shift,
-        eachProxy: eachProxy,
-        exports: exports,
-        slice: slice,
         bind: bind,
         duff: duff,
         sort: sort,
         join: join,
         wrap: wrap,
         uuid: uuid,
-        allKeys: allKeys,
         keys: keys,
         once: once,
         each: each,
@@ -1264,8 +1170,6 @@ application.scope('dev', function (app) {
         find: find,
         findLast: findLast,
         console: console,
-        floor: floor,
-        ceil: ceil,
         min: mathArray('min'),
         max: mathArray('max'),
         math: wrap(gapSplit('E LN2 LN10 LOG2E LOG10E PI SQRT1_2 SQRT2 abs acos acosh asin asinh atan atan2 atanh cbrt ceil clz32 cos cosh exp expm1 floor fround hypot imul log log1p log2 log10 max min pow random round sign sin sinh sqrt tan tanh trunc'), function (key) {

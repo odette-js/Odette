@@ -33,28 +33,17 @@ application.scope(function (app) {
         isArray = _.isArray,
         intendedObject = _.intendedObject,
         uniqueId = _.uniqueId,
-        BOOLEAN_FALSE = !1,
-        BOOLEAN_TRUE = !0,
         ID = 'id',
         SORT = 'sort',
         ADDED = 'added',
         UNWRAP = 'unwrap',
         REMOVED = 'removed',
-        LENGTH = 'length',
-        PARENT = 'parent',
-        DESTROY = 'destroy',
-        BEFORE_COLON = 'before:',
         INTERNAL_EVENTS = '_events',
-        ATTRIBUTES = 'attributes',
         STOP_LISTENING = 'stopListening',
         DISPATCH_EVENT = 'dispatchEvent',
         EVENT_REMOVE = '_removeEventList',
-        ATTRIBUTE_HISTORY = '_attributeHistory',
         _DELEGATED_CHILD_EVENTS = '_delegatedParentEvents',
         _PARENT_DELEGATED_CHILD_EVENTS = '_parentDelgatedChildEvents',
-        CHILD = 'child',
-        CHILDREN = CHILD + 'ren',
-        CHANGE = 'change',
         CHANGE_COUNTER = '_changeCounter',
         PREVIOUS_ATTRIBUTES = '_previousAttributes',
         /**
@@ -65,19 +54,18 @@ application.scope(function (app) {
         Container = factories.Events.extend('Container', {
             // this id prefix is nonsense
             // define the actual key
-            uniqueKey: 'cid',
+            uniqueKey: 'c',
             idAttribute: ID,
             constructor: function (attributes, secondary) {
                 var model = this;
-                model[model.uniqueKey] = model[model.uniqueKey] = uniqueId(model.uniqueKey);
+                model[model.uniqueKey + ID] = model[model.uniqueKey + ID] = uniqueId(model.uniqueKey);
                 extend(model, secondary);
                 model.reset(attributes);
-                Events.constructor.apply(this, arguments);
+                Events[CONSTRUCTOR].apply(this, arguments);
                 return model;
             },
             _reset: function (attributes_) {
                 var childModel, children, model = this,
-                    _altered = model._altered = {},
                     // automatically checks to see if the attributes are a string
                     attributes = parse(attributes_) || {},
                     // default attributes
@@ -87,16 +75,17 @@ application.scope(function (app) {
                     // get the id
                     idAttr = result(model, 'idAttribute', newAttributes),
                     // stale attributes
-                    ret = model[ATTRIBUTES] || {},
-                    history = model[ATTRIBUTE_HISTORY] = {};
+                    ret = model[ATTRIBUTES] || {};
                 // set id and let parent know what your new id is
-                this[DISPATCH_EVENT](BEFORE_COLON + 'reset');
+                model[DISPATCH_EVENT](BEFORE_COLON + RESET);
+                // set the id of the object
                 model._setId(model.id || newAttributes[idAttr] || uniqueId(BOOLEAN_FALSE, BOOLEAN_TRUE));
+                // setup previous attributes
                 model[PREVIOUS_ATTRIBUTES] = {};
                 // swaps attributes hash
                 model[ATTRIBUTES] = newAttributes;
                 // let everything know that it is changing
-                model[DISPATCH_EVENT]('reset');
+                model[DISPATCH_EVENT](RESET);
                 return ret;
             },
             /**
@@ -148,12 +137,10 @@ application.scope(function (app) {
                 var model = this,
                     didChange = BOOLEAN_FALSE,
                     attrs = model[ATTRIBUTES],
-                    history = model[ATTRIBUTE_HISTORY],
                     oldValue = attrs[key],
                     previousAttrsObject = model[PREVIOUS_ATTRIBUTES] = model[PREVIOUS_ATTRIBUTES] || {};
                 if (!isEqual(oldValue, newValue)) {
                     previousAttrsObject[key] = oldValue;
-                    history[key] = oldValue;
                     attrs[key] = newValue;
                     didChange = BOOLEAN_TRUE;
                 }
@@ -313,7 +300,7 @@ application.scope(function (app) {
                 children.add(newModel);
                 // register with parent
                 children.register(newModel.id, newModel);
-                children.register(newModel.uniqueKey, newModel[newModel.uniqueKey], newModel);
+                children.register(newModel.uniqueKey + ID, newModel[newModel.uniqueKey + ID], newModel);
             },
             // ties child events to new child
             _delegateChildEvents: function (model) {
@@ -412,7 +399,7 @@ application.scope(function (app) {
                 children.remove(child);
                 parent[CHILDREN].unRegister(ID, child.id);
                 // unregister from the child hash keys
-                parent[CHILDREN].unRegister(child.uniqueKey, child[child.uniqueKey]);
+                parent[CHILDREN].unRegister(child.uniqueKey + ID, child[child.uniqueKey + ID]);
             },
             // only place that we mention parents
             _collectParents: function () {

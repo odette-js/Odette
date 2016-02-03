@@ -1,6 +1,6 @@
 application.scope(function (app) {
     var blank, _ = app._,
-        toArray = _.toArray,
+        toArray = _[TO_ARRAY],
         map = _.map,
         indexOf = _.indexOf,
         gapSplit = _.gapSplit,
@@ -9,9 +9,6 @@ application.scope(function (app) {
         split = _.split,
         extend = _.extend,
         wrap = _.wrap,
-        LENGTH = 'length',
-        HTTP = 'http',
-        falseBool = false,
         has = _.has,
         join = _.join,
         cacheable = function (fn) {
@@ -154,7 +151,7 @@ application.scope(function (app) {
                         return unitStr;
                     }
                 }
-                return falseBool;
+                return BOOLEAN_FALSE;
             };
         }),
         baseUnitList = gapSplit('px em ex in cm % vh vw pc pt mm vmax vmin'),

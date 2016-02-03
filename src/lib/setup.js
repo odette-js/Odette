@@ -3,12 +3,23 @@
     var blank, topmostDoc, app, MAKE_SCRIPT = 'makeScript',
         LENGTH = 'length',
         PARENT = 'parent',
+        PROTOTYPE = 'prototype',
+        TOUCH_TOP = 'touchTop',
+        TOP_ACCESS = 'topAccess',
         doc = document,
         BOOLEAN_TRUE = !0,
         BOOLEAN_FALSE = !1,
+        NULL = null,
+        typeConstructor = function (str) {
+            return function (thing) {
+                return typeof thing === str;
+            };
+        },
         now = function () {
             return +(new Date());
         },
+        isString = typeConstructor('string'),
+        isFunction = typeConstructor('function'),
         executionTime = now(),
         makeParody = function (parent, fn) {
             return function () {
@@ -32,8 +43,8 @@
         this.global = BOOLEAN_FALSE;
         return this;
     }
-    Application.prototype.wraptry = wraptry;
-    Application.prototype.extend = function (obj) {
+    Application[PROTOTYPE].wraptry = wraptry;
+    Application[PROTOTYPE].extend = function (obj) {
         var n, app = this;
         for (n in obj) {
             if (obj.hasOwnProperty(n)) {
@@ -42,7 +53,7 @@
         }
         return app;
     };
-    Application.prototype.parody = function (list) {
+    Application[PROTOTYPE].parody = function (list) {
         var i = 0,
             extendor = {},
             parent = this.parent;
@@ -51,6 +62,21 @@
         }
         this.extend(extendor);
         return this;
+    };
+    Application[PROTOTYPE].scope = function (name, fn_) {
+        var fn = name && (isFunction(name) ? name : (isFunction(fn_) ? fn_ : NULL));
+        if (fn) {
+            this[PARENT].scope(this.version, fn);
+        }
+        return this;
+    };
+    Application[PROTOTYPE][TOUCH_TOP] = function () {
+        // allows the top part of this script to be swapped out against different windows
+        return this[PARENT][TOUCH_TOP](win);
+    };
+    Application[PROTOTYPE][TOP_ACCESS] = function () {
+        this[TOUCH_TOP]();
+        return this[PARENT][TOP_ACCESS];
     };
     var application = win[WHERE] = win[WHERE] || {
         versions: {},
@@ -100,11 +126,11 @@
                 hash = app.versions,
                 name = fn_ ? name_ : app.defaultVersion,
                 fn = fn_ ? fn_ : name_;
-            if (typeof name_ === 'string') {
+            if (isString(name_)) {
                 app.currentVersion = name_;
             }
             app.registerVersion(name);
-            if (typeof fn === 'function') {
+            if (isFunction(fn)) {
                 this.wraptry(function () {
                     fn.call(app, hash[name]);
                 });
@@ -187,7 +213,7 @@
             // assume you have top access
             var href, topAccess = 1,
                 application = this;
-            if (application.topAccess === blank) {
+            if (application[TOP_ACCESS] === blank) {
                 application.wraptry(function () {
                     href = win.top.location.href;
                     // safari bug WHERE unfriendly frame returns undefined
@@ -205,7 +231,7 @@
                     topmostDoc = win.top.document;
                     win.top[WHERE] = application;
                 }
-                application.topAccess = topAccess;
+                application[TOP_ACCESS] = topAccess;
             }
             win[WHERE] = application;
             return application;
@@ -215,313 +241,4 @@
         app = application.registerVersion(version);
         fn(application, app);
     }
-}(window, 'application', 'dev', function (application, app) {
-    var blank, win = window,
-        doc = document,
-        BOOLEAN_TRUE = !0,
-        BOOLEAN_FALSE = !1,
-        configCacheparams = 3,
-        cacheparams = 78,
-        timestamp = +(new Date()),
-        pushString = 'push',
-        CONCAT = 'concat',
-        LENGTH = 'length',
-        OUTER_AD = 'OuterAd',
-        MAKE_SCRIPT = 'makeScript',
-        READY_STATE = 'readyState',
-        RECEIVED_CONFIG = 'receivedConfig',
-        LOCATION = 'location',
-        PARENT = 'parent',
-        REGISTER_SCOPED_METHOD = 'registerScopedMethod',
-        getType = function (obj) {
-            return typeof obj;
-        },
-        typeConstructor = function (type) {
-            return function (thing) {
-                return getType(thing) === type;
-            };
-        },
-        isObject = typeConstructor('object'),
-        isString = typeConstructor('string'),
-        isFunction = typeConstructor('function'),
-        gapSplit = function (str) {
-            if (isString(str)) {
-                str = str.split(' ');
-            }
-            return str;
-        },
-        configList = gapSplit('loaderConfig creativeConfig formatConfig publisherConfig placementConfig'),
-        /**
-         * list of modules, broken up by where they are used in the framework
-         */
-        extraModules = [],
-        libraryModules = gapSplit('shims utils Strings Collection Events Messenger Box Module speclessExtend Looper Promise Ajax Associator DOMM View Cookie'),
-        baseModules = gapSplit('Buster Ad Timer BustedData expansion publisherConfig reporting tagTranslation autoExpandCollapse'),
-        outerModules = gapSplit('outerAdProto creativeDataConvert visibility xpDirProx creativeToSpeclessMethods'),
-        innerModules = gapSplit('contextList innerAdProto speclessToCreativeMethods AttributesManager exiting'),
-        allModules = libraryModules[CONCAT](baseModules, outerModules, innerModules),
-        allScopedModules = ['scopeStart'][CONCAT](allModules, ['scopeEnd']),
-        startFn = function (key, config) {
-            var sp = this;
-            sp.configs[key] = config || {};
-            sp[RECEIVED_CONFIG](key);
-            return sp;
-        },
-        scopedToWindow = function (name, number) {
-            number = number || 0;
-            return function () {
-                var search = this.parseSearch(arguments[number].location.search);
-                var scope = this.scope(search.version);
-                return scope[name].apply(scope, arguments);
-            };
-        };
-    app.ads = [];
-    app._byId = {};
-    app.configs = {};
-    app.parody(gapSplit('map loadScript makeScript'));
-    app.extend({
-        CDNURL: '//c.specless.io',
-        SERVERURL: '//s.specless.io',
-        SCRIPTPATH: '/frame/2/scripts/',
-        CONFIGPATH: '/ads/2/config/',
-        plugins: {},
-        _startHandlers: [],
-        allModules: allModules,
-        baseModules: baseModules,
-        outerModules: outerModules,
-        innerModules: innerModules,
-        extraModules: extraModules,
-        allScopedModules: allScopedModules,
-        configList: configList,
-        start: startFn,
-        config: startFn,
-        userJS: scopedToWindow('userJS'),
-        scope: function (name, fn_) {
-            var fn = name && (isFunction(name) ? name : (isFunction(fn_) ? fn_ : null));
-            if (fn) {
-                this[PARENT].scope(this.version, fn);
-            }
-            return this;
-        },
-        touchTop: function () {
-            // allows the top part of this script to be swapped out against different windows
-            return this[PARENT].touchTop(win);
-        },
-        // parseSearch: function (search) {
-        //     return this[PARENT].parseSearch(search || win.location.search);
-        // },
-        getCurrentScript: function (d) {
-            return this[PARENT].getCurrentScript(d || doc);
-        },
-        topAccess: function () {
-            this.touchTop();
-            return this[PARENT].topAccess;
-        },
-        /**
-         * @func
-         * @name Specless#parseSearch
-         * @param {String} [search] - search string from the location.search attribute on the window object
-         * @returns {Object} key value pairs of the search string
-         */
-        parseSearch: function (search) {
-            var parms, temp, items, val, converted, i = 0,
-                dcUriComp = win.decodeURIComponent;
-            if (!search) {
-                search = win[LOCATION].search;
-            }
-            items = search.slice(1).split("&");
-            parms = {};
-            for (; i < items[LENGTH]; i++) {
-                temp = items[i].split("=");
-                if (temp[0]) {
-                    if (temp[LENGTH] < 2) {
-                        temp[pushString]("");
-                    }
-                    val = temp[1];
-                    val = dcUriComp(val);
-                    if (val[0] === "'" || val[0] === '"') {
-                        val = val.slice(1, val[LENGTH] - 1);
-                    }
-                    if (val === BOOLEAN_TRUE + '') {
-                        val = BOOLEAN_TRUE;
-                    }
-                    if (val === BOOLEAN_FALSE + '') {
-                        val = BOOLEAN_FALSE;
-                    }
-                    if (isString(val)) {
-                        converted = +val;
-                        if (converted == val && converted + '' === val) {
-                            val = converted;
-                        }
-                    }
-                    parms[dcUriComp(temp[0])] = val;
-                }
-            }
-            return parms;
-        },
-        receivedConfig: function (key) {
-            var app = this,
-                _ = app._ || {},
-                factories = _.factories,
-                configs = app.configs,
-                config = configs[key],
-                keySplit = key.split(':'),
-                configType = keySplit[0],
-                configName = keySplit[1];
-            if (config && isObject(config) && isString(key)) {
-                app.each(function (ad) {
-                    if (factories && factories[OUTER_AD]) {
-                        if (ad instanceof factories[OUTER_AD]) {
-                            return;
-                        }
-                    }
-                    ad = ad.attrs;
-                    if (ad[configType] === configName) {
-                        ad[READY_STATE] = Math.max(--ad[READY_STATE], 0);
-                    }
-                });
-            }
-            return app;
-        },
-        each: function (fn) {
-            this.map(this.ads, fn, this);
-            return this;
-        },
-        makeModuleUrl: function (subfolder, modules, preventprepend) {
-            var url = this.map(modules, function (module) {
-                return [currentVersion, subfolder, module].join('_');
-            }).join(',');
-            if (!preventprepend) {
-                url = this.CDNURL + this.SCRIPTPATH + url;
-            }
-            return url;
-        },
-        loadModules: function (modules, callback, subfolder, debug, docu) {
-            var url, app = this;
-            subfolder = subfolder || 'lib';
-            url = app.makeModuleUrl(subfolder, modules, BOOLEAN_FALSE);
-            if (!debug) {
-                url += '?t=' + cacheparams + '&f=' + cacheparams;
-            }
-            app.loadScript(url, callback, docu);
-            return app;
-        },
-        addStartHandler: function (func) {
-            var app = this,
-                _startHandlers = app._startHandlers;
-            _startHandlers.push(func);
-            return app;
-        },
-        load: function (sAdTag, attrs) {
-            var scriptTag, configType, src, data, module, list, item, endUrl, configsUrl, itemName, i = 0,
-                configItems = [],
-                application = this.touchTop(),
-                app = application.get(currentVersion),
-                parts = {},
-                getById = app._byId,
-                getModules = function () {
-                    if (app.tryToMakeAds) {
-                        app.tryToMakeAds();
-                    }
-                };
-            if (!attrs) {
-                attrs = {};
-            }
-            if (!sAdTag) {
-                sAdTag = application.parseSearch(win[LOCATION].search);
-            }
-            if (isObject(sAdTag)) {
-                attrs = sAdTag;
-                sAdTag = attrs.ad || attrs.serverAdId;
-                attrs.ad = blank;
-                attrs.serverAdId = blank;
-            }
-            attrs.requestTime = attrs.requestTime || timestamp;
-            attrs.serverAdId = sAdTag;
-            parts.win = win;
-            parts.doc = doc;
-            attrs[READY_STATE] = 0;
-            attrs.neededModules = allModules[CONCAT](attrs.modules || []);
-            if ((currentVersion.indexOf('dev') !== -1 || currentVersion === 'hotfix') && !attrs.hasOwnProperty('debug')) {
-                attrs.debug = BOOLEAN_TRUE;
-            }
-            if (attrs.wrapperId) {
-                parts.slot = (doc.getElementById(attrs.wrapperId) || doc.body);
-                parts.scriptTag = parts.slot;
-            }
-            parts.scriptTag = app.getCurrentScript(doc);
-            if (parts.scriptTag) {
-                // have you loaded the lib yet?
-                if (!app[READY_STATE]) {
-                    app[READY_STATE] = 1;
-                    // readyState = 1 === modules are being loaded
-                    app.loadModules(allScopedModules, function () {
-                        app[READY_STATE]++;
-                        getModules();
-                    }, null, attrs.debug, doc, attrs);
-                }
-                if (!attrs.loaderConfig) {
-                    attrs.loaderConfig = sAdTag + '00';
-                }
-                if (!attrs.creativeConfig) {
-                    attrs.creativeConfig = sAdTag;
-                    if (attrs.creativeConfig.length < 8) {
-                        attrs.creativeConfig += '01';
-                    }
-                }
-                data = {
-                    parts: parts,
-                    attrs: attrs
-                };
-                if (!getById[sAdTag]) {
-                    getById[sAdTag] = [];
-                }
-                app.ads[pushString](data);
-                getById[sAdTag][pushString](data);
-                for (; i < configList[LENGTH]; i++) {
-                    configType = configList[i];
-                    item = attrs[configType];
-                    // if it has a config
-                    if (item) {
-                        itemName = configType + ':' + item;
-                        // always count up on the ready state number
-                        attrs[READY_STATE]++;
-                        // if the config has not already been requested
-                        if (!isObject(app.configs[itemName])) {
-                            // then push it to the request and create an object to
-                            // prevent it from being requested again
-                            configItems[pushString]({
-                                type: configType.slice(0, configType[LENGTH] - 6),
-                                name: item
-                            });
-                        } else {
-                            app[RECEIVED_CONFIG](itemName);
-                        }
-                    }
-                }
-                if (configItems[LENGTH]) {
-                    configsUrl = (attrs.CDNURL || this.CDNURL) + (attrs.CONFIGPATH || app.CONFIGPATH) + app.map(configItems, function (item) {
-                        return item.type + '_' + item.name;
-                    }).join(',');
-                    if (!attrs.debug) {
-                        configsUrl += '?t=' + configCacheparams;
-                    }
-                    doc.head.appendChild(application[MAKE_SCRIPT](configsUrl, getModules));
-                }
-            }
-            getModules();
-            return app;
-        }
-    });
-    application[REGISTER_SCOPED_METHOD]('load');
-    application[REGISTER_SCOPED_METHOD]('start');
-    application[REGISTER_SCOPED_METHOD]('run');
-    application[REGISTER_SCOPED_METHOD]('module');
-    application[REGISTER_SCOPED_METHOD]('addStartHandler', 2);
-    // make inner specless object
-    application[REGISTER_SCOPED_METHOD]('makeInner');
-    // handles user js
-    application[REGISTER_SCOPED_METHOD]('userJS');
-    // plugins
-    application[REGISTER_SCOPED_METHOD]('component', 4);
-}));
+}(window, 'application', 'dev', function (application, app) {}));

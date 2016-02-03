@@ -1,2 +1,2 @@
-Specless.scope('dev', function (application) {
-    'use strict';
+application.scope('dev', function (application) {
+        'use strict';
