@@ -1,5 +1,4 @@
 application.scope().module('Looper', function (module, app, _, factories) {
-    'use strict';
     var blank, x = 0,
         lastTime = 0,
         LENGTH = 'length',

@@ -1,38 +1,6 @@
 application.scope(function (app) {
-    var _ = app._,
-        factories = _.factories,
-        Collection = factories.Collection,
+    var Collection = factories.Collection,
         Events = factories.Events,
-        gapSplit = _.gapSplit,
-        isObject = _.isObject,
-        isString = _.isString,
-        isNumber = _.isNumber,
-        isEqual = _.isEqual,
-        isBlank = _.isBlank,
-        isFunction = _.isFunction,
-        each = _.each,
-        duff = _.duff,
-        find = _.find,
-        duffRev = _.duffRev,
-        push = _.push,
-        has = _.has,
-        map = _.map,
-        result = _.result,
-        toArray = _.toArray,
-        remove = _.remove,
-        clone = _.clone,
-        once = _.once,
-        parse = _.parse,
-        extend = _.extend,
-        listDrop = _.remove,
-        stringify = _.stringify,
-        isInstance = _.isInstance,
-        isArrayLike = _.isArrayLike,
-        upCase = _.upCase,
-        camelCase = _.camelCase,
-        isArray = _.isArray,
-        intendedObject = _.intendedObject,
-        uniqueId = _.uniqueId,
         ID = 'id',
         SORT = 'sort',
         ADDED = 'added',
@@ -90,7 +58,7 @@ application.scope(function (app) {
                 return ret;
             },
             /**
-             * @description remove attributes from the Box object. Does not completely remove from object with delete, but instead simply sets it to blank / undefined
+             * @description remove attributes from the Box object. Does not completely remove from object with delete, but instead simply sets it to UNDEFINED / undefined
              * @param {String} attr - property string that is on the attributes object
              * @returns {Box} instance the method was called on
              * @func
@@ -100,7 +68,7 @@ application.scope(function (app) {
                 var attrObj = this[ATTRIBUTES];
                 // blindly wipe the attributes
                 duff(gapSplit(attrs), function (attr) {
-                    attrObj[attr] = blank;
+                    attrObj[attr] = UNDEFINED;
                 });
                 return this;
             },
@@ -125,8 +93,8 @@ application.scope(function (app) {
                 var box = this,
                     attributes = box[ATTRIBUTES];
                 return find(gapSplit(attrs), function (attr) {
-                    return attributes[attr] === blank;
-                }) === blank;
+                    return attributes[attr] === UNDEFINED;
+                }) === UNDEFINED;
             },
             /**
              * @description collects a splat of arguments and condenses them into a single object. Object is then extended onto the attributes object and any items that are different will be fired as events
@@ -190,18 +158,18 @@ application.scope(function (app) {
                         compiled[key] = value;
                     }
                 });
-                if (!changedList[LENGTH]) {
+                if (changedList[LENGTH]) {
                     // do not digest... this time
-                    return model;
-                }
-                model.digester(function () {
-                    duff(changedList, function (name) {
-                        model[DISPATCH_EVENT](CHANGE + ':' + name);
+                    model.digester(function () {
+                        duff(changedList, function (name) {
+                            model[DISPATCH_EVENT](CHANGE + COLON + name);
+                        });
+                        model[DISPATCH_EVENT](CHANGE, compiled);
                     });
-                    model[DISPATCH_EVENT](CHANGE, compiled);
-                });
+                }
                 return model;
             },
+            comparator: 'id',
             /**
              * @description basic json clone of the attributes object
              * @func
@@ -214,17 +182,8 @@ application.scope(function (app) {
                 // to prevent circular dependencies
                 return clone(this[ATTRIBUTES]);
             },
-            comparator: 'id',
             valueOf: function () {
-                var datapoint = +result(this.attributes, this.comparator);
-                // if it's NaN
-                if (datapoint !== datapoint) {
-                    datapoint = blank;
-                }
-                if (datapoint === blank) {
-                    datapoint = +this.id;
-                }
-                return datapoint;
+                return this.id;
             },
             /**
              * @description stringified version of attributes object
@@ -237,7 +196,7 @@ application.scope(function (app) {
             },
             _setId: function (id_) {
                 var model = this,
-                    id = id_ === blank ? uniqueId(BOOLEAN_FALSE) : id_;
+                    id = id_ === UNDEFINED ? uniqueId(BOOLEAN_FALSE) : id_;
                 model.id = id;
             },
             reset: function (attrs) {
@@ -249,7 +208,7 @@ application.scope(function (app) {
             return Box(attributes, options);
         },
         Box = factories.Container.extend('Box', {
-            Model: modelMaker,
+            Child: modelMaker,
             /**
              * @description constructor function for the Box Object
              * @name Box#constructor
@@ -336,7 +295,7 @@ application.scope(function (app) {
                 }
             },
             _isChildType: function (child) {
-                return isInstance(child, this.Model);
+                return isInstance(child, this.Child);
             },
             // this one forcefully adds
             _add: function (model) {
@@ -365,14 +324,14 @@ application.scope(function (app) {
                     secondary = extend(result(parent, CHILD + 'Options'), secondary_ || {}),
                     list = Collection(objs_);
                 // unwrap it if you were passed a collection
-                if (!parent.Model || !list[LENGTH]()) {
+                if (!parent.Child || !list[LENGTH]()) {
                     return list[UNWRAP]();
                 }
                 list = list.foldl(function (memo, obj) {
                     var isChildType = parent._isChildType(obj),
                         // create a new model
                         // call it with new in case they use a constructor
-                        newModel = isChildType ? obj : new parent.Model(obj, secondary),
+                        newModel = isChildType ? obj : new parent.Child(obj, secondary),
                         // find by the newly created's id
                         foundModel = children.get(newModel.id);
                     if (foundModel) {
@@ -388,7 +347,7 @@ application.scope(function (app) {
                     return memo;
                 }, []);
                 if (childAdded) {
-                    parent[DISPATCH_EVENT](CHILD + ':' + ADDED);
+                    parent[DISPATCH_EVENT](CHILD + COLON + ADDED);
                 }
                 return list;
             },
@@ -421,8 +380,8 @@ application.scope(function (app) {
             dispatchEvent: function (name_, data, evnt_) {
                 var origin = this,
                     name = (evnt_ && evnt_.methodName) || name_,
-                    methodName = (evnt_ && evnt_.methodName) || upCase(camelCase('on:' + name, ':')),
-                    childMethodName = upCase(camelCase('on:bubble:' + name, ':')),
+                    methodName = (evnt_ && evnt_.methodName) || upCase(camelCase('on:' + name, COLON)),
+                    childMethodName = upCase(camelCase('on:bubble:' + name, COLON)),
                     // onMethod = isFunction(origin[methodName]),
                     evnt = evnt_ || origin._createEvent(name, data),
                     parents = origin._collectParents(),
@@ -448,7 +407,7 @@ application.scope(function (app) {
                 // attach events from parent
                 parent._removeFromHash(model);
                 // void out the parent member tied directly to the model
-                model[PARENT] = blank;
+                model[PARENT] = UNDEFINED;
                 // let everyone know that you've offically separated
                 model[DISPATCH_EVENT](REMOVED);
                 // notify the child that the remove pipeline is done
@@ -462,23 +421,18 @@ application.scope(function (app) {
                     idModel = idModel_;
                 if (!isObject(idModel)) {
                     // it's a string
-                    idModel = parent[CHILDREN].get(ID, idModel + '');
+                    idModel = parent[CHILDREN].get(ID, idModel + EMPTY_STRING);
                 }
                 if (!idModel || !isObject(idModel)) {
                     return retList;
                 }
-                if (isInstance(idModel, Collection)) {
-                    idModel = idModel[UNWRAP]();
-                }
-                if (!isArray(idModel)) {
-                    idModel = [idModel];
-                }
-                duff(idModel, function (model) {
+                Collection(idModel && idModel.unwrap ? idModel.unwrap() : idModel).duff(function (model) {
+                    var parent = model[PARENT];
                     parent._remove(model);
                     retList.add(model);
                 });
                 if (retList[LENGTH]()) {
-                    parent[DISPATCH_EVENT](CHILD + ':' + REMOVED);
+                    parent[DISPATCH_EVENT](CHILD + COLON + REMOVED);
                 }
                 return retList;
             },

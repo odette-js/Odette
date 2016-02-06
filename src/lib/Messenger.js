@@ -6,6 +6,7 @@ application.scope(function (app) {
         isFunction = _.isFunction,
         isObject = _.isObject,
         intendedObject = _.intendedObject,
+        bind = _.bind,
         PARENT = 'parent',
         NAME = 'name',
         basicData = function (basic) {
@@ -57,7 +58,7 @@ application.scope(function (app) {
                     if (!isFunction(handler_)) {
                         handler = basicData(handler_);
                     }
-                    messenger._setHash(key, bind(handler, this[PARENT] || {}));
+                    messenger._setHash(key, bind(handler, messenger[PARENT] || {}));
                 });
                 return messenger[PARENT];
             }

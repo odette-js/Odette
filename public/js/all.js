@@ -242,9 +242,10 @@
         fn(application, app);
     }
 }(window, 'application', 'dev', function (application, app) {}));
-application.scope('dev', function (application) {
+application.scope('dev', function (app) {
         'use strict';
-var blank, win = window,
+var UNDEFINED, win = window,
+    doc = win.document,
     EMPTY_STRING = '',
     TO_STRING = 'toString',
     VALUE_OF = 'valueOf',
@@ -253,7 +254,9 @@ var blank, win = window,
     CHILD = 'child',
     CHILDREN = CHILD + 'ren',
     CHANGE = 'change',
-    BEFORE_COLON = 'before:',
+    COLON = ':',
+    BEFORE = 'before',
+    BEFORE_COLON = BEFORE + COLON,
     RESET = 'reset',
     ATTRIBUTES = 'attributes',
     PARENT = 'parent',
@@ -266,6 +269,8 @@ var blank, win = window,
     INDEX_OF = 'indexOf',
     WINDOW = 'window',
     DOCUMENT = 'document',
+    ATTRIBUTES = 'attributes',
+    COMPONENTS = 'components',
     CLASS = 'class',
     TOP = 'top',
     LEFT = 'left',
@@ -278,1164 +283,1222 @@ var blank, win = window,
     INNER_WIDTH = 'innerWidth',
     DISPATCH_EVENT = 'dispatchEvent',
     HTTP = 'http',
+    HTTPS = HTTP + 's',
     TO_ARRAY = 'toArray',
     CONSTRUCTOR_KEY = '__' + CONSTRUCTOR + '__',
     LOCATION = 'location',
     EXTEND = 'extend',
     BOOLEAN_TRUE = !0,
     BOOLEAN_FALSE = !1,
-    NULL = null;
-application.scope(function (app) {
-    var blank, _, factories = {},
-        object = Object,
-        fn = Function,
-        array = Array,
-        string = String,
-        BRACKET_OBJECT_SPACE = '[object ',
-        stringProto = string[PROTOTYPE],
-        objectProto = object[PROTOTYPE],
-        arrayProto = array[PROTOTYPE],
-        funcProto = fn[PROTOTYPE],
-        nativeKeys = object.keys,
-        hasEnumBug = !{
-            toString: NULL
-        }.propertyIsEnumerable(TO_STRING),
-        noop = function () {},
-        /**
-         * @func
-         */
-        slice = function (obj, one, two) {
-            return stringProto.slice.call(obj, one, two);
-        },
-        listSlice = function (obj, one, two) {
-            return arrayProto.slice.call(obj, one, two);
-        },
-        /**
-         * @func
-         */
-        split = function (obj, str) {
-            return stringProto.split.call(obj, str);
-        },
-        /**
-         * @func
-         */
-        join = function (obj, str) {
-            return arrayProto.join.call(obj, str);
-        },
-        /**
-         * @func
-         */
-        pop = function (obj) {
-            return arrayProto.pop.call(obj);
-        },
-        /**
-         * @func
-         */
-        push = function (obj, item) {
-            var args = splice(arguments, 1);
-            return arrayProto.push.apply(obj, args);
-        },
-        /**
-         * @func
-         */
-        shift = function (o) {
-            return arrayProto.shift.call(o);
-        },
-        /**
-         * @func
-         */
-        indexOfNaN = function (array, fromIndex, toIndex, fromRight) {
-            if (!array) {
-                return -1;
-            }
-            var other, limit = array[LENGTH],
-                index = fromIndex + (fromRight ? 0 : -1),
-                incrementor = fromRight ? -1 : 1;
-            while ((index += incrementor) < limit) {
-                other = array[index];
-                if (other !== other) {
-                    return index;
-                }
-            }
+    NULL = null,
+    // application.scope(function (app) {
+    _, factories = {},
+    object = Object,
+    fn = Function,
+    array = Array,
+    string = String,
+    BRACKET_OBJECT_SPACE = '[object ',
+    stringProto = string[PROTOTYPE],
+    objectProto = object[PROTOTYPE],
+    arrayProto = array[PROTOTYPE],
+    funcProto = fn[PROTOTYPE],
+    nativeKeys = object.keys,
+    hasEnumBug = !{
+        toString: NULL
+    }.propertyIsEnumerable(TO_STRING),
+    noop = function () {},
+    /**
+     * @func
+     */
+    slice = function (obj, one, two) {
+        return stringProto.slice.call(obj, one, two);
+    },
+    listSlice = function (obj, one, two) {
+        return arrayProto.slice.call(obj, one, two);
+    },
+    /**
+     * @func
+     */
+    split = function (obj, str) {
+        return stringProto.split.call(obj, str);
+    },
+    /**
+     * @func
+     */
+    join = function (obj, str) {
+        return arrayProto.join.call(obj, str);
+    },
+    /**
+     * @func
+     */
+    pop = function (obj) {
+        return arrayProto.pop.call(obj);
+    },
+    /**
+     * @func
+     */
+    push = function (obj, item) {
+        var args = splice(arguments, 1);
+        return arrayProto.push.apply(obj, args);
+    },
+    /**
+     * @func
+     */
+    shift = function (o) {
+        return arrayProto.shift.call(o);
+    },
+    /**
+     * @func
+     */
+    indexOfNaN = function (array, fromIndex, toIndex, fromRight) {
+        if (!array) {
             return -1;
-        },
-        indexOf = function (array, value, fromIndex, toIndex, fromRight) {
-            var index, limit, incrementor;
-            if (!array) {
-                return -1;
-            }
-            if (value !== value) {
-                return indexOfNaN(array, fromIndex, toIndex, fromRight);
-            }
-            index = (fromIndex || 0) - 1;
-            limit = toIndex || array[LENGTH];
+        }
+        var other, limit = toIndex || array[LENGTH],
+            index = fromIndex + (fromRight ? 0 : -1),
             incrementor = fromRight ? -1 : 1;
-            while ((index += incrementor) < limit) {
-                if (array[index] === value) {
-                    return index;
-                }
+        while ((index += incrementor) < limit) {
+            other = array[index];
+            if (other !== other) {
+                return index;
             }
+        }
+        return -1;
+    },
+    indexOf = function (array, value, fromIndex, toIndex, fromRight) {
+        var index, limit, incrementor;
+        if (!array) {
             return -1;
-        },
-        binaryIndexOf = function (array, searchElement, minIndex_, maxIndex_) {
-            var currentIndex, currentElement, resultIndex, found,
-                minIndex = minIndex_ || 0,
-                maxIndex = maxIndex_ || array[LENGTH] - 1;
-            while (minIndex <= maxIndex) {
-                resultIndex = currentIndex = (minIndex + maxIndex) / 2 | 0;
-                currentElement = array[currentIndex];
-                if (currentElement < searchElement) {
-                    minIndex = currentIndex + 1;
-                } else if (currentElement > searchElement) {
-                    maxIndex = currentIndex - 1;
-                } else {
-                    return currentIndex;
+        }
+        if (value !== value) {
+            return indexOfNaN(array, fromIndex, toIndex, fromRight);
+        }
+        index = (fromIndex || 0) - 1;
+        limit = toIndex || array[LENGTH];
+        incrementor = fromRight ? -1 : 1;
+        while ((index += incrementor) < limit) {
+            if (array[index] === value) {
+                return index;
+            }
+        }
+        return -1;
+    },
+    binaryIndexOf = function (array, searchElement, minIndex_, maxIndex_) {
+        var currentIndex, currentElement, resultIndex, found,
+            minIndex = minIndex_ || 0,
+            maxIndex = maxIndex_ || array[LENGTH] - 1;
+        while (minIndex <= maxIndex) {
+            resultIndex = currentIndex = (minIndex + maxIndex) / 2 | 0;
+            currentElement = array[currentIndex];
+            if (currentElement < searchElement) {
+                minIndex = currentIndex + 1;
+            } else if (currentElement > searchElement) {
+                maxIndex = currentIndex - 1;
+            } else {
+                return currentIndex;
+            }
+        }
+        found = ~maxIndex;
+        return found;
+    },
+    /**
+     * @func
+     */
+    splice = function () {
+        var ctx = shift(arguments);
+        return arrayProto.splice.apply(ctx, arguments);
+    },
+    reverse = function (arr) {
+        return arrayProto.reverse.call(arr);
+    },
+    /**
+     * @func
+     */
+    toString = function (obj) {
+        return (obj === NULL || obj === UNDEFINED) ? '' : (obj + '');
+    },
+    /**
+     * @func
+     */
+    sort = function (obj, fn) {
+        var _fn;
+        if (isFunction(fn)) {
+            _fn = fn;
+            // normalization for safari
+            fn = function () {
+                var res = +_fn.apply(this, arguments);
+                if (isNaN(res)) {
+                    res = 0;
                 }
+                if (res > 1) {
+                    res = 1;
+                }
+                if (res < -1) {
+                    res = -1;
+                }
+                return res;
+            };
+        }
+        return arrayProto.sort.call(obj, fn);
+    },
+    /**
+     * @func
+     */
+    has = function (obj, prop) {
+        var val = !1;
+        if (obj && isFunction(obj.hasOwnProperty)) {
+            val = obj.hasOwnProperty(prop);
+        }
+        return val;
+    },
+    /**
+     * @func
+     */
+    previousConstructor = function (instance) {
+        return instance && instance[CONSTRUCTOR_KEY] && instance[CONSTRUCTOR_KEY][CONSTRUCTOR] || instance[CONSTRUCTOR];
+    },
+    nativeIsInstance = function (instance, constructor) {
+        var result = BOOLEAN_FALSE;
+        if (isFunction(constructor)) {
+            result = instance instanceof constructor;
+        }
+        return result;
+    },
+    isInstance = function (instance, constructor_) {
+        var constructor = constructor_;
+        while (has(constructor, CONSTRUCTOR)) {
+            constructor = constructor[CONSTRUCTOR];
+        }
+        return nativeIsInstance(instance, constructor);
+    },
+    /**
+     * @func
+     */
+    splitGen = function (delimiter) {
+        return function (list) {
+            if (isString(list)) {
+                list = split(list, delimiter);
             }
-            found = ~maxIndex;
-            return found;
-        },
-        /**
-         * @func
-         */
-        splice = function () {
-            var ctx = shift(arguments);
-            return arrayProto.splice.apply(ctx, arguments);
-        },
-        reverse = function (arr) {
-            return arrayProto.reverse.call(arr);
-        },
-        /**
-         * @func
-         */
-        toString = function (obj) {
-            return (obj === NULL || obj === blank) ? '' : (obj + '');
-        },
-        /**
-         * @func
-         */
-        sort = function (obj, fn) {
-            var _fn;
-            if (isFunction(fn)) {
-                _fn = fn;
-                // normalization for safari
-                fn = function () {
-                    var res = +_fn.apply(this, arguments);
-                    if (isNaN(res)) {
-                        res = 0;
-                    }
-                    if (res > 1) {
-                        res = 1;
-                    }
-                    if (res < -1) {
-                        res = -1;
-                    }
-                    return res;
-                };
+            return list;
+        };
+    },
+    /**
+     * @func
+     */
+    joinGen = function (delimiter) {
+        return function (arr) {
+            return join(arr, delimiter);
+        };
+    },
+    /**
+     * @func
+     */
+    gapJoin = joinGen(' '),
+    /**
+     * @func
+     */
+    gapSplit = splitGen(' '),
+    /**
+     * @func
+     */
+    isWrap = function (type, fn) {
+        if (!fn) {
+            fn = function () {
+                return 1;
+            };
+        }
+        return function (thing) {
+            var ret = 0;
+            if (typeof thing === type && fn(thing)) {
+                ret = 1;
             }
-            return arrayProto.sort.call(obj, fn);
-        },
-        /**
-         * @func
-         */
-        has = function (obj, prop) {
-            var val = !1;
-            if (obj && isFunction(obj.hasOwnProperty)) {
-                val = obj.hasOwnProperty(prop);
+            return !!ret;
+        };
+    },
+    /**
+     * @func
+     */
+    isFunction = isWrap(FUNCTION),
+    /**
+     * @func
+     */
+    isBoolean = isWrap(BOOLEAN),
+    /**
+     * @func
+     */
+    isString = isWrap(STRING),
+    /**
+     * @func
+     */
+    // isBlank = isWrap('undefined', function (thing) {
+    //     return thing === NULL;
+    // }),
+    isNull = function (thing) {
+        return thing === NULL;
+    },
+    isUndefined = function (thing) {
+        return thing === UNDEFINED;
+    },
+    isBlank = function (thing) {
+        return isUndefined(thing) || isNull(thing);
+    },
+    /**
+     * @func
+     */
+    isNaN = function (thing) {
+        return thing !== thing;
+    },
+    negate = function (fn) {
+        return function () {
+            return !fn.apply(this, arguments);
+        };
+    },
+    isNumber = isWrap('number', negate(isNaN)),
+    isFinite_ = win.isFinite,
+    isFinite = function (thing) {
+        return isNumber(thing) && isFinite_(thing);
+    },
+    /**
+     * @func
+     */
+    isObject = isWrap(OBJECT, function (thing) {
+        return !!thing;
+    }),
+    /**
+     * @func
+     */
+    isArray = Array.isArray,
+    /**
+     * @func
+     */
+    isEmpty = function (obj) {
+        return !keys(obj)[LENGTH];
+    },
+    nonEnumerableProps = gapSplit('valueOf isPrototypeOf ' + TO_STRING + ' propertyIsEnumerable hasOwnProperty toLocaleString'),
+    /**
+     * @func
+     */
+    invert = function (obj) {
+        var i = 0,
+            result = {},
+            objKeys = keys(obj),
+            length = objKeys[LENGTH];
+        for (; i < length; i++) {
+            result[obj[objKeys[i]]] = objKeys[i];
+        }
+        return result;
+    },
+    /**
+     * @func
+     */
+    collectNonEnumProps = function (obj, keys) {
+        var nonEnumIdx = nonEnumerableProps[LENGTH];
+        var constructor = obj[CONSTRUCTOR];
+        var proto = (isFunction(constructor) && constructor[PROTOTYPE]) || ObjProto;
+        // Constructor is a special case.
+        var prop = CONSTRUCTOR;
+        if (has(obj, prop) && !contains(keys, prop)) keys.push(prop);
+        while (nonEnumIdx--) {
+            prop = nonEnumerableProps[nonEnumIdx];
+            if (prop in obj && obj[prop] !== proto[prop] && !contains(keys, prop)) {
+                keys.push(prop);
+            }
+        }
+    },
+    /**
+     * @func
+     */
+    stringify = function (obj) {
+        if (isObject(obj)) {
+            obj = JSON.stringify(obj);
+        }
+        if (isFunction(obj)) {
+            obj = obj.toString();
+        }
+        return obj + '';
+    },
+    /**
+     * @func
+     */
+    uniqueId = (function () {
+        var cache = {},
+            global = 0;
+        return function (prefix, isInt) {
+            var val;
+            if (!prefix) {
+                prefix = '';
+            }
+            prefix += '';
+            val = cache[prefix];
+            if (!val) {
+                val = cache[prefix] = 0;
+            }
+            cache[prefix]++;
+            if (!isInt) {
+                val = prefix + val;
             }
             return val;
-        },
-        /**
-         * @func
-         */
-        previousConstructor = function (instance) {
-            return instance && instance[CONSTRUCTOR_KEY] && instance[CONSTRUCTOR_KEY][CONSTRUCTOR] || instance[CONSTRUCTOR];
-        },
-        nativeIsInstance = function (instance, constructor) {
-            var result = BOOLEAN_FALSE;
-            if (isFunction(constructor)) {
-                result = instance instanceof constructor;
-            }
-            return result;
-        },
-        isInstance = function (instance, constructor_) {
-            var constructor = constructor_;
-            while (has(constructor, CONSTRUCTOR)) {
-                constructor = constructor[CONSTRUCTOR];
-            }
-            return nativeIsInstance(instance, constructor);
-        },
-        /**
-         * @func
-         */
-        splitGen = function (delimiter) {
-            return function (list) {
-                if (isString(list)) {
-                    list = split(list, delimiter);
-                }
-                return list;
-            };
-        },
-        /**
-         * @func
-         */
-        joinGen = function (delimiter) {
-            return function (arr) {
-                return join(arr, delimiter);
-            };
-        },
-        /**
-         * @func
-         */
-        gapJoin = joinGen(' '),
-        /**
-         * @func
-         */
-        gapSplit = splitGen(' '),
-        /**
-         * @func
-         */
-        isWrap = function (type, fn) {
-            if (!fn) {
-                fn = function () {
-                    return 1;
-                };
-            }
-            return function (thing) {
-                var ret = 0;
-                if (typeof thing === type && fn(thing)) {
-                    ret = 1;
-                }
-                return !!ret;
-            };
-        },
-        /**
-         * @func
-         */
-        isFunction = isWrap(FUNCTION),
-        /**
-         * @func
-         */
-        isBoolean = isWrap(BOOLEAN),
-        /**
-         * @func
-         */
-        isString = isWrap(STRING),
-        /**
-         * @func
-         */
-        // isBlank = isWrap('undefined', function (thing) {
-        //     return thing === NULL;
-        // }),
-        isNull = function (thing) {
-            return thing === NULL;
-        },
-        isUndefined = function (thing) {
-            return thing === blank;
-        },
-        isBlank = function (thing) {
-            return isUndefined(thing) || isNull(thing);
-        },
-        /**
-         * @func
-         */
-        isNaN = function (thing) {
-            return thing !== thing;
-        },
-        negate = function (fn) {
-            return function () {
-                return !fn.apply(this, arguments);
-            };
-        },
-        isNumber = isWrap('number', negate(isNaN)),
-        isFinite_ = win.isFinite,
-        isFinite = function (thing) {
-            return isNumber(thing) && isFinite_(thing);
-        },
-        /**
-         * @func
-         */
-        isObject = isWrap(OBJECT, function (thing) {
-            return !!thing;
-        }),
-        /**
-         * @func
-         */
-        isArray = Array.isArray,
-        /**
-         * @func
-         */
-        isEmpty = function (obj) {
-            return !keys(obj)[LENGTH];
-        },
-        nonEnumerableProps = gapSplit('valueOf isPrototypeOf ' + TO_STRING + ' propertyIsEnumerable hasOwnProperty toLocaleString'),
-        /**
-         * @func
-         */
-        invert = function (obj) {
-            var i = 0,
-                result = {},
-                objKeys = keys(obj),
-                length = objKeys[LENGTH];
-            for (; i < length; i++) {
-                result[obj[objKeys[i]]] = objKeys[i];
-            }
-            return result;
-        },
-        /**
-         * @func
-         */
-        collectNonEnumProps = function (obj, keys) {
-            var nonEnumIdx = nonEnumerableProps[LENGTH];
-            var constructor = obj[CONSTRUCTOR];
-            var proto = (isFunction(constructor) && constructor[PROTOTYPE]) || ObjProto;
-            // Constructor is a special case.
-            var prop = CONSTRUCTOR;
-            if (has(obj, prop) && !contains(keys, prop)) keys.push(prop);
-            while (nonEnumIdx--) {
-                prop = nonEnumerableProps[nonEnumIdx];
-                if (prop in obj && obj[prop] !== proto[prop] && !contains(keys, prop)) {
-                    keys.push(prop);
-                }
-            }
-        },
-        /**
-         * @func
-         */
-        stringify = function (obj) {
-            if (isObject(obj)) {
-                obj = JSON.stringify(obj);
-            }
-            if (isFunction(obj)) {
-                obj = obj.toString();
-            }
-            return obj + '';
-        },
-        /**
-         * @func
-         */
-        uniqueId = (function () {
-            var cache = {},
-                global = 0;
-            return function (prefix, isInt) {
-                var val;
-                if (!prefix) {
-                    prefix = '';
-                }
-                prefix += '';
-                val = cache[prefix];
-                if (!val) {
-                    val = cache[prefix] = 0;
-                }
-                cache[prefix]++;
-                if (!isInt) {
-                    val = prefix + val;
-                }
-                return val;
-            };
-        }()),
-        now = function () {
-            return +(new Date());
-        },
-        allKeys = function (obj) {
-            var key, keys = [];
-            if (isObject(obj)) {
-                for (key in obj) {
-                    keys.push(key);
-                }
-                // Ahem, IE < 9.
-                if (hasEnumBug) {
-                    collectNonEnumProps(obj, keys);
-                }
-            }
-            return keys;
-        },
-        /**
-         * @func
-         */
-        extend = function () {
-            var deep = BOOLEAN_FALSE,
-                args = arguments,
-                length = args[LENGTH],
-                index = 1,
-                first = 0,
-                base = args[0];
-            if (base === BOOLEAN_TRUE) {
-                deep = BOOLEAN_TRUE;
-                base = args[1];
-                index = 2;
-            }
-            base = base || {};
-            for (; index < length; index++) {
-                merge(base, args[index], deep);
-            }
-            return base;
-        },
-        merge = function (obj1, obj2, deep) {
-            var key, val, i = 0,
-                keys = allKeys(obj2),
-                l = keys[LENGTH];
-            for (; i < l; i++) {
-                key = keys[i];
-                // ignore undefined
-                if (obj2[key] !== blank) {
-                    val = obj2[key];
-                    if (deep) {
-                        if (isObject(obj2[key])) {
-                            if (!isObject(obj1[key])) {
-                                obj1[key] = returnDismorphicBase(obj2[key]);
-                            }
-                            merge(obj1[key], obj2[key], deep);
-                        } else {
-                            obj1[key] = val;
-                        }
-                    } else {
-                        obj1[key] = val;
-                    }
-                }
-            }
-            return obj1;
-        },
-        /**
-         * @func
-         */
-        // Helper for collection methods to determine whether a collection
-        // should be iterated as an array or as an object
-        // Related: http://people.mozilla.org/~jorendorff/es6-draft.html#sec-tolength
-        // Avoids a very nasty iOS 8 JIT bug on ARM-64. #2094
-        MAX_ARRAY_INDEX = Math.pow(2, 53) - 1,
-        /**
-         * @func
-         */
-        isArrayLike = function (collection) {
-            var length = !!collection && collection[LENGTH];
-            return isArray(collection) || (isNumber(length) && !isString(collection) && length >= 0 && length <= MAX_ARRAY_INDEX && !isFunction(collection));
-        },
-        eachProxy = function (fn) {
-            return function (obj_, iteratee_, context_, direction_) {
-                var ret, obj = obj_,
-                    list = obj,
-                    iteratee = iteratee_,
-                    iterator = iteratee,
-                    context = context_,
-                    direction = direction_;
-                if (obj) {
-                    if (!isArrayLike(obj)) {
-                        list = keys(obj);
-                        if (context) {
-                            iteratee = bind(iterator, context);
-                        }
-                        context = NULL;
-                        iterator = function (key, idx, list) {
-                            // gives you the key, use that to get the value
-                            return iteratee(obj[key], key, obj);
-                        };
-                    }
-                    return fn(list, iterator, context, direction);
-                }
-            };
-        },
-        /**
-         * @func
-         */
-        createPredicateIndexFinder = function (dir) {
-            return eachProxy(function (array, predicate, context, index_) {
-                var length = array[LENGTH],
-                    callback = bind(predicate, context),
-                    index = index_ || (dir > 0 ? 0 : length - 1);
-                for (; index >= 0 && index < length; index += dir) {
-                    if (callback(array[index], index, array)) {
-                        return index;
-                    }
-                }
-                return -1;
-            });
-        },
-        /**
-         * @func
-         */
-        // Returns the first index on an array-like that passes a predicate test
-        findIndex = createPredicateIndexFinder(1),
-        /**
-         * @func
-         */
-        findLastIndex = createPredicateIndexFinder(-1),
-        /**
-         * @func
-         */
-        validKey = function (key) {
-            // -1 for arrays
-            // any other data type ensures string
-            return key !== -1 && key === key && key !== blank && key !== NULL && key !== BOOLEAN_FALSE && key !== BOOLEAN_TRUE;
-        },
-        finder = function (findHelper) {
-            return function (obj, predicate, context, startpoint) {
-                var key = findHelper(obj, predicate, context, startpoint);
-                if (validKey(key)) {
-                    return obj[key];
-                }
-            };
-        },
-        find = finder(findIndex),
-        findLast = finder(findLastIndex),
-        bind = function (fn_, ctx) {
-            var fn = fn_;
-            if (ctx) {
-                fn = fn_.bind(ctx);
-            }
-            return fn;
-        },
-        duff = function (values, process, context, direction) {
-            var iterations, val, i, leftover, deltaFn;
-            if (values && isFunction(process)) {
-                i = 0;
-                val = values[LENGTH];
-                leftover = val % 8;
-                iterations = Math.floor(val / 8);
-                if (direction < 0) {
-                    i = val - 1;
-                }
-                direction = direction || 1;
-                process = bind(process, context);
-                if (leftover > 0) {
-                    do {
-                        process(values[i], i, values);
-                        i += direction;
-                    } while (--leftover > 0);
-                }
-                if (iterations) {
-                    do {
-                        process(values[i], i, values);
-                        i += direction;
-                        process(values[i], i, values);
-                        i += direction;
-                        process(values[i], i, values);
-                        i += direction;
-                        process(values[i], i, values);
-                        i += direction;
-                        process(values[i], i, values);
-                        i += direction;
-                        process(values[i], i, values);
-                        i += direction;
-                        process(values[i], i, values);
-                        i += direction;
-                        process(values[i], i, values);
-                        i += direction;
-                    } while (--iterations > 0);
-                }
-            }
-            return values;
-        },
-        each = eachProxy(duff),
-        /**
-         * @func
-         */
-        parseBool = function (thing) {
-            var ret, thingMod = thing + '';
-            thingMod = thingMod.trim();
-            if (thingMod === BOOLEAN_FALSE + '') {
-                ret = BOOLEAN_FALSE;
-            }
-            if (thingMod === BOOLEAN_TRUE + '') {
-                ret = BOOLEAN_TRUE;
-            }
-            if (ret === blank) {
-                ret = thing;
-            }
-            return ret;
-        },
-        /**
-         * @func
-         */
-        parseDecimal = function (num) {
-            return parseFloat(num) || 0;
-        },
-        pI = function (num) {
-            return parseInt(num, 10) || 0;
-        },
-        keys = function (obj) {
-            var key, keys = [];
-            if (!obj || (!isObject(obj) && !isFunction(obj))) {
-                return keys;
-            }
-            if (nativeKeys) {
-                return nativeKeys(obj);
-            }
+        };
+    }()),
+    now = function () {
+        return +(new Date());
+    },
+    allKeys = function (obj) {
+        var key, keys = [];
+        if (isObject(obj)) {
             for (key in obj) {
-                if (has(obj, key)) {
-                    keys.push(key);
-                }
+                keys.push(key);
             }
             // Ahem, IE < 9.
             if (hasEnumBug) {
                 collectNonEnumProps(obj, keys);
             }
-            return keys;
-        },
-        /**
-         * @func
-         */
-        constructorExtend = function (name, protoProps, attach) {
-            var nameString, child, passedParent, hasConstructor, constructor, parent = this,
-                nameIsStr = isString(name);
-            if (!nameIsStr) {
-                protoProps = name;
-            }
-            hasConstructor = has(protoProps, CONSTRUCTOR);
-            if (protoProps && hasConstructor) {
-                child = protoProps[CONSTRUCTOR];
-            }
-            if (nameIsStr) {
-                passedParent = parent;
-                if (child) {
-                    passedParent = child;
-                }
-                child = new Function[CONSTRUCTOR]('var parent=arguments[0];return function ' + name + '(){return parent.apply(this,arguments);}')(passedParent);
-                // factories[name] = child;
-            } else {
-                child = function () {
-                    return parent.apply(this, arguments);
-                };
-            }
-            // extend(child, parent);
-            child[EXTEND] = constructorExtend;
-            var Surrogate = function () {
-                this[CONSTRUCTOR] = child;
-            };
-            Surrogate[PROTOTYPE] = parent[PROTOTYPE];
-            child[PROTOTYPE] = new Surrogate;
-            // don't call the function if nothing exists
-            if (protoProps) {
-                extend(child[PROTOTYPE], protoProps);
-            }
-            constructor = child;
-            child = constructorWrapper(constructor);
-            child.__super__ = parent;
-            constructor[PROTOTYPE][CONSTRUCTOR_KEY] = child;
-            if (nameIsStr && attach) {
-                factories[name] = child;
-            }
-            return child;
-        },
-        constructorWrapper = function (Constructor) {
-            var __ = function (attributes, options) {
-                if (isInstance(attributes, Constructor)) {
-                    return attributes;
-                }
-                return new Constructor(attributes, options);
-            };
-            __[CONSTRUCTOR] = Constructor;
-            __[EXTEND] = function () {
-                return Constructor[EXTEND].apply(Constructor, arguments);
-            };
-            return __;
-        },
-        /**
-         * @func
-         */
-        once = function (fn) {
-            var doIt;
-            return function () {
-                if (!doIt) {
-                    doIt = 1;
-                    fn.apply(this, arguments);
-                }
-            };
-        },
-        /**
-         * @func
-         */
-        // Internal recursive comparison function for `isEqual`.
-        eq = function (a, b, aStack, bStack) {
-            // Identical objects are equal. `0 === -0`, but they aren't identical.
-            // See the [Harmony `egal` proposal](http://wiki.ecmascript.org/doku.php?id=harmony:egal).
-            if (a === b) {
-                return a !== 0 || 1 / a === 1 / b;
-            }
-            // A strict comparison is necessary because `NULL == undefined`.
-            if (a === NULL || a === blank || b === blank || b === NULL) {
-                return a === b;
-            }
-            // Unwrap any wrapped objects.
-            // if (a instanceof _) a = a._wrapped;
-            // if (b instanceof _) b = b._wrapped;
-            // Compare `[[Class]]` names.
-            var className = toString.call(a);
-            if (className !== toString.call(b)) return BOOLEAN_FALSE;
-            switch (className) {
-                // Strings, numbers, regular expressions, dates, and booleans are compared by value.
-            case BRACKET_OBJECT_SPACE + 'RegExp]':
-                // RegExps are coerced to strings for comparison (Note: '' + /a/i === '/a/i')
-            case BRACKET_OBJECT_SPACE + 'String]':
-                // Primitives and their corresponding object wrappers are equivalent; thus, `"5"` is
-                // equivalent to `new String("5")`.
-                return '' + a === '' + b;
-            case BRACKET_OBJECT_SPACE + 'Number]':
-                // `NaN`s are equivalent, but non-reflexive.
-                // Object(NaN) is equivalent to NaN
-                if (+a !== +a) return +b !== +b;
-                // An `egal` comparison is performed for other numeric values.
-                return +a === 0 ? 1 / +a === 1 / b : +a === +b;
-            case BRACKET_OBJECT_SPACE + 'Date]':
-            case BRACKET_OBJECT_SPACE + 'Boolean]':
-                // Coerce dates and booleans to numeric primitive values. Dates are compared by their
-                // millisecond representations. Note that invalid dates with millisecond representations
-                // of `NaN` are not equivalent.
-                return +a === +b;
-            }
-            var areArrays = className === BRACKET_OBJECT_SPACE + 'Array]';
-            if (!areArrays) {
-                if (typeof a != OBJECT || typeof b != OBJECT) return BOOLEAN_FALSE;
-                // Objects with different constructors are not equivalent, but `Object`s or `Array`s
-                // from different frames are.
-                var aCtor = a[CONSTRUCTOR],
-                    bCtor = b[CONSTRUCTOR];
-                if (aCtor !== bCtor && !(isFunction(aCtor) && nativeIsInstance(aCtor, aCtor) && isFunction(bCtor) && nativeIsInstance(bCtor, bCtor)) && (CONSTRUCTOR in a && CONSTRUCTOR in b)) {
-                    return BOOLEAN_FALSE;
-                }
-            }
-            // Assume equality for cyclic structures. The algorithm for detecting cyclic
-            // structures is adapted from ES 5.1 section 15.12.3, abstract operation `JO`.
-            // Initializing stack of traversed objects.
-            // It's done here since we only need them for objects and arrays comparison.
-            // aStack = aStack || [];
-            // bStack = bStack || [];
-            var length = aStack[LENGTH];
-            while (length--) {
-                // Linear search. Performance is inversely proportional to the number of
-                // unique nested structures.
-                if (aStack[length] === a) {
-                    return bStack[length] === b;
-                }
-            }
-            // Add the first object to the stack of traversed objects.
-            aStack.push(a);
-            bStack.push(b);
-            // Recursively compare objects and arrays.
-            if (areArrays) {
-                // Compare array lengths to determine if a deep comparison is necessary.
-                length = a[LENGTH];
-                if (length !== b[LENGTH]) {
-                    return BOOLEAN_FALSE;
-                }
-                // Deep compare the contents, ignoring non-numeric properties.
-                while (length--) {
-                    if (!eq(a[length], b[length], aStack, bStack)) {
-                        return BOOLEAN_FALSE;
-                    }
-                }
-            } else {
-                // Deep compare objects.
-                var objKeys = keys(a),
-                    key;
-                length = objKeys[LENGTH];
-                // Ensure that both objects contain the same number of properties before comparing deep equality.
-                if (keys(b)[LENGTH] !== length) return BOOLEAN_FALSE;
-                while (length--) {
-                    // Deep compare each member
-                    key = objKeys[length];
-                    if (!(has(b, key) && eq(a[key], b[key], aStack, bStack))) return BOOLEAN_FALSE;
-                }
-            }
-            // Remove the first object from the stack of traversed objects.
-            aStack.pop();
-            bStack.pop();
-            return BOOLEAN_TRUE;
-        },
-        /**
-         * @func
-         */
-        // Perform a deep comparison to check if two objects are equal.
-        isEqual = function (a, b) {
-            return eq(a, b, [], []);
-        },
-        /**
-         * @func
-         */
-        // very shallow clone
-        clone = function (a) {
-            return map(a, function (value, key) {
-                return value;
-            });
-        },
-        fullClone = function (obj) {
-            return parse(stringify(obj));
-        },
-        /**
-         * @func
-         */
-        wrap = function (obj, fn, noExecute) {
-            var newObj = {},
-                _isArray = isArray(obj),
-                wasfunction = isFunction(fn);
-            each(obj, function (value, key) {
-                if (_isArray) {
-                    if (!wasfunction || noExecute) {
-                        newObj[value] = fn;
+        }
+        return keys;
+    },
+    /**
+     * @func
+     */
+    extend = function () {
+        var deep = BOOLEAN_FALSE,
+            args = arguments,
+            length = args[LENGTH],
+            index = 1,
+            first = 0,
+            base = args[0];
+        if (base === BOOLEAN_TRUE) {
+            deep = BOOLEAN_TRUE;
+            base = args[1];
+            index = 2;
+        }
+        base = base || {};
+        for (; index < length; index++) {
+            merge(base, args[index], deep);
+        }
+        return base;
+    },
+    merge = function (obj1, obj2, deep) {
+        var key, val, i = 0,
+            keys = allKeys(obj2),
+            l = keys[LENGTH];
+        for (; i < l; i++) {
+            key = keys[i];
+            // ignore undefined
+            if (obj2[key] !== UNDEFINED) {
+                val = obj2[key];
+                if (deep) {
+                    if (isObject(obj2[key])) {
+                        if (!isObject(obj1[key])) {
+                            obj1[key] = returnDismorphicBase(obj2[key]);
+                        }
+                        merge(obj1[key], obj2[key], deep);
                     } else {
-                        newObj[value] = fn(value);
+                        obj1[key] = val;
                     }
                 } else {
-                    newObj[key] = fn(obj[key], key);
+                    obj1[key] = val;
                 }
-            });
-            return newObj;
-        },
-        /**
-         * @func
-         */
-        unshift = function (thing) {
-            var ret, items = [];
-            duff(arguments, function (arg, idx) {
-                if (idx) {
-                    items.push(arg);
+            }
+        }
+        return obj1;
+    },
+    /**
+     * @func
+     */
+    // Helper for collection methods to determine whether a collection
+    // should be iterated as an array or as an object
+    // Related: http://people.mozilla.org/~jorendorff/es6-draft.html#sec-tolength
+    // Avoids a very nasty iOS 8 JIT bug on ARM-64. #2094
+    MAX_ARRAY_INDEX = Math.pow(2, 53) - 1,
+    /**
+     * @func
+     */
+    isArrayLike = function (collection) {
+        var length = !!collection && collection[LENGTH];
+        return isArray(collection) || (isNumber(length) && !isString(collection) && length >= 0 && length <= MAX_ARRAY_INDEX && !isFunction(collection));
+    },
+    eachProxy = function (fn) {
+        return function (obj_, iteratee_, context_, direction_) {
+            var ret, obj = obj_,
+                list = obj,
+                iteratee = iteratee_,
+                iterator = iteratee,
+                context = context_,
+                direction = direction_;
+            if (!obj) {
+                return obj;
+            }
+            if (!isArrayLike(obj)) {
+                list = keys(obj);
+                if (context) {
+                    iteratee = bind(iterator, context);
                 }
-            });
-            return [].unshift.apply(thing, items);
-        },
-        /**
-         * @func
-         */
-        exports = function (obj) {
-            return extend(_, obj);
-        },
-        /**
-         * @func
-         */
-        Image = win.Image,
-        fetch = function (url, callback) {
-            var img = new Image();
-            url = stringifyQuery(url);
-            if (callback) {
-                img.onload = function () {
-                    _.unshift(arguments, url);
-                    callback.apply(this, arguments);
+                context = NULL;
+                iterator = function (key, idx, list) {
+                    // gives you the key, use that to get the value
+                    return iteratee(obj[key], key, obj);
                 };
             }
-            img.src = url;
-            return img;
-        },
-        parse = function (val_) {
-            var val = val_;
-            if (isString(val)) {
-                val = val.trim();
-                if (val[0] === '{' || val[0] === '[') {
-                    wraptry(function () {
-                        val = JSON.parse(val);
-                    });
+            return fn(list, iterator, context, direction);
+        };
+    },
+    /**
+     * @func
+     */
+    createPredicateIndexFinder = function (dir) {
+        return eachProxy(function (array, predicate, context, index_) {
+            var length = array[LENGTH],
+                callback = bind(predicate, context),
+                index = index_ || (dir > 0 ? 0 : length - 1);
+            for (; index >= 0 && index < length; index += dir) {
+                if (callback(array[index], index, array)) {
+                    return index;
                 }
             }
-            return val;
-        },
-        debounce = function (func, wait, immediate) {
-            var timeout;
-            return function () {
-                var context = this,
-                    args = arguments,
-                    callNow = immediate && !timeout,
-                    later = function () {
-                        timeout = NULL;
-                        if (!immediate) {
-                            func.apply(context, args);
-                        }
-                    };
-                clearTimeout(timeout);
-                timeout = setTimeout(later, wait);
-                if (callNow) {
-                    func.apply(context, args);
-                }
-                return timeout;
-            };
-        },
-        returnDismorphicBase = function (obj) {
-            return isArrayLike(obj) ? [] : {};
-        },
-        map = function (objs, iteratee, context) {
-            var collection = returnDismorphicBase(objs);
-            var bound = bind(iteratee, context);
-            each(objs, function (item, index) {
-                collection[index] = bound(item, index, objs);
-            });
-            return collection;
-        },
-        toArray = function (obj) {
-            var array = [];
-            each(obj, function (value, key) {
-                array.push(value);
-            });
-            return array;
-        },
-        /**
-         * @func
-         */
-        throttle = function (fn, threshold, scope) {
-            var last,
-                deferTimer;
-            if (!threshold) {
-                threshold = 250;
-            }
-            return function () {
-                var context = scope || this,
-                    _now = now(),
-                    args = arguments;
-                if (last && _now < last + threshold) {
-                    // hold on to it
-                    clearTimeout(deferTimer);
-                    deferTimer = setTimeout(function () {
-                        last = _now;
-                        fn.apply(context, args);
-                    }, threshold);
-                } else {
-                    last = _now;
-                    fn.apply(context, args);
-                }
-            };
-        },
-        /**
-         * @func
-         */
-        stringifyQuery = function (obj) {
-            var val, n, base = obj.url,
-                query = [];
-            if (isObject(obj)) {
-                for (n in obj.query) {
-                    val = obj.query[n];
-                    if (val !== blank) {
-                        val = encodeURIComponent(stringify(val));
-                        query.push(n + '=' + val);
-                    }
-                }
-                if (query[LENGTH]) {
-                    base += '?';
-                }
-                base += query.join('&');
-                if (obj.hash) {
-                    obj.hash = _.stringify(obj.hash);
-                    base += ('#' + obj.hash);
-                }
-            } else {
-                base = obj;
-            }
-            return base;
-        },
-        protoProp = function (instance, key, farDown) {
-            var val, proto, constructor = previousConstructor(instance);
-            farDown = farDown || 1;
-            do {
-                proto = constructor[PROTOTYPE];
-                val = proto[key];
-                constructor = previousConstructor(proto);
-            } while (--farDown > 0 && constructor && isFinite(farDown));
-            return val;
-        },
-        uuid = function () {
-            var blank, cryptoCheck = 'crypto' in window && 'getRandomValues' in crypto,
-                sid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-                    var rnd, r, v;
-                    if (cryptoCheck) {
-                        rnd = win.crypto.getRandomValues(new Uint32Array(1));
-                        if (rnd === blank) {
-                            cryptoCheck = BOOLEAN_FALSE;
-                        }
-                    }
-                    if (!cryptoCheck) {
-                        rnd = [Math.floor(Math.random() * 10000000000)];
-                    }
-                    rnd = rnd[0];
-                    r = rnd % 16;
-                    v = (c === 'x') ? r : (r & 0x3 | 0x8);
-                    return v.toString(16);
-                });
-            return cryptoCheck ? sid : 'SF' + sid;
-        },
-        intendedArray = function (array, fn_) {
-            var fn = fn_;
-            if (isArrayLike(array)) {
-                duff(array, fn);
-            } else {
-                if (array) {
-                    fn(array, 0, [array]);
-                }
-            }
-        },
-        intendedObject = function (key, value, fn_) {
-            var fn = fn_,
-                obj = isObject(key) ? key : BOOLEAN_FALSE;
-            if (obj) {
-                each(obj, reverseParams(fn));
-            } else {
-                fn(key, value);
-            }
-        },
-        reverseParams = function (iteratorFn, ctx) {
-            return function (value, key, third) {
-                iteratorFn(key, value, third);
-            };
-        },
-        /**
-         * @func
-         */
-        reference = function (str) {
-            var match;
-            if (!isString(str)) {
-                str = str.referrer;
-            }
-            match = str.match(/^https?:\/\/.*?\//);
-            if (match) {
-                match = match[0];
-            }
-            return match || '';
-        },
-        /**
-         * @func
-         */
-        roundFloat = function (val, power, base) {
-            var mult;
-            if (!isNumber(power)) {
-                power = 1;
-            }
-            mult = Math.pow(base || 10, power);
-            return (parseInt((mult * val), 10) / mult);
-        },
-        result = function (obj, str, arg) {
-            return isFunction(obj[str]) ? obj[str](arg) : obj[str];
-        },
-        maths = Math,
-        mathArray = function (method) {
-            return function (args) {
-                return maths[method].apply(maths, args);
-            };
-        },
-        ensureFunction = function (fn) {
-            return function (_fn) {
-                _fn = _fn || function () {};
-                return fn.call(this, _fn);
-            };
-        },
-        _console = win.console || {},
-        _log = _console.log || noop,
-        console = wrap(gapSplit('trace log dir error'), function (key) {
-            var method = _console[key];
-            return function () {
-                if (method) {
-                    return method.apply(_console, arguments);
-                } else {
-                    return _log.apply(_console, arguments);
-                }
-            };
-        }),
-        wraptry = function (trythis, errthat, finalfunction) {
-            try {
-                return trythis();
-            } catch (e) {
-                return errthat && errthat(e);
-            } finally {
-                return finalfunction && finalfunction();
+            return -1;
+        });
+    },
+    /**
+     * @func
+     */
+    // Returns the first index on an array-like that passes a predicate test
+    findIndex = createPredicateIndexFinder(1),
+    /**
+     * @func
+     */
+    findLastIndex = createPredicateIndexFinder(-1),
+    /**
+     * @func
+     */
+    validKey = function (key) {
+        // -1 for arrays
+        // any other data type ensures string
+        return key !== -1 && key === key && key !== UNDEFINED && key !== NULL && key !== BOOLEAN_FALSE && key !== BOOLEAN_TRUE;
+    },
+    finder = function (findHelper) {
+        return function (obj, predicate, context, startpoint) {
+            var key = findHelper(obj, predicate, context, startpoint);
+            if (validKey(key)) {
+                return obj[key];
             }
         };
+    },
+    find = finder(findIndex),
+    findLast = finder(findLastIndex),
+    bind = function (fn_, ctx) {
+        var fn = fn_;
+        if (ctx) {
+            fn = fn_.bind(ctx);
+        }
+        return fn;
+    },
+    duff = function (values, process, context, direction) {
+        var iterations, val, i, leftover, deltaFn;
+        if (values && isFunction(process)) {
+            i = 0;
+            val = values[LENGTH];
+            leftover = val % 8;
+            iterations = Math.floor(val / 8);
+            if (direction < 0) {
+                i = val - 1;
+            }
+            direction = direction || 1;
+            process = bind(process, context);
+            if (leftover > 0) {
+                do {
+                    process(values[i], i, values);
+                    i += direction;
+                } while (--leftover > 0);
+            }
+            if (iterations) {
+                do {
+                    process(values[i], i, values);
+                    i += direction;
+                    process(values[i], i, values);
+                    i += direction;
+                    process(values[i], i, values);
+                    i += direction;
+                    process(values[i], i, values);
+                    i += direction;
+                    process(values[i], i, values);
+                    i += direction;
+                    process(values[i], i, values);
+                    i += direction;
+                    process(values[i], i, values);
+                    i += direction;
+                    process(values[i], i, values);
+                    i += direction;
+                } while (--iterations > 0);
+            }
+        }
+        return values;
+    },
+    each = eachProxy(duff),
+    tackRev = function (fn, index, ctx) {
+        return function () {
+            var args = toArray(arguments);
+            while (args[LENGTH] < index) {
+                // fill it out with NULL
+                args.push(NULL);
+            }
+            // put -1 on as the last arg
+            args.push(-1);
+            return fn.apply(ctx || _, args);
+        };
+    },
+    duffRev = tackRev(duff, 3),
+    eachRev = tackRev(each, 3),
     /**
-     * @class Model
+     * @func
      */
-    function Model(attributes, options) {
-        return this;
-    }
-    factories.Model = Model;
-    Model[PROTOTYPE] = {};
-    Model[EXTEND] = constructorExtend;
-    _ = app._ = {
-        noop: noop,
-        months: gapSplit('january feburary march april may june july august september october november december'),
-        weekdays: gapSplit('sunday monday tuesday wednesday thursday friday saturday'),
-        constructorWrapper: constructorWrapper,
-        stringifyQuery: stringifyQuery,
-        intendedObject: intendedObject,
-        intendedArray: intendedArray,
-        ensureFunction: ensureFunction,
-        parseDecimal: parseDecimal,
-        reference: reference,
-        isArrayLike: isArrayLike,
-        isInstance: isInstance,
-        hasEnumBug: hasEnumBug,
-        roundFloat: roundFloat,
-        factories: factories,
-        listSlice: listSlice,
-        fullClone: fullClone,
-        parseBool: parseBool,
-        stringify: stringify,
-        splitGen: splitGen,
-        gapSplit: gapSplit,
-        uniqueId: uniqueId,
-        wraptry: wraptry,
-        toString: toString,
-        throttle: throttle,
-        debounce: debounce,
-        protoProp: protoProp,
-        reverse: reverse,
-        binaryIndexOf: binaryIndexOf,
-        indexOfNaN: indexOfNaN,
-        indexOf: indexOf,
-        joinGen: joinGen,
-        toArray: toArray,
-        isEqual: isEqual,
-        unshift: unshift,
-        gapJoin: gapJoin,
-        isArray: isArray,
-        isEmpty: isEmpty,
-        splice: splice,
-        isBoolean: isBoolean,
-        invert: invert,
-        extend: extend,
-        now: now,
-        map: map,
-        result: result,
-        isUndefined: isUndefined,
-        isFunction: isFunction,
-        isObject: isObject,
-        isNumber: isNumber,
-        isFinite: isFinite,
-        isString: isString,
-        isBlank: isBlank,
-        isNull: isNull,
-        isNaN: isNaN,
-        eachProxy: eachProxy,
-        exports: exports,
-        allKeys: allKeys,
-        slice: slice,
-        parse: parse,
-        shift: shift,
-        merge: merge,
-        fetch: fetch,
-        split: split,
-        clone: clone,
-        bind: bind,
-        duff: duff,
-        sort: sort,
-        join: join,
-        wrap: wrap,
-        uuid: uuid,
-        keys: keys,
-        once: once,
-        each: each,
-        push: push,
-        pop: pop,
-        has: has,
-        negate: negate,
-        pI: pI,
-        createPredicateIndexFinder: createPredicateIndexFinder,
-        findIndex: findIndex,
-        findLastIndex: findLastIndex,
-        validKey: validKey,
-        finder: finder,
-        find: find,
-        findLast: findLast,
-        console: console,
-        min: mathArray('min'),
-        max: mathArray('max'),
-        math: wrap(gapSplit('E LN2 LN10 LOG2E LOG10E PI SQRT1_2 SQRT2 abs acos acosh asin asinh atan atan2 atanh cbrt ceil clz32 cos cosh exp expm1 floor fround hypot imul log log1p log2 log10 max min pow random round sign sin sinh sqrt tan tanh trunc'), function (key) {
-            return Math[key];
-        })
+    toBoolean = function (thing) {
+        var ret, thingMod = thing + '';
+        thingMod = thingMod.trim();
+        if (thingMod === BOOLEAN_FALSE + '') {
+            ret = BOOLEAN_FALSE;
+        }
+        if (thingMod === BOOLEAN_TRUE + '') {
+            ret = BOOLEAN_TRUE;
+        }
+        if (ret === UNDEFINED) {
+            ret = thing;
+        }
+        return ret;
+    },
+    /**
+     * @func
+     */
+    parseDecimal = function (num) {
+        return parseFloat(num) || 0;
+    },
+    pI = function (num) {
+        return parseInt(num, 10) || 0;
+    },
+    keys = function (obj) {
+        var key, keys = [];
+        if (!obj || (!isObject(obj) && !isFunction(obj))) {
+            return keys;
+        }
+        if (nativeKeys) {
+            return nativeKeys(obj);
+        }
+        for (key in obj) {
+            if (has(obj, key)) {
+                keys.push(key);
+            }
+        }
+        // Ahem, IE < 9.
+        if (hasEnumBug) {
+            collectNonEnumProps(obj, keys);
+        }
+        return keys;
+    },
+    /**
+     * @func
+     */
+    constructorExtend = function (name, protoProps, attach) {
+        var nameString, child, passedParent, hasConstructor, constructor, parent = this,
+            nameIsStr = isString(name);
+        if (!nameIsStr) {
+            protoProps = name;
+        }
+        hasConstructor = has(protoProps, CONSTRUCTOR);
+        if (protoProps && hasConstructor) {
+            child = protoProps[CONSTRUCTOR];
+        }
+        if (nameIsStr) {
+            passedParent = parent;
+            if (child) {
+                passedParent = child;
+            }
+            child = new Function[CONSTRUCTOR]('var parent=arguments[0];return function ' + name + '(){return parent.apply(this,arguments);}')(passedParent);
+            // factories[name] = child;
+        } else {
+            child = function () {
+                return parent.apply(this, arguments);
+            };
+        }
+        // extend(child, parent);
+        child[EXTEND] = constructorExtend;
+        var Surrogate = function () {
+            this[CONSTRUCTOR] = child;
+        };
+        Surrogate[PROTOTYPE] = parent[PROTOTYPE];
+        child[PROTOTYPE] = new Surrogate;
+        // don't call the function if nothing exists
+        if (protoProps) {
+            extend(child[PROTOTYPE], protoProps);
+        }
+        constructor = child;
+        child = constructorWrapper(constructor);
+        child.__super__ = parent;
+        constructor[PROTOTYPE][CONSTRUCTOR_KEY] = child;
+        if (nameIsStr && attach) {
+            factories[name] = child;
+        }
+        return child;
+    },
+    constructorWrapper = function (Constructor) {
+        var __ = function (attributes, options) {
+            if (isInstance(attributes, Constructor)) {
+                return attributes;
+            }
+            return new Constructor(attributes, options);
+        };
+        __[CONSTRUCTOR] = Constructor;
+        __[EXTEND] = function () {
+            return Constructor[EXTEND].apply(Constructor, arguments);
+        };
+        return __;
+    },
+    /**
+     * @func
+     */
+    once = function (fn) {
+        var doIt;
+        return function () {
+            if (!doIt) {
+                doIt = 1;
+                fn.apply(this, arguments);
+            }
+        };
+    },
+    /**
+     * @func
+     */
+    // Internal recursive comparison function for `isEqual`.
+    eq = function (a, b, aStack, bStack) {
+        // Identical objects are equal. `0 === -0`, but they aren't identical.
+        // See the [Harmony `egal` proposal](http://wiki.ecmascript.org/doku.php?id=harmony:egal).
+        if (a === b) {
+            return a !== 0 || 1 / a === 1 / b;
+        }
+        // A strict comparison is necessary because `NULL == undefined`.
+        if (a === NULL || a === UNDEFINED || b === UNDEFINED || b === NULL) {
+            return a === b;
+        }
+        // Unwrap any wrapped objects.
+        // if (a instanceof _) a = a._wrapped;
+        // if (b instanceof _) b = b._wrapped;
+        // Compare `[[Class]]` names.
+        var className = toString.call(a);
+        if (className !== toString.call(b)) return BOOLEAN_FALSE;
+        switch (className) {
+            // Strings, numbers, regular expressions, dates, and booleans are compared by value.
+        case BRACKET_OBJECT_SPACE + 'RegExp]':
+            // RegExps are coerced to strings for comparison (Note: '' + /a/i === '/a/i')
+        case BRACKET_OBJECT_SPACE + 'String]':
+            // Primitives and their corresponding object wrappers are equivalent; thus, `"5"` is
+            // equivalent to `new String("5")`.
+            return '' + a === '' + b;
+        case BRACKET_OBJECT_SPACE + 'Number]':
+            // `NaN`s are equivalent, but non-reflexive.
+            // Object(NaN) is equivalent to NaN
+            if (+a !== +a) return +b !== +b;
+            // An `egal` comparison is performed for other numeric values.
+            return +a === 0 ? 1 / +a === 1 / b : +a === +b;
+        case BRACKET_OBJECT_SPACE + 'Date]':
+        case BRACKET_OBJECT_SPACE + 'Boolean]':
+            // Coerce dates and booleans to numeric primitive values. Dates are compared by their
+            // millisecond representations. Note that invalid dates with millisecond representations
+            // of `NaN` are not equivalent.
+            return +a === +b;
+        }
+        var areArrays = className === BRACKET_OBJECT_SPACE + 'Array]';
+        if (!areArrays) {
+            if (typeof a != OBJECT || typeof b != OBJECT) return BOOLEAN_FALSE;
+            // Objects with different constructors are not equivalent, but `Object`s or `Array`s
+            // from different frames are.
+            var aCtor = a[CONSTRUCTOR],
+                bCtor = b[CONSTRUCTOR];
+            if (aCtor !== bCtor && !(isFunction(aCtor) && nativeIsInstance(aCtor, aCtor) && isFunction(bCtor) && nativeIsInstance(bCtor, bCtor)) && (CONSTRUCTOR in a && CONSTRUCTOR in b)) {
+                return BOOLEAN_FALSE;
+            }
+        }
+        // Assume equality for cyclic structures. The algorithm for detecting cyclic
+        // structures is adapted from ES 5.1 section 15.12.3, abstract operation `JO`.
+        // Initializing stack of traversed objects.
+        // It's done here since we only need them for objects and arrays comparison.
+        // aStack = aStack || [];
+        // bStack = bStack || [];
+        var length = aStack[LENGTH];
+        while (length--) {
+            // Linear search. Performance is inversely proportional to the number of
+            // unique nested structures.
+            if (aStack[length] === a) {
+                return bStack[length] === b;
+            }
+        }
+        // Add the first object to the stack of traversed objects.
+        aStack.push(a);
+        bStack.push(b);
+        // Recursively compare objects and arrays.
+        if (areArrays) {
+            // Compare array lengths to determine if a deep comparison is necessary.
+            length = a[LENGTH];
+            if (length !== b[LENGTH]) {
+                return BOOLEAN_FALSE;
+            }
+            // Deep compare the contents, ignoring non-numeric properties.
+            while (length--) {
+                if (!eq(a[length], b[length], aStack, bStack)) {
+                    return BOOLEAN_FALSE;
+                }
+            }
+        } else {
+            // Deep compare objects.
+            var objKeys = keys(a),
+                key;
+            length = objKeys[LENGTH];
+            // Ensure that both objects contain the same number of properties before comparing deep equality.
+            if (keys(b)[LENGTH] !== length) return BOOLEAN_FALSE;
+            while (length--) {
+                // Deep compare each member
+                key = objKeys[length];
+                if (!(has(b, key) && eq(a[key], b[key], aStack, bStack))) return BOOLEAN_FALSE;
+            }
+        }
+        // Remove the first object from the stack of traversed objects.
+        aStack.pop();
+        bStack.pop();
+        return BOOLEAN_TRUE;
+    },
+    /**
+     * @func
+     */
+    // Perform a deep comparison to check if two objects are equal.
+    isEqual = function (a, b) {
+        return eq(a, b, [], []);
+    },
+    /**
+     * @func
+     */
+    // very shallow clone
+    clone = function (obj) {
+        return map(obj, function (value, key) {
+            return value;
+        });
+    },
+    fullClone = function (obj) {
+        return parse(stringify(obj));
+    },
+    /**
+     * @func
+     */
+    wrap = function (obj, fn, noExecute) {
+        var newObj = {},
+            _isArray = isArray(obj),
+            wasfunction = isFunction(fn);
+        each(obj, function (value, key) {
+            if (_isArray) {
+                if (!wasfunction || noExecute) {
+                    newObj[value] = fn;
+                } else {
+                    newObj[value] = fn(value);
+                }
+            } else {
+                newObj[key] = fn(obj[key], key);
+            }
+        });
+        return newObj;
+    },
+    /**
+     * @func
+     */
+    unshift = function (thing) {
+        var ret, items = [];
+        duff(arguments, function (arg, idx) {
+            if (idx) {
+                items.push(arg);
+            }
+        });
+        return [].unshift.apply(thing, items);
+    },
+    /**
+     * @func
+     */
+    exports = function (obj) {
+        return extend(_, obj);
+    },
+    /**
+     * @func
+     */
+    Image = win.Image,
+    fetch = function (url, callback) {
+        var img = new Image();
+        url = stringifyQuery(url);
+        if (callback) {
+            img.onload = function () {
+                _.unshift(arguments, url);
+                callback.apply(this, arguments);
+            };
+        }
+        img.src = url;
+        return img;
+    },
+    parse = function (val_) {
+        var val = val_;
+        if (isString(val)) {
+            val = val.trim();
+            if (val[0] === '{' || val[0] === '[') {
+                wraptry(function () {
+                    val = JSON.parse(val);
+                });
+            }
+        }
+        return val;
+    },
+    debounce = function (func, wait, immediate) {
+        var timeout;
+        return function () {
+            var context = this,
+                args = arguments,
+                callNow = immediate && !timeout,
+                later = function () {
+                    timeout = NULL;
+                    if (!immediate) {
+                        func.apply(context, args);
+                    }
+                };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+            if (callNow) {
+                func.apply(context, args);
+            }
+            return timeout;
+        };
+    },
+    returnDismorphicBase = function (obj) {
+        return isArrayLike(obj) ? [] : {};
+    },
+    map = function (objs, iteratee, context) {
+        var collection = returnDismorphicBase(objs);
+        var bound = bind(iteratee, context);
+        each(objs, function (item, index) {
+            collection[index] = bound(item, index, objs);
+        });
+        return collection;
+    },
+    toArray = function (obj) {
+        var array = [];
+        each(obj, function (value, key) {
+            array.push(value);
+        });
+        return array;
+    },
+    /**
+     * @func
+     */
+    throttle = function (fn, threshold, scope) {
+        var last,
+            deferTimer;
+        if (!threshold) {
+            threshold = 250;
+        }
+        return function () {
+            var context = scope || this,
+                _now = now(),
+                args = arguments;
+            if (last && _now < last + threshold) {
+                // hold on to it
+                clearTimeout(deferTimer);
+                deferTimer = setTimeout(function () {
+                    last = _now;
+                    fn.apply(context, args);
+                }, threshold);
+            } else {
+                last = _now;
+                fn.apply(context, args);
+            }
+        };
+    },
+    /**
+     * @func
+     */
+    stringifyQuery = function (obj) {
+        var val, n, base = obj.url,
+            query = [];
+        if (isObject(obj)) {
+            for (n in obj.query) {
+                val = obj.query[n];
+                if (val !== UNDEFINED) {
+                    val = encodeURIComponent(stringify(val));
+                    query.push(n + '=' + val);
+                }
+            }
+            if (query[LENGTH]) {
+                base += '?';
+            }
+            base += query.join('&');
+            if (obj.hash) {
+                obj.hash = _.stringify(obj.hash);
+                base += ('#' + obj.hash);
+            }
+        } else {
+            base = obj;
+        }
+        return base;
+    },
+    protoProperty = function (instance, key, farDown) {
+        var val, proto, constructor = previousConstructor(instance);
+        farDown = farDown || 1;
+        do {
+            proto = constructor[PROTOTYPE];
+            val = proto[key];
+            constructor = previousConstructor(proto);
+        } while (--farDown > 0 && constructor && isFinite(farDown));
+        return val;
+    },
+    uuid = function () {
+        var UNDEFINED, cryptoCheck = 'crypto' in window && 'getRandomValues' in crypto,
+            sid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+                var rnd, r, v;
+                if (cryptoCheck) {
+                    rnd = win.crypto.getRandomValues(new Uint32Array(1));
+                    if (rnd === UNDEFINED) {
+                        cryptoCheck = BOOLEAN_FALSE;
+                    }
+                }
+                if (!cryptoCheck) {
+                    rnd = [Math.floor(Math.random() * 10000000000)];
+                }
+                rnd = rnd[0];
+                r = rnd % 16;
+                v = (c === 'x') ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        return cryptoCheck ? sid : 'SF' + sid;
+    },
+    intendedArray = function (array, fn_) {
+        var fn = fn_,
+            isArrayLikeResult = isArrayLike(array);
+        if (isArrayLikeResult) {
+            duff(array, fn);
+        } else {
+            if (array) {
+                fn(array, 0, [array]);
+            }
+        }
+    },
+    intendedObject = function (key, value, fn_) {
+        var fn = fn_,
+            obj = isObject(key) ? key : BOOLEAN_FALSE;
+        if (obj) {
+            each(obj, reverseParams(fn));
+        } else {
+            fn(key, value);
+        }
+    },
+    reverseParams = function (iteratorFn, ctx) {
+        return function (value, key, third) {
+            iteratorFn(key, value, third);
+        };
+    },
+    /**
+     * @func
+     */
+    reference = function (str) {
+        var match;
+        if (!isString(str)) {
+            str = str.referrer;
+        }
+        match = str.match(/^https?:\/\/.*?\//);
+        if (match) {
+            match = match[0];
+        }
+        return match || '';
+    },
+    /**
+     * @func
+     */
+    roundFloat = function (val, power, base) {
+        var mult;
+        if (!isNumber(power)) {
+            power = 1;
+        }
+        mult = Math.pow(base || 10, power);
+        return (parseInt((mult * val), 10) / mult);
+    },
+    result = function (obj, str, arg, knows) {
+        return obj && (knows || isFunction(obj[str]) ? obj[str](arg) : obj[str]);
+    },
+    maths = Math,
+    mathArray = function (method) {
+        return function (args) {
+            return maths[method].apply(maths, args);
+        };
+    },
+    ensureFunction = function (fn) {
+        return function (_fn) {
+            _fn = _fn || noop;
+            return fn.call(this, _fn);
+        };
+    },
+    /**
+     * @func
+     */
+    // Create a reducing function iterating left or right.
+    createReduce = function (dir) {
+        // Optimized iterator function as using arguments[LENGTH]
+        // in the main function will deoptimize the, see #1991.
+        var iterator = function (obj, iteratee, memo, keys, index, length) {
+            var currentKey;
+            for (; index >= 0 && index < length; index += dir) {
+                currentKey = keys ? keys[index] : index;
+                memo = iteratee(memo, obj[currentKey], currentKey, obj);
+            }
+            return memo;
+        };
+        return function (obj, iteratee, memo, context) {
+            // iteratee = optimizeCb(iteratee, context, 4);
+            var actualKeys = !isArrayLike(obj) && keys(obj),
+                length = (actualKeys || obj)[LENGTH],
+                index = dir > 0 ? 0 : length - 1;
+            // Determine the initial value if none is provided.
+            if (arguments[LENGTH] < 3) {
+                memo = obj[actualKeys ? actualKeys[index] : index];
+                index += dir;
+            }
+            return iterator(obj, iteratee, memo, actualKeys, index, length);
+        };
+    },
+    // **Reduce** builds up a single result from a list of values, aka `inject`,
+    // or `foldl`.
+    /**
+     * @func
+     */
+    foldl = createReduce(1),
+    // The right-associative version of reduce, also known as `foldr`.
+    /**
+     * @func
+     */
+    foldr = createReduce(-1),
+    _console = win.console || {},
+    _log = _console.log || noop,
+    console = wrap(gapSplit('trace log dir error'), function (key) {
+        var method = _console[key] || _log;
+        return function () {
+            return method.apply(_console, arguments);
+        };
+    }),
+    wraptry = function (trythis, errthat, finalfunction) {
+        try {
+            return trythis();
+        } catch (e) {
+            return errthat && errthat(e);
+        } finally {
+            return finalfunction && finalfunction();
+        }
     };
-});
+/**
+ * @class Model
+ */
+function Model(attributes, options) {
+    return this;
+}
+factories.Model = Model;
+Model[PROTOTYPE] = {};
+Model[EXTEND] = constructorExtend;
+_ = app._ = {
+    months: gapSplit('january feburary march april may june july august september october november december'),
+    weekdays: gapSplit('sunday monday tuesday wednesday thursday friday saturday'),
+    constructorWrapper: constructorWrapper,
+    stringifyQuery: stringifyQuery,
+    intendedObject: intendedObject,
+    intendedArray: intendedArray,
+    ensureFunction: ensureFunction,
+    parseDecimal: parseDecimal,
+    reference: reference,
+    isArrayLike: isArrayLike,
+    isInstance: isInstance,
+    hasEnumBug: hasEnumBug,
+    roundFloat: roundFloat,
+    factories: factories,
+    listSlice: listSlice,
+    fullClone: fullClone,
+    toBoolean: toBoolean,
+    stringify: stringify,
+    splitGen: splitGen,
+    gapSplit: gapSplit,
+    uniqueId: uniqueId,
+    wraptry: wraptry,
+    toString: toString,
+    throttle: throttle,
+    debounce: debounce,
+    protoProperty: protoProperty,
+    protoProp: protoProperty,
+    reverse: reverse,
+    binaryIndexOf: binaryIndexOf,
+    indexOfNaN: indexOfNaN,
+    indexOf: indexOf,
+    joinGen: joinGen,
+    toArray: toArray,
+    isEqual: isEqual,
+    unshift: unshift,
+    gapJoin: gapJoin,
+    isArray: isArray,
+    isEmpty: isEmpty,
+    splice: splice,
+    isBoolean: isBoolean,
+    invert: invert,
+    extend: extend,
+    noop: noop,
+    reduce: foldl,
+    foldl: foldl,
+    foldr: foldr,
+    now: now,
+    map: map,
+    result: result,
+    isUndefined: isUndefined,
+    isFunction: isFunction,
+    isObject: isObject,
+    isNumber: isNumber,
+    isFinite: isFinite,
+    isString: isString,
+    isBlank: isBlank,
+    isNull: isNull,
+    isNaN: isNaN,
+    eachProxy: eachProxy,
+    exports: exports,
+    allKeys: allKeys,
+    slice: slice,
+    parse: parse,
+    shift: shift,
+    merge: merge,
+    fetch: fetch,
+    split: split,
+    clone: clone,
+    bind: bind,
+    duff: duff,
+    duffRev: duffRev,
+    eachRev: eachRev,
+    sort: sort,
+    join: join,
+    wrap: wrap,
+    uuid: uuid,
+    keys: keys,
+    once: once,
+    each: each,
+    push: push,
+    pop: pop,
+    has: has,
+    negate: negate,
+    pI: pI,
+    createPredicateIndexFinder: createPredicateIndexFinder,
+    findIndex: findIndex,
+    findLastIndex: findLastIndex,
+    validKey: validKey,
+    finder: finder,
+    find: find,
+    findLast: findLast,
+    console: console,
+    min: mathArray('min'),
+    max: mathArray('max'),
+    math: wrap(gapSplit('E LN2 LN10 LOG2E LOG10E PI SQRT1_2 SQRT2 abs acos acosh asin asinh atan atan2 atanh cbrt ceil clz32 cos cosh exp expm1 floor fround hypot imul log log1p log2 log10 pow random round sign sin sinh sqrt tan tanh trunc'), function (key) {
+        return Math[key];
+    })
+};
+// });
 application.scope(function (app) {
     app.shims = function (win) {
         var fn = function () {
@@ -1662,355 +1725,322 @@ application.scope(function (app) {
     };
     app.shims(window);
 });
-application.scope(function (app) {
-    var blank, _ = app._,
-        toArray = _[TO_ARRAY],
-        map = _.map,
-        indexOf = _.indexOf,
-        gapSplit = _.gapSplit,
-        isString = _.isString,
-        slice = _.slice,
-        split = _.split,
-        extend = _[EXTEND],
-        wrap = _.wrap,
-        has = _.has,
-        join = _.join,
-        cacheable = function (fn) {
-            var cache = {};
-            return function (input) {
-                if (!has(cache, input)) {
-                    cache[input] = fn(input);
-                }
-                return cache[input];
-            };
-        },
-        categoricallyCacheable = function (fn, baseCategory) {
-            var cache = {};
-            return function (string, category) {
-                var cacher;
-                category = category || baseCategory;
-                cacher = cache[category] = cache[category] || cacheable(fn(category));
-                return cacher(string);
-            };
-        },
-        string = extend(wrap(gapSplit('toLowerCase toUpperCase trim'), function (method) {
-            return cacheable(function (item) {
-                return item[method]();
-            });
-        }), wrap(gapSplit('match search'), function (method) {
-            return categoricallyCacheable(function (input) {
-                return function (item) {
-                    return item[method](input);
-                };
-            });
-        })),
-        wrapAll = function (fn) {
-            return function () {
-                var args = toArray(arguments),
-                    ctx = this;
-                return map(args[0], function (thing) {
-                    args[0] = thing;
-                    return fn.apply(ctx, args);
-                });
-            };
-        },
-        deprefix = function (str, prefix, unUpcase) {
-            var nuStr = str.slice(prefix[LENGTH]),
-                first = nuStr[0];
-            if (unUpcase) {
-                first = nuStr[0].toLowerCase();
+// application.scope(function (app) {
+var cacheable = function (fn) {
+        var cache = {};
+        return function (input) {
+            if (!has(cache, input)) {
+                cache[input] = fn(input);
             }
-            nuStr = first + nuStr.slice(1);
-            return nuStr;
-        },
-        deprefixAll = wrapAll(deprefix),
-        prefix = function (str, prefix, camelcase, splitter) {
-            var myStr = prefix + str;
-            if (camelcase !== blank) {
-                myStr = prefix + (splitter || '-') + str;
-                if (camelcase) {
-                    myStr = camelCase(myStr, splitter);
-                } else {
-                    myStr = unCamelCase(myStr, splitter);
-                }
-            }
-            return myStr;
-        },
-        prefixAll = wrapAll(prefix),
-        parseObject = (function () {
-            var cache = {};
-            return function (string) {
-                var found = cache[string];
-                if (!found) {
-                    cache[string] = found = new Function.constructor('return ' + string);
-                }
-                return found();
+            return cache[input];
+        };
+    },
+    categoricallyCacheable = function (fn, baseCategory) {
+        var cache = {};
+        return function (string, category) {
+            var cacher;
+            category = category || baseCategory;
+            cacher = cache[category] = cache[category] || cacheable(fn(category));
+            return cacher(string);
+        };
+    },
+    string = extend(wrap(gapSplit('toLowerCase toUpperCase trim'), function (method) {
+        return cacheable(function (item) {
+            return item[method]();
+        });
+    }), wrap(gapSplit('match search'), function (method) {
+        return categoricallyCacheable(function (input) {
+            return function (item) {
+                return item[method](input);
             };
-        }()),
-        /**
-         * @func
-         */
-        camelCase = categoricallyCacheable(function (splitter) {
-            return function (str) {
-                var i, s, val;
-                if (isString(str)) {
-                    if (str[0] === splitter) {
-                        str = slice(str, 1);
-                    }
-                    s = split(str, splitter);
-                    for (i = s[LENGTH] - 1; i >= 1; i--) {
-                        if (s[i]) {
-                            s[i] = upCase(s[i]);
-                        }
-                    }
-                    val = join(s, '');
-                }
-                return val;
-            };
-        }, '-'),
-        /**
-         * @func
-         */
-        upCase = cacheable(function (s) {
-            return s[0].toUpperCase() + slice(s, 1);
-        }),
-        /**
-         * @func
-         */
-        unCamelCase = categoricallyCacheable(function (splitter) {
-            return function (str) {
-                return str.replace(/([a-z])([A-Z])/g, '$1' + splitter + '$2').replace(/[A-Z]/g, function (s) {
-                    return s.toLowerCase();
-                });
-            };
-        }, '-'),
-        /**
-         * @func
-         */
-        customUnits = categoricallyCacheable(function (unitList_) {
-            var lengthHash = {},
-                hash = {},
-                lengths = [],
-                unitList = gapSplit(unitList_),
-                sortedUnitList = unitList.sort(function (a, b) {
-                    var aLength = a[LENGTH],
-                        bLength = b[LENGTH],
-                        value = _.max([-1, _.min([1, aLength - bLength])]);
-                    hash[a] = hash[b] = BOOLEAN_TRUE;
-                    if (!lengthHash[aLength]) {
-                        lengthHash[aLength] = BOOLEAN_TRUE;
-                        lengths.push(aLength);
-                    }
-                    if (!lengthHash[bLength]) {
-                        lengthHash[bLength] = BOOLEAN_TRUE;
-                        lengths.push(bLength);
-                    }
-                    return -1 * (value === 0 ? (a > b ? -1 : 1) : value);
-                });
-            lengths.sort(function (a, b) {
-                return -1 * _.max([-1, _.min([1, a - b])]);
+        });
+    })),
+    wrapAll = function (fn) {
+        return function () {
+            var args = toArray(arguments),
+                ctx = this;
+            return map(args[0], function (thing) {
+                args[0] = thing;
+                return fn.apply(ctx, args);
             });
-            return function (str_) {
-                var ch, unitStr, unit,
-                    i = 0,
-                    str = (str_ + '').trim(),
-                    length = str[LENGTH];
-                while (lengths[i]) {
+        };
+    },
+    deprefix = function (str, prefix, unUpcase) {
+        var nuStr = str.slice(prefix[LENGTH]),
+            first = nuStr[0];
+        if (unUpcase) {
+            first = nuStr[0].toLowerCase();
+        }
+        nuStr = first + nuStr.slice(1);
+        return nuStr;
+    },
+    deprefixAll = wrapAll(deprefix),
+    prefix = function (str, prefix, camelcase, splitter) {
+        var myStr = prefix + str;
+        if (camelcase !== UNDEFINED) {
+            myStr = prefix + (splitter || '-') + str;
+            if (camelcase) {
+                myStr = camelCase(myStr, splitter);
+            } else {
+                myStr = unCamelCase(myStr, splitter);
+            }
+        }
+        return myStr;
+    },
+    prefixAll = wrapAll(prefix),
+    parseObject = (function () {
+        var cache = {};
+        return function (string) {
+            var found = cache[string];
+            if (!found) {
+                cache[string] = found = new Function.constructor('return ' + string);
+            }
+            return found();
+        };
+    }()),
+    /**
+     * @func
+     */
+    camelCase = categoricallyCacheable(function (splitter) {
+        return function (str) {
+            var i, s, val;
+            if (isString(str)) {
+                if (str[0] === splitter) {
+                    str = slice(str, 1);
+                }
+                s = split(str, splitter);
+                for (i = s[LENGTH] - 1; i >= 1; i--) {
+                    if (s[i]) {
+                        s[i] = upCase(s[i]);
+                    }
+                }
+                val = join(s, EMPTY_STRING);
+            }
+            return val;
+        };
+    }, '-'),
+    /**
+     * @func
+     */
+    upCase = cacheable(function (s) {
+        return s[0].toUpperCase() + slice(s, 1);
+    }),
+    /**
+     * @func
+     */
+    unCamelCase = categoricallyCacheable(function (splitter) {
+        return function (str) {
+            return str.replace(/([a-z])([A-Z])/g, '$1' + splitter + '$2').replace(/[A-Z]/g, function (s) {
+                return s.toLowerCase();
+            });
+        };
+    }, '-'),
+    /**
+     * @func
+     */
+    customUnits = categoricallyCacheable(function (unitList_) {
+        var lengthHash = {},
+            hash = {},
+            lengths = [],
+            unitList = gapSplit(unitList_),
+            sortedUnitList = unitList.sort(function (a, b) {
+                var aLength = a[LENGTH],
+                    bLength = b[LENGTH],
+                    value = _.max([-1, _.min([1, aLength - bLength])]);
+                hash[a] = hash[b] = BOOLEAN_TRUE;
+                if (!lengthHash[aLength]) {
+                    lengthHash[aLength] = BOOLEAN_TRUE;
+                    lengths.push(aLength);
+                }
+                if (!lengthHash[bLength]) {
+                    lengthHash[bLength] = BOOLEAN_TRUE;
+                    lengths.push(bLength);
+                }
+                return -1 * (value === 0 ? (a > b ? -1 : 1) : value);
+            });
+        lengths.sort(function (a, b) {
+            return -1 * _.max([-1, _.min([1, a - b])]);
+        });
+        return function (str_) {
+            var ch, unitStr, unit,
+                i = 0,
+                str = (str_ + EMPTY_STRING).trim(),
+                length = str[LENGTH];
+            while (lengths[i]) {
+                if (lengths[i] < length) {
                     unit = str.substr(length - lengths[i], length);
                     if (hash[unit]) {
                         return unit;
                     }
-                    i++;
                 }
-                return BOOLEAN_FALSE;
-            };
-        }),
-        // customUnits = categoricallyCacheable(function (unitList_) {
-        //     var hash = {},
-        //         maxLength = 0,
-        //         unitList = gapSplit(unitList_).sort(function (a, b) {
-        //             var aLength = a[LENGTH],
-        //                 bLength = b[LENGTH],
-        //                 value = _.max([-1, _.min([1, aLength - bLength])]);
-        //             lengthHash[aLength] = lengthHash[bLength] = BOOLEAN_TRUE;
-        //             return -1 * (value === 0 ? (a > b ? -1 : 1) : value);
-        //         }),
-        //         lengths = keys(lengthHash);
-        //     return function (str_) {
-        //         var ch, unitStr, unit,
-        //             i = 0,
-        //             str = (str_ + '').trim(),
-        //             length = str[LENGTH];
-        //         while (maxLength[i]) {
-        //             unit = str.substr(i);
-        //             // if (hash) {};
-        //             // return unitList[i];
-        //             i++;
-        //         }
-        //         // while (str[--i]) {
-        //         //     unit.unshift(str[i]);
-        //         //     unitStr = unit.join('');
-        //         //     if (indexOf(unitList, unitStr) >= 0) {
-        //         //         if (unitStr === 'em') {
-        //         //             if (str[i - 1] === 'r') {
-        //         //                 unitStr = 'rem';
-        //         //             }
-        //         //         }
-        //         //         if (unitStr === 'in') {
-        //         //             if (str[i - 2] === 'v' && str[i - 1] === 'm') {
-        //         //                 unitStr = 'vmin';
-        //         //             }
-        //         //         }
-        //         //         return unitStr;
-        //         //     }
-        //         // }
-        //         return BOOLEAN_FALSE;
-        //     };
-        // }),
-        baseUnitList = gapSplit('px em ex in cm % vh vw pc pt mm vmax vmin'),
-        units = function (str) {
-            return customUnits(str, baseUnitList);
-        },
-        isHttp = cacheable(function (str) {
-            var ret = !1;
-            if ((str.indexOf(HTTP) === 0 && str.split('//').length >= 2) || str.indexOf('//') === 0) {
-                ret = !0;
+                i++;
             }
-            return ret;
-        }),
-        parseHash = cacheable(function (url) {
-            var hash = '',
-                hashIdx = indexOf(url, '#') + 1;
-            if (hashIdx) {
-                hash = url.slice(hashIdx - 1);
-            }
-            return hash;
-        }),
-        parseURL = function (url) {
-            var firstSlash, hostSplit, originNoProtocol, search = '',
-                hash = '',
-                host = '',
-                pathname = '',
-                protocol = '',
-                port = '',
-                hostname = '',
-                origin = url,
-                searchIdx = indexOf(url, '?') + 1,
-                searchObject = {},
-                protocols = [HTTP, HTTP + 's', 'file', 'about'],
-                protocolLength = protocols.length,
-                doubleSlash = '//';
-            if (searchIdx) {
-                search = url.slice(searchIdx - 1);
-                origin = origin.split(search).join('');
-                hash = parseHash(search);
-                search = search.split(hash).join('');
-                searchObject = app.parseSearch(search);
-            } else {
-                hash = parseHash(url);
-                origin = origin.split(hash).join('');
-            }
-            if (url[0] === '/' && url[1] === '/') {
-                protocol = window.location.protocol;
-                url = protocol + url;
-                origin = protocol + origin;
-            } else {
-                while (protocolLength-- && !protocol) {
-                    if (url.slice(0, protocols[protocolLength].length) === protocols[protocolLength]) {
-                        protocol = protocols[protocolLength];
-                    }
-                }
-                if (!protocol) {
-                    protocol = HTTP;
-                }
-                protocol += ':';
-                if (origin.slice(0, protocol.length) + doubleSlash !== protocol + doubleSlash) {
-                    url = protocol + doubleSlash + url;
-                    origin = protocol + doubleSlash + origin;
-                }
-            }
-            originNoProtocol = origin.split(protocol + doubleSlash).join('');
-            firstSlash = indexOf(originNoProtocol, '/') + 1;
-            pathname = originNoProtocol.slice(firstSlash - 1);
-            host = originNoProtocol.slice(0, firstSlash - 1);
-            origin = origin.split(pathname).join('');
-            hostSplit = host.split(':');
-            hostname = hostSplit.shift();
-            port = hostSplit.join(':');
-            return {
-                port: port,
-                hostname: hostname,
-                pathname: pathname,
-                search: search,
-                host: host,
-                hash: hash,
-                href: url,
-                protocol: protocol,
-                origin: origin,
-                searchObject: searchObject
-            };
+            return BOOLEAN_FALSE;
         };
-    _.exports({
-        // constants
-        customUnits: customUnits,
-        // cache makers
-        cacheable: cacheable,
-        categoricallyCacheable: categoricallyCacheable,
-        // cacheable
-        deprefix: deprefix,
-        deprefixAll: deprefixAll,
-        prefix: prefix,
-        prefixAll: prefixAll,
-        upCase: upCase,
-        unCamelCase: unCamelCase,
-        camelCase: camelCase,
-        string: string,
-        units: units,
-        baseUnitList: baseUnitList,
-        isHttp: isHttp,
-        parseHash: parseHash,
-        parseURL: parseURL,
-        parseObject: parseObject
+    }),
+    baseUnitList = gapSplit('px em rem ex in cm % vh vw pc pt mm vmax vmin'),
+    units = function (str) {
+        return customUnits(str, baseUnitList);
+    },
+    isHttp = cacheable(function (str) {
+        var ret = !1;
+        if ((str.indexOf(HTTP) === 0 && str.split('//').length >= 2) || str.indexOf('//') === 0) {
+            ret = !0;
+        }
+        return ret;
+    }),
+    parseHash = cacheable(function (url) {
+        var hash = EMPTY_STRING,
+            hashIdx = indexOf(url, '#') + 1;
+        if (hashIdx) {
+            hash = url.slice(hashIdx - 1);
+        }
+        return hash;
+    }),
+    parseURL = function (url) {
+        var firstSlash, hostSplit, originNoProtocol, search = EMPTY_STRING,
+            hash = EMPTY_STRING,
+            host = EMPTY_STRING,
+            pathname = EMPTY_STRING,
+            protocol = EMPTY_STRING,
+            port = EMPTY_STRING,
+            hostname = EMPTY_STRING,
+            origin = url,
+            searchIdx = indexOf(url, '?') + 1,
+            searchObject = {},
+            protocols = [HTTP, HTTPS, 'file', 'about'],
+            protocolLength = protocols.length,
+            doubleSlash = '//';
+        if (searchIdx) {
+            search = url.slice(searchIdx - 1);
+            origin = origin.split(search).join(EMPTY_STRING);
+            hash = parseHash(search);
+            search = search.split(hash).join(EMPTY_STRING);
+            searchObject = app.parseSearch(search);
+        } else {
+            hash = parseHash(url);
+            origin = origin.split(hash).join(EMPTY_STRING);
+        }
+        if (url[0] === '/' && url[1] === '/') {
+            protocol = window.location.protocol;
+            url = protocol + url;
+            origin = protocol + origin;
+        } else {
+            while (protocolLength-- && !protocol) {
+                if (url.slice(0, protocols[protocolLength].length) === protocols[protocolLength]) {
+                    protocol = protocols[protocolLength];
+                }
+            }
+            if (!protocol) {
+                protocol = HTTP;
+            }
+            protocol += COLON;
+            if (origin.slice(0, protocol.length) + doubleSlash !== protocol + doubleSlash) {
+                url = protocol + doubleSlash + url;
+                origin = protocol + doubleSlash + origin;
+            }
+        }
+        originNoProtocol = origin.split(protocol + doubleSlash).join(EMPTY_STRING);
+        firstSlash = indexOf(originNoProtocol, '/') + 1;
+        pathname = originNoProtocol.slice(firstSlash - 1);
+        host = originNoProtocol.slice(0, firstSlash - 1);
+        origin = origin.split(pathname).join(EMPTY_STRING);
+        hostSplit = host.split(COLON);
+        hostname = hostSplit.shift();
+        port = hostSplit.join(COLON);
+        return {
+            port: port,
+            hostname: hostname,
+            pathname: pathname,
+            search: search,
+            host: host,
+            hash: hash,
+            href: url,
+            protocol: protocol,
+            origin: origin,
+            searchObject: searchObject
+        };
+    },
+    SIXTY = 60,
+    SEVEN = 7,
+    THIRTY = 30,
+    TWENTY_FOUR = 24,
+    ONE_THOUSAND = 1000,
+    THREE_HUNDRED_SIXTY_FIVE = 365,
+    ONE_THOUSAND_SIXTY = ONE_THOUSAND * SIXTY,
+    THREE_HUNDRED_SIXTY_THOUSAND = ONE_THOUSAND_SIXTY * SIXTY,
+    EIGHTY_SIX_MILLION_FOUR_HUNDRED_THOUSAND = THREE_HUNDRED_SIXTY_THOUSAND * TWENTY_FOUR,
+    SIX_HUNDRED_FOUR_MILLION_EIGHT_HUNDRED_THOUSAND = THREE_HUNDRED_SIXTY_THOUSAND * SEVEN,
+    TWO_BILLION_FIVE_HUNDRED_NINETY_TWO_MILLION = THREE_HUNDRED_SIXTY_THOUSAND * THIRTY,
+    THIRTY_ONE_BILLION_FIVE_HUNDRED_THIRTY_SIX_MILLION = THREE_HUNDRED_SIXTY_THOUSAND * THREE_HUNDRED_SIXTY_FIVE,
+    NUMBERS_LENGTH = {
+        ms: 1,
+        secs: ONE_THOUSAND,
+        s: ONE_THOUSAND,
+        mins: ONE_THOUSAND_SIXTY,
+        hrs: THREE_HUNDRED_SIXTY_THOUSAND,
+        days: EIGHTY_SIX_MILLION_FOUR_HUNDRED_THOUSAND,
+        wks: SIX_HUNDRED_FOUR_MILLION_EIGHT_HUNDRED_THOUSAND,
+        mnths: TWO_BILLION_FIVE_HUNDRED_NINETY_TWO_MILLION,
+        yrs: THIRTY_ONE_BILLION_FIVE_HUNDRED_THIRTY_SIX_MILLION
+    },
+    timeUnits = [],
+    timeUnitToNumber = foldl(NUMBERS_LENGTH, function (memo, number, unit) {
+        timeUnits.push(unit);
+        memo[unit] = function (input) {
+            return input * number;
+        };
+        return memo;
+    }, {}),
+    time = cacheable(function (number_) {
+        var number = number_ + EMPTY_STRING,
+            time = 0;
+        if (isString(number)) {
+            number = number.split(',');
+        }
+        duff(number, function (num_) {
+            var num = num_,
+                unit = customUnits(num, timeUnits),
+                number = +(num.split(unit || EMPTY_STRING).join(EMPTY_STRING)),
+                handler = timeUnitToNumber[unit];
+            // there's a handler for this unit, adn it's not NaN
+            if (number === number) {
+                if (handler) {
+                    number = handler(number);
+                }
+                time += number;
+            }
+        });
+        return time;
     });
+_.exports({
+    // constants
+    customUnits: customUnits,
+    // cache makers
+    cacheable: cacheable,
+    categoricallyCacheable: categoricallyCacheable,
+    // cacheable
+    deprefix: deprefix,
+    deprefixAll: deprefixAll,
+    prefix: prefix,
+    prefixAll: prefixAll,
+    upCase: upCase,
+    unCamelCase: unCamelCase,
+    camelCase: camelCase,
+    string: string,
+    units: units,
+    baseUnitList: baseUnitList,
+    isHttp: isHttp,
+    parseHash: parseHash,
+    parseURL: parseURL,
+    parseObject: parseObject,
+    time: time
 });
 application.scope(function (app) {
-    var blank, _ = app._,
-        factories = _.factories,
-        isObject = _.isObject,
-        isNumber = _.isNumber,
-        isFunction = _.isFunction,
-        isInstance = _.isInstance,
-        LENGTH = 'length',
-        ITEMS = '_items',
+    var ITEMS = '_items',
         BY_ID = '_byId',
         ID = 'id',
         PREVIOUS = '_previous',
-        each = _.each,
-        duff = _.duff,
-        push = _.push,
-        wrap = _.wrap,
-        keys = _.keys,
-        find = _.find,
-        map = _.map,
-        has = _.has,
-        isBlank = _.isBlank,
-        stringify = _.stringify,
-        findLast = _.findLast,
-        allKeys = _.allKeys,
-        splice = _.splice,
-        toArray = _.toArray,
-        gapSplit = _.gapSplit,
-        sort = _.sort,
-        bind = _.bind,
-        extend = _.extend,
-        result = _.result,
-        isArrayLike = _.isArrayLike,
-        negate = _.negate,
-        isArray = _.isArray,
-        indexOf = _.indexOf,
-        clone = _.clone,
-        BOOLEAN_TRUE = !0,
-        BOOLEAN_FALSE = !1,
         eachCall = function (array, method, arg) {
             return duff(array, function (item) {
                 result(item, method, arg);
@@ -2019,7 +2049,7 @@ application.scope(function (app) {
         eachRevCall = function (array, method, arg) {
             return duff(array, function (item) {
                 result(item, method, arg);
-            }, null, -1);
+            }, NULL, -1);
         },
         doToEverything = function (doLater, direction) {
             return function () {
@@ -2028,7 +2058,7 @@ application.scope(function (app) {
                 duff(args, function (items) {
                     duff(items, function (item) {
                         doLater(one, item);
-                    }, null, direction || 1);
+                    }, NULL, direction || 1);
                 });
                 return one;
             };
@@ -2036,31 +2066,52 @@ application.scope(function (app) {
         /**
          * @func
          */
-        remove = function (list, item, lookAfter) {
-            var index = posit(list, item, lookAfter);
+        remove = function (list, item, lookAfter, lookBefore, fromRight) {
+            var index = posit(list, item, lookAfter, lookBefore, fromRight);
             if (index) {
                 removeAt(list, index - 1);
             }
             return !!index;
         },
-        removeAll = doToEverything(remove, -1),
         removeAt = function (list, index) {
             return splice(list, index, 1)[0];
         },
-        add = function (list, item) {
+        add = function (list, item, lookAfter, lookBefore, fromRight) {
             var val = 0,
-                index = posit(list, item);
+                index = posit(list, item, lookAfter, lookBefore, fromRight);
             if (!index) {
                 val = push(list, item);
             }
             return !!val;
         },
-        addAll = doToEverything(add),
         addAt = function (list, item, index) {
             var len = list[LENGTH],
                 lastIdx = len || 0;
             splice(list, index || 0, 0, item);
             return len !== list[LENGTH];
+        },
+        eq = function (list, num) {
+            var n, thisNum, items = [],
+                numb = num || 0,
+                isNumberResult = isNumber(numb),
+                isArrayLikeResult = isArrayLike(numb);
+            if (numb < 0) {
+                isNumberResult = !1;
+            }
+            if (list[LENGTH]) {
+                if (isNumberResult) {
+                    items = [list[numb]];
+                }
+                if (isArrayLikeResult) {
+                    duff(numb, function (num) {
+                        items.push(list[num]);
+                    });
+                }
+                if (!isArrayLikeResult && !isNumberResult && list[0]) {
+                    items = [list[0]];
+                }
+            }
+            return items;
         },
         range = function (start, stop, step, inclusive) {
             var length, range, idx;
@@ -2082,14 +2133,14 @@ application.scope(function (app) {
             }
             return range;
         },
-        count = function (list, start, end, runner_) {
-            var runner, obj, idx, ctx = this;
+        count = function (list, runner_, ctx_, start, end) {
+            var runner, obj, idx, ctx = ctx_ || this;
             if (start < end && isNumber(start) && isNumber(end) && isFinite(start) && isFinite(end)) {
                 end = Math.abs(end);
                 idx = start;
                 runner = bind(runner_, ctx);
                 while (idx < end) {
-                    obj = null;
+                    obj = NULL;
                     if (has(list, idx)) {
                         obj = list[idx];
                     }
@@ -2099,6 +2150,12 @@ application.scope(function (app) {
             }
             return list;
         },
+        countTo = function (list, runner, ctx, num) {
+            return count(list, runner, ctx, 0, num);
+        },
+        countFrom = function (list, runner, ctx, num) {
+            return count(list, runner, ctx, num, list[LENGTH]);
+        },
         // array, startIndex, endIndex
         between = function (fn) {
             return function (list, startIdx_, endIdx_) {
@@ -2107,7 +2164,7 @@ application.scope(function (app) {
                     endIdx = endIdx_ || list[LENGTH],
                     findResult = find(list, function (item, idx, list) {
                         fn(ret, item, idx, list);
-                    }, null, endIdx);
+                    }, NULL, endIdx);
                 return ret;
             };
         },
@@ -2148,17 +2205,11 @@ application.scope(function (app) {
             }
             return match;
         },
-        countTo = function (list, num, runner) {
-            return count(list, 0, num, runner);
-        },
-        countFrom = function (list, num, runner) {
-            return count(list, num, list[LENGTH], runner);
-        },
         /**
          * @func
          */
-        posit = function (list, item, lookAfter) {
-            return indexOf(list, item, lookAfter) + 1;
+        posit = function (list, item, lookAfter, lookBefore, fromRight) {
+            return indexOf(list, item, lookAfter, lookBefore, fromRight) + 1;
         },
         /**
          * @func
@@ -2177,7 +2228,7 @@ application.scope(function (app) {
          */
         concatUnique = function () {
             var array = [];
-            duff(concat.apply(null, arguments), function (item) {
+            duff(concat.apply(NULL, arguments), function (item) {
                 if (!posit(array, item)) {
                     array.push(item);
                 }
@@ -2226,7 +2277,7 @@ application.scope(function (app) {
         pluck = function (arr, key) {
             var items = [];
             duff(arr, function (item) {
-                if (isObject(item) && item[key] !== void 0) {
+                if (isObject(item) && item[key] !== UNDEFINED) {
                     items.push(item[key]);
                 }
             });
@@ -2253,7 +2304,7 @@ application.scope(function (app) {
         flatten = function () {
             return foldl(arguments, function (memo, item) {
                 if (isArrayLike(item)) {
-                    memo = memo.concat(flatten.apply(null, item));
+                    memo = memo.concat(flatten.apply(NULL, item));
                 } else {
                     memo.push(item);
                 }
@@ -2266,108 +2317,16 @@ application.scope(function (app) {
                 var ctx = this,
                     arr = toArray(arguments),
                     args = splice(arr, spliceat);
-                // return duff(args, fn, this, arr);
                 duff(args, function (idx, item, list) {
                     fn.apply(ctx, arr.concat([idx, item, list]));
                 });
             };
         },
-        // merge = splat(function (item, idx, list) {
-        //     var len, collection = this,
-        //         last = collection[LENGTH];
-        //     if (isArrayLike(item)) {
-        //         len = item[LENGTH];
-        //         duff(item, function (key, val) {
-        //             if (val !== blank) {
-        //                 // removes any undefined items
-        //                 len = key + 1;
-        //                 collection[key] = val;
-        //             }
-        //         });
-        //         if (len > (last || 0)) {
-        //             collection[LENGTH] = len;
-        //         }
-        //     }
-        // }),
-        eq = function (list, num) {
-            var n, thisNum, items = [],
-                numb = num || 0,
-                evaluatedIsNumber = isNumber(numb),
-                isArray = isArrayLike(numb);
-            if (numb < 0) {
-                evaluatedIsNumber = BOOLEAN_FALSE;
-            }
-            if (list[LENGTH]) {
-                if (evaluatedIsNumber) {
-                    items = [list[numb]];
-                }
-                if (isArray) {
-                    items = clone(numb);
-                }
-                if (!isArray && !evaluatedIsNumber && list[0]) {
-                    items = [list[0]];
-                }
-            }
-            return items;
-        },
-        tackRev = function (fn, index, ctx) {
-            return function () {
-                var args = toArray(arguments);
-                while (args[LENGTH] < index) {
-                    // fill it out with null
-                    args.push(null);
-                }
-                // put -1 on as the last arg
-                args.push(-1);
-                return fn.apply(ctx || _, args);
-            };
-        },
-        duffRev = tackRev(duff, 3),
-        eachRev = tackRev(each, 3),
         recreateSelf = function (fn, ctx) {
             return function () {
                 return new this.__constructor__(fn.apply(ctx || this, arguments));
             };
         },
-        /**
-         * @func
-         */
-        // Create a reducing function iterating left or right.
-        createReduce = function (dir) {
-            // Optimized iterator function as using arguments[LENGTH]
-            // in the main function will deoptimize the, see #1991.
-            var iterator = function (obj, iteratee, memo, keys, index, length) {
-                var currentKey;
-                for (; index >= 0 && index < length; index += dir) {
-                    currentKey = keys ? keys[index] : index;
-                    memo = iteratee(memo, obj[currentKey], currentKey, obj);
-                }
-                return memo;
-            };
-            return function (obj, iteratee, memo, context) {
-                // iteratee = optimizeCb(iteratee, context, 4);
-                var actualKeys = !isArrayLike(obj) && keys(obj),
-                    length = (actualKeys || obj)[LENGTH],
-                    index = dir > 0 ? 0 : length - 1;
-                // Determine the initial value if none is provided.
-                if (arguments[LENGTH] < 3) {
-                    memo = obj[actualKeys ? actualKeys[index] : index];
-                    index += dir;
-                }
-                return iterator(obj, iteratee, memo, actualKeys, index, length);
-            };
-        },
-        // **Reduce** builds up a single result from a list of values, aka `inject`,
-        // or `foldl`.
-        /**
-         * @func
-         */
-        foldl = createReduce(1),
-        // The right-associative version of reduce, also known as `foldr`.
-        /**
-         * @func
-         */
-        foldr = createReduce(-1),
         /**
          * @func
          */
@@ -2387,27 +2346,9 @@ application.scope(function (app) {
                 return memo;
             }, isArrayResult ? [] : {});
         },
-        unwrapper = function (fn) {
-            return function (args) {
-                args[0] = args[0][ITEMS];
-                return fn.call(this, args);
-            };
-        },
         unwrapInstance = function (instance_) {
             return isInstance(instance, factories.Collection) ? instance_ : instance.unwrap();
         },
-        unwrapAll = function (fn) {
-            return function (args) {
-                duff(args, function (arg, idx, args) {
-                    args[idx] = unwrapInstance(arg);
-                });
-                return fn.call(this, args);
-            };
-        },
-        unwrap = function () {
-            return this[ITEMS];
-        },
-        // canRunHash = {},
         wrappedCollectionMethods = extend(wrap({
             each: duff,
             duff: duff,
@@ -2417,54 +2358,61 @@ application.scope(function (app) {
             forEachRev: duffRev,
             eachCall: eachCall,
             eachRevCall: eachRevCall
-        }, function (handler) {
-            // canRunHash[key] = 1;
-            return function (iterator, context) {
-                var items = this[ITEMS];
-                if (items[LENGTH]) {
-                    handler(items, iterator, context);
-                }
+        }, function (fn) {
+            return function (handler, context) {
+                // unshiftContext
+                var args0 = this.unwrap(),
+                    args1 = handler,
+                    args2 = arguments[LENGTH] > 1 ? context : this;
+                fn(args0, args1, args2);
                 return this;
             };
-        }), wrap(gapSplit('addAll removeAll'), function (name) {
+        }), wrap(gapSplit('min max hypot pop shift'), function (name) {
             return function () {
-                var args = toArray(arguments);
-                args.unshift(this);
-                // unwrapAll
-                duff(args, function (arg, idx, args) {
-                    if (isInstance(arg, Collection)) {
-                        arg = arg.unwrap();
-                    }
-                    args[idx] = arg;
-                });
-                // custom
-                _[name].apply(_, args);
+                return _[name](this.unwrap());
+            };
+        }), wrap(gapSplit('push unshift'), function (name) {
+            return function () {
+                var array = this.unwrap();
+                array[name].apply(array, arguments);
                 return this;
             };
-        }), wrap(gapSplit('sort unshift push cycle uncycle reverse count countTo countFrom'), function (name) {
+        }), wrap(gapSplit('join'), function (name) {
+            return function (arg) {
+                return this.unwrap()[name](arg);
+            };
+        }), wrap(gapSplit('reverse', function (name) {
             return function () {
-                var args = toArray(arguments);
-                args.unshift(this[ITEMS]);
-                // unwrapper
-                // custom
-                _[name].apply(_, args);
+                this.unwrap()[name]();
                 return this;
             };
-        }), wrap(gapSplit('has add addAt remove removeAt pop shift indexOf find findLast findWhere findLastWhere posit foldr foldl reduce'), function (name) {
-            return function () {
-                var args = toArray(arguments);
-                args.unshift(this[ITEMS]);
-                // custom
-                return _[name].apply(_, args);
+        })), wrap(gapSplit('count countTo countFrom'), function (name) {
+            return function (one, two, three) {
+                var ctx = this;
+                _[name](ctx.unwrap(), one, ctx, two, three);
+                return ctx;
             };
-        }), wrap(gapSplit('merge eq map filter pluck where whereNot'), function (name) {
+        }), wrap(gapSplit('foldr foldl reduce find findLast findWhere findLastWhere'), function (name) {
+            return function (fn, ctx, memo) {
+                return _[name](this.unwrap(), fn, ctx, memo);
+            };
+        }), wrap(gapSplit('has add addAt remove removeAt indexOf posit foldr foldl reduce'), function (name) {
+            return function (one, two, three) {
+                return _[name](this.unwrap(), one, two, three);
+            };
+        }), wrap(gapSplit('flatten'), function (name) {
+            return recreateSelf(function () {
+                return _[name](this.unwrap());
+            });
+        }), wrap(gapSplit('eq map filter pluck where whereNot sort cycle uncycle'), function (name) {
+            return recreateSelf(function (fn) {
+                return _[name](this.unwrap(), fn);
+            });
+        }), wrap(gapSplit('merge'), function (name) {
             // always responds with an array
-            return function () {
-                var args = toArray(arguments);
-                args.unshift(this[ITEMS]);
-                // unwrapper
-                // custom
-                return new Collection(_[name].apply(_, args));
+            return function (newish, truth) {
+                _[name](this.unwrap(), newish, truth);
+                return this;
             };
         })),
         ret = _.exports({
@@ -2472,17 +2420,12 @@ application.scope(function (app) {
             eachRevCall: eachRevCall,
             closest: closest,
             filter: filter,
-            reduce: foldl,
-            foldl: foldl,
-            foldr: foldr,
             matches: matches,
             add: add,
             addAt: addAt,
-            addAll: addAll,
             concatUnique: concatUnique,
             removeAt: removeAt,
             remove: remove,
-            removeAll: removeAll,
             cycle: cycle,
             uncycle: uncycle,
             mamboWrap: internalMambo,
@@ -2493,7 +2436,6 @@ application.scope(function (app) {
             findWhere: findWhere,
             findLastWhere: findLastWhere,
             between: between,
-            eq: eq,
             posit: posit,
             range: range,
             count: count,
@@ -2502,7 +2444,8 @@ application.scope(function (app) {
             whereNot: whereNot,
             eachRev: eachRev,
             duffRev: duffRev,
-            flatten: flatten
+            flatten: flatten,
+            eq: eq
         }),
         interactWithById = function (fun, expecting) {
             return function (one, two, three) {
@@ -2516,51 +2459,74 @@ application.scope(function (app) {
                 return fun(instance, categoryHash, category, key, thing, passedCategory);
             };
         },
-        Collection = factories.Model.extend('Collection', extend({
-            unwrap: unwrap,
+        Collection = Model.extend('Collection', extend({
             range: recreateSelf(range),
-            flatten: recreateSelf(function () {
-                // return
-                return flatten.apply(null, this[ITEMS]);
-            }),
             concat: recreateSelf(function () {
-                var args = [],
-                    base = this[ITEMS];
                 // this allows us to mix collections with regular arguments
+                var base = this.unwrap();
                 return base.concat.apply(base, map(arguments, function (arg) {
                     return Collection(arg).unwrap();
                 }));
             }),
+            call: function (arg) {
+                this.each(function (fn) {
+                    fn(arg);
+                });
+                return this;
+            },
+            results: function (key, arg, knows) {
+                this.each(function (obj) {
+                    result(obj, key, arg, knows);
+                });
+                return this;
+            },
+            unwrap: function () {
+                return this[ITEMS];
+            },
+            empty: function () {
+                var collection = this;
+                collection[ITEMS] = [];
+                collection[BY_ID] = {};
+                return collection;
+            },
+            swap: function (arr, hash) {
+                var collection = this;
+                collection[ITEMS] = arr || [];
+                collection[BY_ID] = hash || {};
+                return collection;
+            },
             length: function () {
-                return this[ITEMS][LENGTH];
+                return this.unwrap()[LENGTH];
             },
             first: function () {
-                return this[ITEMS][0];
+                return this.unwrap()[0];
             },
             last: function () {
-                return this[ITEMS][this[LENGTH]() - 1];
+                return this.unwrap()[this[LENGTH]() - 1];
             },
             index: function (number) {
-                return this[ITEMS][number || 0];
+                return this.unwrap()[number || 0];
             },
             constructor: function (arr) {
                 var collection = this;
-                if (!isArray(arr) && isArrayLike(arr)) {
-                    arr = toArray(arr);
+                if (isArrayLike(arr)) {
+                    if (!isArray(arr)) {
+                        arr = toArray(arr);
+                    }
+                } else {
+                    if (!isBlank(arr)) {
+                        arr = [arr];
+                    }
                 }
-                if (!isBlank(arr) && !isArrayLike(arr)) {
-                    arr = [arr];
-                }
-                collection[BY_ID] = {};
-                collection[ITEMS] = arr || [];
+                collection.swap(arr);
                 return collection;
             },
             toString: function () {
-                return stringify(this);
+                return stringify(this.unwrap());
             },
             toJSON: function () {
                 // subtle distinction here
-                return map(this[ITEMS], function (item) {
+                return map(this.unwrap(), function (item) {
                     var ret;
                     if (isObject(item) && isFunction(item.toJSON)) {
                         ret = item.toJSON();
@@ -2570,9 +2536,6 @@ application.scope(function (app) {
                     return ret;
                 });
             },
-            join: function (delimiter) {
-                return this[ITEMS].join(delimiter);
-            },
             get: interactWithById(function (instance, categoryHash, category, key) {
                 return categoryHash[key];
             }, 2),
@@ -2581,15 +2544,15 @@ application.scope(function (app) {
             }, 3),
             unRegister: interactWithById(function (instance, categoryHash, category, key) {
                 var registeredItem = categoryHash[key];
-                if (registeredItem !== blank) {
-                    categoryHash[key] = blank;
+                if (registeredItem !== UNDEFINED) {
+                    categoryHash[key] = UNDEFINED;
                 }
                 return registeredItem;
             }, 2),
             swapRegister: interactWithById(function (instance, categoryHash, category, key, newItem) {
                 var registeredItem = categoryHash[key];
-                if (registeredItem !== blank) {
-                    categoryHash[key] = blank;
+                if (registeredItem !== UNDEFINED) {
+                    categoryHash[key] = UNDEFINED;
                 }
                 categoryHash[key] = newItem;
                 return registeredItem;
@@ -2604,54 +2567,130 @@ application.scope(function (app) {
              */
             mambo: function (fn) {
                 var collection = this;
-                externalMambo(collection[ITEMS], function () {
+                externalMambo(collection.unwrap(), function () {
                     fn(collection);
                 });
                 return collection;
             }
-        }, wrappedCollectionMethods), !0);
+        }, wrappedCollectionMethods), BOOLEAN_TRUE),
+        StringObject = Model.extend('StringObject', {
+            constructor: function (value, parent) {
+                var string = this;
+                string.value = value;
+                string.parent = parent;
+                string.validate();
+                return string;
+            },
+            validate: function () {
+                this.valid = BOOLEAN_TRUE;
+            },
+            invalidate: function () {
+                this.valid = BOOLEAN_FALSE;
+            },
+            toggleValid: function () {
+                this.valid = !this.valid;
+            },
+            isValid: function () {
+                return this.valid;
+            },
+            valueOf: function () {
+                return this.value;
+            },
+            toString: function () {
+                return this.valueOf();
+            },
+            generate: function (delimiter) {
+                return this.isValid() ? delimiter + this.valueOf() : EMPTY_STRING;
+            }
+        }, BOOLEAN_TRUE),
+        StringManager = Collection.extend('StringManager', {
+            Child: StringObject,
+            add: function (string) {
+                var sm = this,
+                    found = sm.get(string);
+                if (string) {
+                    if (found) {
+                        found.validate();
+                    } else {
+                        found = sm.Child(string, sm);
+                        sm.unwrap().push(found);
+                        sm.register(string, found);
+                    }
+                }
+                return found;
+            },
+            increment: function () {},
+            decrement: function () {},
+            remove: function (string) {
+                var sm = this,
+                    found = sm.get(string);
+                if (string) {
+                    if (found) {
+                        found.invalidate();
+                    }
+                }
+                return sm;
+            },
+            toggle: function (string) {
+                var sm = this,
+                    found = sm.get(string);
+                if (!found) {
+                    sm.add(string);
+                } else {
+                    found.toggleValid();
+                }
+            },
+            generate: function (delimiter_) {
+                var string = EMPTY_STRING,
+                    parent = this;
+                parent.delimiter = delimiter_;
+                parent.eachRev(function (stringInstance, idx) {
+                    var fromRight, stringInstanceIndex,
+                        delimiter = idx ? parent.delimiter : EMPTY_STRING,
+                        generated = stringInstance.generate(delimiter);
+                    string += generated;
+                    if (!generated) {
+                        fromRight = idx > parent.length();
+                        stringInstanceIndex = parent.indexOf(stringInstance, UNDEFINED, UNDEFINED, fromRight);
+                        parent.removeAt(stringInstanceIndex);
+                    }
+                });
+                parent.current(string);
+                return string;
+            },
+            current: function (current_) {
+                var sm = this;
+                if (arguments[LENGTH]) {
+                    sm._currentValue = current_;
+                    return sm;
+                } else {
+                    return sm._currentValue;
+                }
+            },
+            ensure: function (value_, splitter) {
+                var sm = this,
+                    value = value_;
+                if (sm.current() !== value) {
+                    if (isString(value)) {
+                        value = value.split(splitter);
+                    }
+                    duff(value, function (item) {
+                        sm.add(item);
+                    });
+                    sm.current(value.join(splitter));
+                }
+                return sm;
+            }
+        }, BOOLEAN_TRUE);
 });
 application.scope(function (app) {
-    var blank, _ = app._,
-        factories = _.factories,
-        gapSplit = _.gapSplit,
-        simpleObject = _.simpleObject,
-        isObject = _.isObject,
-        isString = _.isString,
-        isNum = _.isNum,
-        isFunction = _.isFunction,
-        each = _.each,
-        duff = _.duff,
-        isBlank = _.isBlank,
-        duffRev = _.duffRev,
-        push = _.push,
-        has = _.has,
-        map = _.map,
-        bind = _.bind,
-        find = _.find,
-        isInstance = _.isInstance,
-        camelCase = _.camelCase,
-        intendedObject = _.intendedObject,
-        toArray = _.toArray,
-        clone = _.clone,
-        once = _.once,
-        extend = _.extend,
-        remove = _.remove,
-        stringify = _.stringify,
-        isArrayLike = _.isArrayLike,
-        isArray = _.isArray,
-        upCase = _.upCase,
-        LENGTH = 'length',
-        PARENT = 'parent',
+    var remove = _.remove,
         _EVENTS = '_events',
         EVENT_REMOVE = '_removeEventList',
         CURRENT_EVENTS = '_currentEventList',
         _LISTENING_TO = '_listeningTo',
-        modifiedTriggerString = 'change:',
         IMMEDIATE_PROP_IS_STOPPED = 'immediatePropagationIsStopped',
         SERIALIZED_DATA = 'serializedData',
-        BOOLEAN_TRUE = !0,
-        BOOLEAN_FALSE = !1,
         iterateOverObject = function (box, ctx, key, value, iterator, firstarg, allowNonFn) {
             intendedObject(key, value, function (evnts, funs_) {
                 // only accepts a string or a function
@@ -2690,14 +2729,15 @@ application.scope(function (app) {
         removeEventObject = function (box, arr, handler, ctx) {
             var current = getCurrentEventList(box);
             duffRev(arr, function (obj, idx, array) {
-                if ((!handler || obj.handler === handler) && (!ctx || obj.ctx === ctx)) {
-                    // because event triggers are always syncronous,
-                    // we can just wait until the dispatchEvent function is done
-                    if (current[LENGTH]) {
-                        getRemoveList(box).push(obj);
-                    } else {
-                        removeEvent(obj);
-                    }
+                if ((handler && obj.handler !== handler) || (ctx && obj.ctx !== ctx)) {
+                    return;
+                }
+                // because event triggers are always syncronous,
+                // we can just wait until the dispatchEvent function is done
+                if (current[LENGTH]) {
+                    getRemoveList(box).push(obj);
+                } else {
+                    removeEvent(obj);
                 }
             });
         },
@@ -2705,16 +2745,18 @@ application.scope(function (app) {
             var listeningTo, listening = evnt.listening;
             remove(evnt.list, evnt);
             // disconnect it from the list above it
-            evnt.list = blank;
+            evnt.list = UNDEFINED;
             // check to see if it was a listening type
-            if (listening) {
-                // if it was then decrement it
-                listening.count--;
-                if (!listening.count) {
-                    listeningTo = listening.listeningTo;
-                    listeningTo[listening.obj._listenId] = blank;
-                }
+            if (!listening) {
+                return;
             }
+            // if it was then decrement it
+            listening.count--;
+            if (listening.count) {
+                return;
+            }
+            listeningTo = listening.listeningTo;
+            listeningTo[listening.obj._listenId] = UNDEFINED;
         },
         retreiveEventList = function (model, name) {
             var internalevents = model[_EVENTS] = model[_EVENTS] || {};
@@ -2745,7 +2787,7 @@ application.scope(function (app) {
         retreiveListeningObject = function (thing, obj) {
             var listeningTo, listening, thisId, id = obj._listenId;
             if (!id) {
-                id = obj._listenId = _.uniqueId('l');
+                id = obj._listenId = uniqueId('l');
             }
             listeningTo = thing[_LISTENING_TO] || (thing[_LISTENING_TO] = {});
             listening = listeningTo[id];
@@ -2754,7 +2796,7 @@ application.scope(function (app) {
             if (!listening) {
                 thisId = thing._listenId;
                 if (!thisId) {
-                    thisId = thing._listenId = _.uniqueId('l');
+                    thisId = thing._listenId = uniqueId('l');
                 }
                 listening = listeningTo[id] = {
                     obj: obj,
@@ -2862,7 +2904,6 @@ application.scope(function (app) {
             bindOnce(box, name, obj);
             listenToHandler(box, name, obj, extra);
         },
-        // makeValidEvent = ,
         getEventList = function (box, name) {
             var events = box[_EVENTS] = box[_EVENTS] || {};
             return events[name] || [];
@@ -2898,6 +2939,7 @@ application.scope(function (app) {
             on: flattenMatrix(attachEventObject, 0),
             once: flattenMatrix(onceHandler, 0),
             listenTo: flattenMatrix(listenToHandler, 1),
+            listenToOnce: flattenMatrix(listenToOnceHandler, 1),
             /**
              * @description attaches an event handler to the events object, and takes it off as soon as it runs once
              * @func
@@ -2907,7 +2949,6 @@ application.scope(function (app) {
              * @param {Object} ctx - context that will be applied to the handler
              * @returns {Box} instance
              */
-            listenToOnce: flattenMatrix(listenToOnceHandler, 1),
             /**
              * @description remove event objects from the _events object
              * @param {String|Function} type - event type or handler. If a match is found, then the event object is removed
@@ -2960,7 +3001,7 @@ application.scope(function (app) {
                     if (!stillListening && !find(ids, function (id, key) {
                         return listeningTo[id];
                     })) {
-                        origin[_LISTENING_TO] = blank;
+                        origin[_LISTENING_TO] = UNDEFINED;
                     }
                 }
                 return origin;
@@ -3020,6 +3061,7 @@ application.scope(function (app) {
         isFunction = _.isFunction,
         isObject = _.isObject,
         intendedObject = _.intendedObject,
+        bind = _.bind,
         PARENT = 'parent',
         NAME = 'name',
         basicData = function (basic) {
@@ -3071,7 +3113,7 @@ application.scope(function (app) {
                     if (!isFunction(handler_)) {
                         handler = basicData(handler_);
                     }
-                    messenger._setHash(key, bind(handler, this[PARENT] || {}));
+                    messenger._setHash(key, bind(handler, messenger[PARENT] || {}));
                 });
                 return messenger[PARENT];
             }
@@ -3079,40 +3121,8 @@ application.scope(function (app) {
     factories.Messenger(app);
 });
 application.scope(function (app) {
-    var _ = app._,
-        factories = _.factories,
-        Collection = factories.Collection,
+    var Collection = factories.Collection,
         Events = factories.Events,
-        gapSplit = _.gapSplit,
-        isObject = _.isObject,
-        isString = _.isString,
-        isNumber = _.isNumber,
-        isEqual = _.isEqual,
-        isBlank = _.isBlank,
-        isFunction = _.isFunction,
-        each = _.each,
-        duff = _.duff,
-        find = _.find,
-        duffRev = _.duffRev,
-        push = _.push,
-        has = _.has,
-        map = _.map,
-        result = _.result,
-        toArray = _.toArray,
-        remove = _.remove,
-        clone = _.clone,
-        once = _.once,
-        parse = _.parse,
-        extend = _.extend,
-        listDrop = _.remove,
-        stringify = _.stringify,
-        isInstance = _.isInstance,
-        isArrayLike = _.isArrayLike,
-        upCase = _.upCase,
-        camelCase = _.camelCase,
-        isArray = _.isArray,
-        intendedObject = _.intendedObject,
-        uniqueId = _.uniqueId,
         ID = 'id',
         SORT = 'sort',
         ADDED = 'added',
@@ -3170,7 +3180,7 @@ application.scope(function (app) {
                 return ret;
             },
             /**
-             * @description remove attributes from the Box object. Does not completely remove from object with delete, but instead simply sets it to blank / undefined
+             * @description remove attributes from the Box object. Does not completely remove from object with delete, but instead simply sets it to UNDEFINED / undefined
              * @param {String} attr - property string that is on the attributes object
              * @returns {Box} instance the method was called on
              * @func
@@ -3180,7 +3190,7 @@ application.scope(function (app) {
                 var attrObj = this[ATTRIBUTES];
                 // blindly wipe the attributes
                 duff(gapSplit(attrs), function (attr) {
-                    attrObj[attr] = blank;
+                    attrObj[attr] = UNDEFINED;
                 });
                 return this;
             },
@@ -3205,8 +3215,8 @@ application.scope(function (app) {
                 var box = this,
                     attributes = box[ATTRIBUTES];
                 return find(gapSplit(attrs), function (attr) {
-                    return attributes[attr] === blank;
-                }) === blank;
+                    return attributes[attr] === UNDEFINED;
+                }) === UNDEFINED;
             },
             /**
              * @description collects a splat of arguments and condenses them into a single object. Object is then extended onto the attributes object and any items that are different will be fired as events
@@ -3270,18 +3280,18 @@ application.scope(function (app) {
                         compiled[key] = value;
                     }
                 });
-                if (!changedList[LENGTH]) {
+                if (changedList[LENGTH]) {
                     // do not digest... this time
-                    return model;
-                }
-                model.digester(function () {
-                    duff(changedList, function (name) {
-                        model[DISPATCH_EVENT](CHANGE + ':' + name);
+                    model.digester(function () {
+                        duff(changedList, function (name) {
+                            model[DISPATCH_EVENT](CHANGE + COLON + name);
+                        });
+                        model[DISPATCH_EVENT](CHANGE, compiled);
                     });
-                    model[DISPATCH_EVENT](CHANGE, compiled);
-                });
+                }
                 return model;
             },
+            comparator: 'id',
             /**
              * @description basic json clone of the attributes object
              * @func
@@ -3294,17 +3304,8 @@ application.scope(function (app) {
                 // to prevent circular dependencies
                 return clone(this[ATTRIBUTES]);
             },
-            comparator: 'id',
             valueOf: function () {
-                var datapoint = +result(this.attributes, this.comparator);
-                // if it's NaN
-                if (datapoint !== datapoint) {
-                    datapoint = blank;
-                }
-                if (datapoint === blank) {
-                    datapoint = +this.id;
-                }
-                return datapoint;
+                return this.id;
             },
             /**
              * @description stringified version of attributes object
@@ -3317,7 +3318,7 @@ application.scope(function (app) {
             },
             _setId: function (id_) {
                 var model = this,
-                    id = id_ === blank ? uniqueId(BOOLEAN_FALSE) : id_;
+                    id = id_ === UNDEFINED ? uniqueId(BOOLEAN_FALSE) : id_;
                 model.id = id;
             },
             reset: function (attrs) {
@@ -3329,7 +3330,7 @@ application.scope(function (app) {
             return Box(attributes, options);
         },
         Box = factories.Container.extend('Box', {
-            Model: modelMaker,
+            Child: modelMaker,
             /**
              * @description constructor function for the Box Object
              * @name Box#constructor
@@ -3416,7 +3417,7 @@ application.scope(function (app) {
                 }
             },
             _isChildType: function (child) {
-                return isInstance(child, this.Model);
+                return isInstance(child, this.Child);
             },
             // this one forcefully adds
             _add: function (model) {
@@ -3445,14 +3446,14 @@ application.scope(function (app) {
                     secondary = extend(result(parent, CHILD + 'Options'), secondary_ || {}),
                     list = Collection(objs_);
                 // unwrap it if you were passed a collection
-                if (!parent.Model || !list[LENGTH]()) {
+                if (!parent.Child || !list[LENGTH]()) {
                     return list[UNWRAP]();
                 }
                 list = list.foldl(function (memo, obj) {
                     var isChildType = parent._isChildType(obj),
                         // create a new model
                         // call it with new in case they use a constructor
-                        newModel = isChildType ? obj : new parent.Model(obj, secondary),
+                        newModel = isChildType ? obj : new parent.Child(obj, secondary),
                         // find by the newly created's id
                         foundModel = children.get(newModel.id);
                     if (foundModel) {
@@ -3468,7 +3469,7 @@ application.scope(function (app) {
                     return memo;
                 }, []);
                 if (childAdded) {
-                    parent[DISPATCH_EVENT](CHILD + ':' + ADDED);
+                    parent[DISPATCH_EVENT](CHILD + COLON + ADDED);
                 }
                 return list;
             },
@@ -3501,8 +3502,8 @@ application.scope(function (app) {
             dispatchEvent: function (name_, data, evnt_) {
                 var origin = this,
                     name = (evnt_ && evnt_.methodName) || name_,
-                    methodName = (evnt_ && evnt_.methodName) || upCase(camelCase('on:' + name, ':')),
-                    childMethodName = upCase(camelCase('on:bubble:' + name, ':')),
+                    methodName = (evnt_ && evnt_.methodName) || upCase(camelCase('on:' + name, COLON)),
+                    childMethodName = upCase(camelCase('on:bubble:' + name, COLON)),
                     // onMethod = isFunction(origin[methodName]),
                     evnt = evnt_ || origin._createEvent(name, data),
                     parents = origin._collectParents(),
@@ -3528,7 +3529,7 @@ application.scope(function (app) {
                 // attach events from parent
                 parent._removeFromHash(model);
                 // void out the parent member tied directly to the model
-                model[PARENT] = blank;
+                model[PARENT] = UNDEFINED;
                 // let everyone know that you've offically separated
                 model[DISPATCH_EVENT](REMOVED);
                 // notify the child that the remove pipeline is done
@@ -3542,23 +3543,18 @@ application.scope(function (app) {
                     idModel = idModel_;
                 if (!isObject(idModel)) {
                     // it's a string
-                    idModel = parent[CHILDREN].get(ID, idModel + '');
+                    idModel = parent[CHILDREN].get(ID, idModel + EMPTY_STRING);
                 }
                 if (!idModel || !isObject(idModel)) {
                     return retList;
                 }
-                if (isInstance(idModel, Collection)) {
-                    idModel = idModel[UNWRAP]();
-                }
-                if (!isArray(idModel)) {
-                    idModel = [idModel];
-                }
-                duff(idModel, function (model) {
+                Collection(idModel && idModel.unwrap ? idModel.unwrap() : idModel).duff(function (model) {
+                    var parent = model[PARENT];
                     parent._remove(model);
                     retList.add(model);
                 });
                 if (retList[LENGTH]()) {
-                    parent[DISPATCH_EVENT](CHILD + ':' + REMOVED);
+                    parent[DISPATCH_EVENT](CHILD + COLON + REMOVED);
                 }
                 return retList;
             },
@@ -3782,7 +3778,9 @@ application.scope(function (app) {
              */
             addModuleArgs: function (arr) {
                 var app = this;
-                app._.addAll(app[_EXTRA_MODULE_ARGS], arr);
+                app._.duff(arr, function (item) {
+                    app._.add(app[_EXTRA_MODULE_ARGS], item);
+                });
                 return app;
             },
             /**
@@ -3792,7 +3790,9 @@ application.scope(function (app) {
              * @returns {Specless} instance
              */
             removeModuleArgs: function (arr) {
-                this.utils.removeAll(this[_EXTRA_MODULE_ARGS], arr);
+                app._.duff(arr, function (item) {
+                    app._.remove(app[_EXTRA_MODULE_ARGS], item);
+                });
                 return this;
             },
             /**
@@ -3809,8 +3809,211 @@ application.scope(function (app) {
             }
         }));
 });
+application.scope().module('LinguisticSequencer', function (module, app, _, factories, $) {
+    var Container = factories.Container,
+        Collection = factories.Collection,
+        bind = _.bind,
+        duff = _.duff,
+        isFunction = _.isFunction,
+        isEqual = _.isEqual,
+        result = _.result,
+        CURRENT = 'current',
+        _COUNTER = '_counter',
+        CHANGE = 'change',
+        DESTROY = 'destroy',
+        GROUP_INDEX = 'groupIndex',
+        REGISTERED = 'registered',
+        SUCCESS = 'success',
+        FAILURES = 'failures',
+        EVERY = 'every',
+        BOOLEAN_TRUE = !0,
+        BOOLEAN_FALSE = !1,
+        curriedEquivalence = function (value) {
+            return function (current) {
+                return isEqual(current, value);
+            };
+        },
+        curriedGreaterThan = function (value) {
+            return function (current) {
+                return current > value;
+            };
+        },
+        curriedLessThan = function (value) {
+            return function (current) {
+                return current < value;
+            };
+        },
+        push = function (where) {
+            return function (fn) {
+                var ls = this;
+                ls[WHERE].push(bind(fn, ls));
+                return ls;
+            };
+        },
+        addValue = function (constant1, constant2) {
+            return function () {
+                var ls = this;
+                duff(arguments, function (value) {
+                    ls.add(value, constant1, constant2);
+                });
+                return ls;
+            };
+        },
+        isNot = addValue(BOOLEAN_TRUE),
+        Sequence = Container.extend('LinguisticSequencer', {
+            then: push(SUCCESS),
+            always: push(EVERY),
+            otherwise: push(FAILURES),
+            parentEvents: {
+                destroy: DESTROY,
+                changed: 'apply'
+            },
+            initialize: function () {
+                var sequencer = this;
+                sequencer[_COUNTER] = 0;
+                sequencer.logic = Collection();
+                sequencer[SUCCESS] = Collection();
+                sequencer[FAILURES] = Collection();
+                sequencer[EVERY] = Collection();
+                sequencer.group();
+            },
+            defaults: function () {
+                return {
+                    groupIndex: -1,
+                    registered: {}
+                };
+            },
+            and: function (key) {
+                var ls = this;
+                ls.set(CURRENT, key);
+                ls.bind(key, ls.increment);
+                return ls;
+            },
+            or: function (key) {
+                this.group();
+                this.add(key);
+                return this;
+            },
+            group: function () {
+                var ls = this,
+                    value = ls.get(GROUP_INDEX);
+                ++value;
+                ls.set(GROUP_INDEX, value);
+                ls.logic.push({
+                    index: value,
+                    list: Collection()
+                });
+                return ls;
+            },
+            increment: function () {
+                ++this[_COUNTER];
+            },
+            bind: function (target, handler) {
+                var ls = this,
+                    registered = ls.get(REGISTERED);
+                if (!registered[target]) {
+                    registered[target] = BOOLEAN_TRUE;
+                    this.listenTo(this.grandParent(), CHANGE + ':' + target, handler);
+                }
+            },
+            unbind: function (target, handler) {
+                var ls = this,
+                    registered = ls.get(REGISTERED);
+                if (registered[target]) {
+                    registered[target] = BOOLEAN_FALSE;
+                    this.stopListening(this.grandParent(), CHANGE + ':' + target, handler);
+                }
+            },
+            is: addValue(),
+            isNot: isNot,
+            isnt: isNot,
+            isGreaterThan: addValue(BOOLEAN_FALSE, curriedGreaterThan),
+            isLessThan: addValue(BOOLEAN_FALSE, curriedLessThan),
+            isNotGreaterThan: addValue(BOOLEAN_TRUE, curriedGreaterThan),
+            isNotLessThan: addValue(BOOLEAN_TRUE, curriedLessThan),
+            value: function (value, defaultFn) {
+                return isFunction(value) ? value : defaultFn(value);
+            },
+            add: function (value_, negate, defaultFn) {
+                var object, ls = this;
+                var current = ls.get(CURRENT);
+                var value = ls.value(value_, defaultFn || curriedEquivalence);
+                var made = ls.make(current, negate ? _.negate(value) : value);
+                ls.logic.get(ls.get(GROUP_INDEX)).list.push(made);
+                return ls;
+            },
+            grandParent: function () {
+                return this.parent.parent;
+            },
+            check: function () {
+                var sequencer = this,
+                    grandparent = sequencer.grandParent();
+                return !!sequencer[_COUNTER] && !sequencer.logic.find(function (group) {
+                    return group.list.find(function (item) {
+                        return !item.handler(grandparent.get(item.key));
+                    });
+                });
+            },
+            restart: function () {
+                this[_COUNTER] = 0;
+                return this;
+            },
+            make: function (key, handler) {
+                var context = this;
+                return {
+                    key: key,
+                    context: context,
+                    handler: bind(handler, context)
+                };
+            },
+            handle: function (key, arg) {
+                var ls = this;
+                var ret = ls[key] && ls[key].call(arg);
+                return ls;
+            },
+            apply: function () {
+                var ls = this,
+                    checked = ls.check();
+                sequencer.restart();
+                if (ls._set('previous', checked)) {
+                    if (checked) {
+                        ls.handle(SUCCESS);
+                    } else {
+                        ls.handle(FAILURES);
+                    }
+                    ls.handle(EVERY);
+                }
+                return ls;
+            }
+        }, BOOLEAN_TRUE),
+        Sequencer = factories.Box.extend('SequenceManager', {
+            Model: Sequence,
+            constructor: function (secondary) {
+                return factories.Box.constructor.call(this, {}, secondary);
+            },
+            initialize: function () {
+                var manager = this,
+                    parent = manager.parent,
+                    when = function (key) {
+                        var sequencer = manager.add({});
+                        sequencer.and(key);
+                        return sequencer;
+                    };
+                manager.listenTo(manager.parent, CHANGE, function () {
+                    manager.dispatchEvent(CHANGE + 'd');
+                });
+                if (parent) {
+                    if (parent.when) {
+                        result(parent.when.manager, DESTROY);
+                    }
+                    parent.when = when;
+                    manager.listenTo(parent, DESTROY, manager.destroy);
+                }
+            }
+        }, BOOLEAN_TRUE);
+    app.message.reply('sequencer:linguistic', Sequencer);
+});
 application.scope().module('Looper', function (module, app, _, factories) {
-    'use strict';
     var blank, x = 0,
         lastTime = 0,
         LENGTH = 'length',
@@ -4124,8 +4327,7 @@ application.scope().module('Looper', function (module, app, _, factories) {
     });
 });
 application.scope().module('Promise', function (module, app, _, factories) {
-    var blank, LENGTH = 'length',
-        FAILURE = 'failure',
+    var blank, FAILURE = 'failure',
         SUCCESS = 'success',
         STATE = 'state',
         ALWAYS = 'always',
@@ -4145,9 +4347,6 @@ application.scope().module('Promise', function (module, app, _, factories) {
         result = _.result,
         wraptry = _.wraptry,
         indexOf = _.indexOf,
-        BOOLEAN_TRUE = !0,
-        BOOLEAN_FALSE = !1,
-        NULL = null,
         when = function () {
             var promise = factories.Promise();
             promise.add(foldl(flatten(arguments), function (memo, pro) {
@@ -4385,15 +4584,16 @@ application.scope().module('Ajax', function (module, app, _, factories) {
         FAILURE = 'failure',
         SUCCESS = 'success',
         READY_STATE = 'readyState',
+        XDomainRequest = window.XDomainRequest,
         isObject = _.isObject,
         isArray = _.isArray,
         stringify = _.stringify,
         parse = _.parse,
         extend = _.extend,
         stringifyQuery = _.stringifyQuery,
-        validTypes = gapSplit('GET POST PUT DELETE'),
+        GET = 'GET',
+        validTypes = gapSplit(GET + ' POST PUT DELETE'),
         baseEvents = gapSplit('progress timeout abort error'),
-        cache = {},
         /**
          * @description helper function to attach a bunch of event listeners to the request object as well as help them trigger the appropriate events on the Ajax object itself
          * @private
@@ -4471,13 +4671,13 @@ application.scope().module('Ajax', function (module, app, _, factories) {
                 // ajax.async = BOOLEAN_TRUE;
                 xhrReq = new XMLHttpRequest();
                 // covers ie9
-                if (typeof XDomainRequest !== 'undefined') {
+                if (!_.isUndefined(XDomainRequest)) {
                     xhrReq = new XDomainRequest();
                     method = 'onload';
                 }
                 if (!_.isObject(str)) {
                     str = str || '';
-                    type = 'GET';
+                    type = GET;
                     typeThing = str.toUpperCase();
                     if (posit(validTypes, typeThing)) {
                         type = typeThing;
@@ -4490,7 +4690,7 @@ application.scope().module('Ajax', function (module, app, _, factories) {
                     };
                 }
                 str.async = BOOLEAN_TRUE;
-                str.type = (str.type || 'GET').toUpperCase();
+                str.type = (str.type || GET).toUpperCase();
                 str.method = method;
                 factories.Promise.constructor.apply(ajax);
                 ajax.on('change:url', alterurlHandler);
@@ -4589,7 +4789,7 @@ application.scope().module('Ajax', function (module, app, _, factories) {
         key = key.toLowerCase();
         memo[key] = function (url) {
             return Ajax({
-                type: key,
+                type: key_,
                 url: url
             });
         };
@@ -4686,62 +4886,21 @@ application.scope().module('Associator', function (module, app, _, factories) {
                     current.readData = BOOLEAN_TRUE;
                 }
                 return current;
+            },
+            ensure: function (el, attr, failure) {
+                var data = this.get(el);
+                data[attr] = data[attr] || failure();
+                return data[attr];
             }
         }, BOOLEAN_TRUE);
     _.exports({
-        associator: factories.Associator()
+        associator: Associator()
     });
 });
 application.scope().module('DOMM', function (module, app, _, factories) {
-    var sizzleDoc = document,
-        eq = _.eq,
-        once = _.once,
-        elementData = _.associator,
-        result = _.result,
-        uniqueId = _.uniqueId,
-        isFunction = _.isFunction,
+    var posit = _.posit,
         Collection = factories.Collection,
-        wraptry = _.wraptry,
-        now = _.now,
-        each = _.each,
-        bind = _.bind,
-        duff = _.duff,
-        find = _.find,
-        wrap = _.wrap,
-        trace = _.trace,
-        posit = _.posit,
-        foldl = _.foldl,
-        filter = _.filter,
-        isString = _.isString,
-        isObject = _.isObject,
-        isNumber = _.isNumber,
-        isBoolean = _.isBoolean,
-        stringify = _.stringify,
-        parse = _.parse,
-        isArrayLike = _.isArrayLike,
-        objectMatches = _.matches,
-        merge = _.merge,
-        console = _.console,
-        remove = _.splice,
-        extend = _.extend,
-        negate = _.negate,
-        intendedObject = _.intendedObject,
-        isInstance = _.isInstance,
-        isBlank = _.isBlank,
-        gapJoin = _.gapJoin,
-        isArray = _.isArray,
-        toArray = _.toArray,
-        duffRev = _.duffRev,
-        indexOf = _.indexOf,
-        clone = _.clone,
-        units = _.units,
-        gapSplit = _.gapSplit,
-        camelCase = _.camelCase,
-        unCamelCase = _.unCamelCase,
-        parseDecimal = _.parseDecimal,
-        add = _.add,
-        removeAll = _.removeAll,
-        addAll = _.addAll,
+        elementData = _.associator,
         NODE_TYPE = 'nodeType',
         PARENT_NODE = 'parentNode',
         ITEMS = '_items',
@@ -4772,7 +4931,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             return obj && isNumber(obj[NODE_TYPE]) && obj[NODE_TYPE] === obj.DOCUMENT_NODE;
         },
         isFragment = function (frag) {
-            return frag && frag[NODE_TYPE] === sizzleDoc.DOCUMENT_FRAGMENT_NODE;
+            return frag && frag[NODE_TYPE] === doc.DOCUMENT_FRAGMENT_NODE;
         },
         getClosestWindow = function (windo_) {
             var windo = windo_ || win;
@@ -4782,7 +4941,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             var ret = getClosestWindow(ctx).getComputedStyle(el);
             return ret ? ret : getClosestWindow(el).getComputedStyle(el) || clone(el[STYLE]) || {};
         },
-        allStyles = getComputed(sizzleDoc[BODY], win),
+        allStyles = getComputed(doc[BODY], win),
         rkeyEvent = /^key/,
         rmouseEvent = /^(?:mouse|pointer|contextmenu)|click/,
         rfocusMorph = /^(?:focusinfocus|focusoutblur)$/,
@@ -4821,7 +4980,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         }()),
         saveDOMContentLoadedEvent = function (doc) {
             var data = elementData.get(doc);
-            if (data.isReady === blank) {
+            if (data.isReady === UNDEFINED) {
                 data.isReady = BOOLEAN_FALSE;
                 DOMM(doc).on('DOMContentLoaded', function (e) {
                     data.DOMContentLoadedEvent = e;
@@ -4864,7 +5023,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         attributeInterface = function (el, key, val) {
             // set or remove if not undefined
             // undefined fills in the gap by returning some value, which is never undefined
-            if (val !== blank) {
+            if (val !== UNDEFINED) {
                 if (!val && val !== 0) {
                     el.removeAttribute(key);
                 } else {
@@ -4881,8 +5040,8 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             }
             return (className || EMPTY_STRING).split(' ');
         },
-        setClassName = function (el, val) {
-            var value = val.join(' ').trim();
+        setClassName = function (el, value) {
+            // var value = val.join(' ').trim();
             if (isString(el[CLASSNAME])) {
                 el[CLASSNAME] = value;
             } else {
@@ -4956,20 +5115,65 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         trustedEvents = gapSplit('load scroll resize orientationchange click dblclick mousedown mouseup mouseover mouseout mouseenter mouseleave mousemove change contextmenu hashchange load mousewheel wheel readystatechange'),
         ALL_EVENTS_HASH = wrap(AllEvents, BOOLEAN_TRUE),
         knownPrefixesHash = wrap(knownPrefixes, BOOLEAN_TRUE),
-        changeClass = function (el, remove, add) {
-            var n, val, command, classList;
-            if (el) {
-                classList = getClassName(el);
-                if (remove) {
-                    removeAll(classList, gapSplit(remove));
-                }
-                if (add) {
-                    addAll(classList, gapSplit(add));
-                }
-                // val = gapJoin(classList).trim();
-                setClassName(el, classList);
-                return el;
-            }
+        // changeClass = function (el, remove, add) {
+        //     var n, val, command, classList;
+        //     if (el) {
+        //         classList = getClassName(el);
+        //         if (remove) {
+        //             duff(gapSplit(remove), function (clas) {
+        //                 _.remove(classList, clas);
+        //             });
+        //         }
+        //         if (add) {
+        //             duff(gapSplit(add), function (clas) {
+        //                 _.add(classList, clas);
+        //             });
+        //         }
+        //         // val = gapJoin(classList).trim();
+        //         setClassName(el, classList);
+        //         return el;
+        //     }
+        // },
+        addClass = function (classManager, add) {
+            duff(gapSplit(add), classManager.add, classManager);
+            return classManager;
+        },
+        removeClass = function (classManager, remove) {
+            duff(gapSplit(remove), classManager.remove, classManager);
+            return classManager;
+        },
+        toggleClass = function (classManager, togglers) {
+            duff(gapSplit(togglers), classManager.toggle, classManager);
+            return classManager;
+        },
+        changeClass = function (classManager, remove, add) {
+            return addClass(removeClass(classManager, remove), add);
+        },
+        applyClass = function (fn) {
+            return function (one, two) {
+                this.duff(function (el) {
+                    var classManager = elementData.ensure(el, ATTRIBUTES, factories.StringManager);
+                    classManager.ensure(getClassName(el), ' ');
+                    var ret = fn(classManager, one, two);
+                    var generated = ret.generate(' ');
+                    setClassName(el, generated);
+                });
+                return this;
+            };
+        },
+        /**
+         * @private
+         * @func
+         */
+        containsClass = function (className) {
+            return !!this.length() && !find(this.unwrap(), function (el) {
+                var classManager = elementData.ensure(el, ATTRIBUTES, factories.StringManager);
+                classManager.ensure(getClassName(el), ' ');
+                return find(gapSplit(className), function (clas) {
+                    var stringInstance = classManager.get(clas);
+                    return stringInstance ? !stringInstance.isValid() : BOOLEAN_TRUE;
+                });
+            });
         },
         /**
          * @private
@@ -5365,58 +5569,6 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             }
             return number;
         },
-        SIXTY = 60,
-        SEVEN = 7,
-        THIRTY = 30,
-        TWENTY_FOUR = 24,
-        ONE_THOUSAND = 1000,
-        THREE_HUNDRED_SIXTY_FIVE = 365,
-        ONE_THOUSAND_SIXTY = ONE_THOUSAND * SIXTY,
-        THREE_HUNDRED_SIXTY_THOUSAND = ONE_THOUSAND_SIXTY * SIXTY,
-        EIGHTY_SIX_MILLION_FOUR_HUNDRED_THOUSAND = THREE_HUNDRED_SIXTY_THOUSAND * TWENTY_FOUR,
-        SIX_HUNDRED_FOUR_MILLION_EIGHT_HUNDRED_THOUSAND = THREE_HUNDRED_SIXTY_THOUSAND * SEVEN,
-        TWO_BILLION_FIVE_HUNDRED_NINETY_TWO_MILLION = THREE_HUNDRED_SIXTY_THOUSAND * THIRTY,
-        THIRTY_ONE_BILLION_FIVE_HUNDRED_THIRTY_SIX_MILLION = THREE_HUNDRED_SIXTY_THOUSAND * THREE_HUNDRED_SIXTY_FIVE,
-        NUMBERS_LENGTH = {
-            ms: 1,
-            secs: ONE_THOUSAND,
-            s: ONE_THOUSAND,
-            mins: ONE_THOUSAND_SIXTY,
-            hrs: THREE_HUNDRED_SIXTY_THOUSAND,
-            days: EIGHTY_SIX_MILLION_FOUR_HUNDRED_THOUSAND,
-            wks: SIX_HUNDRED_FOUR_MILLION_EIGHT_HUNDRED_THOUSAND,
-            mnths: TWO_BILLION_FIVE_HUNDRED_NINETY_TWO_MILLION,
-            yrs: THIRTY_ONE_BILLION_FIVE_HUNDRED_THIRTY_SIX_MILLION
-        },
-        timeUnits = [],
-        timeUnitToNumber = foldl(NUMBERS_LENGTH, function (memo, number, unit) {
-            timeUnits.push(unit);
-            memo[unit] = function (input) {
-                return input * number;
-            };
-            return memo;
-        }, {}),
-        time = _.cacheable(function (number_) {
-            var number = number_ + EMPTY_STRING,
-                time = 0;
-            if (isString(number)) {
-                number = number.split(',');
-            }
-            duff(number, function (num_) {
-                var num = num_,
-                    unit = _.customUnits(num, timeUnits),
-                    number = +(num.split(unit || EMPTY_STRING).join(EMPTY_STRING)),
-                    handler = timeUnitToNumber[unit];
-                // there's a handler for this unit, adn it's not NaN
-                if (number === number) {
-                    if (handler) {
-                        number = handler(number);
-                    }
-                    time += number;
-                }
-            });
-            return time;
-        }),
         /**
          * @private
          * @func
@@ -5479,23 +5631,6 @@ application.scope().module('DOMM', function (module, app, _, factories) {
          * @private
          * @func
          */
-        containsClass = function (el, className) {
-            var original = getClassName(el),
-                nuClasses = gapSplit(className),
-                nuClassesLen = nuClasses[LENGTH],
-                i = 0,
-                has = 0;
-            for (; i < nuClassesLen; i++) {
-                if (posit(original, nuClasses[i])) {
-                    has++;
-                }
-            }
-            return (has === nuClassesLen);
-        },
-        /**
-         * @private
-         * @func
-         */
         tagIs = function (el, str) {
             var tagName;
             if (el && isObject(el)) {
@@ -5517,7 +5652,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
          * @func
          */
         createElement = function (str) {
-            return sizzleDoc.createElement(str);
+            return doc.createElement(str);
         },
         makeEmptyFrame = function (str) {
             var frame, div = createElement('div');
@@ -5570,7 +5705,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             };
         },
         createDocumentFragment = function () {
-            return sizzleDoc.createDocumentFragment();
+            return doc.createDocumentFragment();
         },
         /**
          * @private
@@ -5656,7 +5791,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                         }
                         duff(__keys, function (_key) {
                             var value = fn(el, _key, val, data, dom);
-                            if (value !== blank) {
+                            if (value !== UNDEFINED) {
                                 ret[_key] = value;
                                 count++;
                             }
@@ -5980,7 +6115,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             if (!mainHandler.currentEvent) {
                 if (!obj.isDestroyed) {
                     obj.isDestroyed = BOOLEAN_TRUE;
-                    idx = idx === blank ? list.indexOf(obj) : idx;
+                    idx = idx === UNDEFINED ? list.indexOf(obj) : idx;
                     if (idx + 1) {
                         if (selector) {
                             mainHandler[DELEGATE_COUNT]--;
@@ -5999,15 +6134,15 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         ensureHandlers = function (fn) {
             return function (name) {
                 // var args = toArray(arguments);
-                var args = [EMPTY_STRING, blank, []],
+                var args = [EMPTY_STRING, UNDEFINED, []],
                     origArgs = filter(arguments, negate(isBlank)),
                     argLen = origArgs[LENGTH];
                 if (!isObject(name)) {
                     if (argLen === 1) {
-                        args = [name, blank, [blank]];
+                        args = [name, UNDEFINED, [UNDEFINED]];
                     }
                     if (argLen === 2) {
-                        args = [name, blank, arguments[1]];
+                        args = [name, UNDEFINED, arguments[1]];
                     }
                 }
                 if (argLen === 3) {
@@ -6085,7 +6220,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                         button = original.button;
                     // Calculate pageX/Y if missing and clientX/Y available
                     if (isBlank(evnt.pageX) && !isBlank(original.clientX)) {
-                        evntDoc = evnt.target.ownerDocument || sizzleDoc;
+                        evntDoc = evnt.target.ownerDocument || doc;
                         doc = evntDoc.documentElement;
                         body = evntDoc[BODY];
                         evnt.pageX = original.clientX + (doc && doc.scrollLeft || body && body.scrollLeft || 0) - (doc && doc.clientLeft || body && body.clientLeft || 0);
@@ -6099,7 +6234,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                     evnt.y = original.y || 0;
                     // Add which for click: 1 === left; 2 === middle; 3 === right
                     // Note: button is not normalized, so don't use it
-                    if (!evnt.which && button !== blank) {
+                    if (!evnt.which && button !== UNDEFINED) {
                         evnt.which = (button & 1 ? 1 : (button & 2 ? 3 : (button & 4 ? 2 : 0)));
                     }
                     return evnt;
@@ -6129,7 +6264,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 // ie also does not have a target... so use current target
                 target = evnt.target || (evnt.view ? evnt.view.event.currentTarget : event.currentTarget);
                 if (!target) {
-                    target = evnt.target = sizzleDoc;
+                    target = evnt.target = doc;
                 }
                 // Support: Safari 6.0+, Chrome<28
                 // Target should not be a text node (#504, #13143)
@@ -6192,6 +6327,8 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 this.stopPropagation();
             }
         }, BOOLEAN_TRUE),
+        eq = _.eq,
+        objectMatches = _.matches,
         createDomFilter = function (filtr) {
             var filter;
             if (isFunction(filtr)) {
@@ -6389,7 +6526,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                     var data = elementData.get(el);
                     each(data.handlers, function (key, fn, eH) {
                         var wasCapt, split = key.split(':');
-                        eH[key] = blank;
+                        eH[key] = UNDEFINED;
                         wasCapt = data.events[split[0]];
                         if (wasCapt) {
                             wasCapt[split[1]] = [];
@@ -6451,7 +6588,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 var count = 0,
                     length = this[LENGTH](),
                     result = length && find(this.unwrap(), negate(isElement));
-                return length && result === blank;
+                return length && result === UNDEFINED;
             },
             /**
              * @func
@@ -6468,7 +6605,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             /**
              * @func
              * @name DOMM#getStyle
-             * @retuns {Object} the get computed result or a blank object if first or defined index is not a dom element and therefore cannot have a style associated with it
+             * @retuns {Object} the get computed result or a UNDEFINED object if first or defined index is not a dom element and therefore cannot have a style associated with it
              */
             getStyle: function (eq) {
                 var ret = {},
@@ -6493,7 +6630,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 }
                 key = unCamelCase(key);
                 value = attributeInterface(el, key, val);
-                if (value !== blank) {
+                if (value !== UNDEFINED) {
                     data.dataset[_key] = value;
                 }
                 return value;
@@ -6516,7 +6653,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                     }
                 } else {
                     if (isBlank(val)) {
-                        val = blank;
+                        val = UNDEFINED;
                     }
                     el[key] = val;
                 }
@@ -6564,55 +6701,28 @@ application.scope().module('DOMM', function (module, app, _, factories) {
              * @param {String|Array} add - space delimited string that separates classes to be added through the change class function
              * @returns {DOMM} instance
              */
-            addClass: eachProc(function (el, add) {
-                changeClass(el, 0, add);
-            }),
+            addClass: applyClass(addClass),
             /**
              * @func
              * @name DOMM#removeClass
              * @param {String|Array} remove - space delimited string that separates classes to be removed through the change class function
              * @returns {DOMM} instance
              */
-            removeClass: eachProc(function (el, remove) {
-                changeClass(el, remove);
-            }),
+            removeClass: applyClass(removeClass),
             /**
              * @func
              * @name DOMM#toggleClass
              * @params {String|Array} list - space delimited string that separates classes to be removed and added through the change class function
              * @returns {DOMM} instance
              */
-            toggleClass: eachProc(function (el, list) {
-                var add = [],
-                    remove = [];
-                duff(gapSplit(list), function (item) {
-                    if (containsClass(el, item)) {
-                        remove.push(item);
-                    } else {
-                        add.push(item);
-                    }
-                });
-                changeClass(el, remove, add);
-            }),
+            toggleClass: applyClass(toggleClass),
             /**
              * @func
              * @name DOMM#hasClass
              * @param {String|Array} list - space delimited string that each element is checked againsts to ensure that it has the classs
              * @returns {Boolean} do all of the elements in the collection have all of the classes listed
              */
-            hasClass: function (clas) {
-                var dom = this,
-                    retVals = [],
-                    countLen = [],
-                    classes = gapSplit(clas);
-                dom.duff(function (el) {
-                    countLen.push(1);
-                    if (containsClass(el, clas)) {
-                        retVals.push(1);
-                    }
-                });
-                return (dom[LENGTH]() && countLen[LENGTH] === retVals[LENGTH]);
-            },
+            hasClass: containsClass,
             /**
              * @func
              * @name DOMM#changeClass
@@ -6620,7 +6730,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
              * @param {String|Array} [add] - adds space delimited list or array of classes
              * @returns {DOMM} instance
              */
-            changeClass: eachProc(changeClass),
+            changeClass: applyClass(changeClass),
             booleanClass: eachProc(function (el, add, remove) {
                 if (add) {
                     add = remove;
@@ -6992,11 +7102,10 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             return triggerEventWrapper(attr);
         })), BOOLEAN_TRUE),
         Sizzle = function (str, ctx) {
-            return (ctx || sizzleDoc).querySelectorAll(str);
+            return (ctx || doc).querySelectorAll(str);
         },
         $;
     _.exports({
-        time: time,
         covers: covers,
         center: center,
         closer: closer,
@@ -7015,7 +7124,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         unitToNumber: unitToNumber,
         numberToUnit: numberToUnit
     });
-    $ = _DOMM(sizzleDoc);
+    $ = _DOMM(doc);
     app.addModuleArgs([$]);
 });
 application.scope().module('View', function (module, app, _, factories, $) {

@@ -1,44 +1,11 @@
 application.scope(function (app) {
-    var blank, _ = app._,
-        factories = _.factories,
-        gapSplit = _.gapSplit,
-        simpleObject = _.simpleObject,
-        isObject = _.isObject,
-        isString = _.isString,
-        isNum = _.isNum,
-        isFunction = _.isFunction,
-        each = _.each,
-        duff = _.duff,
-        isBlank = _.isBlank,
-        duffRev = _.duffRev,
-        push = _.push,
-        has = _.has,
-        map = _.map,
-        bind = _.bind,
-        find = _.find,
-        isInstance = _.isInstance,
-        camelCase = _.camelCase,
-        intendedObject = _.intendedObject,
-        toArray = _.toArray,
-        clone = _.clone,
-        once = _.once,
-        extend = _.extend,
-        remove = _.remove,
-        stringify = _.stringify,
-        isArrayLike = _.isArrayLike,
-        isArray = _.isArray,
-        upCase = _.upCase,
-        LENGTH = 'length',
-        PARENT = 'parent',
+    var remove = _.remove,
         _EVENTS = '_events',
         EVENT_REMOVE = '_removeEventList',
         CURRENT_EVENTS = '_currentEventList',
         _LISTENING_TO = '_listeningTo',
-        modifiedTriggerString = 'change:',
         IMMEDIATE_PROP_IS_STOPPED = 'immediatePropagationIsStopped',
         SERIALIZED_DATA = 'serializedData',
-        BOOLEAN_TRUE = !0,
-        BOOLEAN_FALSE = !1,
         iterateOverObject = function (box, ctx, key, value, iterator, firstarg, allowNonFn) {
             intendedObject(key, value, function (evnts, funs_) {
                 // only accepts a string or a function
@@ -77,14 +44,15 @@ application.scope(function (app) {
         removeEventObject = function (box, arr, handler, ctx) {
             var current = getCurrentEventList(box);
             duffRev(arr, function (obj, idx, array) {
-                if ((!handler || obj.handler === handler) && (!ctx || obj.ctx === ctx)) {
-                    // because event triggers are always syncronous,
-                    // we can just wait until the dispatchEvent function is done
-                    if (current[LENGTH]) {
-                        getRemoveList(box).push(obj);
-                    } else {
-                        removeEvent(obj);
-                    }
+                if ((handler && obj.handler !== handler) || (ctx && obj.ctx !== ctx)) {
+                    return;
+                }
+                // because event triggers are always syncronous,
+                // we can just wait until the dispatchEvent function is done
+                if (current[LENGTH]) {
+                    getRemoveList(box).push(obj);
+                } else {
+                    removeEvent(obj);
                 }
             });
         },
@@ -92,16 +60,18 @@ application.scope(function (app) {
             var listeningTo, listening = evnt.listening;
             remove(evnt.list, evnt);
             // disconnect it from the list above it
-            evnt.list = blank;
+            evnt.list = UNDEFINED;
             // check to see if it was a listening type
-            if (listening) {
-                // if it was then decrement it
-                listening.count--;
-                if (!listening.count) {
-                    listeningTo = listening.listeningTo;
-                    listeningTo[listening.obj._listenId] = blank;
-                }
+            if (!listening) {
+                return;
             }
+            // if it was then decrement it
+            listening.count--;
+            if (listening.count) {
+                return;
+            }
+            listeningTo = listening.listeningTo;
+            listeningTo[listening.obj._listenId] = UNDEFINED;
         },
         retreiveEventList = function (model, name) {
             var internalevents = model[_EVENTS] = model[_EVENTS] || {};
@@ -132,7 +102,7 @@ application.scope(function (app) {
         retreiveListeningObject = function (thing, obj) {
             var listeningTo, listening, thisId, id = obj._listenId;
             if (!id) {
-                id = obj._listenId = _.uniqueId('l');
+                id = obj._listenId = uniqueId('l');
             }
             listeningTo = thing[_LISTENING_TO] || (thing[_LISTENING_TO] = {});
             listening = listeningTo[id];
@@ -141,7 +111,7 @@ application.scope(function (app) {
             if (!listening) {
                 thisId = thing._listenId;
                 if (!thisId) {
-                    thisId = thing._listenId = _.uniqueId('l');
+                    thisId = thing._listenId = uniqueId('l');
                 }
                 listening = listeningTo[id] = {
                     obj: obj,
@@ -249,7 +219,6 @@ application.scope(function (app) {
             bindOnce(box, name, obj);
             listenToHandler(box, name, obj, extra);
         },
-        // makeValidEvent = ,
         getEventList = function (box, name) {
             var events = box[_EVENTS] = box[_EVENTS] || {};
             return events[name] || [];
@@ -285,6 +254,7 @@ application.scope(function (app) {
             on: flattenMatrix(attachEventObject, 0),
             once: flattenMatrix(onceHandler, 0),
             listenTo: flattenMatrix(listenToHandler, 1),
+            listenToOnce: flattenMatrix(listenToOnceHandler, 1),
             /**
              * @description attaches an event handler to the events object, and takes it off as soon as it runs once
              * @func
@@ -294,7 +264,6 @@ application.scope(function (app) {
              * @param {Object} ctx - context that will be applied to the handler
              * @returns {Box} instance
              */
-            listenToOnce: flattenMatrix(listenToOnceHandler, 1),
             /**
              * @description remove event objects from the _events object
              * @param {String|Function} type - event type or handler. If a match is found, then the event object is removed
@@ -347,7 +316,7 @@ application.scope(function (app) {
                     if (!stillListening && !find(ids, function (id, key) {
                         return listeningTo[id];
                     })) {
-                        origin[_LISTENING_TO] = blank;
+                        origin[_LISTENING_TO] = UNDEFINED;
                     }
                 }
                 return origin;

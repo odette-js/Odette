@@ -12,15 +12,16 @@ application.scope().module('Ajax', function (module, app, _, factories) {
         FAILURE = 'failure',
         SUCCESS = 'success',
         READY_STATE = 'readyState',
+        XDomainRequest = window.XDomainRequest,
         isObject = _.isObject,
         isArray = _.isArray,
         stringify = _.stringify,
         parse = _.parse,
         extend = _.extend,
         stringifyQuery = _.stringifyQuery,
-        validTypes = gapSplit('GET POST PUT DELETE'),
+        GET = 'GET',
+        validTypes = gapSplit(GET + ' POST PUT DELETE'),
         baseEvents = gapSplit('progress timeout abort error'),
-        cache = {},
         /**
          * @description helper function to attach a bunch of event listeners to the request object as well as help them trigger the appropriate events on the Ajax object itself
          * @private
@@ -98,13 +99,13 @@ application.scope().module('Ajax', function (module, app, _, factories) {
                 // ajax.async = BOOLEAN_TRUE;
                 xhrReq = new XMLHttpRequest();
                 // covers ie9
-                if (typeof XDomainRequest !== 'undefined') {
+                if (!_.isUndefined(XDomainRequest)) {
                     xhrReq = new XDomainRequest();
                     method = 'onload';
                 }
                 if (!_.isObject(str)) {
                     str = str || '';
-                    type = 'GET';
+                    type = GET;
                     typeThing = str.toUpperCase();
                     if (posit(validTypes, typeThing)) {
                         type = typeThing;
@@ -117,7 +118,7 @@ application.scope().module('Ajax', function (module, app, _, factories) {
                     };
                 }
                 str.async = BOOLEAN_TRUE;
-                str.type = (str.type || 'GET').toUpperCase();
+                str.type = (str.type || GET).toUpperCase();
                 str.method = method;
                 factories.Promise.constructor.apply(ajax);
                 ajax.on('change:url', alterurlHandler);
@@ -216,7 +217,7 @@ application.scope().module('Ajax', function (module, app, _, factories) {
         key = key.toLowerCase();
         memo[key] = function (url) {
             return Ajax({
-                type: key,
+                type: key_,
                 url: url
             });
         };

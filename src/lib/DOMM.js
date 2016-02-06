@@ -1,53 +1,7 @@
 application.scope().module('DOMM', function (module, app, _, factories) {
-    var sizzleDoc = document,
-        eq = _.eq,
-        once = _.once,
-        elementData = _.associator,
-        result = _.result,
-        uniqueId = _.uniqueId,
-        isFunction = _.isFunction,
+    var posit = _.posit,
         Collection = factories.Collection,
-        wraptry = _.wraptry,
-        now = _.now,
-        each = _.each,
-        bind = _.bind,
-        duff = _.duff,
-        find = _.find,
-        wrap = _.wrap,
-        trace = _.trace,
-        posit = _.posit,
-        foldl = _.foldl,
-        filter = _.filter,
-        isString = _.isString,
-        isObject = _.isObject,
-        isNumber = _.isNumber,
-        isBoolean = _.isBoolean,
-        stringify = _.stringify,
-        parse = _.parse,
-        isArrayLike = _.isArrayLike,
-        objectMatches = _.matches,
-        merge = _.merge,
-        console = _.console,
-        remove = _.splice,
-        extend = _.extend,
-        negate = _.negate,
-        intendedObject = _.intendedObject,
-        isInstance = _.isInstance,
-        isBlank = _.isBlank,
-        gapJoin = _.gapJoin,
-        isArray = _.isArray,
-        toArray = _.toArray,
-        duffRev = _.duffRev,
-        indexOf = _.indexOf,
-        clone = _.clone,
-        units = _.units,
-        gapSplit = _.gapSplit,
-        camelCase = _.camelCase,
-        unCamelCase = _.unCamelCase,
-        parseDecimal = _.parseDecimal,
-        add = _.add,
-        removeAll = _.removeAll,
-        addAll = _.addAll,
+        elementData = _.associator,
         NODE_TYPE = 'nodeType',
         PARENT_NODE = 'parentNode',
         ITEMS = '_items',
@@ -78,7 +32,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             return obj && isNumber(obj[NODE_TYPE]) && obj[NODE_TYPE] === obj.DOCUMENT_NODE;
         },
         isFragment = function (frag) {
-            return frag && frag[NODE_TYPE] === sizzleDoc.DOCUMENT_FRAGMENT_NODE;
+            return frag && frag[NODE_TYPE] === doc.DOCUMENT_FRAGMENT_NODE;
         },
         getClosestWindow = function (windo_) {
             var windo = windo_ || win;
@@ -88,7 +42,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             var ret = getClosestWindow(ctx).getComputedStyle(el);
             return ret ? ret : getClosestWindow(el).getComputedStyle(el) || clone(el[STYLE]) || {};
         },
-        allStyles = getComputed(sizzleDoc[BODY], win),
+        allStyles = getComputed(doc[BODY], win),
         rkeyEvent = /^key/,
         rmouseEvent = /^(?:mouse|pointer|contextmenu)|click/,
         rfocusMorph = /^(?:focusinfocus|focusoutblur)$/,
@@ -127,7 +81,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         }()),
         saveDOMContentLoadedEvent = function (doc) {
             var data = elementData.get(doc);
-            if (data.isReady === blank) {
+            if (data.isReady === UNDEFINED) {
                 data.isReady = BOOLEAN_FALSE;
                 DOMM(doc).on('DOMContentLoaded', function (e) {
                     data.DOMContentLoadedEvent = e;
@@ -170,7 +124,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         attributeInterface = function (el, key, val) {
             // set or remove if not undefined
             // undefined fills in the gap by returning some value, which is never undefined
-            if (val !== blank) {
+            if (val !== UNDEFINED) {
                 if (!val && val !== 0) {
                     el.removeAttribute(key);
                 } else {
@@ -187,8 +141,8 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             }
             return (className || EMPTY_STRING).split(' ');
         },
-        setClassName = function (el, val) {
-            var value = val.join(' ').trim();
+        setClassName = function (el, value) {
+            // var value = val.join(' ').trim();
             if (isString(el[CLASSNAME])) {
                 el[CLASSNAME] = value;
             } else {
@@ -262,20 +216,65 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         trustedEvents = gapSplit('load scroll resize orientationchange click dblclick mousedown mouseup mouseover mouseout mouseenter mouseleave mousemove change contextmenu hashchange load mousewheel wheel readystatechange'),
         ALL_EVENTS_HASH = wrap(AllEvents, BOOLEAN_TRUE),
         knownPrefixesHash = wrap(knownPrefixes, BOOLEAN_TRUE),
-        changeClass = function (el, remove, add) {
-            var n, val, command, classList;
-            if (el) {
-                classList = getClassName(el);
-                if (remove) {
-                    removeAll(classList, gapSplit(remove));
-                }
-                if (add) {
-                    addAll(classList, gapSplit(add));
-                }
-                // val = gapJoin(classList).trim();
-                setClassName(el, classList);
-                return el;
-            }
+        // changeClass = function (el, remove, add) {
+        //     var n, val, command, classList;
+        //     if (el) {
+        //         classList = getClassName(el);
+        //         if (remove) {
+        //             duff(gapSplit(remove), function (clas) {
+        //                 _.remove(classList, clas);
+        //             });
+        //         }
+        //         if (add) {
+        //             duff(gapSplit(add), function (clas) {
+        //                 _.add(classList, clas);
+        //             });
+        //         }
+        //         // val = gapJoin(classList).trim();
+        //         setClassName(el, classList);
+        //         return el;
+        //     }
+        // },
+        addClass = function (classManager, add) {
+            duff(gapSplit(add), classManager.add, classManager);
+            return classManager;
+        },
+        removeClass = function (classManager, remove) {
+            duff(gapSplit(remove), classManager.remove, classManager);
+            return classManager;
+        },
+        toggleClass = function (classManager, togglers) {
+            duff(gapSplit(togglers), classManager.toggle, classManager);
+            return classManager;
+        },
+        changeClass = function (classManager, remove, add) {
+            return addClass(removeClass(classManager, remove), add);
+        },
+        applyClass = function (fn) {
+            return function (one, two) {
+                this.duff(function (el) {
+                    var classManager = elementData.ensure(el, ATTRIBUTES, factories.StringManager);
+                    classManager.ensure(getClassName(el), ' ');
+                    var ret = fn(classManager, one, two);
+                    var generated = ret.generate(' ');
+                    setClassName(el, generated);
+                });
+                return this;
+            };
+        },
+        /**
+         * @private
+         * @func
+         */
+        containsClass = function (className) {
+            return !!this.length() && !find(this.unwrap(), function (el) {
+                var classManager = elementData.ensure(el, ATTRIBUTES, factories.StringManager);
+                classManager.ensure(getClassName(el), ' ');
+                return find(gapSplit(className), function (clas) {
+                    var stringInstance = classManager.get(clas);
+                    return stringInstance ? !stringInstance.isValid() : BOOLEAN_TRUE;
+                });
+            });
         },
         /**
          * @private
@@ -671,58 +670,6 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             }
             return number;
         },
-        SIXTY = 60,
-        SEVEN = 7,
-        THIRTY = 30,
-        TWENTY_FOUR = 24,
-        ONE_THOUSAND = 1000,
-        THREE_HUNDRED_SIXTY_FIVE = 365,
-        ONE_THOUSAND_SIXTY = ONE_THOUSAND * SIXTY,
-        THREE_HUNDRED_SIXTY_THOUSAND = ONE_THOUSAND_SIXTY * SIXTY,
-        EIGHTY_SIX_MILLION_FOUR_HUNDRED_THOUSAND = THREE_HUNDRED_SIXTY_THOUSAND * TWENTY_FOUR,
-        SIX_HUNDRED_FOUR_MILLION_EIGHT_HUNDRED_THOUSAND = THREE_HUNDRED_SIXTY_THOUSAND * SEVEN,
-        TWO_BILLION_FIVE_HUNDRED_NINETY_TWO_MILLION = THREE_HUNDRED_SIXTY_THOUSAND * THIRTY,
-        THIRTY_ONE_BILLION_FIVE_HUNDRED_THIRTY_SIX_MILLION = THREE_HUNDRED_SIXTY_THOUSAND * THREE_HUNDRED_SIXTY_FIVE,
-        NUMBERS_LENGTH = {
-            ms: 1,
-            secs: ONE_THOUSAND,
-            s: ONE_THOUSAND,
-            mins: ONE_THOUSAND_SIXTY,
-            hrs: THREE_HUNDRED_SIXTY_THOUSAND,
-            days: EIGHTY_SIX_MILLION_FOUR_HUNDRED_THOUSAND,
-            wks: SIX_HUNDRED_FOUR_MILLION_EIGHT_HUNDRED_THOUSAND,
-            mnths: TWO_BILLION_FIVE_HUNDRED_NINETY_TWO_MILLION,
-            yrs: THIRTY_ONE_BILLION_FIVE_HUNDRED_THIRTY_SIX_MILLION
-        },
-        timeUnits = [],
-        timeUnitToNumber = foldl(NUMBERS_LENGTH, function (memo, number, unit) {
-            timeUnits.push(unit);
-            memo[unit] = function (input) {
-                return input * number;
-            };
-            return memo;
-        }, {}),
-        time = _.cacheable(function (number_) {
-            var number = number_ + EMPTY_STRING,
-                time = 0;
-            if (isString(number)) {
-                number = number.split(',');
-            }
-            duff(number, function (num_) {
-                var num = num_,
-                    unit = _.customUnits(num, timeUnits),
-                    number = +(num.split(unit || EMPTY_STRING).join(EMPTY_STRING)),
-                    handler = timeUnitToNumber[unit];
-                // there's a handler for this unit, adn it's not NaN
-                if (number === number) {
-                    if (handler) {
-                        number = handler(number);
-                    }
-                    time += number;
-                }
-            });
-            return time;
-        }),
         /**
          * @private
          * @func
@@ -785,23 +732,6 @@ application.scope().module('DOMM', function (module, app, _, factories) {
          * @private
          * @func
          */
-        containsClass = function (el, className) {
-            var original = getClassName(el),
-                nuClasses = gapSplit(className),
-                nuClassesLen = nuClasses[LENGTH],
-                i = 0,
-                has = 0;
-            for (; i < nuClassesLen; i++) {
-                if (posit(original, nuClasses[i])) {
-                    has++;
-                }
-            }
-            return (has === nuClassesLen);
-        },
-        /**
-         * @private
-         * @func
-         */
         tagIs = function (el, str) {
             var tagName;
             if (el && isObject(el)) {
@@ -823,7 +753,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
          * @func
          */
         createElement = function (str) {
-            return sizzleDoc.createElement(str);
+            return doc.createElement(str);
         },
         makeEmptyFrame = function (str) {
             var frame, div = createElement('div');
@@ -876,7 +806,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             };
         },
         createDocumentFragment = function () {
-            return sizzleDoc.createDocumentFragment();
+            return doc.createDocumentFragment();
         },
         /**
          * @private
@@ -962,7 +892,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                         }
                         duff(__keys, function (_key) {
                             var value = fn(el, _key, val, data, dom);
-                            if (value !== blank) {
+                            if (value !== UNDEFINED) {
                                 ret[_key] = value;
                                 count++;
                             }
@@ -1286,7 +1216,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             if (!mainHandler.currentEvent) {
                 if (!obj.isDestroyed) {
                     obj.isDestroyed = BOOLEAN_TRUE;
-                    idx = idx === blank ? list.indexOf(obj) : idx;
+                    idx = idx === UNDEFINED ? list.indexOf(obj) : idx;
                     if (idx + 1) {
                         if (selector) {
                             mainHandler[DELEGATE_COUNT]--;
@@ -1305,15 +1235,15 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         ensureHandlers = function (fn) {
             return function (name) {
                 // var args = toArray(arguments);
-                var args = [EMPTY_STRING, blank, []],
+                var args = [EMPTY_STRING, UNDEFINED, []],
                     origArgs = filter(arguments, negate(isBlank)),
                     argLen = origArgs[LENGTH];
                 if (!isObject(name)) {
                     if (argLen === 1) {
-                        args = [name, blank, [blank]];
+                        args = [name, UNDEFINED, [UNDEFINED]];
                     }
                     if (argLen === 2) {
-                        args = [name, blank, arguments[1]];
+                        args = [name, UNDEFINED, arguments[1]];
                     }
                 }
                 if (argLen === 3) {
@@ -1391,7 +1321,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                         button = original.button;
                     // Calculate pageX/Y if missing and clientX/Y available
                     if (isBlank(evnt.pageX) && !isBlank(original.clientX)) {
-                        evntDoc = evnt.target.ownerDocument || sizzleDoc;
+                        evntDoc = evnt.target.ownerDocument || doc;
                         doc = evntDoc.documentElement;
                         body = evntDoc[BODY];
                         evnt.pageX = original.clientX + (doc && doc.scrollLeft || body && body.scrollLeft || 0) - (doc && doc.clientLeft || body && body.clientLeft || 0);
@@ -1405,7 +1335,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                     evnt.y = original.y || 0;
                     // Add which for click: 1 === left; 2 === middle; 3 === right
                     // Note: button is not normalized, so don't use it
-                    if (!evnt.which && button !== blank) {
+                    if (!evnt.which && button !== UNDEFINED) {
                         evnt.which = (button & 1 ? 1 : (button & 2 ? 3 : (button & 4 ? 2 : 0)));
                     }
                     return evnt;
@@ -1435,7 +1365,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 // ie also does not have a target... so use current target
                 target = evnt.target || (evnt.view ? evnt.view.event.currentTarget : event.currentTarget);
                 if (!target) {
-                    target = evnt.target = sizzleDoc;
+                    target = evnt.target = doc;
                 }
                 // Support: Safari 6.0+, Chrome<28
                 // Target should not be a text node (#504, #13143)
@@ -1498,6 +1428,8 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 this.stopPropagation();
             }
         }, BOOLEAN_TRUE),
+        eq = _.eq,
+        objectMatches = _.matches,
         createDomFilter = function (filtr) {
             var filter;
             if (isFunction(filtr)) {
@@ -1695,7 +1627,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                     var data = elementData.get(el);
                     each(data.handlers, function (key, fn, eH) {
                         var wasCapt, split = key.split(':');
-                        eH[key] = blank;
+                        eH[key] = UNDEFINED;
                         wasCapt = data.events[split[0]];
                         if (wasCapt) {
                             wasCapt[split[1]] = [];
@@ -1757,7 +1689,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 var count = 0,
                     length = this[LENGTH](),
                     result = length && find(this.unwrap(), negate(isElement));
-                return length && result === blank;
+                return length && result === UNDEFINED;
             },
             /**
              * @func
@@ -1774,7 +1706,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             /**
              * @func
              * @name DOMM#getStyle
-             * @retuns {Object} the get computed result or a blank object if first or defined index is not a dom element and therefore cannot have a style associated with it
+             * @retuns {Object} the get computed result or a UNDEFINED object if first or defined index is not a dom element and therefore cannot have a style associated with it
              */
             getStyle: function (eq) {
                 var ret = {},
@@ -1799,7 +1731,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 }
                 key = unCamelCase(key);
                 value = attributeInterface(el, key, val);
-                if (value !== blank) {
+                if (value !== UNDEFINED) {
                     data.dataset[_key] = value;
                 }
                 return value;
@@ -1822,7 +1754,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                     }
                 } else {
                     if (isBlank(val)) {
-                        val = blank;
+                        val = UNDEFINED;
                     }
                     el[key] = val;
                 }
@@ -1870,55 +1802,28 @@ application.scope().module('DOMM', function (module, app, _, factories) {
              * @param {String|Array} add - space delimited string that separates classes to be added through the change class function
              * @returns {DOMM} instance
              */
-            addClass: eachProc(function (el, add) {
-                changeClass(el, 0, add);
-            }),
+            addClass: applyClass(addClass),
             /**
              * @func
              * @name DOMM#removeClass
              * @param {String|Array} remove - space delimited string that separates classes to be removed through the change class function
              * @returns {DOMM} instance
              */
-            removeClass: eachProc(function (el, remove) {
-                changeClass(el, remove);
-            }),
+            removeClass: applyClass(removeClass),
             /**
              * @func
              * @name DOMM#toggleClass
              * @params {String|Array} list - space delimited string that separates classes to be removed and added through the change class function
              * @returns {DOMM} instance
              */
-            toggleClass: eachProc(function (el, list) {
-                var add = [],
-                    remove = [];
-                duff(gapSplit(list), function (item) {
-                    if (containsClass(el, item)) {
-                        remove.push(item);
-                    } else {
-                        add.push(item);
-                    }
-                });
-                changeClass(el, remove, add);
-            }),
+            toggleClass: applyClass(toggleClass),
             /**
              * @func
              * @name DOMM#hasClass
              * @param {String|Array} list - space delimited string that each element is checked againsts to ensure that it has the classs
              * @returns {Boolean} do all of the elements in the collection have all of the classes listed
              */
-            hasClass: function (clas) {
-                var dom = this,
-                    retVals = [],
-                    countLen = [],
-                    classes = gapSplit(clas);
-                dom.duff(function (el) {
-                    countLen.push(1);
-                    if (containsClass(el, clas)) {
-                        retVals.push(1);
-                    }
-                });
-                return (dom[LENGTH]() && countLen[LENGTH] === retVals[LENGTH]);
-            },
+            hasClass: containsClass,
             /**
              * @func
              * @name DOMM#changeClass
@@ -1926,7 +1831,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
              * @param {String|Array} [add] - adds space delimited list or array of classes
              * @returns {DOMM} instance
              */
-            changeClass: eachProc(changeClass),
+            changeClass: applyClass(changeClass),
             booleanClass: eachProc(function (el, add, remove) {
                 if (add) {
                     add = remove;
@@ -2298,11 +2203,10 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             return triggerEventWrapper(attr);
         })), BOOLEAN_TRUE),
         Sizzle = function (str, ctx) {
-            return (ctx || sizzleDoc).querySelectorAll(str);
+            return (ctx || doc).querySelectorAll(str);
         },
         $;
     _.exports({
-        time: time,
         covers: covers,
         center: center,
         closer: closer,
@@ -2321,6 +2225,6 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         unitToNumber: unitToNumber,
         numberToUnit: numberToUnit
     });
-    $ = _DOMM(sizzleDoc);
+    $ = _DOMM(doc);
     app.addModuleArgs([$]);
 });

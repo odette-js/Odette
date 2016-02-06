@@ -1,6 +1,5 @@
 application.scope().module('Promise', function (module, app, _, factories) {
-    var blank, LENGTH = 'length',
-        FAILURE = 'failure',
+    var blank, FAILURE = 'failure',
         SUCCESS = 'success',
         STATE = 'state',
         ALWAYS = 'always',
@@ -20,9 +19,6 @@ application.scope().module('Promise', function (module, app, _, factories) {
         result = _.result,
         wraptry = _.wraptry,
         indexOf = _.indexOf,
-        BOOLEAN_TRUE = !0,
-        BOOLEAN_FALSE = !1,
-        NULL = null,
         when = function () {
             var promise = factories.Promise();
             promise.add(foldl(flatten(arguments), function (memo, pro) {

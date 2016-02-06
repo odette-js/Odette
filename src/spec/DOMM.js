@@ -13,7 +13,7 @@ application.scope().run(function (app, _, factories, $) {
             },
             create = function () {
                 $con.remove(divs);
-                divs = $().count(0, 5, function (item, index, list) {
+                divs = $().count(function (item, index, list) {
                     var div = document.createElement('div');
                     div.className = 'one';
                     if (index % 2) {
@@ -22,7 +22,7 @@ application.scope().run(function (app, _, factories, $) {
                         div.className += ' not';
                     }
                     list.push(div);
-                });
+                }, 0, 5);
                 $con.append(divs);
                 return divs;
             },

@@ -88,9 +88,14 @@ application.scope().module('Associator', function (module, app, _, factories) {
                     current.readData = BOOLEAN_TRUE;
                 }
                 return current;
+            },
+            ensure: function (el, attr, failure) {
+                var data = this.get(el);
+                data[attr] = data[attr] || failure();
+                return data[attr];
             }
         }, BOOLEAN_TRUE);
     _.exports({
-        associator: factories.Associator()
+        associator: Associator()
     });
 });

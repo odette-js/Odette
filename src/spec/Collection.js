@@ -61,12 +61,12 @@ application.scope().run(function (app, _, factories, $) {
             expect(test).toEqual([9, 8, 7, 6, 5, 4, 3, 2, 1, 0]);
         });
         describe('but other methods need arrays... Collections also have a bunch of methods that they stole from the _ object such as:', function () {
-            it('addAll', function () {
-                expect(numberCollection.addAll([0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20]).unwrap()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16, 18, 20]);
-            });
-            it('removeAll', function () {
-                expect(numberCollection.removeAll([0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20]).unwrap()).toEqual([1, 3, 5, 7, 9]);
-            });
+            // it('addAll', function () {
+            //     expect(numberCollection.addAll([0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20]).unwrap()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16, 18, 20]);
+            // });
+            // it('removeAll', function () {
+            //     expect(numberCollection.removeAll([0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20]).unwrap()).toEqual([1, 3, 5, 7, 9]);
+            // });
             it('sort', function () {
                 expect(numberCollection.sort().unwrap()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
                 expect(numberCollection.sort(function (a, b) {
@@ -87,24 +87,24 @@ application.scope().run(function (app, _, factories, $) {
                 expect(numberCollection.uncycle(3).unwrap()).toEqual([7, 8, 9, 0, 1, 2, 3, 4, 5, 6]);
             });
             it('count', function () {
-                expect(numberCollection.count(10, 20, function (item, idx, list) {
+                expect(numberCollection.count(function (item, idx, list) {
                     if (item === null) {
                         list.push(idx);
                     }
-                }).length()).toEqual(20);
+                }, 10, 20).length()).toEqual(20);
             });
             it('countTo', function () {
-                expect(numberCollection.countTo(20, function (item, idx, list) {
+                expect(numberCollection.countTo(function (item, idx, list) {
                     if (item === null) {
                         list.push(idx);
                     }
-                }).length()).toEqual(20);
+                }, 20).length()).toEqual(20);
             });
             it('countFrom', function () {
                 var count = 0;
-                numberCollection.countFrom(6, function (item, idx, list) {
+                numberCollection.countFrom(function (item, idx, list) {
                     count++;
-                });
+                }, 6);
                 expect(count).toEqual(4);
             });
             it('has', function () {

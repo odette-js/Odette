@@ -1,41 +1,8 @@
 application.scope(function (app) {
-    var blank, _ = app._,
-        factories = _.factories,
-        isObject = _.isObject,
-        isNumber = _.isNumber,
-        isFunction = _.isFunction,
-        isInstance = _.isInstance,
-        LENGTH = 'length',
-        ITEMS = '_items',
+    var ITEMS = '_items',
         BY_ID = '_byId',
         ID = 'id',
         PREVIOUS = '_previous',
-        each = _.each,
-        duff = _.duff,
-        push = _.push,
-        wrap = _.wrap,
-        keys = _.keys,
-        find = _.find,
-        map = _.map,
-        has = _.has,
-        isBlank = _.isBlank,
-        stringify = _.stringify,
-        findLast = _.findLast,
-        allKeys = _.allKeys,
-        splice = _.splice,
-        toArray = _.toArray,
-        gapSplit = _.gapSplit,
-        sort = _.sort,
-        bind = _.bind,
-        extend = _.extend,
-        result = _.result,
-        isArrayLike = _.isArrayLike,
-        negate = _.negate,
-        isArray = _.isArray,
-        indexOf = _.indexOf,
-        clone = _.clone,
-        BOOLEAN_TRUE = !0,
-        BOOLEAN_FALSE = !1,
         eachCall = function (array, method, arg) {
             return duff(array, function (item) {
                 result(item, method, arg);
@@ -44,7 +11,7 @@ application.scope(function (app) {
         eachRevCall = function (array, method, arg) {
             return duff(array, function (item) {
                 result(item, method, arg);
-            }, null, -1);
+            }, NULL, -1);
         },
         doToEverything = function (doLater, direction) {
             return function () {
@@ -53,7 +20,7 @@ application.scope(function (app) {
                 duff(args, function (items) {
                     duff(items, function (item) {
                         doLater(one, item);
-                    }, null, direction || 1);
+                    }, NULL, direction || 1);
                 });
                 return one;
             };
@@ -61,31 +28,52 @@ application.scope(function (app) {
         /**
          * @func
          */
-        remove = function (list, item, lookAfter) {
-            var index = posit(list, item, lookAfter);
+        remove = function (list, item, lookAfter, lookBefore, fromRight) {
+            var index = posit(list, item, lookAfter, lookBefore, fromRight);
             if (index) {
                 removeAt(list, index - 1);
             }
             return !!index;
         },
-        removeAll = doToEverything(remove, -1),
         removeAt = function (list, index) {
             return splice(list, index, 1)[0];
         },
-        add = function (list, item) {
+        add = function (list, item, lookAfter, lookBefore, fromRight) {
             var val = 0,
-                index = posit(list, item);
+                index = posit(list, item, lookAfter, lookBefore, fromRight);
             if (!index) {
                 val = push(list, item);
             }
             return !!val;
         },
-        addAll = doToEverything(add),
         addAt = function (list, item, index) {
             var len = list[LENGTH],
                 lastIdx = len || 0;
             splice(list, index || 0, 0, item);
             return len !== list[LENGTH];
+        },
+        eq = function (list, num) {
+            var n, thisNum, items = [],
+                numb = num || 0,
+                isNumberResult = isNumber(numb),
+                isArrayLikeResult = isArrayLike(numb);
+            if (numb < 0) {
+                isNumberResult = !1;
+            }
+            if (list[LENGTH]) {
+                if (isNumberResult) {
+                    items = [list[numb]];
+                }
+                if (isArrayLikeResult) {
+                    duff(numb, function (num) {
+                        items.push(list[num]);
+                    });
+                }
+                if (!isArrayLikeResult && !isNumberResult && list[0]) {
+                    items = [list[0]];
+                }
+            }
+            return items;
         },
         range = function (start, stop, step, inclusive) {
             var length, range, idx;
@@ -107,14 +95,14 @@ application.scope(function (app) {
             }
             return range;
         },
-        count = function (list, start, end, runner_) {
-            var runner, obj, idx, ctx = this;
+        count = function (list, runner_, ctx_, start, end) {
+            var runner, obj, idx, ctx = ctx_ || this;
             if (start < end && isNumber(start) && isNumber(end) && isFinite(start) && isFinite(end)) {
                 end = Math.abs(end);
                 idx = start;
                 runner = bind(runner_, ctx);
                 while (idx < end) {
-                    obj = null;
+                    obj = NULL;
                     if (has(list, idx)) {
                         obj = list[idx];
                     }
@@ -124,6 +112,12 @@ application.scope(function (app) {
             }
             return list;
         },
+        countTo = function (list, runner, ctx, num) {
+            return count(list, runner, ctx, 0, num);
+        },
+        countFrom = function (list, runner, ctx, num) {
+            return count(list, runner, ctx, num, list[LENGTH]);
+        },
         // array, startIndex, endIndex
         between = function (fn) {
             return function (list, startIdx_, endIdx_) {
@@ -132,7 +126,7 @@ application.scope(function (app) {
                     endIdx = endIdx_ || list[LENGTH],
                     findResult = find(list, function (item, idx, list) {
                         fn(ret, item, idx, list);
-                    }, null, endIdx);
+                    }, NULL, endIdx);
                 return ret;
             };
         },
@@ -173,17 +167,11 @@ application.scope(function (app) {
             }
             return match;
         },
-        countTo = function (list, num, runner) {
-            return count(list, 0, num, runner);
-        },
-        countFrom = function (list, num, runner) {
-            return count(list, num, list[LENGTH], runner);
-        },
         /**
          * @func
          */
-        posit = function (list, item, lookAfter) {
-            return indexOf(list, item, lookAfter) + 1;
+        posit = function (list, item, lookAfter, lookBefore, fromRight) {
+            return indexOf(list, item, lookAfter, lookBefore, fromRight) + 1;
         },
         /**
          * @func
@@ -202,7 +190,7 @@ application.scope(function (app) {
          */
         concatUnique = function () {
             var array = [];
-            duff(concat.apply(null, arguments), function (item) {
+            duff(concat.apply(NULL, arguments), function (item) {
                 if (!posit(array, item)) {
                     array.push(item);
                 }
@@ -251,7 +239,7 @@ application.scope(function (app) {
         pluck = function (arr, key) {
             var items = [];
             duff(arr, function (item) {
-                if (isObject(item) && item[key] !== void 0) {
+                if (isObject(item) && item[key] !== UNDEFINED) {
                     items.push(item[key]);
                 }
             });
@@ -278,7 +266,7 @@ application.scope(function (app) {
         flatten = function () {
             return foldl(arguments, function (memo, item) {
                 if (isArrayLike(item)) {
-                    memo = memo.concat(flatten.apply(null, item));
+                    memo = memo.concat(flatten.apply(NULL, item));
                 } else {
                     memo.push(item);
                 }
@@ -291,108 +279,16 @@ application.scope(function (app) {
                 var ctx = this,
                     arr = toArray(arguments),
                     args = splice(arr, spliceat);
-                // return duff(args, fn, this, arr);
                 duff(args, function (idx, item, list) {
                     fn.apply(ctx, arr.concat([idx, item, list]));
                 });
             };
         },
-        // merge = splat(function (item, idx, list) {
-        //     var len, collection = this,
-        //         last = collection[LENGTH];
-        //     if (isArrayLike(item)) {
-        //         len = item[LENGTH];
-        //         duff(item, function (key, val) {
-        //             if (val !== blank) {
-        //                 // removes any undefined items
-        //                 len = key + 1;
-        //                 collection[key] = val;
-        //             }
-        //         });
-        //         if (len > (last || 0)) {
-        //             collection[LENGTH] = len;
-        //         }
-        //     }
-        // }),
-        eq = function (list, num) {
-            var n, thisNum, items = [],
-                numb = num || 0,
-                evaluatedIsNumber = isNumber(numb),
-                isArray = isArrayLike(numb);
-            if (numb < 0) {
-                evaluatedIsNumber = BOOLEAN_FALSE;
-            }
-            if (list[LENGTH]) {
-                if (evaluatedIsNumber) {
-                    items = [list[numb]];
-                }
-                if (isArray) {
-                    items = clone(numb);
-                }
-                if (!isArray && !evaluatedIsNumber && list[0]) {
-                    items = [list[0]];
-                }
-            }
-            return items;
-        },
-        tackRev = function (fn, index, ctx) {
-            return function () {
-                var args = toArray(arguments);
-                while (args[LENGTH] < index) {
-                    // fill it out with null
-                    args.push(null);
-                }
-                // put -1 on as the last arg
-                args.push(-1);
-                return fn.apply(ctx || _, args);
-            };
-        },
-        duffRev = tackRev(duff, 3),
-        eachRev = tackRev(each, 3),
         recreateSelf = function (fn, ctx) {
             return function () {
                 return new this.__constructor__(fn.apply(ctx || this, arguments));
             };
         },
-        /**
-         * @func
-         */
-        // Create a reducing function iterating left or right.
-        createReduce = function (dir) {
-            // Optimized iterator function as using arguments[LENGTH]
-            // in the main function will deoptimize the, see #1991.
-            var iterator = function (obj, iteratee, memo, keys, index, length) {
-                var currentKey;
-                for (; index >= 0 && index < length; index += dir) {
-                    currentKey = keys ? keys[index] : index;
-                    memo = iteratee(memo, obj[currentKey], currentKey, obj);
-                }
-                return memo;
-            };
-            return function (obj, iteratee, memo, context) {
-                // iteratee = optimizeCb(iteratee, context, 4);
-                var actualKeys = !isArrayLike(obj) && keys(obj),
-                    length = (actualKeys || obj)[LENGTH],
-                    index = dir > 0 ? 0 : length - 1;
-                // Determine the initial value if none is provided.
-                if (arguments[LENGTH] < 3) {
-                    memo = obj[actualKeys ? actualKeys[index] : index];
-                    index += dir;
-                }
-                return iterator(obj, iteratee, memo, actualKeys, index, length);
-            };
-        },
-        // **Reduce** builds up a single result from a list of values, aka `inject`,
-        // or `foldl`.
-        /**
-         * @func
-         */
-        foldl = createReduce(1),
-        // The right-associative version of reduce, also known as `foldr`.
-        /**
-         * @func
-         */
-        foldr = createReduce(-1),
         /**
          * @func
          */
@@ -412,27 +308,9 @@ application.scope(function (app) {
                 return memo;
             }, isArrayResult ? [] : {});
         },
-        unwrapper = function (fn) {
-            return function (args) {
-                args[0] = args[0][ITEMS];
-                return fn.call(this, args);
-            };
-        },
         unwrapInstance = function (instance_) {
             return isInstance(instance, factories.Collection) ? instance_ : instance.unwrap();
         },
-        unwrapAll = function (fn) {
-            return function (args) {
-                duff(args, function (arg, idx, args) {
-                    args[idx] = unwrapInstance(arg);
-                });
-                return fn.call(this, args);
-            };
-        },
-        unwrap = function () {
-            return this[ITEMS];
-        },
-        // canRunHash = {},
         wrappedCollectionMethods = extend(wrap({
             each: duff,
             duff: duff,
@@ -442,54 +320,61 @@ application.scope(function (app) {
             forEachRev: duffRev,
             eachCall: eachCall,
             eachRevCall: eachRevCall
-        }, function (handler) {
-            // canRunHash[key] = 1;
-            return function (iterator, context) {
-                var items = this[ITEMS];
-                if (items[LENGTH]) {
-                    handler(items, iterator, context);
-                }
+        }, function (fn) {
+            return function (handler, context) {
+                // unshiftContext
+                var args0 = this.unwrap(),
+                    args1 = handler,
+                    args2 = arguments[LENGTH] > 1 ? context : this;
+                fn(args0, args1, args2);
                 return this;
             };
-        }), wrap(gapSplit('addAll removeAll'), function (name) {
+        }), wrap(gapSplit('min max hypot pop shift'), function (name) {
             return function () {
-                var args = toArray(arguments);
-                args.unshift(this);
-                // unwrapAll
-                duff(args, function (arg, idx, args) {
-                    if (isInstance(arg, Collection)) {
-                        arg = arg.unwrap();
-                    }
-                    args[idx] = arg;
-                });
-                // custom
-                _[name].apply(_, args);
+                return _[name](this.unwrap());
+            };
+        }), wrap(gapSplit('push unshift'), function (name) {
+            return function () {
+                var array = this.unwrap();
+                array[name].apply(array, arguments);
                 return this;
             };
-        }), wrap(gapSplit('sort unshift push cycle uncycle reverse count countTo countFrom'), function (name) {
+        }), wrap(gapSplit('join'), function (name) {
+            return function (arg) {
+                return this.unwrap()[name](arg);
+            };
+        }), wrap(gapSplit('reverse', function (name) {
             return function () {
-                var args = toArray(arguments);
-                args.unshift(this[ITEMS]);
-                // unwrapper
-                // custom
-                _[name].apply(_, args);
+                this.unwrap()[name]();
                 return this;
             };
-        }), wrap(gapSplit('has add addAt remove removeAt pop shift indexOf find findLast findWhere findLastWhere posit foldr foldl reduce'), function (name) {
-            return function () {
-                var args = toArray(arguments);
-                args.unshift(this[ITEMS]);
-                // custom
-                return _[name].apply(_, args);
+        })), wrap(gapSplit('count countTo countFrom'), function (name) {
+            return function (one, two, three) {
+                var ctx = this;
+                _[name](ctx.unwrap(), one, ctx, two, three);
+                return ctx;
             };
-        }), wrap(gapSplit('merge eq map filter pluck where whereNot'), function (name) {
+        }), wrap(gapSplit('foldr foldl reduce find findLast findWhere findLastWhere'), function (name) {
+            return function (fn, ctx, memo) {
+                return _[name](this.unwrap(), fn, ctx, memo);
+            };
+        }), wrap(gapSplit('has add addAt remove removeAt indexOf posit foldr foldl reduce'), function (name) {
+            return function (one, two, three) {
+                return _[name](this.unwrap(), one, two, three);
+            };
+        }), wrap(gapSplit('flatten'), function (name) {
+            return recreateSelf(function () {
+                return _[name](this.unwrap());
+            });
+        }), wrap(gapSplit('eq map filter pluck where whereNot sort cycle uncycle'), function (name) {
+            return recreateSelf(function (fn) {
+                return _[name](this.unwrap(), fn);
+            });
+        }), wrap(gapSplit('merge'), function (name) {
             // always responds with an array
-            return function () {
-                var args = toArray(arguments);
-                args.unshift(this[ITEMS]);
-                // unwrapper
-                // custom
-                return new Collection(_[name].apply(_, args));
+            return function (newish, truth) {
+                _[name](this.unwrap(), newish, truth);
+                return this;
             };
         })),
         ret = _.exports({
@@ -497,17 +382,12 @@ application.scope(function (app) {
             eachRevCall: eachRevCall,
             closest: closest,
             filter: filter,
-            reduce: foldl,
-            foldl: foldl,
-            foldr: foldr,
             matches: matches,
             add: add,
             addAt: addAt,
-            addAll: addAll,
             concatUnique: concatUnique,
             removeAt: removeAt,
             remove: remove,
-            removeAll: removeAll,
             cycle: cycle,
             uncycle: uncycle,
             mamboWrap: internalMambo,
@@ -518,7 +398,6 @@ application.scope(function (app) {
             findWhere: findWhere,
             findLastWhere: findLastWhere,
             between: between,
-            eq: eq,
             posit: posit,
             range: range,
             count: count,
@@ -527,7 +406,8 @@ application.scope(function (app) {
             whereNot: whereNot,
             eachRev: eachRev,
             duffRev: duffRev,
-            flatten: flatten
+            flatten: flatten,
+            eq: eq
         }),
         interactWithById = function (fun, expecting) {
             return function (one, two, three) {
@@ -541,51 +421,74 @@ application.scope(function (app) {
                 return fun(instance, categoryHash, category, key, thing, passedCategory);
             };
         },
-        Collection = factories.Model.extend('Collection', extend({
-            unwrap: unwrap,
+        Collection = Model.extend('Collection', extend({
             range: recreateSelf(range),
-            flatten: recreateSelf(function () {
-                // return
-                return flatten.apply(null, this[ITEMS]);
-            }),
             concat: recreateSelf(function () {
-                var args = [],
-                    base = this[ITEMS];
                 // this allows us to mix collections with regular arguments
+                var base = this.unwrap();
                 return base.concat.apply(base, map(arguments, function (arg) {
                     return Collection(arg).unwrap();
                 }));
             }),
+            call: function (arg) {
+                this.each(function (fn) {
+                    fn(arg);
+                });
+                return this;
+            },
+            results: function (key, arg, knows) {
+                this.each(function (obj) {
+                    result(obj, key, arg, knows);
+                });
+                return this;
+            },
+            unwrap: function () {
+                return this[ITEMS];
+            },
+            empty: function () {
+                var collection = this;
+                collection[ITEMS] = [];
+                collection[BY_ID] = {};
+                return collection;
+            },
+            swap: function (arr, hash) {
+                var collection = this;
+                collection[ITEMS] = arr || [];
+                collection[BY_ID] = hash || {};
+                return collection;
+            },
             length: function () {
-                return this[ITEMS][LENGTH];
+                return this.unwrap()[LENGTH];
             },
             first: function () {
-                return this[ITEMS][0];
+                return this.unwrap()[0];
             },
             last: function () {
-                return this[ITEMS][this[LENGTH]() - 1];
+                return this.unwrap()[this[LENGTH]() - 1];
             },
             index: function (number) {
-                return this[ITEMS][number || 0];
+                return this.unwrap()[number || 0];
             },
             constructor: function (arr) {
                 var collection = this;
-                if (!isArray(arr) && isArrayLike(arr)) {
-                    arr = toArray(arr);
+                if (isArrayLike(arr)) {
+                    if (!isArray(arr)) {
+                        arr = toArray(arr);
+                    }
+                } else {
+                    if (!isBlank(arr)) {
+                        arr = [arr];
+                    }
                 }
-                if (!isBlank(arr) && !isArrayLike(arr)) {
-                    arr = [arr];
-                }
-                collection[BY_ID] = {};
-                collection[ITEMS] = arr || [];
+                collection.swap(arr);
                 return collection;
             },
             toString: function () {
-                return stringify(this);
+                return stringify(this.unwrap());
             },
             toJSON: function () {
                 // subtle distinction here
-                return map(this[ITEMS], function (item) {
+                return map(this.unwrap(), function (item) {
                     var ret;
                     if (isObject(item) && isFunction(item.toJSON)) {
                         ret = item.toJSON();
@@ -595,9 +498,6 @@ application.scope(function (app) {
                     return ret;
                 });
             },
-            join: function (delimiter) {
-                return this[ITEMS].join(delimiter);
-            },
             get: interactWithById(function (instance, categoryHash, category, key) {
                 return categoryHash[key];
             }, 2),
@@ -606,15 +506,15 @@ application.scope(function (app) {
             }, 3),
             unRegister: interactWithById(function (instance, categoryHash, category, key) {
                 var registeredItem = categoryHash[key];
-                if (registeredItem !== blank) {
-                    categoryHash[key] = blank;
+                if (registeredItem !== UNDEFINED) {
+                    categoryHash[key] = UNDEFINED;
                 }
                 return registeredItem;
             }, 2),
             swapRegister: interactWithById(function (instance, categoryHash, category, key, newItem) {
                 var registeredItem = categoryHash[key];
-                if (registeredItem !== blank) {
-                    categoryHash[key] = blank;
+                if (registeredItem !== UNDEFINED) {
+                    categoryHash[key] = UNDEFINED;
                 }
                 categoryHash[key] = newItem;
                 return registeredItem;
@@ -629,10 +529,119 @@ application.scope(function (app) {
              */
             mambo: function (fn) {
                 var collection = this;
-                externalMambo(collection[ITEMS], function () {
+                externalMambo(collection.unwrap(), function () {
                     fn(collection);
                 });
                 return collection;
             }
-        }, wrappedCollectionMethods), !0);
+        }, wrappedCollectionMethods), BOOLEAN_TRUE),
+        StringObject = Model.extend('StringObject', {
+            constructor: function (value, parent) {
+                var string = this;
+                string.value = value;
+                string.parent = parent;
+                string.validate();
+                return string;
+            },
+            validate: function () {
+                this.valid = BOOLEAN_TRUE;
+            },
+            invalidate: function () {
+                this.valid = BOOLEAN_FALSE;
+            },
+            toggleValid: function () {
+                this.valid = !this.valid;
+            },
+            isValid: function () {
+                return this.valid;
+            },
+            valueOf: function () {
+                return this.value;
+            },
+            toString: function () {
+                return this.valueOf();
+            },
+            generate: function (delimiter) {
+                return this.isValid() ? delimiter + this.valueOf() : EMPTY_STRING;
+            }
+        }, BOOLEAN_TRUE),
+        StringManager = Collection.extend('StringManager', {
+            Child: StringObject,
+            add: function (string) {
+                var sm = this,
+                    found = sm.get(string);
+                if (string) {
+                    if (found) {
+                        found.validate();
+                    } else {
+                        found = sm.Child(string, sm);
+                        sm.unwrap().push(found);
+                        sm.register(string, found);
+                    }
+                }
+                return found;
+            },
+            increment: function () {},
+            decrement: function () {},
+            remove: function (string) {
+                var sm = this,
+                    found = sm.get(string);
+                if (string) {
+                    if (found) {
+                        found.invalidate();
+                    }
+                }
+                return sm;
+            },
+            toggle: function (string) {
+                var sm = this,
+                    found = sm.get(string);
+                if (!found) {
+                    sm.add(string);
+                } else {
+                    found.toggleValid();
+                }
+            },
+            generate: function (delimiter_) {
+                var string = EMPTY_STRING,
+                    parent = this;
+                parent.delimiter = delimiter_;
+                parent.eachRev(function (stringInstance, idx) {
+                    var fromRight, stringInstanceIndex,
+                        delimiter = idx ? parent.delimiter : EMPTY_STRING,
+                        generated = stringInstance.generate(delimiter);
+                    string += generated;
+                    if (!generated) {
+                        fromRight = idx > parent.length();
+                        stringInstanceIndex = parent.indexOf(stringInstance, UNDEFINED, UNDEFINED, fromRight);
+                        parent.removeAt(stringInstanceIndex);
+                    }
+                });
+                parent.current(string);
+                return string;
+            },
+            current: function (current_) {
+                var sm = this;
+                if (arguments[LENGTH]) {
+                    sm._currentValue = current_;
+                    return sm;
+                } else {
+                    return sm._currentValue;
+                }
+            },
+            ensure: function (value_, splitter) {
+                var sm = this,
+                    value = value_;
+                if (sm.current() !== value) {
+                    if (isString(value)) {
+                        value = value.split(splitter);
+                    }
+                    duff(value, function (item) {
+                        sm.add(item);
+                    });
+                    sm.current(value.join(splitter));
+                }
+                return sm;
+            }
+        }, BOOLEAN_TRUE);
 });

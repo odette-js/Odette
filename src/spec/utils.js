@@ -342,12 +342,12 @@ application.scope().run(function (app, _, $) {
                     ['three', 2, obj]
                 ]);
             });
-            it('_.parseBool', function () {
-                expect(_.parseBool('truth')).toEqual('truth');
-                expect(_.parseBool('true')).toEqual(true);
-                expect(_.parseBool('falsey')).toEqual('falsey');
-                expect(_.parseBool('false')).toEqual(false);
-                expect(_.parseBool({})).toEqual({});
+            it('_.toBoolean', function () {
+                expect(_.toBoolean('truth')).toEqual('truth');
+                expect(_.toBoolean('true')).toEqual(true);
+                expect(_.toBoolean('falsey')).toEqual('falsey');
+                expect(_.toBoolean('false')).toEqual(false);
+                expect(_.toBoolean({})).toEqual({});
             });
             it('_.once', function () {
                 var count = 0,

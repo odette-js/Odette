@@ -169,7 +169,9 @@ application.scope(function (app) {
              */
             addModuleArgs: function (arr) {
                 var app = this;
-                app._.addAll(app[_EXTRA_MODULE_ARGS], arr);
+                app._.duff(arr, function (item) {
+                    app._.add(app[_EXTRA_MODULE_ARGS], item);
+                });
                 return app;
             },
             /**
@@ -179,7 +181,9 @@ application.scope(function (app) {
              * @returns {Specless} instance
              */
             removeModuleArgs: function (arr) {
-                this.utils.removeAll(this[_EXTRA_MODULE_ARGS], arr);
+                app._.duff(arr, function (item) {
+                    app._.remove(app[_EXTRA_MODULE_ARGS], item);
+                });
                 return this;
             },
             /**

@@ -27,7 +27,7 @@ application.scope().run(function (app, _, $) {
             registry.set(two, {
                 two: 2
             });
-            expect(registry.sameType(two).data.length).toEqual(2);
+            expect(_.keys(registry.sameType(two).__elid__).length).toEqual(2);
         });
     });
 });
