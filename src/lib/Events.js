@@ -1,127 +1,158 @@
+var DISPATCH_EVENT = 'dispatchEvent';
+var _EVENTS = '_events';
 application.scope(function (app) {
     var remove = _.remove,
-        _EVENTS = '_events',
-        EVENT_REMOVE = '_removeEventList',
-        CURRENT_EVENTS = '_currentEventList',
+        SortedCollection = factories.SortedCollection,
+        REMOVE_EVENTS = '_removeEvents',
+        CURRENT_EVENTS = '_currentEvents',
         _LISTENING_TO = '_listeningTo',
         IMMEDIATE_PROP_IS_STOPPED = 'immediatePropagationIsStopped',
         SERIALIZED_DATA = 'serializedData',
-        iterateOverObject = function (box, ctx, key, value, iterator, firstarg, allowNonFn) {
-            intendedObject(key, value, function (evnts, funs_) {
-                // only accepts a string or a function
-                var fn = isString(funs_) ? box[funs_] : funs_,
-                    splitevents = gapSplit(evnts);
-                if (!allowNonFn && !isFunction(fn)) {
-                    return splitevents;
-                }
-                return duff(splitevents, function (eventName) {
-                    var namespace = eventName.split(':')[0];
-                    iterator(box, eventName, {
-                        disabled: BOOLEAN_FALSE,
-                        namespace: namespace,
-                        name: eventName,
-                        handler: fn,
-                        ctx: ctx,
-                        origin: box
-                    }, firstarg);
-                });
+        iterateOverObject = function (box, ctx, evnts, funs_, iterator, firstarg) {
+            // intendedObject(key, value, function (evnts, funs_) {
+            // only accepts a string or a function
+            var fn = isString(funs_) ? box[funs_] : funs_,
+                splitevents = gapSplit(evnts);
+            if (!isFunction(fn)) {
+                throwError('handler must be a function');
+            }
+            return duff(splitevents, function (eventName) {
+                var namespace = eventName.split(':')[0];
+                iterator(box, eventName, {
+                    disabled: BOOLEAN_FALSE,
+                    namespace: namespace,
+                    name: eventName,
+                    handler: fn,
+                    ctx: ctx,
+                    origin: box
+                }, firstarg);
             });
         },
         // user friendly version
         flattenMatrix = function (iterator, nameOrObjectIndex) {
             return function () {
-                var names, box = this,
-                    args = toArray(arguments),
-                    handlersIndex = nameOrObjectIndex,
-                    list = args.splice(nameOrObjectIndex),
-                    nameOrObject = list[0];
-                if (!nameOrObjectIndex || args[0]) {
-                    iterateOverObject(box, args[handlersIndex + 1], nameOrObject, list[1], iterator, args[0]);
+                var args, handlersIndex, firstArg, list, nameOrObject, names, box = this;
+                if (!arguments[0]) {
+                    return box;
                 }
+                args = toArray(arguments);
+                handlersIndex = nameOrObjectIndex;
+                list = args.splice(nameOrObjectIndex);
+                nameOrObject = list[0];
+                firstArg = args[0];
+                if (nameOrObjectIndex && !firstArg) {
+                    return box;
+                }
+                intendedObject(nameOrObject, list[1], function (events, handlers) {
+                    iterateOverObject(box, args[0], events, handlers, iterator, firstArg);
+                });
                 return box;
             };
         },
-        removeEventObject = function (box, arr, handler, ctx) {
-            var current = getCurrentEventList(box);
-            duffRev(arr, function (obj, idx, array) {
+        curriedEquality = function (key, original) {
+            return function (e) {
+                return isEqual(original, e.target.get(key));
+            };
+        },
+        turnOff = function (e) {
+            return e && e.target && e.target.off && e.target.off();
+        },
+        setupWatcher = function (iterator, nameOrObjectIndex, triggersOnce) {
+            var after = triggersOnce ? turnOff : _.noop;
+            return function () {
+                var context, list, args, firstArg, handlersIndex, nameOrObject, original_handler, box = this,
+                    ret = {};
+                if (!arguments[0]) {
+                    return ret;
+                }
+                args = toArray(arguments);
+                handlersIndex = nameOrObjectIndex;
+                list = args.splice(nameOrObjectIndex);
+                nameOrObject = list[0];
+                context = args[handlersIndex - 1];
+                firstArg = args[0];
+                if (nameOrObjectIndex && !firstArg) {
+                    return ret;
+                }
+                intendedObject(nameOrObject, list[1], function (key_, value_, isObject_) {
+                    // only allow one to be watched
+                    var key = key_.split(' ')[0],
+                        fun_things = original_handler || bind(list[isObject_ ? 1 : 2], context || box),
+                        value = isFunction(value_) ? value_ : curriedEquality(key, value_),
+                        handler = function (e) {
+                            if (e && value(e)) {
+                                fun_things(e);
+                                after(e);
+                            }
+                        };
+                    original_handler = fun_things;
+                    iterateOverObject(box, context, CHANGE + COLON + key, handler, iterator, firstArg);
+                    ret[key] = handler;
+                });
+                return ret;
+            };
+        },
+        tryToRemoveObject = function (cantRemove, obj, removeList, box) {
+            // because event triggers are always syncronous,
+            // we can just wait until the dispatchEvent function is done
+            if (cantRemove) {
+                removeList.add(obj);
+            } else {
+                box._removeEvent(obj);
+            }
+        },
+        removeEventObjectById = function (box, list, id) {
+            var events = box._getEvents(),
+                current = events[CURRENT_EVENTS],
+                obj = list.get(id),
+                ret = obj && box._removeEvent(obj);
+            attemptListWipe(box, list);
+            return ret;
+        },
+        attemptListWipe = function (box, list) {
+            if (!list[LENGTH]()) {
+                box[list.name] = UNDEFINED;
+            }
+        },
+        removeEventObject = function (box, list, handler, ctx) {
+            var obj, events = box._getEvents(),
+                current = events[CURRENT_EVENTS],
+                removeList = events[REMOVE_EVENTS],
+                currentLength = current[LENGTH]();
+            list.duffRev(function (obj, idx) {
                 if ((handler && obj.handler !== handler) || (ctx && obj.ctx !== ctx)) {
                     return;
                 }
-                // because event triggers are always syncronous,
-                // we can just wait until the dispatchEvent function is done
-                if (current[LENGTH]) {
-                    getRemoveList(box).push(obj);
-                } else {
-                    removeEvent(obj);
-                }
+                tryToRemoveObject(currentLength, obj, removeList, box);
             });
+            attemptListWipe(box, list);
         },
-        removeEvent = function (evnt) {
-            var listeningTo, listening = evnt.listening;
-            remove(evnt.list, evnt);
-            // disconnect it from the list above it
-            evnt.list = UNDEFINED;
-            // check to see if it was a listening type
-            if (!listening) {
-                return;
-            }
-            // if it was then decrement it
-            listening.count--;
-            if (listening.count) {
-                return;
-            }
-            listeningTo = listening.listeningTo;
-            listeningTo[listening.obj._listenId] = UNDEFINED;
+        event_incrementer = 1,
+        __FN_ID__ = '__fnid__',
+        returnsId = function () {
+            return this.id;
         },
-        retreiveEventList = function (model, name) {
-            var internalevents = model[_EVENTS] = model[_EVENTS] || {};
-            return internalevents[name];
-        },
-        getRemoveList = function (model) {
-            var list = model[EVENT_REMOVE] = model[EVENT_REMOVE] = [];
-            return list;
-        },
-        getCurrentEventList = function (model) {
-            var list = model[CURRENT_EVENTS] = model[CURRENT_EVENTS] || [];
-            return list;
-        },
-        attachEventObject = function (obj, name, eventObject) {
-            var events, list;
-            if (!obj) {
-                return;
-            }
-            eventObject.ctx = eventObject.ctx || eventObject.origin;
-            eventObject.fn = eventObject.fn || eventObject.handler;
-            eventObject.fn = bind(eventObject.fn, eventObject.ctx);
-            events = obj[_EVENTS] = obj[_EVENTS] || {};
-            list = events[name] = events[name] || [];
-            // attached so event can remove itself
-            eventObject.list = list;
-            list.push(eventObject);
+        attachEventObject = function (box, name, eventObject) {
+            box._attachEvent(name, eventObject);
         },
         retreiveListeningObject = function (thing, obj) {
-            var listeningTo, listening, thisId, id = obj._listenId;
-            if (!id) {
-                id = obj._listenId = uniqueId('l');
-            }
-            listeningTo = thing[_LISTENING_TO] || (thing[_LISTENING_TO] = {});
-            listening = listeningTo[id];
+            var id = obj._listenId = obj._listenId || uniqueId('l'),
+                listeningTo = thing[_LISTENING_TO] || (thing[_LISTENING_TO] = {}),
+                listening = listeningTo[id];
             // This object is not listening to any other events on `obj` yet.
             // Setup the necessary references to track the listening callbacks.
-            if (!listening) {
-                thisId = thing._listenId;
-                if (!thisId) {
-                    thisId = thing._listenId = uniqueId('l');
-                }
-                listening = listeningTo[id] = {
-                    obj: obj,
-                    objId: id,
-                    id: thisId,
-                    listeningTo: listeningTo,
-                    ctx: thing,
-                    count: 0
-                };
+            if (listening) {
+                return listening;
             }
+            thing._listenId = thing._listenId || uniqueId('l');
+            listening = listeningTo[id] = {
+                obj: obj,
+                objId: id,
+                id: thing._listenId,
+                listeningTo: listeningTo,
+                ctx: thing,
+                count: 0
+            };
             return listening;
         },
         ObjectEvent = factories.Model.extend('ObjectEvent', {
@@ -133,7 +164,7 @@ application.scope(function (app) {
                 evnt.bubbles = BOOLEAN_FALSE;
                 evnt.dispatchChildren = BOOLEAN_FALSE;
                 evnt.dispatchTree = BOOLEAN_FALSE;
-                evnt.onMethodName = upCase(camelCase('on:' + name, ':'));
+                evnt.onMethodName = camelCase('on:' + name, ':');
                 evnt.propagationIsStopped = evnt[IMMEDIATE_PROP_IS_STOPPED] = BOOLEAN_FALSE;
                 evnt.target = target;
                 evnt.name = name;
@@ -195,21 +226,21 @@ application.scope(function (app) {
                 evnt.originalStack = BOOLEAN_FALSE;
             }
         }),
+        onceHandler = function (box, name, obj) {
+            bindOnce(box, name, obj);
+            box._attachEvent(name, obj);
+        },
         bindOnce = function (box, name, obj) {
             var fn = obj.handler;
-            obj.fn = _.once(function () {
-                box.off();
+            obj.fn = once(function (e) {
+                turnOff(e);
                 fn.apply(this, arguments);
             });
         },
         listenToHandler = function (box, name, obj, target) {
             var listeningObject = retreiveListeningObject(box, target);
             preBindListeners(obj, listeningObject);
-            attachEventObject(target, name, obj);
-        },
-        onceHandler = function (box, name, obj) {
-            bindOnce(box, name, obj);
-            attachEventObject(box, name, obj);
+            target._attachEvent(name, obj);
         },
         preBindListeners = function (obj, listening) {
             listening.count++;
@@ -219,12 +250,11 @@ application.scope(function (app) {
             bindOnce(box, name, obj);
             listenToHandler(box, name, obj, extra);
         },
-        getEventList = function (box, name) {
-            var events = box[_EVENTS] = box[_EVENTS] || {};
-            return events[name] || [];
-        },
         overrideEventCreation = function (obj) {
             return obj && (obj.bubbles || obj.dispatchChildren || opts.dispatchTree);
+        },
+        secretOffIterator = function (box, name, obj) {
+            removeEventObject(box, !name || box._getEvents(name), obj.handler, obj.ctx);
         },
         Events = factories.Model.extend('Events', {
             /**
@@ -239,22 +269,37 @@ application.scope(function (app) {
             initialize: _.noop,
             constructor: function (opts) {
                 var model = this;
-                model._makeValid();
+                model._getEvents();
                 model.on(model.events);
                 model.initialize(opts);
-                return model;
-            },
-            _makeValid: function () {
-                var model = this;
-                model[CURRENT_EVENTS] = model[CURRENT_EVENTS] || [];
-                model[_EVENTS] = model[_EVENTS] || {};
-                model[EVENT_REMOVE] = model[EVENT_REMOVE] || [];
                 return model;
             },
             on: flattenMatrix(attachEventObject, 0),
             once: flattenMatrix(onceHandler, 0),
             listenTo: flattenMatrix(listenToHandler, 1),
             listenToOnce: flattenMatrix(listenToOnceHandler, 1),
+            watch: setupWatcher(attachEventObject, 0),
+            watchOnce: setupWatcher(attachEventObject, 0, 1),
+            watchOther: setupWatcher(listenToHandler, 1),
+            watchOtherOnce: setupWatcher(listenToHandler, 1, 1),
+            _makeEvents: function () {
+                var list = this[_EVENTS] = this[_EVENTS] = {
+                    _byName: {},
+                    _currentEvents: SortedCollection(),
+                    _removeEvents: SortedCollection()
+                };
+                return list;
+            },
+            _getEvents: function (key) {
+                var list = this[_EVENTS];
+                if (!list) {
+                    list = this._makeEvents();
+                }
+                if (key) {
+                    list = list._byName[key] = list._byName[key] || SortedCollection(BOOLEAN_TRUE, BOOLEAN_TRUE);
+                }
+                return list;
+            },
             /**
              * @description attaches an event handler to the events object, and takes it off as soon as it runs once
              * @func
@@ -273,33 +318,45 @@ application.scope(function (app) {
              * @returns {Box} instance
              */
             wipeEvents: function () {
-                var box = this;
-                each(box[_EVENTS], function (array, key, obj) {
-                    duffRev(array, removeEvent);
+                var box = this,
+                    events = box._getEvents(),
+                    currentEventList = events[CURRENT_EVENTS],
+                    removeEventList = events[REMOVE_EVENTS],
+                    currentLength = currentEventList[LENGTH]();
+                each(events._byName, function (list, key, obj) {
+                    list.duffRev(function (obj) {
+                        tryToRemoveObject(currentLength, obj, removeEventList, box);
+                    });
+                    attemptListWipe(box, list);
                 });
                 return box;
             },
             off: function (name_, fn_, ctx_) {
-                var currentEventList, currentObj, box = this,
-                    name = name_;
-                box._makeValid();
+                var fn_id, currentEventList, currentObj, box = this,
+                    name = name_,
+                    ctx = isObject(name) ? fn_ : ctx_,
+                    events = box._getEvents();
                 if (arguments[LENGTH]) {
                     if (!name) {
-                        each(box[_EVENTS], function (list, name) {
+                        each(events._byName, function (list, name) {
                             removeEventObject(box, list, fn_, ctx_);
                         });
                     } else {
-                        iterateOverObject(box, isObject(name_) ? fn_ : ctx_, name, fn_, function (box, name, obj) {
-                            removeEventObject(box, !name || box[_EVENTS][name], obj.handler, obj.ctx);
+                        intendedObject(name, fn_, function (name, fn_) {
+                            iterateOverObject(box, ctx, name, fn_, secretOffIterator);
                         });
                     }
                 } else {
-                    currentEventList = getCurrentEventList(box);
-                    currentObj = currentEventList[currentEventList[LENGTH] - 1];
+                    currentEventList = events[CURRENT_EVENTS];
+                    currentObj = currentEventList.last();
                     if (currentObj) {
-                        removeEventObject(box, [currentObj]);
+                        removeEventObjectById(box, events._byName[currentObj.name], currentObj.id);
+                        // if (!) {
+                        //     removeEventObject(box, events._byName[currentObj.name], currentObj.handler, currentObj.ctx);
+                        // }
                     }
                 }
+                return box;
             },
             stopListening: function (obj, name, callback) {
                 var ids, listening, stillListening = 0,
@@ -337,23 +394,23 @@ application.scope(function (app) {
             },
             _eventDispatcher: function (evnt) {
                 var box = this,
-                    valid = box._makeValid(),
                     name = evnt.name,
-                    currentEventArray = getCurrentEventList(box),
-                    list = getEventList(box, name),
-                    ret = isFunction(box[evnt.methodName]) && box[evnt.methodName](evnt),
-                    anotherRet = !evnt[IMMEDIATE_PROP_IS_STOPPED] && !!find(list, function (obj) {
+                    events = box._getEvents(),
+                    currentEventArray = events[CURRENT_EVENTS],
+                    list = events._byName[name],
+                    ret = result(box, evnt.onMethodName, evnt),
+                    removeList = events[REMOVE_EVENTS],
+                    anotherRet = !evnt[IMMEDIATE_PROP_IS_STOPPED] && (!list || !!list.find(function (obj) {
                         var gah;
                         currentEventArray.push(obj);
                         obj.fn(evnt);
                         gah = currentEventArray.pop();
                         return evnt[IMMEDIATE_PROP_IS_STOPPED];
-                    });
-                if (!currentEventArray[LENGTH] && box[EVENT_REMOVE][LENGTH] && box[EVENT_REMOVE][LENGTH]) {
-                    duffRev(box[EVENT_REMOVE], removeEvent);
-                    box[EVENT_REMOVE] = [];
+                    }));
+                if (!currentEventArray[LENGTH]() && removeList[LENGTH]()) {
+                    removeList.duffRev(box._removeEvent, box);
+                    removeList.empty();
                 }
-                return box;
             },
             _createEvent: function (name, data) {
                 return new ObjectEvent(name, this, data);
@@ -365,6 +422,58 @@ application.scope(function (app) {
                 box._eventDispatcher(evnt);
                 evnt.finished();
                 return evnt;
+            },
+            _attachEvent: function (name, eventObject) {
+                var list, obj = this;
+                eventObject.id = ++event_incrementer;
+                eventObject.valueOf = returnsId;
+                eventObject.ctx = eventObject.ctx || eventObject.origin;
+                eventObject.fn = bind(eventObject.fn || eventObject.handler, eventObject.ctx);
+                // attach the id to the bound function because that instance is private
+                eventObject.fn[__FN_ID__] = eventObject.id;
+                // events = obj[_EVENTS] = obj[_EVENTS] || {};
+                list = obj._getEvents(name);
+                // list = events[name] = events[name] || SortedCollection(BOOLEAN_TRUE, BOOLEAN_TRUE);
+                // attaching name so list can remove itself from hash
+                list.name = name;
+                // attached so event can remove itself
+                eventObject.list = list;
+                eventObject.maxIndex = list[LENGTH]();
+                list.add(eventObject);
+            },
+            _wipeList: function (list) {
+                var box = this;
+                if (!list[LENGTH]()) {
+                    box._getEvents()._byName[list.name] = UNDEFINED;
+                    return BOOLEAN_TRUE;
+                }
+            },
+            _removeEvent: function (evnt) {
+                var listeningTo, box = this,
+                    listening = evnt.listening,
+                    list = evnt.list,
+                    events = box._getEvents();
+                if (events[CURRENT_EVENTS][LENGTH]()) {
+                    events[REMOVE_EVENTS].add(evnt);
+                    return BOOLEAN_FALSE;
+                } else {
+                    list.remove(evnt);
+                    // disconnect it from the list above it
+                    evnt.list = UNDEFINED;
+                    // check to see if it was a listening type
+                    if (!listening) {
+                        return;
+                    }
+                    // if it was then decrement it
+                    listening.count--;
+                    if (listening.count) {
+                        return;
+                    }
+                    listeningTo = listening.listeningTo;
+                    listeningTo[listening.obj._listenId] = UNDEFINED;
+                    box._wipeList(list);
+                    return BOOLEAN_TRUE;
+                }
             }
         }, BOOLEAN_TRUE);
 });

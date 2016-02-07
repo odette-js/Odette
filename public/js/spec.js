@@ -644,12 +644,6 @@ application.scope().run(function (app, _, factories, $) {
                 }, 6);
                 expect(count).toEqual(4);
             });
-            it('has', function () {
-                expect(numberCollection.has('25')).toEqual(false);
-                expect(numberCollection.has('3')).toEqual(true);
-                expect(numberCollection.has({})).toEqual(false);
-                expect(numberCollection.has([])).toEqual(false);
-            });
             it('add', function () {
                 expect(numberCollection.add(61)).toEqual(true);
                 expect(numberCollection.add(5)).toEqual(false);
@@ -799,16 +793,56 @@ application.scope().run(function (app, _, factories, $) {
             });
         });
     });
+    describe('SortedCollection', function () {
+        var numberCollection, SortedCollection = factories.SortedCollection;
+        beforeEach(function () {
+            collection = SortedCollection();
+            numberCollection = SortedCollection([4, 5, 3, 7, 8, 6, 2, 0, 1, 9]);
+            complexCollection = SortedCollection([factories.Box(), factories.Box({
+                one: 1,
+                two: 2,
+                three: 3
+            })]);
+            evenNumberList = [0, 2, 4, 6, 8];
+        });
+        it('should be sorted at the beginning', function () {
+            expect(numberCollection.toJSON()).toEqual(numberCollection.sort().toJSON());
+        });
+        it('can get values without having to iterate over everything', function () {
+            numberCollection.indexOf = _.noop;
+            expect(numberCollection.get(8)).toEqual(8);
+        });
+        it('can add values in the correct place', function () {
+            var sorted = SortedCollection(evenNumberList);
+            sorted.add(1);
+            sorted.add(5);
+            sorted.add(3);
+            expect(sorted.index(0)).toEqual(0);
+            expect(sorted.index(1)).toEqual(1);
+            expect(sorted.index(2)).toEqual(2);
+            expect(sorted.index(3)).toEqual(3);
+            expect(sorted.index(4)).toEqual(4);
+            expect(sorted.index(5)).toEqual(5);
+        });
+        it('can remove values from the correct place', function () {
+            var sorted = SortedCollection(evenNumberList);
+            sorted.remove(4);
+            sorted.remove(2);
+            expect(sorted.index(0)).toEqual(0);
+            expect(sorted.index(1)).toEqual(6);
+            expect(sorted.index(2)).toEqual(8);
+        });
+    });
 });
 application.scope().run(function (app, _, factories, $) {
     describe('Events', function () {
         var blank, box,
             Box = factories.Box,
             handler = function () {
-                return !0;
+                count++;
             },
             handler2 = function () {
-                return !1;
+                count--;
             },
             data = {
                 some: 'thing',
@@ -821,6 +855,7 @@ application.scope().run(function (app, _, factories, $) {
                 }]
             };
         beforeEach(function () {
+            count = 0;
             box = Box({
                 zero: 0,
                 one: 1,
@@ -839,36 +874,51 @@ application.scope().run(function (app, _, factories, $) {
             describe('and can create events for itself', function () {
                 it('either one at a time', function () {
                     box.on('evnt', handler);
-                    expect(box._events.evnt[0].handler()).toEqual(true);
+                    expect(count).toEqual(0);
+                    box.dispatchEvent('evnt');
+                    expect(count).toEqual(1);
+                    box.dispatchEvent('evnt');
+                    expect(count).toEqual(2);
                 });
                 it('or many at a time', function () {
                     box.on('evnt eventer mikesevent', handler);
-                    expect(box._events.evnt[0].handler() && box._events.eventer[0].handler() && box._events.mikesevent[0].handler()).toEqual(true);
+                    expect(count).toEqual(0);
+                    box.dispatchEvent('evnt');
+                    box.dispatchEvent('eventer');
+                    box.dispatchEvent('mikesevent');
+                    expect(count).toEqual(3);
+                    box.dispatchEvent('evnt');
+                    box.dispatchEvent('eventer');
+                    box.dispatchEvent('mikesevent');
+                    expect(count).toEqual(6);
                 });
-                // it('or many against a list of functions', function () {
-                //     box.on('evnt eventer mikesevent', [handler, handler2]);
-                //     expect(box._events.evnt[0].handler === handler && box._events.evnt[1].handler === handler2).toEqual(true);
-                // });
             });
             describe('and can remove events from itself', function () {
                 it('either one at a time', function () {
                     box.on('evnt', handler);
-                    expect(box._events.evnt[0].handler()).toEqual(true);
+                    expect(count).toEqual(0);
+                    box.dispatchEvent('evnt');
+                    expect(count).toEqual(1);
+                    box.dispatchEvent('evnt');
+                    expect(count).toEqual(2);
                     box.off('evnt', handler);
-                    expect(box._events.evnt[0]).toEqual(void 0);
+                    expect(count).toEqual(2);
+                    box.dispatchEvent('evnt');
+                    expect(count).toEqual(2);
                 });
                 it('or many at a time', function () {
                     box.on('evnt eventer mikesevent', handler);
-                    expect(box._events.evnt[0].handler === handler && box._events.eventer[0].handler === handler && box._events.mikesevent[0].handler === handler).toEqual(true);
+                    expect(count).toEqual(0);
+                    box.dispatchEvent('evnt');
+                    box.dispatchEvent('eventer');
+                    box.dispatchEvent('mikesevent');
+                    expect(count).toEqual(3);
+                    box.dispatchEvent('evnt');
+                    box.dispatchEvent('eventer');
+                    box.dispatchEvent('mikesevent');
+                    expect(count).toEqual(6);
                     box.off('evnt eventer mikesevent', handler);
-                    expect(box._events.evnt[0] === void 0 && box._events.eventer[0] === void 0 && box._events.mikesevent[0] === void 0).toEqual(true);
                 });
-                // it('or many against a list of functions', function () {
-                //     box.on('evnt eventer mikesevent', [handler, handler2]);
-                //     expect(box._events.evnt[0].handler === handler && box._events.eventer[0].handler === handler && box._events.mikesevent[0].handler === handler && box._events.evnt[1].handler === handler2 && box._events.eventer[1].handler === handler2 && box._events.mikesevent[1].handler === handler2).toEqual(true);
-                //     box.off('evnt eventer mikesevent', [handler, handler2]);
-                //     expect(box._events.evnt[0] === void 0 && box._events.eventer[0] === void 0 && box._events.mikesevent[0] === void 0).toEqual(true);
-                // });
             });
         });
         describe('Boxes can also listen to other, similar objects', function () {
@@ -879,64 +929,61 @@ application.scope().run(function (app, _, factories, $) {
             describe('by using the listenTo method', function () {
                 it('either one at a time', function () {
                     box.listenTo(box2, 'evnt', handler);
-                    expect(box2._events.evnt[0].handler === handler).toEqual(true);
+                    expect(count).toEqual(0);
+                    box2.dispatchEvent('evnt');
+                    expect(count).toEqual(1);
+                    box2.dispatchEvent('evnt');
+                    expect(count).toEqual(2);
                 });
                 it('or many at a time', function () {
                     box.listenTo(box2, 'evnt eventer mikesevent', handler);
-                    expect(box2._events.evnt[0].handler === handler && box2._events.eventer[0].handler === handler && box2._events.mikesevent[0].handler === handler).toEqual(true);
+                    expect(count).toEqual(0);
+                    box2.dispatchEvent('evnt');
+                    expect(count).toEqual(1);
+                    box2.dispatchEvent('eventer');
+                    expect(count).toEqual(2);
+                    box2.dispatchEvent('mikesevent');
+                    expect(count).toEqual(3);
                 });
-                // it('or many against a list of functions', function () {
-                //     var listenObj;
-                //     box.listenTo(box2, 'evnt eventer mikesevent', [handler, handler2]);
-                //     expect(handler === box2._events.evnt[0].handler && handler === box2._events.eventer[0].handler && handler === box2._events.mikesevent[0].handler && handler2 === box2._events.evnt[1].handler && handler2 === box2._events.eventer[1].handler && handler2 === box2._events.mikesevent[1].handler).toEqual(true);
-                //     _.each(box._listeningTo, function (idx, listen) {
-                //         listenObj = listen;
-                //     });
-                //     expect(handler === listenObj.obj._events.evnt[0].handler && handler === listenObj.obj._events.eventer[0].handler && handler === listenObj.obj._events.mikesevent[0].handler && handler2 === listenObj.obj._events.evnt[1].handler && handler2 === listenObj.obj._events.eventer[1].handler && handler2 === listenObj.obj._events.mikesevent[1].handler).toEqual(true);
-                // });
             });
-            describe('you can even take a shortcut and dispatch an event one at a time', function () {
-                it('using dispatch event', function () {
-                    var handle = 0,
-                        handler = function () {
-                            handle++;
-                        };
-                    box.on('handle', handler);
-                    box.dispatchEvent('handle');
-                    expect(handle).toEqual(1);
-                });
+            it('you can even take a shortcut and dispatch an event one at a time using dispatchEvent', function () {
+                box.on('handle', handler);
+                expect(count).toEqual(0);
+                box.dispatchEvent('handle');
+                expect(count).toEqual(1);
+            });
+            it('or many at a time using dispatchEvents', function () {
+                box.on('handle handler beep boop blob', handler);
+                expect(count).toEqual(0);
+                box.dispatchEvents('handle handler beep boop blob');
+                expect(count).toEqual(5);
             });
             describe('and can stop listening by using the stopListening method', function () {
                 it('can remove events one at a time', function () {
                     var listenObj;
                     box.listenTo(box2, 'evnt', handler);
-                    expect(box2._events.evnt[0].handler === handler).toEqual(true);
+                    expect(count).toEqual(0);
+                    box2.dispatchEvent('evnt');
+                    expect(count).toEqual(1);
                     box.stopListening(box2, 'evnt', handler);
-                    _.each(box._listeningTo, function (idx, listen) {
-                        listenObj = listen;
-                    });
-                    expect(box2._events.evnt[0] === void 0 && listenObj === void 0).toEqual(true);
+                    expect(count).toEqual(1);
+                    box2.dispatchEvent('evnt');
+                    expect(count).toEqual(1);
                 });
                 it('or many at a time', function () {
-                    var listenObj;
                     box.listenTo(box2, 'evnt eventer mikesevent', handler);
-                    expect(box2._events.evnt[0].handler === handler && box2._events.eventer[0].handler === handler && box2._events.mikesevent[0].handler === handler).toEqual(true);
+                    expect(count).toEqual(0);
+                    box2.dispatchEvent('evnt');
+                    box2.dispatchEvent('eventer');
+                    box2.dispatchEvent('mikesevent');
+                    expect(count).toEqual(3);
                     box.stopListening(box2, 'evnt eventer mikesevent', handler);
-                    _.each(box._listeningTo, function (idx, listen) {
-                        listenObj = listen;
-                    });
-                    expect(box2._events.evnt[0] === void 0 && box2._events.eventer[0] === void 0 && box2._events.mikesevent[0] === void 0).toEqual(true);
+                    expect(count).toEqual(3);
+                    box2.dispatchEvent('evnt');
+                    box2.dispatchEvent('eventer');
+                    box2.dispatchEvent('mikesevent');
+                    expect(count).toEqual(3);
                 });
-                // it('or many against a list of functions', function () {
-                //     var listenObj;
-                //     box.listenTo(box2, 'evnt eventer mikesevent', [handler, handler2]);
-                //     _.each(box._listeningTo, function (idx, listen) {
-                //         listenObj = listen;
-                //     });
-                //     expect(box2._events.evnt[0].handler === handler && box2._events.eventer[0].handler === handler && box2._events.mikesevent[0].handler === handler && box2._events.evnt[1].handler === handler2 && box2._events.eventer[1].handler === handler2 && box2._events.mikesevent[1].handler === handler2 && listenObj.obj._events.evnt[0].handler === handler && listenObj.obj._events.eventer[0].handler === handler && listenObj.obj._events.mikesevent[0].handler === handler && listenObj.obj._events.evnt[1].handler === handler2 && listenObj.obj._events.eventer[1].handler === handler2 && listenObj.obj._events.mikesevent[1].handler === handler2).toEqual(true);
-                //     box.stopListening(box2, 'evnt eventer mikesevent', [handler, handler2]);
-                //     expect(box2._events.evnt[0] === void 0 && box2._events.eventer[0] === void 0 && box2._events.mikesevent[0] === void 0 && box2._events.evnt[1] === void 0 && box2._events.eventer[1] === void 0 && box2._events.mikesevent[1] === void 0 && listenObj.obj._events.evnt[0] === void 0 && listenObj.obj._events.eventer[0] === void 0 && listenObj.obj._events.mikesevent[0] === void 0 && listenObj.obj._events.evnt[1] === void 0 && listenObj.obj._events.eventer[1] === void 0 && listenObj.obj._events.mikesevent[1] === void 0).toEqual(true);
-                // });
             });
         });
     });
@@ -944,13 +991,16 @@ application.scope().run(function (app, _, factories, $) {
 application.scope().run(function (app, _, factories, $) {
     // var factories = _.factories;
     describe('Box', function () {
-        var blank, box,
+        var blank, count, box,
             Box = factories.Box,
             handler = function () {
                 return !0;
             },
             handler2 = function () {
                 return !1;
+            },
+            counter = function () {
+                count++;
             },
             data = {
                 some: 'thing',
@@ -963,6 +1013,7 @@ application.scope().run(function (app, _, factories, $) {
                 }]
             };
         beforeEach(function () {
+            count = 0;
             box = Box({
                 zero: 0,
                 one: 1,
@@ -1278,7 +1329,7 @@ application.scope().run(function (app, _, factories, $) {
                     box.childEvents = {
                         beep: function () {
                             counter++;
-                            counter += (this === box);
+                            counter += (this !== box) && _.isInstance(box, factories.Model);
                         },
                         boop: function () {
                             counter--;
@@ -1311,66 +1362,200 @@ application.scope().run(function (app, _, factories, $) {
         describe('boxes can remove themselves', function () {
             it('if they are alone, only their events will be removed', function () {
                 box.on({
-                    event1: function () {},
-                    event2: function () {}
+                    event1: counter,
+                    event2: counter
                 });
-                expect(box._events.event1.length).toEqual(1);
+                expect(count).toEqual(0);
+                box.dispatchEvent('event1');
+                expect(count).toEqual(1);
+                box.dispatchEvent('event2');
+                expect(count).toEqual(2);
                 box.destroy();
-                expect(box._events.event1.length).toEqual(0);
+                expect(count).toEqual(2);
+                box.dispatchEvent('event1');
+                expect(count).toEqual(2);
+                box.dispatchEvent('event2');
+                expect(count).toEqual(2);
             });
             it('if they are listening to something then those listeners will also be removed', function () {
-                var box2 = factories.Box(),
-                    events = {};
+                var box2 = factories.Box();
                 box.listenTo(box2, {
-                    event1: function () {},
-                    event2: function () {}
+                    event1: counter,
+                    event2: counter
                 });
-                expect(box2._events.event1.length).toEqual(1);
-                expect(_.keys(box._listeningTo).length).toEqual(1);
+                expect(count).toEqual(0);
+                box2.dispatchEvent('event1');
+                expect(count).toEqual(1);
+                box2.dispatchEvent('event2');
+                expect(count).toEqual(2);
                 box2.destroy();
-                expect(box2._events.event1.length).toEqual(0);
-                _.each(box._listeningTo, function (val, key) {
-                    if (!_.isBlank(val)) {
-                        events[key] = val;
-                    }
-                });
-                expect(_.keys(events).length).toEqual(0);
+                expect(count).toEqual(2);
+                box2.dispatchEvent('event1');
+                expect(count).toEqual(2);
+                box2.dispatchEvent('event2');
+                expect(count).toEqual(2);
+                // box.listenTo(box2, {
+                //     event1: function () {},
+                //     event2: function () {}
+                // });
+                // expect(box2._events.event1.length).toEqual(1);
+                // expect(_.keys(box._listeningTo).length).toEqual(1);
+                // box2.destroy();
+                // expect(box2._events.event1.length).toEqual(0);
+                // _.each(box._listeningTo, function (val, key) {
+                //     if (!_.isBlank(val)) {
+                //         events[key] = val;
+                //     }
+                // });
+                // expect(_.keys(events).length).toEqual(0);
             });
             it('conversely, if the box has listening objects, it will remove it\'s handlers from other objects', function () {
-                var box2 = factories.Box(),
-                    events = {};
+                var box2 = factories.Box();
                 box.listenTo(box2, {
-                    event1: function () {},
-                    event2: function () {}
+                    event1: counter,
+                    event2: counter
                 });
-                expect(box2._events.event1.length).toEqual(1);
-                expect(_.keys(box._listeningTo).length).toEqual(1);
+                expect(count).toEqual(0);
+                box2.dispatchEvent('event1');
+                expect(count).toEqual(1);
+                box2.dispatchEvent('event2');
+                expect(count).toEqual(2);
                 box.destroy();
-                // check to make sure all of the _events are being removed and
-                // all of the ties to everything else is being cleaned up
-                expect(box2._events.event1.length).toEqual(0);
-                _.each(box._listeningTo, function (val, key) {
-                    if (!_.isBlank(val)) {
-                        events[key] = val;
-                    }
+                expect(count).toEqual(2);
+                box2.dispatchEvent('event1');
+                expect(count).toEqual(2);
+                box2.dispatchEvent('event2');
+                expect(count).toEqual(2);
+            });
+        });
+        describe('there is also an alternative to the on api called the watch api', function () {
+            it('it can attach event listeners', function () {
+                var count = 0;
+                box.watch('there', 'there', function (e) {
+                    count++;
                 });
-                expect(_.keys(events).length).toEqual(0);
+                expect(count).toEqual(0);
+                box.set('there', 'here');
+                expect(count).toEqual(0);
+                box.set('there', 'there');
+                expect(count).toEqual(1);
+                box.set('there', 'here');
+                expect(count).toEqual(1);
+                box.set('there', 'there');
+                expect(count).toEqual(2);
+            });
+            it('and watch variables dynamically', function () {
+                var half = -1,
+                    count = 0;
+                box.watch('there', function (e) {
+                    half++;
+                    if (half > count) {
+                        half--;
+                        return true;
+                    }
+                }, function (e) {
+                    count++;
+                });
+                expect(count).toEqual(0);
+                box.set('there', 'here');
+                expect(count).toEqual(0);
+                box.set('there', 'there');
+                expect(count).toEqual(1);
+                box.set('there', 'here');
+                expect(count).toEqual(1);
+                box.set('there', 'there');
+                expect(count).toEqual(2);
+            });
+            it('it does not have a context in the first argument', function () {
+                var count = 0;
+                box.watch('there', function (e) {
+                    return e.target === box && this !== box;
+                }, function (e) {
+                    count++;
+                });
+                expect(count).toEqual(0);
+                box.set('there', 'here');
+                expect(count).toEqual(1);
+                box.set('there', 'there');
+                expect(count).toEqual(2);
+            });
+            it('it does can attach listeners using the once api', function () {
+                var count = 0;
+                box.watchOnce('there', 'there', function (e) {
+                    count++;
+                });
+                expect(count).toEqual(0);
+                box.set('there', 'here');
+                expect(count).toEqual(0);
+                box.set('there', 'there');
+                expect(count).toEqual(1);
+                box.set('there', 'here');
+                expect(count).toEqual(1);
+                box.set('there', 'there');
+                expect(count).toEqual(1);
+            });
+            it('and listeners on other objects with the watchOther api', function () {
+                var count = 0;
+                var box2 = factories.Box();
+                box.watchOther(box2, 'there', function (e) {
+                    count++;
+                    return e.target === box && this !== box;
+                }, function (e) {
+                    count++;
+                });
+                expect(count).toEqual(0);
+                box2.set('there', 'here');
+                expect(count).toEqual(1);
+                box2.set('there', 'there');
+                expect(count).toEqual(2);
+                box2.set('there', 'here');
+                expect(count).toEqual(3);
+                box2.set('there', 'there');
+                expect(count).toEqual(4);
+            });
+            it('and listeners on other objects with the watchOther api', function () {
+                var count = 0;
+                var box2 = factories.Box();
+                box.watchOtherOnce(box2, 'there', 'there', function (e) {
+                    count++;
+                });
+                expect(count).toEqual(0);
+                box2.set('there', 'there');
+                expect(count).toEqual(1);
+                box2.set('there', 'here');
+                expect(count).toEqual(1);
+            });
+            it('the once handler will only take itself off when it succeeds', function () {
+                var count = 0;
+                var box2 = factories.Box();
+                box.watchOtherOnce(box2, 'there', 'there', function (e) {
+                    count++;
+                });
+                expect(count).toEqual(0);
+                box2.set('there', 'here');
+                expect(count).toEqual(0);
+                box2.set('there', 'there');
+                expect(count).toEqual(1);
+                box2.set('there', 'here');
+                expect(count).toEqual(1);
+                box2.set('there', 'there');
+                expect(count).toEqual(1);
             });
         });
     });
 });
 application.scope().run(function (app, _, factories, $) {
     describe('Promise', function () {
-        var madeit, promise;
+        var madeit, promise, handler = function () {
+            madeit++;
+        };
         beforeEach(function () {
             madeit = 0;
             promise = factories.Promise();
         });
         it('allows for async resolution of state', function () {
             expect(_.isObject(promise)).toEqual(true);
-            promise.always(function (e) {
-                madeit++;
-            });
+            promise.always(handler);
             // test for premature trigger
             expect(madeit).toEqual(0);
             // make sure promise is an object
@@ -1418,9 +1603,7 @@ application.scope().run(function (app, _, factories, $) {
         describe('can resolve to different states such as', function () {
             it('success', function (done) {
                 // attach handler
-                promise.success(function () {
-                    madeit++;
-                });
+                promise.success(handler);
                 setTimeout(function () {
                     // resolve promise for success
                     promise.resolve();
@@ -1428,13 +1611,11 @@ application.scope().run(function (app, _, factories, $) {
                     expect(madeit).toEqual(1);
                     // let jasmine know we're all good
                     done();
-                }, 100);
+                });
             });
             it('failure', function (done) {
                 // attach failure handler
-                promise.failure(function () {
-                    madeit++;
-                });
+                promise.failure(handler);
                 setTimeout(function () {
                     // resolve promise for failure
                     promise.reject();
@@ -1442,37 +1623,37 @@ application.scope().run(function (app, _, factories, $) {
                     expect(madeit).toEqual(1);
                     // let jasmine know we're all good
                     done();
-                }, 100);
+                });
             });
         });
         describe('but it also can trigger functions on any resolution with the always method such as', function () {
             it('resolve', function (done) {
                 // attach always handler
-                promise.always(function () {
-                    madeit++;
-                });
+                promise.success(handler);
+                promise.always(handler);
                 setTimeout(function () {
                     // resolve promise for failure
                     promise.resolve();
                     // expect madeit to increase
-                    expect(madeit).toEqual(1);
+                    expect(madeit).toEqual(2);
                     // let jasmine know we're all good
                     done();
-                }, 100);
+                });
+                expect(madeit).toEqual(0);
             });
             it('reject', function (done) {
                 // attach always handler
-                promise.always(function () {
-                    madeit++;
-                });
+                promise.failure(handler);
+                promise.always(handler);
                 setTimeout(function () {
                     // reject promise
                     promise.reject();
                     // expect madeit to increase
-                    expect(madeit).toEqual(1);
+                    expect(madeit).toEqual(2);
                     // let jasmine know we're all good
                     done();
-                }, 100);
+                });
+                expect(madeit).toEqual(0);
             });
         });
         describe('creates a tree of dependencies', function () {
@@ -1642,9 +1823,9 @@ application.scope().run(function (app, _, $) {
         it('is not a collection', function () {
             expect(_.isInstance(registry, factories.Collection)).toEqual(false);
         });
-        it('can get any object\'s data', function () {
-            expect(_.has(registry.get(window), 'dataset')).toEqual(true);
-        });
+        // it('can get any object\'s data', function () {
+        //     expect(_.has(registry.get(window), 'dataset')).toEqual(true);
+        // });
         it('can save data against pointers', function () {
             registry.set(window, {
                 some: 'data'
@@ -1667,17 +1848,19 @@ application.scope().run(function (app, _, $) {
 application.scope().run(function (app, _, factories, $) {
     var elementData = _.associator;
     describe('DOMM', function () {
-        var divs, $empty = $(),
+        var divs, count, $empty = $(),
             $win = $(window),
             $doc = $(document),
             $body = $(document.body),
             handler = function () {
-                return true;
+                // return true;
+                count++;
             },
             handler2 = function () {
                 return false;
             },
             create = function () {
+                count = 0;
                 $con.remove(divs);
                 divs = $().count(function (item, index, list) {
                     var div = document.createElement('div');
@@ -1865,93 +2048,105 @@ application.scope().run(function (app, _, factories, $) {
         describe('the domm is also special because it abstracts event listeners for you', function () {
             describe('can add handlers', function () {
                 it('one at a time', function () {
-                    divs.on('click', handler).duff(function (div, idx) {
-                        var data = elementData.get(div);
-                        expect(data.events['false'].click[0].fn === handler).toEqual(true);
-                    });
+                    divs.on('click', handler);
+                    expect(count).toEqual(0);
+                    divs.click();
+                    expect(count).toEqual(5);
                 });
                 it('many at a time', function () {
-                    divs.on('click mouseover mouseout', handler).duff(function (div, idx) {
-                        var data = elementData.get(div);
-                        _.each(data.handlers, function (_handler, key) {
-                            var split = key.split(':');
-                            _.duff(data.events[split[0]][split[1]], function (fn, idx) {
-                                expect(fn.fn === handler).toEqual(true);
-                            });
-                        });
-                    });
+                    divs.on('click mouseover mouseout', handler);
+                    expect(count).toEqual(0);
+                    divs.dispatchEvent('click');
+                    divs.dispatchEvent('mouseover');
+                    divs.dispatchEvent('mouseout');
+                    expect(count).toEqual(15);
                 });
             });
         });
         describe('the domm is also special because it abstracts event listeners for you', function () {
             describe('can add handlers', function () {
                 it('one at a time', function () {
-                    divs.on('click', handler).duff(function (div, idx) {
-                        var data = elementData.get(div);
-                        expect(data.events['false'].click[0].fn === handler).toEqual(true);
-                    });
+                    divs.on('click', handler);
+                    expect(count).toEqual(0);
+                    divs.dispatchEvent('click');
+                    expect(count).toEqual(5);
                 });
                 it('many at a time', function () {
-                    divs.on('click mouseover mouseout', handler).duff(function (div, idx) {
-                        var data = elementData.get(div);
-                        _.each(data.handlers, function (_handler, key) {
-                            var split = key.split(':');
-                            expect(split[0]).toEqual('false');
-                            _.duff(data.events[split[0]][split[1]], function (fn, idx) {
-                                expect(fn.fn === handler).toEqual(true);
-                            });
-                        });
-                    });
+                    divs.on('click mouseover mouseout', handler);
+                    expect(count).toEqual(0);
+                    divs.dispatchEvent('click');
+                    divs.dispatchEvent('mouseover');
+                    divs.dispatchEvent('mouseout');
+                    expect(count).toEqual(15);
                 });
             });
             describe('also capture handlers', function () {
                 it('one at a time', function () {
-                    divs.on('_click', handler).duff(function (div, idx) {
-                        var data = elementData.get(div);
-                        expect(data.events['true'].click[0].fn === handler).toEqual(true);
-                    });
+                    divs.on('_click', handler);
+                    expect(count).toEqual(0);
+                    divs.dispatchEvent('click', true);
+                    expect(count).toEqual(5);
                 });
                 it('many at a time', function () {
-                    divs.on('_click _mouseover _mouseout', handler).duff(function (div, idx) {
-                        var data = elementData.get(div);
-                        _.each(data.handlers, function (_handler, key) {
-                            var split = key.split(':');
-                            expect(split[0]).toEqual('true');
-                            _.duff(data.events[split[0]][split[1]], function (fn, idx) {
-                                expect(fn.fn === handler).toEqual(true);
-                            });
-                        });
-                    });
+                    divs.on('_click _mouseover _mouseout', handler);
+                    expect(count).toEqual(0);
+                    divs.dispatchEvent('click', true);
+                    divs.dispatchEvent('mouseover', true);
+                    divs.dispatchEvent('mouseout', true);
+                    expect(count).toEqual(15);
+                    // .duff(function (div, idx) {
+                    //     var data = elementData.get(div);
+                    //     _.each(data.handlers, function (_handler, key) {
+                    //         var split = key.split(':');
+                    //         expect(split[0]).toEqual('true');
+                    //         _.duff(data.events[split[0]][split[1]], function (fn, idx) {
+                    //             expect(fn.fn === handler).toEqual(true);
+                    //         });
+                    //     });
+                    // });
                 });
             });
             it('will only add a method to the queue once. if a duplicate is passed in, it will be ignored (just like the browser implementation)', function () {
-                divs.on('click', handler).on('click', handler).duff(function (div, idx) {
-                    var data = elementData.get(div);
-                    expect(data.events['false'].click[1]).toEqual(void 0);
-                });
+                divs.on('click', handler).on('click', handler);
+                expect(count).toEqual(0);
+                divs.dispatchEvent('click');
+                expect(count).toEqual(5);
+                divs.dispatchEvent('click');
+                expect(count).toEqual(10);
+                // .duff(function (div, idx) {
+                //     var data = elementData.get(div);
+                //     expect(data.events['false'].click[1]).toEqual(void 0);
+                // });
             });
             it('once wrappers can also be used with the once method and they can be added the same way as once', function () {
-                var isDone = 0,
-                    handler = function () {
-                        isDone--;
-                    };
+                // var isDone = 0,
+                //     handler = function () {
+                //         isDone--;
+                //     };
                 divs.once('click', handler);
-                $(document.body).append(divs);
-                divs.duff(function (div, idx) {
-                    isDone++;
-                    var data = elementData.get(div);
-                    expect(_.isFunction(data.events['false'].click[0].fn)).toEqual(true);
-                    $(div).click();
-                    data = elementData.get(div);
-                    expect(data.events['false'].click[0]).toEqual(void 0);
-                });
-                divs.remove();
+                expect(count).toEqual(0);
+                divs.dispatchEvent('click');
+                expect(count).toEqual(5);
+                divs.dispatchEvent('click');
+                expect(count).toEqual(5);
+                // $(document.body).append(divs);
+                // divs.duff(function (div, idx) {
+                //     isDone++;
+                //     var data = elementData.get(div);
+                //     expect(_.isFunction(data.events['false'].click[0].fn)).toEqual(true);
+                //     $(div).click();
+                //     data = elementData.get(div);
+                //     expect(data.events['false'].click[0]).toEqual(void 0);
+                // });
+                // divs.remove();
             });
             it('be careful with the once function because they can be added multiple times to the queue, since they use a proxy function, like the one available at _.once', function () {
-                divs.once('click', handler).once('click', handler).duff(function (div, idx) {
-                    var data = elementData.get(div);
-                    expect(_.isFunction(data.events['false'].click[1].fn)).toEqual(true);
-                });
+                divs.once('click', handler);
+                expect(count).toEqual(0);
+                divs.dispatchEvent('click');
+                expect(count).toEqual(5);
+                divs.dispatchEvent('click');
+                expect(count).toEqual(5);
             });
         });
         describe('the each function is special because', function () {
@@ -2064,31 +2259,29 @@ application.scope().run(function (app, _, factories, $) {
                     one: 'one',
                     two: 'two'
                 });
-                divs.duff(function (div, idx) {
+                divs.duff(function (div) {
                     expect(div.getAttribute('data-one')).toEqual('one');
                     expect(div.getAttribute('data-two')).toEqual('two');
                 });
                 divs.data({
                     one: {
-                        some: 'one'
+                        some: true,
+                        some2: true
                     },
                     two: {
-                        to: 'love'
+                        to: true,
+                        from: true
                     }
                 });
-                divs.each(function (div, idx) {
-                    expect(div.data('one')).toEqual({
-                        some: 'one'
-                    });
-                    expect(div.data('two')).toEqual({
-                        to: 'love'
-                    });
+                divs.each(function (div) {
+                    expect(div.data('one')).toEqual('one some some2');
+                    expect(div.data('two')).toEqual('two to from');
                 });
             });
         });
         describe('it can also manipulate elements in other ways', function () {
             it('like by manipulating their attributes', function () {
-                divs.duff(function (div, idx) {
+                divs.duff(function (div) {
                     expect(div.getAttribute('tabindex')).toEqual(null);
                 });
                 divs.attr({
@@ -2254,6 +2447,7 @@ application.scope().run(function (app, _, factories, $) {
 //     });
 // });
 application.scope().run(function (app, _, factories, $) {
+    var $iframe = $('iframe');
     describe('Buster', function () {
         //
     });

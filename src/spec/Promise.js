@@ -1,15 +1,15 @@
 application.scope().run(function (app, _, factories, $) {
     describe('Promise', function () {
-        var madeit, promise;
+        var madeit, promise, handler = function () {
+            madeit++;
+        };
         beforeEach(function () {
             madeit = 0;
             promise = factories.Promise();
         });
         it('allows for async resolution of state', function () {
             expect(_.isObject(promise)).toEqual(true);
-            promise.always(function (e) {
-                madeit++;
-            });
+            promise.always(handler);
             // test for premature trigger
             expect(madeit).toEqual(0);
             // make sure promise is an object
@@ -57,9 +57,7 @@ application.scope().run(function (app, _, factories, $) {
         describe('can resolve to different states such as', function () {
             it('success', function (done) {
                 // attach handler
-                promise.success(function () {
-                    madeit++;
-                });
+                promise.success(handler);
                 setTimeout(function () {
                     // resolve promise for success
                     promise.resolve();
@@ -67,13 +65,11 @@ application.scope().run(function (app, _, factories, $) {
                     expect(madeit).toEqual(1);
                     // let jasmine know we're all good
                     done();
-                }, 100);
+                });
             });
             it('failure', function (done) {
                 // attach failure handler
-                promise.failure(function () {
-                    madeit++;
-                });
+                promise.failure(handler);
                 setTimeout(function () {
                     // resolve promise for failure
                     promise.reject();
@@ -81,37 +77,37 @@ application.scope().run(function (app, _, factories, $) {
                     expect(madeit).toEqual(1);
                     // let jasmine know we're all good
                     done();
-                }, 100);
+                });
             });
         });
         describe('but it also can trigger functions on any resolution with the always method such as', function () {
             it('resolve', function (done) {
                 // attach always handler
-                promise.always(function () {
-                    madeit++;
-                });
+                promise.success(handler);
+                promise.always(handler);
                 setTimeout(function () {
                     // resolve promise for failure
                     promise.resolve();
                     // expect madeit to increase
-                    expect(madeit).toEqual(1);
+                    expect(madeit).toEqual(2);
                     // let jasmine know we're all good
                     done();
-                }, 100);
+                });
+                expect(madeit).toEqual(0);
             });
             it('reject', function (done) {
                 // attach always handler
-                promise.always(function () {
-                    madeit++;
-                });
+                promise.failure(handler);
+                promise.always(handler);
                 setTimeout(function () {
                     // reject promise
                     promise.reject();
                     // expect madeit to increase
-                    expect(madeit).toEqual(1);
+                    expect(madeit).toEqual(2);
                     // let jasmine know we're all good
                     done();
-                }, 100);
+                });
+                expect(madeit).toEqual(0);
             });
         });
         describe('creates a tree of dependencies', function () {

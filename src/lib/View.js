@@ -35,10 +35,7 @@ application.scope().module('View', function (module, app, _, factories, $) {
         ESTABLISHED_REGIONS = '_establishedRegions',
         APPEND_CHILD_ELEMENTS = '_appendChildElements',
         PROTOTYPE = 'prototype',
-        DISPATCH_EVENT = 'dispatchEvent',
         REGION_MANAGER = 'regionManager',
-        BOOLEAN_TRUE = !0,
-        BOOLEAN_FALSE = !1,
         templates = {},
         compile = function (id, force) {
             var matches, tag, template, attrs, templates_ = templates[appVersion] = templates[appVersion] || {},

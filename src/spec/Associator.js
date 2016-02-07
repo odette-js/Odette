@@ -9,9 +9,9 @@ application.scope().run(function (app, _, $) {
         it('is not a collection', function () {
             expect(_.isInstance(registry, factories.Collection)).toEqual(false);
         });
-        it('can get any object\'s data', function () {
-            expect(_.has(registry.get(window), 'dataset')).toEqual(true);
-        });
+        // it('can get any object\'s data', function () {
+        //     expect(_.has(registry.get(window), 'dataset')).toEqual(true);
+        // });
         it('can save data against pointers', function () {
             registry.set(window, {
                 some: 'data'

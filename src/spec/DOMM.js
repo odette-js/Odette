@@ -1,17 +1,19 @@
 application.scope().run(function (app, _, factories, $) {
     var elementData = _.associator;
     describe('DOMM', function () {
-        var divs, $empty = $(),
+        var divs, count, $empty = $(),
             $win = $(window),
             $doc = $(document),
             $body = $(document.body),
             handler = function () {
-                return true;
+                // return true;
+                count++;
             },
             handler2 = function () {
                 return false;
             },
             create = function () {
+                count = 0;
                 $con.remove(divs);
                 divs = $().count(function (item, index, list) {
                     var div = document.createElement('div');
@@ -199,93 +201,105 @@ application.scope().run(function (app, _, factories, $) {
         describe('the domm is also special because it abstracts event listeners for you', function () {
             describe('can add handlers', function () {
                 it('one at a time', function () {
-                    divs.on('click', handler).duff(function (div, idx) {
-                        var data = elementData.get(div);
-                        expect(data.events['false'].click[0].fn === handler).toEqual(true);
-                    });
+                    divs.on('click', handler);
+                    expect(count).toEqual(0);
+                    divs.click();
+                    expect(count).toEqual(5);
                 });
                 it('many at a time', function () {
-                    divs.on('click mouseover mouseout', handler).duff(function (div, idx) {
-                        var data = elementData.get(div);
-                        _.each(data.handlers, function (_handler, key) {
-                            var split = key.split(':');
-                            _.duff(data.events[split[0]][split[1]], function (fn, idx) {
-                                expect(fn.fn === handler).toEqual(true);
-                            });
-                        });
-                    });
+                    divs.on('click mouseover mouseout', handler);
+                    expect(count).toEqual(0);
+                    divs.dispatchEvent('click');
+                    divs.dispatchEvent('mouseover');
+                    divs.dispatchEvent('mouseout');
+                    expect(count).toEqual(15);
                 });
             });
         });
         describe('the domm is also special because it abstracts event listeners for you', function () {
             describe('can add handlers', function () {
                 it('one at a time', function () {
-                    divs.on('click', handler).duff(function (div, idx) {
-                        var data = elementData.get(div);
-                        expect(data.events['false'].click[0].fn === handler).toEqual(true);
-                    });
+                    divs.on('click', handler);
+                    expect(count).toEqual(0);
+                    divs.dispatchEvent('click');
+                    expect(count).toEqual(5);
                 });
                 it('many at a time', function () {
-                    divs.on('click mouseover mouseout', handler).duff(function (div, idx) {
-                        var data = elementData.get(div);
-                        _.each(data.handlers, function (_handler, key) {
-                            var split = key.split(':');
-                            expect(split[0]).toEqual('false');
-                            _.duff(data.events[split[0]][split[1]], function (fn, idx) {
-                                expect(fn.fn === handler).toEqual(true);
-                            });
-                        });
-                    });
+                    divs.on('click mouseover mouseout', handler);
+                    expect(count).toEqual(0);
+                    divs.dispatchEvent('click');
+                    divs.dispatchEvent('mouseover');
+                    divs.dispatchEvent('mouseout');
+                    expect(count).toEqual(15);
                 });
             });
             describe('also capture handlers', function () {
                 it('one at a time', function () {
-                    divs.on('_click', handler).duff(function (div, idx) {
-                        var data = elementData.get(div);
-                        expect(data.events['true'].click[0].fn === handler).toEqual(true);
-                    });
+                    divs.on('_click', handler);
+                    expect(count).toEqual(0);
+                    divs.dispatchEvent('click', true);
+                    expect(count).toEqual(5);
                 });
                 it('many at a time', function () {
-                    divs.on('_click _mouseover _mouseout', handler).duff(function (div, idx) {
-                        var data = elementData.get(div);
-                        _.each(data.handlers, function (_handler, key) {
-                            var split = key.split(':');
-                            expect(split[0]).toEqual('true');
-                            _.duff(data.events[split[0]][split[1]], function (fn, idx) {
-                                expect(fn.fn === handler).toEqual(true);
-                            });
-                        });
-                    });
+                    divs.on('_click _mouseover _mouseout', handler);
+                    expect(count).toEqual(0);
+                    divs.dispatchEvent('click', true);
+                    divs.dispatchEvent('mouseover', true);
+                    divs.dispatchEvent('mouseout', true);
+                    expect(count).toEqual(15);
+                    // .duff(function (div, idx) {
+                    //     var data = elementData.get(div);
+                    //     _.each(data.handlers, function (_handler, key) {
+                    //         var split = key.split(':');
+                    //         expect(split[0]).toEqual('true');
+                    //         _.duff(data.events[split[0]][split[1]], function (fn, idx) {
+                    //             expect(fn.fn === handler).toEqual(true);
+                    //         });
+                    //     });
+                    // });
                 });
             });
             it('will only add a method to the queue once. if a duplicate is passed in, it will be ignored (just like the browser implementation)', function () {
-                divs.on('click', handler).on('click', handler).duff(function (div, idx) {
-                    var data = elementData.get(div);
-                    expect(data.events['false'].click[1]).toEqual(void 0);
-                });
+                divs.on('click', handler).on('click', handler);
+                expect(count).toEqual(0);
+                divs.dispatchEvent('click');
+                expect(count).toEqual(5);
+                divs.dispatchEvent('click');
+                expect(count).toEqual(10);
+                // .duff(function (div, idx) {
+                //     var data = elementData.get(div);
+                //     expect(data.events['false'].click[1]).toEqual(void 0);
+                // });
             });
             it('once wrappers can also be used with the once method and they can be added the same way as once', function () {
-                var isDone = 0,
-                    handler = function () {
-                        isDone--;
-                    };
+                // var isDone = 0,
+                //     handler = function () {
+                //         isDone--;
+                //     };
                 divs.once('click', handler);
-                $(document.body).append(divs);
-                divs.duff(function (div, idx) {
-                    isDone++;
-                    var data = elementData.get(div);
-                    expect(_.isFunction(data.events['false'].click[0].fn)).toEqual(true);
-                    $(div).click();
-                    data = elementData.get(div);
-                    expect(data.events['false'].click[0]).toEqual(void 0);
-                });
-                divs.remove();
+                expect(count).toEqual(0);
+                divs.dispatchEvent('click');
+                expect(count).toEqual(5);
+                divs.dispatchEvent('click');
+                expect(count).toEqual(5);
+                // $(document.body).append(divs);
+                // divs.duff(function (div, idx) {
+                //     isDone++;
+                //     var data = elementData.get(div);
+                //     expect(_.isFunction(data.events['false'].click[0].fn)).toEqual(true);
+                //     $(div).click();
+                //     data = elementData.get(div);
+                //     expect(data.events['false'].click[0]).toEqual(void 0);
+                // });
+                // divs.remove();
             });
             it('be careful with the once function because they can be added multiple times to the queue, since they use a proxy function, like the one available at _.once', function () {
-                divs.once('click', handler).once('click', handler).duff(function (div, idx) {
-                    var data = elementData.get(div);
-                    expect(_.isFunction(data.events['false'].click[1].fn)).toEqual(true);
-                });
+                divs.once('click', handler);
+                expect(count).toEqual(0);
+                divs.dispatchEvent('click');
+                expect(count).toEqual(5);
+                divs.dispatchEvent('click');
+                expect(count).toEqual(5);
             });
         });
         describe('the each function is special because', function () {
@@ -398,31 +412,29 @@ application.scope().run(function (app, _, factories, $) {
                     one: 'one',
                     two: 'two'
                 });
-                divs.duff(function (div, idx) {
+                divs.duff(function (div) {
                     expect(div.getAttribute('data-one')).toEqual('one');
                     expect(div.getAttribute('data-two')).toEqual('two');
                 });
                 divs.data({
                     one: {
-                        some: 'one'
+                        some: true,
+                        some2: true
                     },
                     two: {
-                        to: 'love'
+                        to: true,
+                        from: true
                     }
                 });
-                divs.each(function (div, idx) {
-                    expect(div.data('one')).toEqual({
-                        some: 'one'
-                    });
-                    expect(div.data('two')).toEqual({
-                        to: 'love'
-                    });
+                divs.each(function (div) {
+                    expect(div.data('one')).toEqual('one some some2');
+                    expect(div.data('two')).toEqual('two to from');
                 });
             });
         });
         describe('it can also manipulate elements in other ways', function () {
             it('like by manipulating their attributes', function () {
-                divs.duff(function (div, idx) {
+                divs.duff(function (div) {
                     expect(div.getAttribute('tabindex')).toEqual(null);
                 });
                 divs.attr({

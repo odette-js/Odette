@@ -24,22 +24,16 @@ application.scope().module('Associator', function (module, app, _, factories) {
             get: function (obj, type) {
                 var returnData, idxOf, dataset, n, key, instance = this,
                     canRead = 0,
-                    data = {
-                        dataset: {}
-                    },
+                    data = {},
                     current = instance.sameType(obj),
                     els = current[ITEMS] = current[ITEMS] || [],
                     eldata = current[__ELID__] = current[__ELID__] || {},
                     dataArray = current[DATA] = current[DATA] || [];
                 if (obj && current.readData) {
-                    dataset = obj[DATASET];
-                    key = obj[__ELID__] = obj[__ELID__] || _.uniqueId('el');
+                    // dataset = obj[DATASET];
+                    key = obj[__ELID__] = obj[__ELID__] || uniqueId('el');
                     if (key) {
                         data = eldata[key] = eldata[key] || {};
-                    }
-                    // copy dataset over from one to the other
-                    if (isObject(dataset) && _[IS_ELEMENT](obj)) {
-                        data[DATASET] = extend(data[DATASET], dataset);
                     }
                     return data;
                 } else {

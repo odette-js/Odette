@@ -1,13 +1,16 @@
 application.scope().run(function (app, _, factories, $) {
     // var factories = _.factories;
     describe('Box', function () {
-        var blank, box,
+        var blank, count, box,
             Box = factories.Box,
             handler = function () {
                 return !0;
             },
             handler2 = function () {
                 return !1;
+            },
+            counter = function () {
+                count++;
             },
             data = {
                 some: 'thing',
@@ -20,6 +23,7 @@ application.scope().run(function (app, _, factories, $) {
                 }]
             };
         beforeEach(function () {
+            count = 0;
             box = Box({
                 zero: 0,
                 one: 1,
@@ -335,7 +339,7 @@ application.scope().run(function (app, _, factories, $) {
                     box.childEvents = {
                         beep: function () {
                             counter++;
-                            counter += (this === box);
+                            counter += (this !== box) && _.isInstance(box, factories.Model);
                         },
                         boop: function () {
                             counter--;
@@ -368,50 +372,184 @@ application.scope().run(function (app, _, factories, $) {
         describe('boxes can remove themselves', function () {
             it('if they are alone, only their events will be removed', function () {
                 box.on({
-                    event1: function () {},
-                    event2: function () {}
+                    event1: counter,
+                    event2: counter
                 });
-                expect(box._events.event1.length).toEqual(1);
+                expect(count).toEqual(0);
+                box.dispatchEvent('event1');
+                expect(count).toEqual(1);
+                box.dispatchEvent('event2');
+                expect(count).toEqual(2);
                 box.destroy();
-                expect(box._events.event1.length).toEqual(0);
+                expect(count).toEqual(2);
+                box.dispatchEvent('event1');
+                expect(count).toEqual(2);
+                box.dispatchEvent('event2');
+                expect(count).toEqual(2);
             });
             it('if they are listening to something then those listeners will also be removed', function () {
-                var box2 = factories.Box(),
-                    events = {};
+                var box2 = factories.Box();
                 box.listenTo(box2, {
-                    event1: function () {},
-                    event2: function () {}
+                    event1: counter,
+                    event2: counter
                 });
-                expect(box2._events.event1.length).toEqual(1);
-                expect(_.keys(box._listeningTo).length).toEqual(1);
+                expect(count).toEqual(0);
+                box2.dispatchEvent('event1');
+                expect(count).toEqual(1);
+                box2.dispatchEvent('event2');
+                expect(count).toEqual(2);
                 box2.destroy();
-                expect(box2._events.event1.length).toEqual(0);
-                _.each(box._listeningTo, function (val, key) {
-                    if (!_.isBlank(val)) {
-                        events[key] = val;
-                    }
-                });
-                expect(_.keys(events).length).toEqual(0);
+                expect(count).toEqual(2);
+                box2.dispatchEvent('event1');
+                expect(count).toEqual(2);
+                box2.dispatchEvent('event2');
+                expect(count).toEqual(2);
+                // box.listenTo(box2, {
+                //     event1: function () {},
+                //     event2: function () {}
+                // });
+                // expect(box2._events.event1.length).toEqual(1);
+                // expect(_.keys(box._listeningTo).length).toEqual(1);
+                // box2.destroy();
+                // expect(box2._events.event1.length).toEqual(0);
+                // _.each(box._listeningTo, function (val, key) {
+                //     if (!_.isBlank(val)) {
+                //         events[key] = val;
+                //     }
+                // });
+                // expect(_.keys(events).length).toEqual(0);
             });
             it('conversely, if the box has listening objects, it will remove it\'s handlers from other objects', function () {
-                var box2 = factories.Box(),
-                    events = {};
+                var box2 = factories.Box();
                 box.listenTo(box2, {
-                    event1: function () {},
-                    event2: function () {}
+                    event1: counter,
+                    event2: counter
                 });
-                expect(box2._events.event1.length).toEqual(1);
-                expect(_.keys(box._listeningTo).length).toEqual(1);
+                expect(count).toEqual(0);
+                box2.dispatchEvent('event1');
+                expect(count).toEqual(1);
+                box2.dispatchEvent('event2');
+                expect(count).toEqual(2);
                 box.destroy();
-                // check to make sure all of the _events are being removed and
-                // all of the ties to everything else is being cleaned up
-                expect(box2._events.event1.length).toEqual(0);
-                _.each(box._listeningTo, function (val, key) {
-                    if (!_.isBlank(val)) {
-                        events[key] = val;
-                    }
+                expect(count).toEqual(2);
+                box2.dispatchEvent('event1');
+                expect(count).toEqual(2);
+                box2.dispatchEvent('event2');
+                expect(count).toEqual(2);
+            });
+        });
+        describe('there is also an alternative to the on api called the watch api', function () {
+            it('it can attach event listeners', function () {
+                var count = 0;
+                box.watch('there', 'there', function (e) {
+                    count++;
                 });
-                expect(_.keys(events).length).toEqual(0);
+                expect(count).toEqual(0);
+                box.set('there', 'here');
+                expect(count).toEqual(0);
+                box.set('there', 'there');
+                expect(count).toEqual(1);
+                box.set('there', 'here');
+                expect(count).toEqual(1);
+                box.set('there', 'there');
+                expect(count).toEqual(2);
+            });
+            it('and watch variables dynamically', function () {
+                var half = -1,
+                    count = 0;
+                box.watch('there', function (e) {
+                    half++;
+                    if (half > count) {
+                        half--;
+                        return true;
+                    }
+                }, function (e) {
+                    count++;
+                });
+                expect(count).toEqual(0);
+                box.set('there', 'here');
+                expect(count).toEqual(0);
+                box.set('there', 'there');
+                expect(count).toEqual(1);
+                box.set('there', 'here');
+                expect(count).toEqual(1);
+                box.set('there', 'there');
+                expect(count).toEqual(2);
+            });
+            it('it does not have a context in the first argument', function () {
+                var count = 0;
+                box.watch('there', function (e) {
+                    return e.target === box && this !== box;
+                }, function (e) {
+                    count++;
+                });
+                expect(count).toEqual(0);
+                box.set('there', 'here');
+                expect(count).toEqual(1);
+                box.set('there', 'there');
+                expect(count).toEqual(2);
+            });
+            it('it does can attach listeners using the once api', function () {
+                var count = 0;
+                box.watchOnce('there', 'there', function (e) {
+                    count++;
+                });
+                expect(count).toEqual(0);
+                box.set('there', 'here');
+                expect(count).toEqual(0);
+                box.set('there', 'there');
+                expect(count).toEqual(1);
+                box.set('there', 'here');
+                expect(count).toEqual(1);
+                box.set('there', 'there');
+                expect(count).toEqual(1);
+            });
+            it('and listeners on other objects with the watchOther api', function () {
+                var count = 0;
+                var box2 = factories.Box();
+                box.watchOther(box2, 'there', function (e) {
+                    count++;
+                    return e.target === box && this !== box;
+                }, function (e) {
+                    count++;
+                });
+                expect(count).toEqual(0);
+                box2.set('there', 'here');
+                expect(count).toEqual(1);
+                box2.set('there', 'there');
+                expect(count).toEqual(2);
+                box2.set('there', 'here');
+                expect(count).toEqual(3);
+                box2.set('there', 'there');
+                expect(count).toEqual(4);
+            });
+            it('and listeners on other objects with the watchOther api', function () {
+                var count = 0;
+                var box2 = factories.Box();
+                box.watchOtherOnce(box2, 'there', 'there', function (e) {
+                    count++;
+                });
+                expect(count).toEqual(0);
+                box2.set('there', 'there');
+                expect(count).toEqual(1);
+                box2.set('there', 'here');
+                expect(count).toEqual(1);
+            });
+            it('the once handler will only take itself off when it succeeds', function () {
+                var count = 0;
+                var box2 = factories.Box();
+                box.watchOtherOnce(box2, 'there', 'there', function (e) {
+                    count++;
+                });
+                expect(count).toEqual(0);
+                box2.set('there', 'here');
+                expect(count).toEqual(0);
+                box2.set('there', 'there');
+                expect(count).toEqual(1);
+                box2.set('there', 'here');
+                expect(count).toEqual(1);
+                box2.set('there', 'there');
+                expect(count).toEqual(1);
             });
         });
     });

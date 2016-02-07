@@ -2,7 +2,6 @@ application.scope(function (app) {
     var ITEMS = '_items',
         BY_ID = '_byId',
         ID = 'id',
-        PREVIOUS = '_previous',
         eachCall = function (array, method, arg) {
             return duff(array, function (item) {
                 result(item, method, arg);
@@ -12,18 +11,6 @@ application.scope(function (app) {
             return duff(array, function (item) {
                 result(item, method, arg);
             }, NULL, -1);
-        },
-        doToEverything = function (doLater, direction) {
-            return function () {
-                var args = toArray(arguments),
-                    one = args.shift();
-                duff(args, function (items) {
-                    duff(items, function (item) {
-                        doLater(one, item);
-                    }, NULL, direction || 1);
-                });
-                return one;
-            };
         },
         /**
          * @func
@@ -77,7 +64,7 @@ application.scope(function (app) {
         },
         range = function (start, stop, step, inclusive) {
             var length, range, idx;
-            if (isBlank(stop)) {
+            if (stop == NULL) {
                 stop = start || 0;
                 start = 0;
             }
@@ -133,40 +120,55 @@ application.scope(function (app) {
         /**
          * @func
          */
-        closest = function (list, target) {
-            var match, path, diff, valuesLen, possible, i = 0,
-                previousAbs = Infinity;
-            // trying to avoid running through 20 matchs
-            // when i'm already at the exact one
-            if (!isArrayLike(list)) {
-                return;
-            }
-            valuesLen = list[LENGTH];
-            if (valuesLen === 1) {
-                match = list[0];
-            }
-            if (indexOf(list, target) !== -1) {
-                match = target;
-            }
-            if (!match) {
-                // try doing this later with no sorting
-                sort(list);
-                for (i = valuesLen - 1;
-                    (i >= 0 && !match); i--) {
-                    path = list[i];
-                    diff = Math.abs(target - path);
-                    if (diff < previousAbs) {
-                        possible = path;
-                        previousAbs = diff;
-                    }
+        closest = function (array, searchElement, minIndex_, maxIndex_) {
+            var currentIndex, currentElement, found,
+                minIndex = minIndex_ || 0,
+                maxIndex = maxIndex_ || array[LENGTH] - 1;
+            while (minIndex <= maxIndex) {
+                currentIndex = (minIndex + maxIndex) / 2 | 0;
+                currentElement = array[currentIndex];
+                // calls valueOf
+                if (currentElement < searchElement) {
+                    minIndex = currentIndex + 1;
+                } else if (currentElement > searchElement) {
+                    maxIndex = currentIndex - 1;
+                } else {
+                    return currentIndex;
                 }
-                match = possible;
             }
-            if (!match) {
-                match = target;
-            }
-            return match;
+            found = ~~maxIndex;
+            return found;
         },
+        // closest = function (list, target) {
+        //     var match, path, diff, possible, i = 0,
+        //         previousAbs = Infinity,
+        //         // trying to avoid running through 20 matchs
+        //         // when i'm already at the exact one
+        //         valuesLen = list[LENGTH];
+        //     if (valuesLen === 1) {
+        //         match = list[0];
+        //     }
+        //     if (indexOf(list, target) !== -1) {
+        //         match = target;
+        //     }
+        //     if (!match) {
+        //         // try doing this later with no sorting
+        //         for (i = valuesLen - 1;
+        //             (i >= 0 && !match); i--) {
+        //             path = list[i];
+        //             diff = Math.abs(target - path);
+        //             if (diff < previousAbs) {
+        //                 possible = path;
+        //                 previousAbs = diff;
+        //             }
+        //         }
+        //         match = possible;
+        //     }
+        //     if (!match) {
+        //         match = target;
+        //     }
+        //     return match;
+        // },
         /**
          * @func
          */
@@ -177,30 +179,30 @@ application.scope(function (app) {
          * @func
          */
         concat = function () {
-            var array = [];
-            duff(arguments, function (arg) {
+            return foldl(arguments, function (memo, arg) {
                 duff(arg, function (item) {
-                    array.push(item);
+                    memo.push(item);
                 });
-            });
-            return array;
+                return memo;
+            }, []);
         },
         /**
          * @func
          */
         concatUnique = function () {
-            var array = [];
-            duff(concat.apply(NULL, arguments), function (item) {
-                if (!posit(array, item)) {
-                    array.push(item);
-                }
-            });
-            return array;
+            return foldl(arguments, function (memo, argument) {
+                duff(argument, function (item) {
+                    if (binaryIndexOf(memo, item) === -1) {
+                        memo.push(item);
+                    }
+                });
+                return memo;
+            }, []);
         },
-        cycle = function (arr, num) {
-            var piece, len = arr[LENGTH];
+        cycle = function (arr, num_) {
+            var num, piece, len = arr[LENGTH];
             if (isNumber(len)) {
-                num = num % len;
+                num = num_ % len;
                 piece = arr.splice(num);
                 arr.unshift.apply(arr, piece);
             }
@@ -237,13 +239,9 @@ application.scope(function (app) {
             return fn.apply(this, arguments);
         }),
         pluck = function (arr, key) {
-            var items = [];
-            duff(arr, function (item) {
-                if (isObject(item) && item[key] !== UNDEFINED) {
-                    items.push(item[key]);
-                }
+            return map(arr, function (item) {
+                return result(item, key);
             });
-            return items;
         },
         // Convenience version of a common use case of `filter`: selecting only objects
         // containing specific `key:value` pairs.
@@ -358,7 +356,7 @@ application.scope(function (app) {
             return function (fn, ctx, memo) {
                 return _[name](this.unwrap(), fn, ctx, memo);
             };
-        }), wrap(gapSplit('has add addAt remove removeAt indexOf posit foldr foldl reduce'), function (name) {
+        }), wrap(gapSplit('add addAt remove removeAt indexOf posit foldr foldl reduce'), function (name) {
             return function (one, two, three) {
                 return _[name](this.unwrap(), one, two, three);
             };
@@ -366,7 +364,7 @@ application.scope(function (app) {
             return recreateSelf(function () {
                 return _[name](this.unwrap());
             });
-        }), wrap(gapSplit('eq map filter pluck where whereNot sort cycle uncycle'), function (name) {
+        }), wrap(gapSplit('eq map filter pluck where whereNot cycle uncycle'), function (name) {
             return recreateSelf(function (fn) {
                 return _[name](this.unwrap(), fn);
             });
@@ -380,7 +378,7 @@ application.scope(function (app) {
         ret = _.exports({
             eachCall: eachCall,
             eachRevCall: eachRevCall,
-            closest: closest,
+            // closest: closest,
             filter: filter,
             matches: matches,
             add: add,
@@ -412,7 +410,7 @@ application.scope(function (app) {
         interactWithById = function (fun, expecting) {
             return function (one, two, three) {
                 var instance = this,
-                    bycategories = instance[BY_ID],
+                    bycategories = instance.getRegistry(),
                     passedCategory = arguments[LENGTH] === expecting,
                     category = passedCategory ? one : ID,
                     categoryHash = bycategories[category] = bycategories[category] || {},
@@ -430,31 +428,43 @@ application.scope(function (app) {
                     return Collection(arg).unwrap();
                 }));
             }),
+            has: function (object) {
+                return this.indexOf(object) !== -1;
+            },
             call: function (arg) {
                 this.each(function (fn) {
                     fn(arg);
                 });
                 return this;
             },
-            results: function (key, arg, knows) {
+            results: function (key, arg, handle) {
                 this.each(function (obj) {
-                    result(obj, key, arg, knows);
+                    obj[key](arg);
                 });
                 return this;
             },
             unwrap: function () {
                 return this[ITEMS];
             },
+            setupList: function (list) {
+                this[ITEMS] = list || [];
+            },
+            getRegistry: function () {
+                return this[BY_ID];
+            },
+            setupRegistry: function (registry) {
+                this[BY_ID] = registry || {};
+            },
             empty: function () {
                 var collection = this;
-                collection[ITEMS] = [];
-                collection[BY_ID] = {};
+                collection.setupList();
+                collection.setupRegistry();
                 return collection;
             },
             swap: function (arr, hash) {
                 var collection = this;
-                collection[ITEMS] = arr || [];
-                collection[BY_ID] = hash || {};
+                collection.setupList(arr);
+                collection.setupRegistry(hash);
                 return collection;
             },
             length: function () {
@@ -469,6 +479,10 @@ application.scope(function (app) {
             index: function (number) {
                 return this.unwrap()[number || 0];
             },
+            sort: function (fn_) {
+                sort(this.unwrap(), fn_);
+                return this;
+            },
             constructor: function (arr) {
                 var collection = this;
                 if (isArrayLike(arr)) {
@@ -476,7 +490,7 @@ application.scope(function (app) {
                         arr = toArray(arr);
                     }
                 } else {
-                    if (!isBlank(arr)) {
+                    if (arr != NULL) {
                         arr = [arr];
                     }
                 }
@@ -487,15 +501,8 @@ application.scope(function (app) {
                 return stringify(this.unwrap());
             },
             toJSON: function () {
-                // subtle distinction here
                 return map(this.unwrap(), function (item) {
-                    var ret;
-                    if (isObject(item) && isFunction(item.toJSON)) {
-                        ret = item.toJSON();
-                    } else {
-                        ret = item;
-                    }
-                    return ret;
+                    return isObject(item) ? result(item, TO_JSON) : item;
                 });
             },
             get: interactWithById(function (instance, categoryHash, category, key) {
@@ -535,44 +542,123 @@ application.scope(function (app) {
                 return collection;
             }
         }, wrappedCollectionMethods), BOOLEAN_TRUE),
+        SortedCollection = Collection.extend('SortedCollection', {
+            constructor: function (list_, skip) {
+                var sorted = this;
+                sorted.reversed = BOOLEAN_FALSE;
+                sorted.empty();
+                if (!skip) {
+                    sorted.load(isArrayLike(list_) ? list_ : [list_]);
+                }
+                return sorted;
+            },
+            sort: function () {
+                var sorted = this;
+                sort(sorted.unwrap(), sorted.reversed ? function (a, b) {
+                    return a < b;
+                } : function (a, b) {
+                    return a > b;
+                });
+                return sorted;
+            },
+            reverse: function () {
+                var sorted = this;
+                sorted.reversed = !sorted.reversed;
+                sorted.sort();
+                return sorted;
+            },
+            closest: function (value) {
+                return closest(this.unwrap(), value);
+            },
+            validateId: function (id) {
+                return isNumber(id) || isString(id);
+            },
+            push: function (object, valueOfResult_) {
+                var sorted = this,
+                    valueOfResult = valueOfResult_ || object && object.valueOf();
+                if (!sorted.validateId(valueOfResult)) {
+                    throwError('objects in sorted collections must have either a number or string for their valueOf result');
+                }
+                sorted.addAt(object, sorted.closest(valueOfResult) + 1);
+                return sorted;
+            },
+            indexOf: function (object) {
+                var array = this.unwrap();
+                return (array[LENGTH] > 25 ? binaryIndexOf : indexOf)(array, object);
+            },
+            load: function (values) {
+                var sm = this;
+                duff(values, sm.add, sm);
+                return sm;
+            },
+            add: function (object) {
+                var sorted = this,
+                    valueOfResult = object && object.valueOf(),
+                    retrieved = sorted.get(valueOfResult);
+                if (retrieved == NULL && object != NULL) {
+                    sorted.push(object, valueOfResult);
+                    sorted.registerNew(valueOfResult, object);
+                }
+            },
+            remove: function (object) {
+                var where, sorted = this,
+                    valueOfResult = object && object.valueOf(),
+                    retrieved = sorted.get(valueOfResult);
+                if (object != NULL) {
+                    where = sorted.indexOf(retrieved);
+                    sorted.removeAt(where);
+                    sorted.unRegisterOld(valueOfResult);
+                }
+            },
+            // encouraged to replace
+            registerNew: function (key, object) {
+                this.register(key, object);
+            },
+            unRegisterOld: function (key) {
+                this.unRegister(key);
+            }
+        }, BOOLEAN_TRUE),
         StringObject = Model.extend('StringObject', {
             constructor: function (value, parent) {
                 var string = this;
                 string.value = value;
                 string.parent = parent;
-                string.validate();
+                string.isValid(BOOLEAN_TRUE);
                 return string;
             },
-            validate: function () {
-                this.valid = BOOLEAN_TRUE;
+            toggle: function (direction) {
+                this.isValid(toggle(this.isValid(), direction));
             },
-            invalidate: function () {
-                this.valid = BOOLEAN_FALSE;
-            },
-            toggleValid: function () {
-                this.valid = !this.valid;
-            },
-            isValid: function () {
-                return this.valid;
+            isValid: function (value) {
+                var string = this;
+                if (arguments[LENGTH]) {
+                    if (string.valid !== value) {
+                        string.parent.increment();
+                        string.valid = value;
+                    }
+                    return string;
+                } else {
+                    return string.valid;
+                }
             },
             valueOf: function () {
                 return this.value;
             },
             toString: function () {
-                return this.valueOf();
+                return this.value;
             },
-            generate: function (delimiter) {
-                return this.isValid() ? delimiter + this.valueOf() : EMPTY_STRING;
+            generate: function () {
+                return this.isValid() ? this.valueOf() : EMPTY_STRING;
             }
         }, BOOLEAN_TRUE),
-        StringManager = Collection.extend('StringManager', {
+        StringManager = SortedCollection.extend('StringManager', {
             Child: StringObject,
             add: function (string) {
                 var sm = this,
                     found = sm.get(string);
                 if (string) {
                     if (found) {
-                        found.validate();
+                        found.isValid(BOOLEAN_TRUE);
                     } else {
                         found = sm.Child(string, sm);
                         sm.unwrap().push(found);
@@ -581,14 +667,25 @@ application.scope(function (app) {
                 }
                 return found;
             },
-            increment: function () {},
-            decrement: function () {},
+            empty: function () {
+                var sm = this;
+                // wipes array and id hash
+                Collection[CONSTRUCTOR][PROTOTYPE].empty.call(sm);
+                // resets change counter
+                sm.current(EMPTY_STRING);
+            },
+            increment: function () {
+                this._changeCounter++;
+            },
+            decrement: function () {
+                this._changeCounter--;
+            },
             remove: function (string) {
                 var sm = this,
                     found = sm.get(string);
                 if (string) {
                     if (found) {
-                        found.invalidate();
+                        found.isValid(BOOLEAN_FALSE);
                     }
                 }
                 return sm;
@@ -599,30 +696,30 @@ application.scope(function (app) {
                 if (!found) {
                     sm.add(string);
                 } else {
-                    found.toggleValid();
+                    found.toggle();
                 }
             },
             generate: function (delimiter_) {
                 var string = EMPTY_STRING,
-                    parent = this;
-                parent.delimiter = delimiter_;
-                parent.eachRev(function (stringInstance, idx) {
-                    var fromRight, stringInstanceIndex,
-                        delimiter = idx ? parent.delimiter : EMPTY_STRING,
-                        generated = stringInstance.generate(delimiter);
-                    string += generated;
-                    if (!generated) {
-                        fromRight = idx > parent.length();
-                        stringInstanceIndex = parent.indexOf(stringInstance, UNDEFINED, UNDEFINED, fromRight);
-                        parent.removeAt(stringInstanceIndex);
+                    parent = this,
+                    delimiter = parent.delimiter = delimiter_;
+                if (!this._changeCounter) {
+                    return this.current();
+                }
+                parent[ITEMS] = parent.foldl(function (memo, stringInstance) {
+                    if (stringInstance.isValid()) {
+                        memo.push(stringInstance);
                     }
-                });
+                    return memo;
+                }, []);
+                string = parent.unwrap().join(delimiter);
                 parent.current(string);
                 return string;
             },
             current: function (current_) {
                 var sm = this;
                 if (arguments[LENGTH]) {
+                    sm._changeCounter = 0;
                     sm._currentValue = current_;
                     return sm;
                 } else {
@@ -636,11 +733,15 @@ application.scope(function (app) {
                     if (isString(value)) {
                         value = value.split(splitter);
                     }
-                    duff(value, function (item) {
-                        sm.add(item);
-                    });
+                    sm.load(value);
                     sm.current(value.join(splitter));
                 }
+                return sm;
+            },
+            refill: function (array) {
+                var sm = this;
+                sm.empty();
+                sm.load(array);
                 return sm;
             }
         }, BOOLEAN_TRUE);

@@ -2,6 +2,7 @@ var UNDEFINED, win = window,
     doc = win.document,
     EMPTY_STRING = '',
     TO_STRING = 'toString',
+    TO_JSON = 'toJSON',
     VALUE_OF = 'valueOf',
     PROTOTYPE = 'prototype',
     CONSTRUCTOR = 'constructor',
@@ -44,9 +45,13 @@ var UNDEFINED, win = window,
     EXTEND = 'extend',
     BOOLEAN_TRUE = !0,
     BOOLEAN_FALSE = !1,
+    INFINITY = Infinity,
+    NEGATIVE_INFINITY = -INFINITY,
+    BIG_INTEGER = 32767,
+    NEGATIVE_BIG_INTEGER = BIG_INTEGER - 1,
+    TWO_TO_THE_31 = 2147483647,
     NULL = null,
-    // application.scope(function (app) {
-    _, factories = {},
+    factories = {},
     object = Object,
     fn = Function,
     array = Array,
@@ -137,24 +142,56 @@ var UNDEFINED, win = window,
         }
         return -1;
     },
-    binaryIndexOf = function (array, searchElement, minIndex_, maxIndex_) {
-        var currentIndex, currentElement, resultIndex, found,
-            minIndex = minIndex_ || 0,
-            maxIndex = maxIndex_ || array[LENGTH] - 1;
-        while (minIndex <= maxIndex) {
-            resultIndex = currentIndex = (minIndex + maxIndex) / 2 | 0;
-            currentElement = array[currentIndex];
-            if (currentElement < searchElement) {
-                minIndex = currentIndex + 1;
-            } else if (currentElement > searchElement) {
-                maxIndex = currentIndex - 1;
-            } else {
-                return currentIndex;
+    binaryIndexOf = function (list, item, minIndex_, maxIndex_) {
+        var guess, min = minIndex_ || 0,
+            max = maxIndex_ || list[LENGTH] - 1,
+            bitwise = (max <= TWO_TO_THE_31) ? BOOLEAN_TRUE : BOOLEAN_FALSE;
+        if (bitwise) {
+            while (min <= max) {
+                guess = (min + max) >> 1;
+                if (list[guess] === item) {
+                    return guess;
+                } else {
+                    if (list[guess] < item) {
+                        min = guess + 1;
+                    } else {
+                        max = guess - 1;
+                    }
+                }
+            }
+        } else {
+            while (min <= max) {
+                guess = (min + max) / 2 | 0;
+                if (list[guess] === item) {
+                    return guess;
+                } else {
+                    if (list[guess] < item) {
+                        min = guess + 1;
+                    } else {
+                        max = guess - 1;
+                    }
+                }
             }
         }
-        found = ~maxIndex;
-        return found;
+        return -1;
     },
+    // binaryIndexOf = function (array, searchElement, minIndex_, maxIndex_) {
+    //     var currentIndex, currentElement, minIndex = minIndex_ || 0,
+    //         maxIndex = maxIndex_ || array[LENGTH] - 1;
+    //     while (minIndex <= maxIndex) {
+    //         currentIndex = (minIndex + maxIndex) / 2 | 0;
+    //         currentElement = array[currentIndex];
+    //         // calls valueOf
+    //         if (currentElement < searchElement) {
+    //             minIndex = currentIndex + 1;
+    //         } else if (currentElement > searchElement) {
+    //             maxIndex = currentIndex - 1;
+    //         } else {
+    //             return currentIndex;
+    //         }
+    //     }
+    //     return~ maxIndex;
+    // },
     /**
      * @func
      */
@@ -169,31 +206,30 @@ var UNDEFINED, win = window,
      * @func
      */
     toString = function (obj) {
-        return (obj === NULL || obj === UNDEFINED) ? '' : (obj + '');
+        return (obj === NULL || obj === UNDEFINED) ? EMPTY_STRING : (obj + EMPTY_STRING);
     },
     /**
      * @func
      */
-    sort = function (obj, fn) {
-        var _fn;
-        if (isFunction(fn)) {
-            _fn = fn;
-            // normalization for safari
-            fn = function () {
-                var res = +_fn.apply(this, arguments);
-                if (isNaN(res)) {
-                    res = 0;
-                }
-                if (res > 1) {
-                    res = 1;
-                }
-                if (res < -1) {
-                    res = -1;
-                }
-                return res;
-            };
-        }
-        return arrayProto.sort.call(obj, fn);
+    sort = function (obj, fn_) {
+        var fn = fn_ || function (a, b) {
+            return a > b;
+        };
+        // normalize sort function handling for safari
+        return arrayProto.sort.call(obj, function () {
+            var result = fn.apply(this, arguments),
+                numericResult = +result;
+            if (isNaN(numericResult)) {
+                numericResult = 0;
+            }
+            if (numericResult > 1) {
+                numericResult = 1;
+            }
+            if (result === BOOLEAN_FALSE || numericResult < -1) {
+                numericResult = -1;
+            }
+            return numericResult;
+        });
     },
     /**
      * @func
@@ -369,7 +405,7 @@ var UNDEFINED, win = window,
         if (isFunction(obj)) {
             obj = obj.toString();
         }
-        return obj + '';
+        return obj + EMPTY_STRING;
     },
     /**
      * @func
@@ -380,9 +416,9 @@ var UNDEFINED, win = window,
         return function (prefix, isInt) {
             var val;
             if (!prefix) {
-                prefix = '';
+                prefix = EMPTY_STRING;
             }
-            prefix += '';
+            prefix += EMPTY_STRING;
             val = cache[prefix];
             if (!val) {
                 val = cache[prefix] = 0;
@@ -606,12 +642,12 @@ var UNDEFINED, win = window,
      * @func
      */
     toBoolean = function (thing) {
-        var ret, thingMod = thing + '';
+        var ret, thingMod = thing + EMPTY_STRING;
         thingMod = thingMod.trim();
-        if (thingMod === BOOLEAN_FALSE + '') {
+        if (thingMod === BOOLEAN_FALSE + EMPTY_STRING) {
             ret = BOOLEAN_FALSE;
         }
-        if (thingMod === BOOLEAN_TRUE + '') {
+        if (thingMod === BOOLEAN_TRUE + EMPTY_STRING) {
             ret = BOOLEAN_TRUE;
         }
         if (ret === UNDEFINED) {
@@ -699,6 +735,9 @@ var UNDEFINED, win = window,
             }
             return new Constructor(attributes, options);
         };
+        __.isInstance = Constructor.isInstance = function (instance) {
+            return isInstance(instance, Constructor);
+        };
         __[CONSTRUCTOR] = Constructor;
         __[EXTEND] = function () {
             return Constructor[EXTEND].apply(Constructor, arguments);
@@ -740,11 +779,11 @@ var UNDEFINED, win = window,
         switch (className) {
             // Strings, numbers, regular expressions, dates, and booleans are compared by value.
         case BRACKET_OBJECT_SPACE + 'RegExp]':
-            // RegExps are coerced to strings for comparison (Note: '' + /a/i === '/a/i')
+            // RegExps are coerced to strings for comparison (Note: EMPTY_STRING + /a/i === '/a/i')
         case BRACKET_OBJECT_SPACE + 'String]':
             // Primitives and their corresponding object wrappers are equivalent; thus, `"5"` is
             // equivalent to `new String("5")`.
-            return '' + a === '' + b;
+            return EMPTY_STRING + a === EMPTY_STRING + b;
         case BRACKET_OBJECT_SPACE + 'Number]':
             // `NaN`s are equivalent, but non-reflexive.
             // Object(NaN) is equivalent to NaN
@@ -1060,7 +1099,7 @@ var UNDEFINED, win = window,
         if (match) {
             match = match[0];
         }
-        return match || '';
+        return match || EMPTY_STRING;
     },
     /**
      * @func
@@ -1135,6 +1174,9 @@ var UNDEFINED, win = window,
             return method.apply(_console, arguments);
         };
     }),
+    throwError = console.throwError = function (options) {
+        throw new Error(options);
+    },
     wraptry = function (trythis, errthat, finalfunction) {
         try {
             return trythis();
@@ -1143,6 +1185,113 @@ var UNDEFINED, win = window,
         } finally {
             return finalfunction && finalfunction();
         }
+    },
+    toggle = function (current, which) {
+        if (which === UNDEFINED) {
+            return !current;
+        } else {
+            return !!which;
+        }
+    },
+    _ = app._ = {
+        months: gapSplit('january feburary march april may june july august september october november december'),
+        weekdays: gapSplit('sunday monday tuesday wednesday thursday friday saturday'),
+        constructorWrapper: constructorWrapper,
+        stringifyQuery: stringifyQuery,
+        intendedObject: intendedObject,
+        intendedArray: intendedArray,
+        ensureFunction: ensureFunction,
+        parseDecimal: parseDecimal,
+        reference: reference,
+        isArrayLike: isArrayLike,
+        isInstance: isInstance,
+        hasEnumBug: hasEnumBug,
+        roundFloat: roundFloat,
+        factories: factories,
+        listSlice: listSlice,
+        fullClone: fullClone,
+        toBoolean: toBoolean,
+        stringify: stringify,
+        splitGen: splitGen,
+        gapSplit: gapSplit,
+        uniqueId: uniqueId,
+        wraptry: wraptry,
+        toString: toString,
+        throttle: throttle,
+        debounce: debounce,
+        protoProperty: protoProperty,
+        protoProp: protoProperty,
+        reverse: reverse,
+        binaryIndexOf: binaryIndexOf,
+        indexOfNaN: indexOfNaN,
+        indexOf: indexOf,
+        joinGen: joinGen,
+        toArray: toArray,
+        isEqual: isEqual,
+        unshift: unshift,
+        gapJoin: gapJoin,
+        isArray: isArray,
+        isEmpty: isEmpty,
+        splice: splice,
+        isBoolean: isBoolean,
+        invert: invert,
+        extend: extend,
+        noop: noop,
+        toggle: toggle,
+        reduce: foldl,
+        foldl: foldl,
+        foldr: foldr,
+        now: now,
+        map: map,
+        result: result,
+        isUndefined: isUndefined,
+        isFunction: isFunction,
+        isObject: isObject,
+        isNumber: isNumber,
+        isFinite: isFinite,
+        isString: isString,
+        isBlank: isBlank,
+        isNull: isNull,
+        isNaN: isNaN,
+        eachProxy: eachProxy,
+        exports: exports,
+        allKeys: allKeys,
+        slice: slice,
+        parse: parse,
+        shift: shift,
+        merge: merge,
+        fetch: fetch,
+        split: split,
+        clone: clone,
+        bind: bind,
+        duff: duff,
+        duffRev: duffRev,
+        eachRev: eachRev,
+        sort: sort,
+        join: join,
+        wrap: wrap,
+        uuid: uuid,
+        keys: keys,
+        once: once,
+        each: each,
+        push: push,
+        pop: pop,
+        has: has,
+        negate: negate,
+        pI: pI,
+        createPredicateIndexFinder: createPredicateIndexFinder,
+        findIndex: findIndex,
+        findLastIndex: findLastIndex,
+        validKey: validKey,
+        finder: finder,
+        find: find,
+        findLast: findLast,
+        console: console,
+        min: mathArray('min'),
+        max: mathArray('max'),
+        math: wrap(gapSplit('E LN2 LN10 LOG2E LOG10E PI SQRT1_2 SQRT2 abs acos acosh asin asinh atan atan2 atanh cbrt ceil clz32 cos cosh exp expm1 floor fround hypot imul log log1p log2 log10 pow random round sign sin sinh sqrt tan tanh trunc'), function (key) {
+            return Math[key];
+        })
     };
 /**
  * @class Model
@@ -1150,106 +1299,6 @@ var UNDEFINED, win = window,
 function Model(attributes, options) {
     return this;
 }
-factories.Model = Model;
 Model[PROTOTYPE] = {};
 Model[EXTEND] = constructorExtend;
-_ = app._ = {
-    months: gapSplit('january feburary march april may june july august september october november december'),
-    weekdays: gapSplit('sunday monday tuesday wednesday thursday friday saturday'),
-    constructorWrapper: constructorWrapper,
-    stringifyQuery: stringifyQuery,
-    intendedObject: intendedObject,
-    intendedArray: intendedArray,
-    ensureFunction: ensureFunction,
-    parseDecimal: parseDecimal,
-    reference: reference,
-    isArrayLike: isArrayLike,
-    isInstance: isInstance,
-    hasEnumBug: hasEnumBug,
-    roundFloat: roundFloat,
-    factories: factories,
-    listSlice: listSlice,
-    fullClone: fullClone,
-    toBoolean: toBoolean,
-    stringify: stringify,
-    splitGen: splitGen,
-    gapSplit: gapSplit,
-    uniqueId: uniqueId,
-    wraptry: wraptry,
-    toString: toString,
-    throttle: throttle,
-    debounce: debounce,
-    protoProperty: protoProperty,
-    protoProp: protoProperty,
-    reverse: reverse,
-    binaryIndexOf: binaryIndexOf,
-    indexOfNaN: indexOfNaN,
-    indexOf: indexOf,
-    joinGen: joinGen,
-    toArray: toArray,
-    isEqual: isEqual,
-    unshift: unshift,
-    gapJoin: gapJoin,
-    isArray: isArray,
-    isEmpty: isEmpty,
-    splice: splice,
-    isBoolean: isBoolean,
-    invert: invert,
-    extend: extend,
-    noop: noop,
-    reduce: foldl,
-    foldl: foldl,
-    foldr: foldr,
-    now: now,
-    map: map,
-    result: result,
-    isUndefined: isUndefined,
-    isFunction: isFunction,
-    isObject: isObject,
-    isNumber: isNumber,
-    isFinite: isFinite,
-    isString: isString,
-    isBlank: isBlank,
-    isNull: isNull,
-    isNaN: isNaN,
-    eachProxy: eachProxy,
-    exports: exports,
-    allKeys: allKeys,
-    slice: slice,
-    parse: parse,
-    shift: shift,
-    merge: merge,
-    fetch: fetch,
-    split: split,
-    clone: clone,
-    bind: bind,
-    duff: duff,
-    duffRev: duffRev,
-    eachRev: eachRev,
-    sort: sort,
-    join: join,
-    wrap: wrap,
-    uuid: uuid,
-    keys: keys,
-    once: once,
-    each: each,
-    push: push,
-    pop: pop,
-    has: has,
-    negate: negate,
-    pI: pI,
-    createPredicateIndexFinder: createPredicateIndexFinder,
-    findIndex: findIndex,
-    findLastIndex: findLastIndex,
-    validKey: validKey,
-    finder: finder,
-    find: find,
-    findLast: findLast,
-    console: console,
-    min: mathArray('min'),
-    max: mathArray('max'),
-    math: wrap(gapSplit('E LN2 LN10 LOG2E LOG10E PI SQRT1_2 SQRT2 abs acos acosh asin asinh atan atan2 atanh cbrt ceil clz32 cos cosh exp expm1 floor fround hypot imul log log1p log2 log10 pow random round sign sin sinh sqrt tan tanh trunc'), function (key) {
-        return Math[key];
-    })
-};
-// });
+factories.Model = constructorWrapper(Model);

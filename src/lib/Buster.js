@@ -1,5 +1,5 @@
 application.scope().module('Buster', function (module, app, _, factories, $) {
-    var blank, isReceiving = 0,
+    var isReceiving = 0,
         get = _.get,
         duff = _.duff,
         collection = factories.Collection,
@@ -15,23 +15,8 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
         parse = _.parse,
         foldl = _.foldl,
         stringify = _.stringify,
-        BOOLEAN_TRUE = !0,
-        BOOLEAN_FALSE = !1,
-        infin = 32767,
-        nInfin = -infin - 1,
-        ATTRIBUTES = 'attributes',
         COMPONENT = 'component',
-        COMPONENTS = COMPONENT + 's',
         RESPONSE_OPTIONS = 'responseOptions',
-        PARENT = 'parent',
-        LENGTH = 'length',
-        HEIGHT = 'height',
-        WIDTH = 'width',
-        BOTTOM = 'bottom',
-        RIGHT = 'right',
-        LEFT = 'left',
-        TOP = 'top',
-        DISPATCH_EVENT = 'dispatchEvent',
         MARGIN_BOTTOM = 'marginBottom',
         MARGIN_RIGHT = 'marginRight',
         MIN_HEIGHT = 'minHeight',
@@ -319,10 +304,10 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                 }
                 return memo;
             }, {
-                top: infin,
-                left: infin,
-                right: nInfin,
-                bottom: nInfin,
+                top: BIG_INTEGER,
+                left: BIG_INTEGER,
+                right: NEGATIVE_BIG_INTEGER,
+                bottom: NEGATIVE_BIG_INTEGER,
                 marginBottom: 0,
                 marginRight: 0,
                 zIndex: 0,
@@ -379,17 +364,6 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                 return message;
             }
         }),
-        showHideBoolean = function (bool) {
-            return function (showList) {
-                var buster = this;
-                duff(gapSplit(showList), function (id) {
-                    var com = buster[COMPONENT](id);
-                    if (com) {
-                        com.isShowing = bool;
-                    }
-                });
-            };
-        },
         Buster = factories.Buster = factories.Box.extend('Buster', {
             Model: Message,
             events: {
@@ -427,7 +401,7 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                 _.AF.remove(attrs.componentTransitionAFID);
                 buster.parts = {};
                 associator.remove(buster.id);
-                factories.Box.constructor.prototype.destroy.apply(this, arguments);
+                factories.Box[CONSTRUCTOR][PROTOTYPE].destroy.apply(this, arguments);
                 return buster;
             },
             tellMouseMovement: function () {
@@ -499,35 +473,36 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                     },
                     unload: function () {
                         this.destroy();
-                    },
-                    // belongs on the outside
-                    updateAttributes: function (e) {
-                        var buster = this,
-                            data = e.data(),
-                            packet = data.packet;
-                        buster.set(packet.update);
-                        duff(packet[COMPONENTS], function (com) {
-                            var component = buster[COMPONENT](com.registeredAs);
-                            if (!component) {
-                                buster[COMPONENTS].add(com);
-                            } else {
-                                extend(component, com);
-                            }
-                        });
-                        buster[COMPONENTS].each(function (com) {
-                            if (_.posit(packet.showing, com.registeredAs)) {
-                                com.isShowing = BOOLEAN_TRUE;
-                            } else {
-                                com.isShowing = BOOLEAN_FALSE;
-                            }
-                        });
-                        if (packet.shouldRespond) {
-                            buster.respond();
-                        }
                     }
+                    // ,
+                    // belongs on the outside
+                    // updateAttributes: function (e) {
+                    //     var buster = this,
+                    //         data = e.data(),
+                    //         packet = data.packet;
+                    //     buster.set(packet.update);
+                    //     duff(packet[COMPONENTS], function (com) {
+                    //         var component = buster[COMPONENT](com.registeredAs);
+                    //         if (!component) {
+                    //             buster[COMPONENTS].add(com);
+                    //         } else {
+                    //             extend(component, com);
+                    //         }
+                    //     });
+                    //     buster[COMPONENTS].each(function (com) {
+                    //         if (_.posit(packet.showing, com.registeredAs)) {
+                    //             com.isShowing = BOOLEAN_TRUE;
+                    //         } else {
+                    //             com.isShowing = BOOLEAN_FALSE;
+                    //         }
+                    //     });
+                    //     if (packet.shouldRespond) {
+                    //         buster.respond();
+                    //     }
+                    // }
                 });
                 buster.allListeners = collection();
-                attrs.frame = null;
+                attrs.frame = NULL;
                 buster.el = $(buster.parts.frame);
                 registered = associator.get(attrs.id);
                 registered.buster = buster;
@@ -564,33 +539,33 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
              * @func
              * @name Buster#getTargets
              */
-            getTargets: function (target) {
-                var buster = this,
-                    attrs = buster[ATTRIBUTES],
-                    parts = buster.parts,
-                    top = parts[TOP],
-                    targets = [],
-                    wrapper = parts.wrapper;
-                if (!target) {
-                    targets = [top];
-                }
-                if (target === 'wrapper') {
-                    targets = [wrapper];
-                }
-                if (target === 'self') {
-                    targets = buster.el;
-                }
-                if (target === 'document') {
-                    targets = [parts.doc];
-                }
-                if (target === PARENT) {
-                    targets = buster.el[PARENT]();
-                }
-                if (!targets[LENGTH]) {
-                    targets = parts.doc.querySelectorAll(target);
-                }
-                return $(targets);
-            },
+            // getTargets: function (target) {
+            //     var buster = this,
+            //         attrs = buster[ATTRIBUTES],
+            //         parts = buster.parts,
+            //         top = parts[TOP],
+            //         targets = [],
+            //         wrapper = parts.wrapper;
+            //     if (!target) {
+            //         targets = [top];
+            //     }
+            //     if (target === 'wrapper') {
+            //         targets = [wrapper];
+            //     }
+            //     if (target === 'self') {
+            //         targets = buster.el;
+            //     }
+            //     if (target === DOCUMENT) {
+            //         targets = [parts.doc];
+            //     }
+            //     if (target === PARENT) {
+            //         targets = buster.el[PARENT]();
+            //     }
+            //     if (!targets[LENGTH]) {
+            //         targets = parts.doc.querySelectorAll(target);
+            //     }
+            //     return $(targets);
+            // },
             /**
              * tries to flush the cache. only works if the isConnected attribute is set to true. If it is, then the post message pipeline begins
              * @returns {buster} returns this;
@@ -609,9 +584,7 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                     childrenLen = buster.children[LENGTH]();
                     queuedMsg = buster.children.index(currentIdx);
                     while (queuedMsg && currentIdx < childrenLen) {
-                        queuedMsg.set({
-                            runCount: 0
-                        });
+                        queuedMsg.set('runCount', 0);
                         postMessage(queuedMsg, buster);
                         if (currentIdx) {
                             currentIdx = (buster.get(QUEUED_MESSAGE_INDEX) + 1) || 0;
@@ -621,9 +594,7 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                             childrenLen = BOOLEAN_FALSE;
                         }
                     }
-                    buster.set({
-                        flushing: BOOLEAN_FALSE
-                    });
+                    buster.set('flushing', BOOLEAN_FALSE);
                     if (buster.get('isConnected')) {
                         if (buster.children[LENGTH]() > buster.get(QUEUED_MESSAGE_INDEX)) {
                             buster.flush();
@@ -647,7 +618,7 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                         command: command,
                         packet: packet
                     }, defaultObj, extra));
-                return buster.children.index(defaultObj.index);
+                return buster[CHILDREN].index(defaultObj.index);
             },
             /**
              * shorthand for creating a function that gets called after the buster's partner has responded
@@ -674,7 +645,7 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                     runCount = data.runCount,
                     children = buster.children,
                     eventname = 'respond',
-                    args = _.toArray(arguments);
+                    args = toArray(arguments);
                 if (runCount) {
                     originalMessage = children.index(data.index);
                     if (!originalMessage) {
@@ -734,28 +705,28 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
              * @func
              * @name Buster#shouldUpdate
              */
-            shouldUpdate: function (args) {
-                var ret, buster = this,
-                    attrs = buster[ATTRIBUTES],
-                    lastUpdate = attrs.lastRespondUpdate,
-                    lastFrameRect = attrs.lastFrameRect,
-                    top = buster.parts[TOP] || {},
-                    width = top.innerWidth,
-                    height = top.innerHeight,
-                    nowish = now();
-                if (lastUpdate > nowish - 1000 && _.isObject(lastFrameRect)) {
-                    ret = !(lastFrameRect[BOTTOM] < -height * 0.5 || lastFrameRect.top > height * 1.5 || lastFrameRect[RIGHT] < -width * 0.5 || lastFrameRect[LEFT] > width * 1.5);
-                } else {
-                    ret = 1;
-                }
-                clearTimeout(attrs.lastUpdateThrottledId);
-                if (!ret) {
-                    attrs.lastUpdateThrottledId = setTimeout(function () {
-                        buster.respond.apply(buster, args);
-                    }, -(nowish - lastUpdate - 1000));
-                }
-                return !buster.startThrottle || ret;
-            },
+            // shouldUpdate: function (args) {
+            //     var ret, buster = this,
+            //         attrs = buster[ATTRIBUTES],
+            //         lastUpdate = attrs.lastRespondUpdate,
+            //         lastFrameRect = attrs.lastFrameRect,
+            //         top = buster.parts[TOP] || {},
+            //         width = top.innerWidth,
+            //         height = top.innerHeight,
+            //         nowish = now();
+            //     if (lastUpdate > nowish - 1000 && _.isObject(lastFrameRect)) {
+            //         ret = !(lastFrameRect[BOTTOM] < -height * 0.5 || lastFrameRect.top > height * 1.5 || lastFrameRect[RIGHT] < -width * 0.5 || lastFrameRect[LEFT] > width * 1.5);
+            //     } else {
+            //         ret = 1;
+            //     }
+            //     clearTimeout(attrs.lastUpdateThrottledId);
+            //     if (!ret) {
+            //         attrs.lastUpdateThrottledId = setTimeout(function () {
+            //             buster.respond.apply(buster, args);
+            //         }, -(nowish - lastUpdate - 1000));
+            //     }
+            //     return !buster.startThrottle || ret;
+            // },
             /**
              * respond trigger.
              * @arg {object} original data object (same pointer) that was sent over
@@ -804,155 +775,153 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
              * @func
              * @name Buster#getFrameRect
              */
-            getFrameRect: function () {
-                var clientRect = this[ATTRIBUTES].lastFrameRect = this.el.clientRect();
-                return clientRect;
-            },
+            // getFrameRect: function () {
+            //     var clientRect = this[ATTRIBUTES].lastFrameRect = this.el.clientRect();
+            //     return clientRect;
+            // },
             /**
              * @returns {object} client rect duplicate of parent element
              * @func
              * @name Buster#getParentRect
              */
-            getParentRect: function () {
-                var parentRect = this[ATTRIBUTES].lastParentRect = this.el[PARENT]().clientRect();
-                return parentRect;
-            },
-            updateTopData: function () {
-                var buster = this,
-                    attrs = get(buster),
-                    parts = buster.parts,
-                    topWin = parts.top || {},
-                    location = topWin.location || {
-                        hash: '',
-                        pathname: '',
-                        protocol: '',
-                        search: ''
-                    },
-                    topData = attrs.topData = {
-                        innerHeight: topWin.innerHeight || 0,
-                        outerHeight: topWin.outerHeight || 0,
-                        innerWidth: topWin.innerWidth || 0,
-                        outerWidth: topWin.outerWidth || 0,
-                        scrollX: topWin.scrollX || 0,
-                        scrollY: topWin.scrollY || 0,
-                        location: {
-                            hash: location.hash.slice(1),
-                            host: location.host,
-                            href: location.href,
-                            origin: location.origin,
-                            pathname: location.pathname.slice(1),
-                            port: location.port,
-                            protocol: location.protocol.slice(0, location.protocol[LENGTH] - 1),
-                            search: location.search.slice(1)
-                        }
-                    };
-                return topData;
-            },
+            // getParentRect: function () {
+            //     var parentRect = this[ATTRIBUTES].lastParentRect = this.el[PARENT]().clientRect();
+            //     return parentRect;
+            // },
+            // updateTopData: function () {
+            //     var buster = this,
+            //         attrs = get(buster),
+            //         parts = buster.parts,
+            //         topWin = parts.top || {},
+            //         location = topWin.location || {
+            //             hash: '',
+            //             pathname: '',
+            //             protocol: '',
+            //             search: ''
+            //         },
+            //         topData = attrs.topData = {
+            //             innerHeight: topWin.innerHeight || 0,
+            //             outerHeight: topWin.outerHeight || 0,
+            //             innerWidth: topWin.innerWidth || 0,
+            //             outerWidth: topWin.outerWidth || 0,
+            //             scrollX: topWin.scrollX || 0,
+            //             scrollY: topWin.scrollY || 0,
+            //             location: {
+            //                 hash: location.hash.slice(1),
+            //                 host: location.host,
+            //                 href: location.href,
+            //                 origin: location.origin,
+            //                 pathname: location.pathname.slice(1),
+            //                 port: location.port,
+            //                 protocol: location.protocol.slice(0, location.protocol[LENGTH] - 1),
+            //                 search: location.search.slice(1)
+            //             }
+            //         };
+            //     return topData;
+            // },
             /**
              * gets the wrapper info, such as scroll height, id, and the classname
              * @returns {object} key value pairs of all of the data that defines the wrapper
              * @func
              * @name Buster#wrapperInfo
              */
-            wrapperInfo: function () {
-                var info, buster = this,
-                    parts = buster.parts,
-                    el = parts.wrapper || {},
-                    doc = parts.doc || {
-                        body: {}
-                    },
-                    root = doc.body.parentNode,
-                    getBoundingClientRect = {},
-                    attrs = get(buster);
-                if (el.tagName) {
-                    getBoundingClientRect = $(el).clientRect();
-                }
-                info = attrs.wrapperInfo = {
-                    readyState: (doc.readyState === 'complete'),
-                    scrollHeight: el.scrollHeight,
-                    scrollWidth: el.scrollWidth,
-                    scrollLeft: el.scrollLeft,
-                    scrollTop: el.scrollTop,
-                    className: el.className,
-                    pageTitle: doc.title,
-                    id: el.id,
-                    height: pI(getBoundingClientRect[HEIGHT]),
-                    bottom: pI(getBoundingClientRect[BOTTOM]),
-                    width: pI(getBoundingClientRect[WIDTH]),
-                    right: pI(getBoundingClientRect[RIGHT]),
-                    left: pI(getBoundingClientRect[LEFT]),
-                    top: pI(getBoundingClientRect[TOP])
-                };
-                return info;
-            },
+            // wrapperInfo: function () {
+            //     var info, buster = this,
+            //         parts = buster.parts,
+            //         el = parts.wrapper || {},
+            //         doc = parts.doc || {
+            //             body: {}
+            //         },
+            //         root = doc.body.parentNode,
+            //         getBoundingClientRect = {},
+            //         attrs = get(buster);
+            //     if (el.tagName) {
+            //         getBoundingClientRect = $(el).clientRect();
+            //     }
+            //     info = attrs.wrapperInfo = {
+            //         readyState: (doc.readyState === 'complete'),
+            //         scrollHeight: el.scrollHeight,
+            //         scrollWidth: el.scrollWidth,
+            //         scrollLeft: el.scrollLeft,
+            //         scrollTop: el.scrollTop,
+            //         className: el.className,
+            //         pageTitle: doc.title,
+            //         id: el.id,
+            //         height: pI(getBoundingClientRect[HEIGHT]),
+            //         bottom: pI(getBoundingClientRect[BOTTOM]),
+            //         width: pI(getBoundingClientRect[WIDTH]),
+            //         right: pI(getBoundingClientRect[RIGHT]),
+            //         left: pI(getBoundingClientRect[LEFT]),
+            //         top: pI(getBoundingClientRect[TOP])
+            //     };
+            //     return info;
+            // },
             /**
              * @returns {object} position in document as calculated by the buster attributes
              * @func
              * @name Buster#positionInDocument
              */
-            positionInDocument: function () {
-                var attrs = this[ATTRIBUTES],
-                    wrapperInfo = attrs.wrapperInfo,
-                    contentRect = attrs.lastParentRect,
-                    pos = attrs.lastPosInDoc = {
-                        top: pI(contentRect[TOP] - wrapperInfo[TOP]),
-                        bottom: pI(wrapperInfo[HEIGHT] - contentRect[TOP] - wrapperInfo.scrollTop - contentRect[HEIGHT]),
-                        left: pI(contentRect[LEFT] - wrapperInfo[LEFT]),
-                        right: pI(wrapperInfo[WIDTH] - contentRect[RIGHT] - wrapperInfo.scrollLeft - wrapperInfo[LEFT])
-                    };
-                return pos;
-            },
-            calculateSizes: function () {
-                var buster = this,
-                    attrs = get(buster),
-                    parentStyle = attrs.lastParentStyle = buster.el[PARENT]().getStyle(),
-                    comSizes = attrs[COMPONENTS] = buster[COMPONENTS].map(function (idx, com) {
-                        return buster.calculateSize(com);
-                    });
-                return comSizes;
-            },
-            showComponents: showHideBoolean(BOOLEAN_TRUE),
-            hideComponents: showHideBoolean(BOOLEAN_FALSE),
-            calculateContainerSize: function (components) {
-                var buster = this,
-                    attrs = get(buster),
-                    parentRect = attrs.lastParentRect,
-                    sizing = containerSize(components || buster[COMPONENTS]);
-                attrs._sizing = sizing;
-                attrs.containerSize = {
-                    top: sizing[TOP],
-                    left: sizing[LEFT],
-                    width: sizing[RIGHT] - sizing[LEFT],
-                    height: sizing[BOTTOM] - sizing[TOP]
-                };
-                attrs.pushVerticalVal = Math.min(Math.max(sizing[BOTTOM] - parentRect[BOTTOM], 0), sizing[MARGIN_BOTTOM]);
-                attrs.pushHorizontalVal = Math.min(Math.max(sizing[RIGHT] - parentRect[RIGHT], 0), sizing[MARGIN_RIGHT]);
-                sizing = attrs.containerCss = {
-                    top: sizing[TOP] - parentRect[TOP],
-                    left: sizing[LEFT] - parentRect[LEFT],
-                    width: sizing[RIGHT] - sizing[LEFT],
-                    height: sizing[BOTTOM] - sizing[TOP],
-                    zIndex: sizing.zIndex || 'inherit'
-                };
-                return sizing;
-            },
-            calculateSize: function (component) {
-                var buster = this,
-                    attrs = get(buster),
-                    expansion = factories.expansion[component.dimensionType || 'match'],
-                    parentRect = attrs.lastParentRect,
-                    parentStyle = attrs.lastParentStyle,
-                    method = (expansion || factories.expansion.match),
-                    result = method.call(buster, component, parentRect, parentStyle, buster.parts[TOP]),
-                    // these are always relative to the viewport
-                    calcSize = component.calculatedSize = _.floor({
-                        top: result[TOP],
-                        left: result[LEFT],
-                        width: result[WIDTH],
-                        height: result[HEIGHT]
-                    }, 2);
-                return calcSize;
-            },
+            // positionInDocument: function () {
+            //     var attrs = this[ATTRIBUTES],
+            //         wrapperInfo = attrs.wrapperInfo,
+            //         contentRect = attrs.lastParentRect,
+            //         pos = attrs.lastPosInDoc = {
+            //             top: pI(contentRect[TOP] - wrapperInfo[TOP]),
+            //             bottom: pI(wrapperInfo[HEIGHT] - contentRect[TOP] - wrapperInfo.scrollTop - contentRect[HEIGHT]),
+            //             left: pI(contentRect[LEFT] - wrapperInfo[LEFT]),
+            //             right: pI(wrapperInfo[WIDTH] - contentRect[RIGHT] - wrapperInfo.scrollLeft - wrapperInfo[LEFT])
+            //         };
+            //     return pos;
+            // },
+            // calculateSizes: function () {
+            //     var buster = this,
+            //         attrs = get(buster),
+            //         parentStyle = attrs.lastParentStyle = buster.el[PARENT]().getStyle(),
+            //         comSizes = attrs[COMPONENTS] = buster[COMPONENTS].map(function (idx, com) {
+            //             return buster.calculateSize(com);
+            //         });
+            //     return comSizes;
+            // },
+            // calculateContainerSize: function (components) {
+            //     var buster = this,
+            //         attrs = get(buster),
+            //         parentRect = attrs.lastParentRect,
+            //         sizing = containerSize(components || buster[COMPONENTS]);
+            //     attrs._sizing = sizing;
+            //     attrs.containerSize = {
+            //         top: sizing[TOP],
+            //         left: sizing[LEFT],
+            //         width: sizing[RIGHT] - sizing[LEFT],
+            //         height: sizing[BOTTOM] - sizing[TOP]
+            //     };
+            //     attrs.pushVerticalVal = Math.min(Math.max(sizing[BOTTOM] - parentRect[BOTTOM], 0), sizing[MARGIN_BOTTOM]);
+            //     attrs.pushHorizontalVal = Math.min(Math.max(sizing[RIGHT] - parentRect[RIGHT], 0), sizing[MARGIN_RIGHT]);
+            //     sizing = attrs.containerCss = {
+            //         top: sizing[TOP] - parentRect[TOP],
+            //         left: sizing[LEFT] - parentRect[LEFT],
+            //         width: sizing[RIGHT] - sizing[LEFT],
+            //         height: sizing[BOTTOM] - sizing[TOP],
+            //         zIndex: sizing.zIndex || 'inherit'
+            //     };
+            //     return sizing;
+            // },
+            // calculateSize: function (component) {
+            //     var buster = this,
+            //         attrs = get(buster),
+            //         expansion = factories.expansion[component.dimensionType || 'match'],
+            //         parentRect = attrs.lastParentRect,
+            //         parentStyle = attrs.lastParentStyle,
+            //         method = (expansion || factories.expansion.match),
+            //         result = method.call(buster, component, parentRect, parentStyle, buster.parts[TOP]),
+            //         // these are always relative to the viewport
+            //         calcSize = component.calculatedSize = _.floor({
+            //             top: result[TOP],
+            //             left: result[LEFT],
+            //             width: result[WIDTH],
+            //             height: result[HEIGHT]
+            //         }, 2);
+            //     return calcSize;
+            // },
             /**
              * starts a relationship between two busters. simplifies the initialization process.
              * @returns {number} just for responding to the original message in case there's a handler

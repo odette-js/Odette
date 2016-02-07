@@ -107,12 +107,6 @@ application.scope().run(function (app, _, factories, $) {
                 }, 6);
                 expect(count).toEqual(4);
             });
-            it('has', function () {
-                expect(numberCollection.has('25')).toEqual(false);
-                expect(numberCollection.has('3')).toEqual(true);
-                expect(numberCollection.has({})).toEqual(false);
-                expect(numberCollection.has([])).toEqual(false);
-            });
             it('add', function () {
                 expect(numberCollection.add(61)).toEqual(true);
                 expect(numberCollection.add(5)).toEqual(false);
@@ -260,6 +254,46 @@ application.scope().run(function (app, _, factories, $) {
                     [9, 10, 11, 12]
                 ]).flatten().unwrap()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
             });
+        });
+    });
+    describe('SortedCollection', function () {
+        var numberCollection, SortedCollection = factories.SortedCollection;
+        beforeEach(function () {
+            collection = SortedCollection();
+            numberCollection = SortedCollection([4, 5, 3, 7, 8, 6, 2, 0, 1, 9]);
+            complexCollection = SortedCollection([factories.Box(), factories.Box({
+                one: 1,
+                two: 2,
+                three: 3
+            })]);
+            evenNumberList = [0, 2, 4, 6, 8];
+        });
+        it('should be sorted at the beginning', function () {
+            expect(numberCollection.toJSON()).toEqual(numberCollection.sort().toJSON());
+        });
+        it('can get values without having to iterate over everything', function () {
+            numberCollection.indexOf = _.noop;
+            expect(numberCollection.get(8)).toEqual(8);
+        });
+        it('can add values in the correct place', function () {
+            var sorted = SortedCollection(evenNumberList);
+            sorted.add(1);
+            sorted.add(5);
+            sorted.add(3);
+            expect(sorted.index(0)).toEqual(0);
+            expect(sorted.index(1)).toEqual(1);
+            expect(sorted.index(2)).toEqual(2);
+            expect(sorted.index(3)).toEqual(3);
+            expect(sorted.index(4)).toEqual(4);
+            expect(sorted.index(5)).toEqual(5);
+        });
+        it('can remove values from the correct place', function () {
+            var sorted = SortedCollection(evenNumberList);
+            sorted.remove(4);
+            sorted.remove(2);
+            expect(sorted.index(0)).toEqual(0);
+            expect(sorted.index(1)).toEqual(6);
+            expect(sorted.index(2)).toEqual(8);
         });
     });
 });

@@ -6,9 +6,17 @@ application.scope(function (app) {
         ADDED = 'added',
         UNWRAP = 'unwrap',
         REMOVED = 'removed',
+        CURRENT = 'current',
+        _COUNTER = '_counter',
+        CHANGE = 'change',
+        DESTROY = 'destroy',
+        GROUP_INDEX = 'groupIndex',
+        REGISTERED = 'registered',
+        SUCCESS = 'success',
+        FAILURES = 'failures',
+        EVERY = 'every',
         INTERNAL_EVENTS = '_events',
         STOP_LISTENING = 'stopListening',
-        DISPATCH_EVENT = 'dispatchEvent',
         EVENT_REMOVE = '_removeEventList',
         _DELEGATED_CHILD_EVENTS = '_delegatedParentEvents',
         _PARENT_DELEGATED_CHILD_EVENTS = '_parentDelgatedChildEvents',
@@ -24,6 +32,7 @@ application.scope(function (app) {
             // define the actual key
             uniqueKey: 'c',
             idAttribute: ID,
+            comparator: ID,
             constructor: function (attributes, secondary) {
                 var model = this;
                 model[model.uniqueKey + ID] = model[model.uniqueKey + ID] = uniqueId(model.uniqueKey);
@@ -169,7 +178,6 @@ application.scope(function (app) {
                 }
                 return model;
             },
-            comparator: 'id',
             /**
              * @description basic json clone of the attributes object
              * @func
@@ -202,13 +210,194 @@ application.scope(function (app) {
             reset: function (attrs) {
                 this._reset(attrs);
                 return this;
+            },
+            setAndDispatch: function (key, value, fn, evnt) {
+                var ret, container = this;
+                if (container._set(key, value)) {
+                    fn.call(container);
+                    ret = evnt && container[DISPATCH_EVENT](evnt);
+                }
+                return container;
             }
         }, BOOLEAN_TRUE),
-        modelMaker = function (attributes, options) {
-            return Box(attributes, options);
+        curriedEquivalence = function (value) {
+            return function (current) {
+                return isEqual(current, value);
+            };
         },
+        curriedGreaterThan = function (value) {
+            return function (current) {
+                return current > value;
+            };
+        },
+        curriedLessThan = function (value) {
+            return function (current) {
+                return current < value;
+            };
+        },
+        push = function (where) {
+            return function (fn) {
+                var sequencer = this;
+                sequencer[where].push(bind(fn, sequencer));
+                return sequencer;
+            };
+        },
+        addValue = function (constant1, constant2) {
+            return function () {
+                var sequencer = this;
+                duff(arguments, function (value) {
+                    sequencer.add(value, constant1, constant2);
+                });
+                return sequencer;
+            };
+        },
+        isNot = addValue(BOOLEAN_TRUE),
+        LinguisticSequencer = Container.extend('LinguisticSequencer', {
+            then: push(SUCCESS),
+            always: push(EVERY),
+            otherwise: push(FAILURES),
+            initialize: function () {
+                var sequencer = this;
+                sequencer[_COUNTER] = 0;
+                sequencer.logic = Collection();
+                sequencer[SUCCESS] = Collection();
+                sequencer[FAILURES] = Collection();
+                sequencer[EVERY] = Collection();
+                sequencer.group();
+            },
+            defaults: function () {
+                return {
+                    groupIndex: -1,
+                    registered: {}
+                };
+            },
+            and: function (key) {
+                var sequencer = this;
+                sequencer.set(CURRENT, key);
+                sequencer.bind(key, sequencer.increment);
+                return sequencer;
+            },
+            or: function (key) {
+                this.group();
+                this.add(key);
+                return this;
+            },
+            group: function () {
+                var sequencer = this,
+                    value = sequencer.get(GROUP_INDEX);
+                ++value;
+                sequencer.set(GROUP_INDEX, value);
+                sequencer.logic.push({
+                    index: value,
+                    list: Collection()
+                });
+                return sequencer;
+            },
+            increment: function () {
+                ++this[_COUNTER];
+            },
+            bind: function (target, handler) {
+                var sequencer = this,
+                    registered = sequencer.get(REGISTERED);
+                if (!registered[target]) {
+                    registered[target] = BOOLEAN_TRUE;
+                    this.listenTo(this.grandParent(), CHANGE + ':' + target, handler);
+                }
+            },
+            unbind: function (target, handler) {
+                var sequencer = this,
+                    registered = sequencer.get(REGISTERED);
+                if (registered[target]) {
+                    registered[target] = BOOLEAN_FALSE;
+                    this.stopListening(this.grandParent(), CHANGE + ':' + target, handler);
+                }
+            },
+            is: addValue(),
+            isNot: isNot,
+            isnt: isNot,
+            isGreaterThan: addValue(BOOLEAN_FALSE, curriedGreaterThan),
+            isLessThan: addValue(BOOLEAN_FALSE, curriedLessThan),
+            isNotGreaterThan: addValue(BOOLEAN_TRUE, curriedGreaterThan),
+            isNotLessThan: addValue(BOOLEAN_TRUE, curriedLessThan),
+            value: function (value, defaultFn) {
+                return isFunction(value) ? value : defaultFn(value);
+            },
+            add: function (value_, negate, defaultFn) {
+                var object, sequencer = this;
+                var current = sequencer.get(CURRENT);
+                var value = sequencer.value(value_, defaultFn || curriedEquivalence);
+                var made = sequencer.make(current, negate ? _.negate(value) : value);
+                sequencer.logic.index(sequencer.get(GROUP_INDEX)).list.push(made);
+                return sequencer;
+            },
+            grandParent: function () {
+                return this.parent.parent;
+            },
+            check: function () {
+                var sequencer = this,
+                    grandparent = sequencer.grandParent();
+                return !!sequencer[_COUNTER] && !sequencer.logic.find(function (group) {
+                    return group.list.find(function (item) {
+                        return !item.handler(grandparent.get(item.key));
+                    });
+                });
+            },
+            restart: function () {
+                this[_COUNTER] = 0;
+                return this;
+            },
+            make: function (key, handler) {
+                var context = this;
+                return {
+                    key: key,
+                    context: context,
+                    handler: bind(handler, context)
+                };
+            },
+            handle: function (key, arg) {
+                var sequencer = this;
+                var ret = sequencer[key] && sequencer[key].call(arg);
+                return sequencer;
+            },
+            run: function () {
+                var sequencer = this;
+                if (sequencer.get('state')) {
+                    sequencer.handle(SUCCESS);
+                } else {
+                    sequencer.handle(FAILURES);
+                }
+                sequencer.handle(EVERY);
+            },
+            apply: function () {
+                var sequencer = this,
+                    checked = sequencer.check();
+                sequencer.restart();
+                sequencer.setAndDispatch('state', checked, sequencer.run, CHANGE + COLON + 'state');
+                return sequencer;
+            },
+            when: function (key) {
+                var sequencer, manager, parent = this;
+                if (parent && !parent._linguisticSequencer) {
+                    manager = parent._linguisticSequencer = Box({}, {
+                        parent: parent,
+                        Child: LinguisticSequencer
+                    });
+                    manager.listenTo(parent, {
+                        destroy: manager.destroy,
+                        change: function (e) {
+                            manager.children.results('apply', e);
+                        }
+                    });
+                }
+                sequencer = manager.add({})[0];
+                sequencer.and(key);
+                return sequencer;
+            }
+        }, BOOLEAN_TRUE),
         Box = factories.Container.extend('Box', {
-            Child: modelMaker,
+            Child: function (attributes, options) {
+                return Box(attributes, options);
+            },
             /**
              * @description constructor function for the Box Object
              * @name Box#constructor
@@ -222,9 +411,6 @@ application.scope(function (app) {
             },
             _ensureChildren: function () {
                 this[CHILDREN] = Collection();
-            },
-            _gatherChildren: function () {
-                return [];
             },
             /**
              * @description resets the box's attributes to the object that is passed in
@@ -483,5 +669,5 @@ application.scope(function (app) {
                 return model;
             }
         }, BOOLEAN_TRUE);
-    modelMaker.constructor = Box;
+    // modelMaker[CONSTRUCTOR] = Box[CONSTRUCTOR];
 });
