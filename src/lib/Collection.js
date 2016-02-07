@@ -577,7 +577,7 @@ application.scope(function (app) {
                 var sorted = this,
                     valueOfResult = valueOfResult_ || object && object.valueOf();
                 if (!sorted.validateId(valueOfResult)) {
-                    throwError('objects in sorted collections must have either a number or string for their valueOf result');
+                    exception('objects in sorted collections must have either a number or string for their valueOf result');
                 }
                 sorted.addAt(object, sorted.closest(valueOfResult) + 1);
                 return sorted;
@@ -729,13 +729,11 @@ application.scope(function (app) {
             ensure: function (value_, splitter) {
                 var sm = this,
                     value = value_;
-                if (sm.current() !== value) {
-                    if (isString(value)) {
-                        value = value.split(splitter);
-                    }
-                    sm.load(value);
-                    sm.current(value.join(splitter));
+                if (sm.current() === value) {
+                    return sm;
                 }
+                sm.load(value);
+                sm.current(value.join(splitter));
                 return sm;
             },
             refill: function (array) {

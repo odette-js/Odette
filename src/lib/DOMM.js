@@ -96,7 +96,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 return DOMM(sel, ctx || doc);
             };
         },
-        setAttribute = function (el, key, val_) {
+        setAttribute = function (el, key, val_, isProp) {
             var val = val_;
             if (val === BOOLEAN_TRUE) {
                 val = EMPTY_STRING;
@@ -104,16 +104,25 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 val = stringify(val);
             }
             val += EMPTY_STRING;
-            el.setAttribute(key, val);
+            if (isProp) {
+                el[key] = val;
+            } else {
+                el.setAttribute(key, val);
+            }
         },
-        getAttribute = function (el, key) {
-            var converted;
-            var val = parse(el.getAttribute(key));
+        getAttribute = function (el, key, isProp) {
+            var converted, val;
+            if (isProp) {
+                val = el[key];
+            } else {
+                val = el.getAttribute(key);
+            }
+            val = parse(val);
             val = +val == val ? +val : val;
             if (val === EMPTY_STRING) {
                 val = BOOLEAN_TRUE;
             }
-            if (isBlank(val)) {
+            if (val == NULL) {
                 val = BOOLEAN_FALSE;
             }
             return val;
@@ -122,13 +131,19 @@ application.scope().module('DOMM', function (module, app, _, factories) {
          * @private
          * @func
          */
-        attributeInterface = function (el, key, val) {
+        removeAttribute = function (el, key, isProp) {
+            if (isProp) {
+                el[key] = NULL;
+            } else {
+                el.removeAttribute(key);
+            }
+        },
+        attributeInterface = function (el, key, val, isProp, data) {
             // set or remove if not undefined
             // undefined fills in the gap by returning some value, which is never undefined
             var isArrayResult, cameledKey = camelCase(key),
-                stringManager = elementData.ensure(el, DOMM_STRING, DOMEvents).get(cameledKey, StringManager),
-                // stringManager = _stringManager[cameledKey] = _stringManager[cameledKey] || SortedCollection(),
-                readAttribute = getAttribute(el, key);
+                stringManager = (data || elementData.ensure(el, DOMM_STRING, DOMEvents)).get(cameledKey, StringManager),
+                readAttribute = getAttribute(el, key, isProp);
             if (isString(readAttribute)) {
                 stringManager.ensure(readAttribute);
             }
@@ -136,7 +151,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 return readAttribute;
             }
             if (!val && val !== 0) {
-                el.removeAttribute(key);
+                removeAttribute(el, key, isProp);
             } else {
                 isArrayResult = isArray(val);
                 if (isObject(val) && !isArrayResult) {
@@ -151,22 +166,31 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                     stringManager.refill(gapSplit(val));
                 }
                 val = stringManager.generate(' ');
-                setAttribute(el, key, val);
+                setAttribute(el, key, val, isProp);
             }
+        },
+        propertyInterface = function (el, key, value) {
+            //     var value;
+            //     if (val == NULL) {
+            //         value = el[key];
+            //         value = value == NULL ? NULL : value;
+            //     } else {
+            //         el[key] = val == NULL ? NULL : val;
+            //     }
+            //     return value;
         },
         getClassName = function (el, key) {
             var className = el[CLASSNAME];
             if (!isString(className)) {
-                className = getAttribute(el, CLASS);
+                className = getAttribute(el, CLASS, BOOLEAN_FALSE);
             }
             return (className || EMPTY_STRING).split(' ');
         },
         setClassName = function (el, value) {
-            // var value = val.join(' ').trim();
             if (isString(el[CLASSNAME])) {
                 el[CLASSNAME] = value;
             } else {
-                setAttribute(el, CLASS, value);
+                setAttribute(el, CLASS, value, BOOLEAN_FALSE);
             }
         },
         DO_NOT_TRUST = BOOLEAN_FALSE,
@@ -179,24 +203,23 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 return ret;
             };
         },
-        triggerEventWrapper = function (attr, api) {
-            attr = attr || api;
-            return function (fn, fn2) {
+        triggerEventWrapper = function (attr_, api) {
+            var attr = attr_ || api,
+                eachHandler = cannotTrust(function (el) {
+                    var whichever = api || attr;
+                    if (isFunction(el[whichever])) {
+                        el[whichever]();
+                    } else {
+                        $(el).dispatchEvent(whichever);
+                    }
+                });
+            return function (fn, fn2, capturing) {
                 var args, evnt, count = 0,
                     domm = this;
                 if (isFunction(fn) || isFunction(fn2)) {
-                    args = toArray(arguments);
-                    args.unshift(attr);
-                    domm.on.apply(domm, args);
+                    domm.on(attr, fn, fn2, capturing);
                 } else {
-                    domm.duff(cannotTrust(function (el) {
-                        var whichever = api || attr;
-                        if (isFunction(el[whichever])) {
-                            el[whichever]();
-                        } else {
-                            $(el).dispatchEvent(whichever);
-                        }
-                    }));
+                    domm.duff(eachHandler);
                 }
                 return domm;
             };
@@ -236,25 +259,6 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         trustedEvents = gapSplit('load scroll resize orientationchange click dblclick mousedown mouseup mouseover mouseout mouseenter mouseleave mousemove change contextmenu hashchange load mousewheel wheel readystatechange'),
         ALL_EVENTS_HASH = wrap(AllEvents, BOOLEAN_TRUE),
         knownPrefixesHash = wrap(knownPrefixes, BOOLEAN_TRUE),
-        // changeClass = function (el, remove, add) {
-        //     var n, val, command, classList;
-        //     if (el) {
-        //         classList = getClassName(el);
-        //         if (remove) {
-        //             duff(gapSplit(remove), function (clas) {
-        //                 _.remove(classList, clas);
-        //             });
-        //         }
-        //         if (add) {
-        //             duff(gapSplit(add), function (clas) {
-        //                 _.add(classList, clas);
-        //             });
-        //         }
-        //         // val = gapJoin(classList).trim();
-        //         setClassName(el, classList);
-        //         return el;
-        //     }
-        // },
         addClass = function (classManager, add) {
             duff(gapSplit(add), classManager.add, classManager);
             return classManager;
@@ -282,7 +286,6 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 this.duff(function (el) {
                     var currentClassName = getClassName(el),
                         _classManager = elementData.ensure(el, DOMM_STRING, DOMEvents).get(CLASSNAME, StringManager),
-                        // _classManager = attributesHash[CLASSNAME] = attributesHash[CLASSNAME] || StringManager(),
                         classManager = _classManager.ensure(currentClassName, ' '),
                         ret = fn(classManager, one, two),
                         generated = ret.generate(' ');
@@ -297,10 +300,9 @@ application.scope().module('DOMM', function (module, app, _, factories) {
          */
         containsClass = function (newClasses) {
             return !!this.length() && !find(this.unwrap(), function (el) {
-                var className = getClassName(el),
+                var currentClassName = getClassName(el),
                     _classManager = elementData.ensure(el, DOMM_STRING, DOMEvents).get(CLASSNAME, StringManager),
-                    // _classManager = attributesHash[CLASSNAME] = attributesHash[CLASSNAME] || StringManager(),
-                    classManager = _classManager.ensure(className, ' ');
+                    classManager = _classManager.ensure(currentClassName, ' ');
                 return find(gapSplit(newClasses), function (clas) {
                     var stringInstance = classManager.get(clas);
                     return stringInstance ? !stringInstance.isValid() : BOOLEAN_TRUE;
@@ -914,7 +916,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 return collected;
             });
         },
-        domAttrManipulator = function (fn, getData) {
+        domAttrManipulator = function (fn, isProp) {
             // cant wrap in each because need to return custom data
             return function (key, value) {
                 var dataKeys = [],
@@ -928,9 +930,10 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 intendedObject(key, value, function (__key, val) {
                     var __keys = gapSplit(__key);
                     dataKeys.push(__key);
-                    duff(domList, function (el) {
+                    duff(domList, function (el, idx) {
+                        var datum = cachedData[idx] = cachedData[idx] || elementData.ensure(el, DOMM_STRING, DOMEvents);
                         duff(__keys, function (_key) {
-                            var value = fn(el, _key, val, dom);
+                            var value = fn(el, unCamelCase(_key), val, isProp, datum);
                             if (value !== UNDEFINED) {
                                 ret[_key] = value;
                                 count++;
@@ -1133,24 +1136,12 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             }
             removeStack = mainHandler[REMOVE_QUEUE];
             e = new Event(evnt, el);
-            // args = [e].concat(args || []);
             wraptry(function () {
                 eventDispatcher(el, e, list);
-            }, function (e) {
-                console.error(e);
-            });
+            }, console.error);
             events._removeEvents.duffRev(data._removeEvent, data);
-            // duffRev(removeStack, removeEventQueue);
-            // addQueue = mainHandler[ADD_QUEUE];
-            // while (addQueue[LENGTH]()) {
-            //     addEventQueue(addQueue.first());
-            //     gah = addQueue.shift();
-            // }
             e.isTrusted = BOOLEAN_FALSE;
             return e.returnValue;
-        },
-        matchesHandler = function (handler, obj) {
-            return !handler || obj.fn === handler;
         },
         _eventExpander = wrap({
             ready: 'DOMContentLoaded',
@@ -1176,15 +1167,10 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             };
         },
         addEventListener = expandEventListenerArguments(function (name, namespace, selector, callback, capture) {
-            console.log(arguments);
             var dom = this;
-            if (!isFunction(callback)) {
-                return dom;
-            }
-            dom.duff(function (el) {
+            return isFunction(callback) ? dom.duff(function (el) {
                 _addEventListener(el, name, namespace, selector, callback, capture);
-            });
-            return dom;
+            }) && dom : dom;
         }),
         eventToNamespace = function (evnt) {
             if (!isString(evnt)) {
@@ -1312,7 +1298,6 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         },
         ensureHandlers = function (fn) {
             return function (name) {
-                // var args = toArray(arguments);
                 var args = [EMPTY_STRING, UNDEFINED, []],
                     origArgs = filter(arguments, negate(isBlank)),
                     argLen = origArgs[LENGTH];
@@ -1330,11 +1315,11 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 return fn.apply(this, args);
             };
         },
-        removeEventListener = ensureHandlers(expandEventListenerArguments(function (name, namespace, selector, handler, capture) {
-            this.duff(function (el) {
+        removeEventListener = expandEventListenerArguments(function (name, namespace, selector, handler, capture) {
+            return this.duff(function (el) {
                 _removeEventListener(el, name, namespace, selector, handler, capture);
             });
-        })),
+        }),
         removeEvent = function (obj) {
             var mainHandler = obj.mainHandler;
             if (obj.selector) {
@@ -1563,6 +1548,15 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             });
             return matchers;
         }),
+        makeDataKey = function (_key) {
+            var dataString = 'data-',
+                key = _key,
+                sliced = _key.slice(0, 5);
+            if (dataString !== sliced) {
+                key = dataString + _key;
+            }
+            return key;
+        },
         canBeProcessed = function (item) {
             return isElement(item) || isWindow(item) || isDocument(item) || isFragment(item);
         },
@@ -1573,6 +1567,9 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 firstEl.appendChild(fragment(el));
             }
             return dom;
+        },
+        prependChild = function (els) {
+            return this.insertAt(0);
         },
         DOMM = factories[DOMM_STRING] = factories.Collection.extend(DOMM_STRING, extend({
             /**
@@ -1790,40 +1787,27 @@ application.scope().module('DOMM', function (module, app, _, factories) {
              * @param {...*} splat of objects and key value pairs that create a single object to be applied to the element
              * @returns {Object|*} can return the value that is asked for by the initial function call
              */
-            data: domAttrManipulator(function (el, _key, val, dom) {
-                var ret, stringManager, unCameledKey, readAttribute, dataString = 'data-',
-                    sliced = _key.slice(0, 5),
-                    cameledKey = _key;
-                if (dataString !== sliced) {
-                    cameledKey = dataString + _key;
-                }
-                unCameledKey = unCamelCase(cameledKey);
-                return attributeInterface(el, unCameledKey, val);
-            }, BOOLEAN_TRUE),
+            data: domAttrManipulator(function (el, _key, val, isProp, data) {
+                return attributeInterface(el, makeDataKey(_key), val, isProp, data);
+            }),
             /**
              * @func
              * @name DOMM#attr
              * @param {...*} splat of objects and key value pairs that create a single object to be applied to the element
              * @returns {DOMM|*} if multiple attributes were requested then a plain hash is returned, otherwise the DOMM instance is returned
              */
-            attr: domAttrManipulator(function (el, _key, val, attributesHash, dom) {
-                return attributeInterface(el, unCamelCase(_key), val);
-            }),
-            prop: domAttrManipulator(function (el, key, val, attributesHash, dom) {
-                var value;
-                if (isBlank(val)) {
-                    value = el[key];
-                    if (isBlank(value)) {
-                        value = NULL;
-                    }
-                } else {
-                    if (isBlank(val)) {
-                        val = UNDEFINED;
-                    }
-                    el[key] = val;
-                }
-                return value;
-            }),
+            attr: domAttrManipulator(attributeInterface),
+            prop: domAttrManipulator(attributeInterface, BOOLEAN_TRUE),
+            // prop: domAttrManipulator(function (el, key, val) {
+            //     var value;
+            //     if (val == NULL) {
+            //         value = el[key];
+            //         value = value == NULL ? NULL : value;
+            //     } else {
+            //         el[key] = val == NULL ? NULL : val;
+            //     }
+            //     return value;
+            // }),
             /**
              * @func
              * @name DOMM#eq
@@ -1939,6 +1923,8 @@ application.scope().module('DOMM', function (module, app, _, factories) {
              */
             append: append,
             appendChild: append,
+            prepend: prependChild,
+            prependChild: prependChild,
             /**
              * @func
              * @name DOMM#next
@@ -1963,28 +1949,14 @@ application.scope().module('DOMM', function (module, app, _, factories) {
              * @returns {DOMM} instance
              */
             insertAt: function (els, idx) {
-                var point, dom = this,
+                var dom = this,
                     frag = fragment(els),
-                    children = dom.children();
-                if (!idx && !isNumber(idx)) {
-                    point = {};
-                }
-                if (isNumber(idx)) {
-                    point = children.eq(idx);
-                }
-                if (isString(idx)) {
-                    point = dom.children().filter(idx);
-                }
-                if (isInstance(point, DOMM)) {
-                    point = point[INDEX](0);
-                }
-                if (!isElement(point)) {
-                    point = NULL;
-                }
-                dom.duff(function (el) {
+                    children = dom.children(),
+                    point_ = isNumber(idx) ? children.eq(idx) : (isString(idx) ? dom.children.filter(idx) : DOMM(point)[INDEX](0)),
+                    point = isElement(point) ? point : NULL;
+                return dom.duff(function (el) {
                     el.insertBefore(frag, point);
                 });
-                return dom;
             },
             /**
              * @func
@@ -1992,16 +1964,13 @@ application.scope().module('DOMM', function (module, app, _, factories) {
              * @returns {DOMM} instance
              */
             remove: eachProc(function (el) {
-                var data, parent = el[PARENT_NODE];
-                if (!isObject(parent)) {
-                    return;
-                }
-                data = elementData.get(el);
-                if (data.isRemoving || !isFunction(parent.removeChild)) {
+                var parent = el[PARENT_NODE],
+                    data = elementData.get(el);
+                if (data.isRemoving) {
                     return;
                 }
                 data.isRemoving = BOOLEAN_TRUE;
-                parent.removeChild(el);
+                result(parent, 'removeChild', el);
             }),
             /**
              * @func

@@ -14,7 +14,7 @@ application.scope(function (app) {
             var fn = isString(funs_) ? box[funs_] : funs_,
                 splitevents = gapSplit(evnts);
             if (!isFunction(fn)) {
-                throwError('handler must be a function');
+                exception('handler must be a function');
             }
             return duff(splitevents, function (eventName) {
                 var namespace = eventName.split(':')[0];

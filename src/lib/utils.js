@@ -1174,7 +1174,7 @@ var UNDEFINED, win = window,
             return method.apply(_console, arguments);
         };
     }),
-    throwError = console.throwError = function (options) {
+    exception = console.exception = function (options) {
         throw new Error(options);
     },
     wraptry = function (trythis, errthat, finalfunction) {

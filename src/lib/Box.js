@@ -105,6 +105,24 @@ application.scope(function (app) {
                     return attributes[attr] === UNDEFINED;
                 }) === UNDEFINED;
             },
+            exists: function (key) {
+                return this[ATTRIBUTES][KEY] != NULL;
+            },
+            insert: function (key, handler) {
+                var container = this,
+                    newCount = 0,
+                    attrs = {};
+                intendedObject(key, handler, function (key, handler) {
+                    if (container[ATTRIBUTES][key] == NULL) {
+                        ++newCount;
+                        attrs[key] = handler();
+                    }
+                });
+                if (newCount) {
+                    container.set(attrs);
+                }
+                return container;
+            },
             /**
              * @description collects a splat of arguments and condenses them into a single object. Object is then extended onto the attributes object and any items that are different will be fired as events
              * @param {...*} series - takes a series of key value pairs. can be mixed with objects. All key value pairs will be placed on a new object, which is to be passed into the function below
@@ -167,15 +185,16 @@ application.scope(function (app) {
                         compiled[key] = value;
                     }
                 });
-                if (changedList[LENGTH]) {
-                    // do not digest... this time
-                    model.digester(function () {
-                        duff(changedList, function (name) {
-                            model[DISPATCH_EVENT](CHANGE + COLON + name);
-                        });
-                        model[DISPATCH_EVENT](CHANGE, compiled);
-                    });
+                if (!changedList[LENGTH]) {
+                    return model;
                 }
+                // do not digest... this time
+                model.digester(function () {
+                    duff(changedList, function (name) {
+                        model[DISPATCH_EVENT](CHANGE + COLON + name);
+                    });
+                    model[DISPATCH_EVENT](CHANGE, compiled);
+                });
                 return model;
             },
             /**
@@ -326,7 +345,7 @@ application.scope(function (app) {
                 var object, sequencer = this;
                 var current = sequencer.get(CURRENT);
                 var value = sequencer.value(value_, defaultFn || curriedEquivalence);
-                var made = sequencer.make(current, negate ? _.negate(value) : value);
+                var made = sequencer._makeLogicObject(current, value, negate);
                 sequencer.logic.index(sequencer.get(GROUP_INDEX)).list.push(made);
                 return sequencer;
             },
@@ -338,7 +357,7 @@ application.scope(function (app) {
                     grandparent = sequencer.grandParent();
                 return !!sequencer[_COUNTER] && !sequencer.logic.find(function (group) {
                     return group.list.find(function (item) {
-                        return !item.handler(grandparent.get(item.key));
+                        return !item.fn(grandparent.get(item.key));
                     });
                 });
             },
@@ -346,12 +365,15 @@ application.scope(function (app) {
                 this[_COUNTER] = 0;
                 return this;
             },
-            make: function (key, handler) {
-                var context = this;
+            _makeLogicObject: function (key, handler, negate) {
+                var context = this,
+                    bound = bind(handler, context);
+                bound = negate ? _.negate(bound) : bound;
                 return {
                     key: key,
                     context: context,
-                    handler: bind(handler, context)
+                    handler: handler,
+                    fn: bound
                 };
             },
             handle: function (key, arg) {
