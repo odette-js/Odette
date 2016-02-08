@@ -417,9 +417,12 @@ application.scope().module('View', function (module, app, _, factories, $) {
                     _bufferedEls = isFragment(view._bufferedEls) ? 1 : view._resetBufferedEls();
             },
             _addBufferedView: function (view) {
-                var parent = this;
-                parent._bufferedEls.appendChild(view.el[INDEX](0));
-                parent._bufferedViews.push(view);
+                var parent = this,
+                    el = view.el && view.el[INDEX](0);
+                if (el) {
+                    parent._bufferedEls.appendChild(el);
+                    parent._bufferedViews.push(view);
+                }
             },
             _resetBuffered: function () {
                 this._resetBufferedEls();

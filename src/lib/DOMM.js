@@ -1,9 +1,12 @@
 application.scope().module('DOMM', function (module, app, _, factories) {
     var posit = _.posit,
-        DOMM_STRING = 'DOMM',
         Collection = factories.Collection,
         elementData = _.associator,
+        DOMM_STRING = 'DOMM',
         NODE_TYPE = 'nodeType',
+        LOCAL_NAME = 'localName',
+        APPEND_CHILD = 'appendChild',
+        REMOVE_CHILD = 'removeChild',
         PARENT_NODE = 'parentNode',
         ITEMS = '_items',
         DELEGATE_COUNT = '__delegateCount',
@@ -14,6 +17,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         FONT_SIZE = 'fontSize',
         DEFAULT_VIEW = 'defaultView',
         DIV = 'div',
+        IFRAME = 'iframe',
         devicePixelRatio = (win.devicePixelRatio || 1),
         ua = navigator.userAgent,
         isElement = function (object) {
@@ -814,7 +818,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             if (!el || !isDocument(el)) {
                 return BOOLEAN_FALSE;
             }
-            tagName = el.localName.toLowerCase();
+            tagName = el[LOCAL_NAME].toLowerCase();
             return str ? tagName === str.toLowerCase() : tagName;
         },
         /**
@@ -840,7 +844,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         makeTree = function (str) {
             var div = createElement(DIV);
             div.innerHTML = str;
-            return $(div.children).remove().unwrap();
+            return $(div).children().remove().unwrap();
         },
         /**
          * @private
@@ -860,7 +864,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             temp = !parent;
             if (temp) {
                 parent = createElement(DIV);
-                parent.appendChild(element);
+                parent[APPEND_CHILD](element);
             }
             // temp && tempParent.removeChild(element);
             return !!posit(Sizzle(selector, parent), element);
@@ -870,15 +874,11 @@ application.scope().module('DOMM', function (module, app, _, factories) {
          * @func
          */
         eachProc = function (fn) {
-            return function () {
-                var args = toArray(arguments),
-                    domm = this;
-                args.unshift(domm);
-                domm.duff(function (el) {
-                    args[0] = el;
-                    fn.apply(domm, args);
+            return function (one, two, three, four, five) {
+                var domm = this;
+                return domm.duff(function (zero, idx) {
+                    fn(zero, idx, domm, one, two, three, four, five);
                 });
-                return domm;
             };
         },
         createDocumentFragment = function () {
@@ -901,7 +901,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             } else {
                 frag = createDocumentFragment();
                 $(el).duff(ensureDOM(function (el) {
-                    frag.appendChild(el);
+                    frag[APPEND_CHILD](el);
                 }));
             }
             return frag;
@@ -911,7 +911,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 var dom = this,
                     returnString = EMPTY_STRING;
                 return isString(string) ? dom.duff(function (el) {
-                    if (tag(el, 'iframe')) {
+                    if (tag(el, IFRAME)) {
                         win = el.contentWindow;
                         if (win) {
                             doc = win[DOCUMENT];
@@ -923,7 +923,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                         el[attr] = string;
                     }
                 }) : dom.duff(function (el) {
-                    if (tag(el, 'iframe')) {
+                    if (tag(el, IFRAME)) {
                         win = el.contentWindow;
                         if (win) {
                             doc = win[DOCUMENT];
@@ -1654,7 +1654,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             var dom = this,
                 firstEl = dom.first();
             if (firstEl) {
-                firstEl.appendChild(fragment(el));
+                firstEl[APPEND_CHILD](fragment(el));
             }
             return dom;
         },
@@ -1699,6 +1699,22 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             Sizzle: Sizzle,
             unitToNumber: unitToNumber,
             numberToUnit: numberToUnit
+        }),
+        removeChild = eachProc(function (el, idx, domm) {
+            var parent = el[PARENT_NODE],
+                cachedData = domm._data,
+                data = cachedData[idx] || elementData.get(el);
+            if (!domm._data) {
+                cachedData = domm._data = [];
+            }
+            if (!cachedData[idx]) {
+                cachedData[idx] = data;
+            }
+            if (data.isRemoving) {
+                return;
+            }
+            data.isRemoving = BOOLEAN_TRUE;
+            result(parent, REMOVE_CHILD, el);
         }),
         DOMM = factories[DOMM_STRING] = factories.Collection.extend(DOMM_STRING, extend({
             /**
@@ -1862,14 +1878,15 @@ application.scope().module('DOMM', function (module, app, _, factories) {
              * @param {Function} fn - handler to put on the event loop
              * @returns {DOMM} instance
              */
-            once: expandEventListenerArguments(eachProc(function (el, types, namespace, selector, fn, capture) {
-                var args = args;
-                var _fn = once(function () {
-                    _removeEventListener(el, types, namespace, selector, _fn, capture);
-                    return fn.apply(this, arguments);
+            once: expandEventListenerArguments(function (types, namespace, selector, fn, capture) {
+                return this.duff(function (el) {
+                    var _fn = once(function () {
+                        _removeEventListener(el, types, namespace, selector, _fn, capture);
+                        return fn.apply(this, arguments);
+                    });
+                    _addEventListener(el, types, namespace, selector, _fn, capture);
                 });
-                _addEventListener(el, types, namespace, selector, _fn, capture);
-            })),
+            }),
             /**
              * @func
              * @name DOMM#css
@@ -2073,6 +2090,13 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             prependChild: prependChild,
             /**
              * @func
+             * @name DOMM#remove
+             * @returns {DOMM} instance
+             */
+            remove: removeChild,
+            removeChild: removeChild,
+            /**
+             * @func
              * @name DOMM#next
              * @returns {DOMM} instance
              */
@@ -2104,20 +2128,6 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                     el.insertBefore(frag, point);
                 });
             },
-            /**
-             * @func
-             * @name DOMM#remove
-             * @returns {DOMM} instance
-             */
-            remove: eachProc(function (el) {
-                var parent = el[PARENT_NODE],
-                    data = elementData.get(el);
-                if (data.isRemoving) {
-                    return;
-                }
-                data.isRemoving = BOOLEAN_TRUE;
-                result(parent, 'removeChild', el);
-            }),
             /**
              * @func
              * @name DOMM#parent
@@ -2322,8 +2332,8 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                     if (node.innerText) {
                         obj.innerText = node.innerText;
                     }
-                    duff(node.attributes, function (attr) {
-                        obj[camelCase(attr.localName)] = attr.nodeValue;
+                    duff(node[ATTRIBUTES], function (attr) {
+                        obj[camelCase(attr[LOCAL_NAME])] = attr.nodeValue;
                     });
                     arr.push(obj);
                 });
