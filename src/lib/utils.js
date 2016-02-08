@@ -649,11 +649,11 @@ var factories = {},
         return child;
     },
     constructorWrapper = function (Constructor) {
-        var __ = function (attributes, options) {
-            if (isInstance(attributes, Constructor)) {
-                return attributes;
+        var __ = function (one, two, three, four, five, six) {
+            if (isInstance(one, Constructor)) {
+                return one;
             }
-            return new Constructor(attributes, options);
+            return new Constructor(one, two, three, four, five, six);
         };
         __.isInstance = Constructor.isInstance = function (instance) {
             return isInstance(instance, Constructor);
@@ -1000,8 +1000,8 @@ var factories = {},
             });
         return cryptoCheck ? sid : 'SF' + sid;
     },
-    intendedObject = function (key, value, fn_) {
-        var fn = fn_,
+    intendedObject = function (key, value, fn_, ctx) {
+        var fn = ctx ? bind(fn_, ctx) : fn_,
             obj = isObject(key) ? key : BOOLEAN_FALSE;
         if (obj) {
             each(obj, reverseParams(fn));
@@ -1009,7 +1009,7 @@ var factories = {},
             fn(key, value);
         }
     },
-    reverseParams = function (iteratorFn, ctx) {
+    reverseParams = function (iteratorFn) {
         return function (value, key, third) {
             iteratorFn(key, value, third);
         };
