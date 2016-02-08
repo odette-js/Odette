@@ -35,7 +35,6 @@ application.scope().module('Associator', function (module, app, _, factories) {
                     if (key) {
                         data = eldata[key] = eldata[key] || {};
                     }
-                    return data;
                 } else {
                     idxOf = current[ITEMS][INDEX_OF](obj);
                     if (idxOf === blank || idxOf === -1) {
@@ -43,8 +42,10 @@ application.scope().module('Associator', function (module, app, _, factories) {
                         current[ITEMS].push(obj);
                         dataArray[idxOf] = data;
                     }
-                    return dataArray[idxOf];
+                    data = dataArray[idxOf];
                 }
+                data.target = obj;
+                return data;
             },
             /**
              * @func
@@ -78,7 +79,7 @@ application.scope().module('Associator', function (module, app, _, factories) {
                     lowerType = type.toLowerCase(),
                     globalindex = lowerType[INDEX_OF]('global');
                 // skip reading data
-                if (globalindex === -1 && lowerType[INDEX_OF]('window') === -1) {
+                if (globalindex === -1 && lowerType[INDEX_OF](WINDOW) === -1) {
                     current.readData = BOOLEAN_TRUE;
                 }
                 return current;
@@ -86,6 +87,7 @@ application.scope().module('Associator', function (module, app, _, factories) {
             ensure: function (el, attr, failure) {
                 var data = this.get(el);
                 data[attr] = data[attr] || failure();
+                data[attr][TARGET] = data[attr][TARGET] || data[TARGET];
                 return data[attr];
             }
         }, BOOLEAN_TRUE);

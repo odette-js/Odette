@@ -8,7 +8,6 @@ application.scope().module('Looper', function (module, app, _, factories) {
         posit = _.posit,
         nowish = _.now,
         gapSplit = _.gapSplit,
-        win = window,
         vendors = gapSplit('ms moz webkit o'),
         REQUEST_ANIMATION_FRAME = 'requestAnimationFrame',
         allLoopers = [],
@@ -17,7 +16,7 @@ application.scope().module('Looper', function (module, app, _, factories) {
         duff = _.duff,
         remove = _.remove,
         removeAll = _.removeAll,
-        duffRev = _.duffRev,
+        duffRev = _.duffRight,
         extend = _.extend,
         BOOLEAN_TRUE = !0,
         BOOLEAN_FALSE = !1,
@@ -32,7 +31,7 @@ application.scope().module('Looper', function (module, app, _, factories) {
             });
         },
         teardown = function () {
-            duffRev(runningLoopers, function (looper, idx) {
+            duffRight(runningLoopers, function (looper, idx) {
                 if (looper.halted() || looper.stopped() || looper.destroyed() || !looper.length()) {
                     runningLoopers.splice(idx, 1);
                 }

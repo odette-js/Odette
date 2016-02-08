@@ -7,7 +7,7 @@ application.scope(function (app) {
                 result(item, method, arg);
             });
         },
-        eachRevCall = function (array, method, arg) {
+        eachCallRight = function (array, method, arg) {
             return duff(array, function (item) {
                 result(item, method, arg);
             }, NULL, -1);
@@ -29,7 +29,7 @@ application.scope(function (app) {
             var val = 0,
                 index = posit(list, item, lookAfter, lookBefore, fromRight);
             if (!index) {
-                val = push(list, item);
+                val = list.push(item);
             }
             return !!val;
         },
@@ -39,25 +39,31 @@ application.scope(function (app) {
             splice(list, index || 0, 0, item);
             return len !== list[LENGTH];
         },
-        eq = function (list, num) {
-            var n, thisNum, items = [],
+        eq = function (list, num, caller_) {
+            var n, thisNum, caller = caller_ || noop,
+                items = [],
                 numb = num || 0,
                 isNumberResult = isNumber(numb),
                 isArrayLikeResult = isArrayLike(numb);
             if (numb < 0) {
                 isNumberResult = !1;
             }
-            if (list[LENGTH]) {
-                if (isNumberResult) {
-                    items = [list[numb]];
-                }
+            if (!list[LENGTH]) {
+                return items;
+            }
+            if (isNumberResult) {
+                items = [list[numb]];
+                caller(items[0]);
+            } else {
                 if (isArrayLikeResult) {
                     duff(numb, function (num) {
-                        items.push(list[num]);
+                        var item = list[num];
+                        items.push(item);
+                        caller(item);
                     });
-                }
-                if (!isArrayLikeResult && !isNumberResult && list[0]) {
+                } else {
                     items = [list[0]];
+                    caller(items[0]);
                 }
             }
             return items;
@@ -261,16 +267,6 @@ application.scope(function (app) {
         whereNot = function (obj, attrs) {
             return filter(obj, negate(matches(attrs)));
         },
-        flatten = function () {
-            return foldl(arguments, function (memo, item) {
-                if (isArrayLike(item)) {
-                    memo = memo.concat(flatten.apply(NULL, item));
-                } else {
-                    memo.push(item);
-                }
-                return memo;
-            }, []);
-        },
         splat = function (fn, spliceat) {
             spliceat = spliceat || 0;
             return function () {
@@ -313,11 +309,11 @@ application.scope(function (app) {
             each: duff,
             duff: duff,
             forEach: duff,
-            eachRev: duffRev,
-            duffRev: duffRev,
-            forEachRev: duffRev,
             eachCall: eachCall,
-            eachRevCall: eachRevCall
+            eachRight: duffRight,
+            duffRight: duffRight,
+            forEachRight: duffRight,
+            eachCallRight: eachCallRight
         }, function (fn) {
             return function (handler, context) {
                 // unshiftContext
@@ -333,8 +329,7 @@ application.scope(function (app) {
             };
         }), wrap(gapSplit('push unshift'), function (name) {
             return function () {
-                var array = this.unwrap();
-                array[name].apply(array, arguments);
+                _[name](this.unwrap(), arguments);
                 return this;
             };
         }), wrap(gapSplit('join'), function (name) {
@@ -346,7 +341,7 @@ application.scope(function (app) {
                 this.unwrap()[name]();
                 return this;
             };
-        })), wrap(gapSplit('count countTo countFrom'), function (name) {
+        })), wrap(gapSplit('count countTo countFrom merge'), function (name) {
             return function (one, two, three) {
                 var ctx = this;
                 _[name](ctx.unwrap(), one, ctx, two, three);
@@ -360,25 +355,14 @@ application.scope(function (app) {
             return function (one, two, three) {
                 return _[name](this.unwrap(), one, two, three);
             };
-        }), wrap(gapSplit('flatten'), function (name) {
-            return recreateSelf(function () {
-                return _[name](this.unwrap());
-            });
-        }), wrap(gapSplit('eq map filter pluck where whereNot cycle uncycle'), function (name) {
+        }), wrap(gapSplit('eq map filter pluck where whereNot cycle uncycle flatten'), function (name) {
             return recreateSelf(function (fn) {
                 return _[name](this.unwrap(), fn);
             });
-        }), wrap(gapSplit('merge'), function (name) {
-            // always responds with an array
-            return function (newish, truth) {
-                _[name](this.unwrap(), newish, truth);
-                return this;
-            };
         })),
         ret = _.exports({
             eachCall: eachCall,
-            eachRevCall: eachRevCall,
-            // closest: closest,
+            eachCallRight: eachCallRight,
             filter: filter,
             matches: matches,
             add: add,
@@ -402,8 +386,8 @@ application.scope(function (app) {
             countTo: countTo,
             countFrom: countFrom,
             whereNot: whereNot,
-            eachRev: eachRev,
-            duffRev: duffRev,
+            eachRight: eachRight,
+            duffRight: duffRight,
             flatten: flatten,
             eq: eq
         }),
@@ -439,7 +423,7 @@ application.scope(function (app) {
             },
             results: function (key, arg, handle) {
                 this.each(function (obj) {
-                    obj[key](arg);
+                    result(obj, key, arg);
                 });
                 return this;
             },
@@ -702,8 +686,9 @@ application.scope(function (app) {
             generate: function (delimiter_) {
                 var string = EMPTY_STRING,
                     parent = this,
-                    delimiter = parent.delimiter = delimiter_;
-                if (!this._changeCounter) {
+                    previousDelimiter = parent.delimiter,
+                    delimiter = delimiter_;
+                if (!this._changeCounter && previousDelimiter === previousDelimiter) {
                     return this.current();
                 }
                 parent[ITEMS] = parent.foldl(function (memo, stringInstance) {
@@ -728,12 +713,15 @@ application.scope(function (app) {
             },
             ensure: function (value_, splitter) {
                 var sm = this,
-                    value = value_;
-                if (sm.current() === value) {
+                    value = value_,
+                    delimiter = splitter === UNDEFINED ? ' ' : splitter,
+                    isArrayResult = isArray(value),
+                    madeString = (isArrayResult ? value.join(delimiter) : value);
+                if (sm.current() === madeString) {
                     return sm;
                 }
-                sm.load(value);
-                sm.current(value.join(splitter));
+                sm.load(isArrayResult ? value : _.split(value, delimiter));
+                sm.current(madeString);
                 return sm;
             },
             refill: function (array) {

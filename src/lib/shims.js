@@ -183,10 +183,10 @@ application.scope(function (app) {
                     return fBound;
                 };
             }
-            window.matchMedia = window.matchMedia || function () {
+            win.matchMedia = win.matchMedia || function () {
                 // "use strict";
                 // For browsers that support matchMedium api such as IE 9 and webkit
-                var styleMedia = (window.styleMedia || window.media);
+                var styleMedia = (win.styleMedia || win.media);
                 // For those that don't support matchMedium
                 if (!styleMedia) {
                     var style = document.createElement('style'),
@@ -195,8 +195,8 @@ application.scope(function (app) {
                     style.type = 'text/css';
                     style.id = 'matchmediajs-test';
                     script.parentNode.insertBefore(style, script);
-                    // 'style.currentStyle' is used by IE <= 8 and 'window.getComputedStyle' for all other browsers
-                    info = ('getComputedStyle' in window) && window.getComputedStyle(style, null) || style.currentStyle;
+                    // 'style.currentStyle' is used by IE <= 8 and 'win.getComputedStyle' for all other browsers
+                    info = ('getComputedStyle' in win) && win.getComputedStyle(style, null) || style.currentStyle;
                     styleMedia = {
                         matchMedium: function (media) {
                             var text = '@media ' + media + '{ #matchmediajs-test { width: 1px; } }';
@@ -222,5 +222,5 @@ application.scope(function (app) {
         };
         fn.call(win);
     };
-    app.shims(window);
+    app.shims(win);
 });

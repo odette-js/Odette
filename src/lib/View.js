@@ -384,7 +384,7 @@ application.scope().module('View', function (module, app, _, factories, $) {
         }, BOOLEAN_TRUE),
         _View = factories.View,
         Region = View.extend('Region', {
-            Model: _View,
+            Child: _View,
             _ensureElement: function () {
                 this._setElement();
             },

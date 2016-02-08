@@ -15,7 +15,7 @@ var content = ['browserify'],
             }
         });
     },
-    modules = 'setup scopeStart utils shims Strings Collection Events Messenger Box Module Looper Promise Ajax Associator DOMM View Buster scopeEnd'.split(' '),
+    modules = 'beforeSetup setup scopeStart constants utils shims Strings Collection Events Messenger Box Module Looper Promise Ajax Associator DOMM View Buster scopeEnd'.split(' '),
     paths = makePath({
         jsAll: './src/**/*.js',
         jsList: _.map(modules, function (name) {

@@ -8,7 +8,6 @@ application.scope(function (app) {
         REMOVED = 'removed',
         CURRENT = 'current',
         _COUNTER = '_counter',
-        CHANGE = 'change',
         DESTROY = 'destroy',
         GROUP_INDEX = 'groupIndex',
         REGISTERED = 'registered',
@@ -36,9 +35,8 @@ application.scope(function (app) {
             constructor: function (attributes, secondary) {
                 var model = this;
                 model[model.uniqueKey + ID] = model[model.uniqueKey + ID] = uniqueId(model.uniqueKey);
-                extend(model, secondary);
                 model.reset(attributes);
-                Events[CONSTRUCTOR].apply(this, arguments);
+                Events[CONSTRUCTOR].call(this, secondary);
                 return model;
             },
             _reset: function (attributes_) {
@@ -159,7 +157,7 @@ application.scope(function (app) {
                 // stops listening to everything
                 box[STOP_LISTENING]();
                 // takes off all other event handlers
-                box.wipeEvents();
+                box.resetEvents();
                 return box;
             },
             digester: function (fn) {
@@ -170,7 +168,7 @@ application.scope(function (app) {
                 --model[CHANGE_COUNTER];
                 // this event should only ever exist here
                 if (!model[CHANGE_COUNTER]) {
-                    model[DISPATCH_EVENT]('digest', model[PREVIOUS_ATTRIBUTES]);
+                    model[DISPATCH_EVENT](CHANGE, model[PREVIOUS_ATTRIBUTES]);
                     model[PREVIOUS_ATTRIBUTES] = {};
                 }
                 return ret;
@@ -191,7 +189,7 @@ application.scope(function (app) {
                 // do not digest... this time
                 model.digester(function () {
                     duff(changedList, function (name) {
-                        model[DISPATCH_EVENT](CHANGE + COLON + name);
+                        model[DISPATCH_EVENT](CHANGE_COLON + name);
                     });
                     model[DISPATCH_EVENT](CHANGE, compiled);
                 });
@@ -207,6 +205,9 @@ application.scope(function (app) {
                 // does not prevent circular dependencies.
                 // swap this out for something else if you want
                 // to prevent circular dependencies
+                return clone(this[ATTRIBUTES]);
+            },
+            clone: function () {
                 return clone(this[ATTRIBUTES]);
             },
             valueOf: function () {
@@ -239,6 +240,25 @@ application.scope(function (app) {
                 return container;
             }
         }, BOOLEAN_TRUE),
+        // intentional modification of Events prototype
+        ret = factories.Events[CONSTRUCTOR][PROTOTYPE].when = function (key) {
+            var sequencer, manager, parent = this;
+            if (parent && !parent._linguisticSequencer) {
+                manager = parent._linguisticSequencer = Box({}, {
+                    parent: parent,
+                    Child: LinguisticSequencer
+                });
+                manager.listenTo(parent, {
+                    destroy: manager.destroy,
+                    change: function (e) {
+                        manager.children.results('apply', e);
+                    }
+                });
+            }
+            sequencer = manager.add({})[0];
+            sequencer.and(key);
+            return sequencer;
+        },
         curriedEquivalence = function (value) {
             return function (current) {
                 return isEqual(current, value);
@@ -320,7 +340,7 @@ application.scope(function (app) {
                     registered = sequencer.get(REGISTERED);
                 if (!registered[target]) {
                     registered[target] = BOOLEAN_TRUE;
-                    this.listenTo(this.grandParent(), CHANGE + ':' + target, handler);
+                    this.listenTo(this.grandParent(), CHANGE_COLON + target, handler);
                 }
             },
             unbind: function (target, handler) {
@@ -328,7 +348,7 @@ application.scope(function (app) {
                     registered = sequencer.get(REGISTERED);
                 if (registered[target]) {
                     registered[target] = BOOLEAN_FALSE;
-                    this.stopListening(this.grandParent(), CHANGE + ':' + target, handler);
+                    this.stopListening(this.grandParent(), CHANGE_COLON + target, handler);
                 }
             },
             is: addValue(),
@@ -394,32 +414,15 @@ application.scope(function (app) {
                 var sequencer = this,
                     checked = sequencer.check();
                 sequencer.restart();
-                sequencer.setAndDispatch('state', checked, sequencer.run, CHANGE + COLON + 'state');
-                return sequencer;
-            },
-            when: function (key) {
-                var sequencer, manager, parent = this;
-                if (parent && !parent._linguisticSequencer) {
-                    manager = parent._linguisticSequencer = Box({}, {
-                        parent: parent,
-                        Child: LinguisticSequencer
-                    });
-                    manager.listenTo(parent, {
-                        destroy: manager.destroy,
-                        change: function (e) {
-                            manager.children.results('apply', e);
-                        }
-                    });
-                }
-                sequencer = manager.add({})[0];
-                sequencer.and(key);
+                sequencer.setAndDispatch('state', checked, sequencer.run, CHANGE_COLON + 'state');
                 return sequencer;
             }
         }, BOOLEAN_TRUE),
+        modelMaker = function (attributes, options) {
+            return Box(attributes, options);
+        },
         Box = factories.Container.extend('Box', {
-            Child: function (attributes, options) {
-                return Box(attributes, options);
-            },
+            Child: modelMaker,
             /**
              * @description constructor function for the Box Object
              * @name Box#constructor
@@ -691,5 +694,5 @@ application.scope(function (app) {
                 return model;
             }
         }, BOOLEAN_TRUE);
-    // modelMaker[CONSTRUCTOR] = Box[CONSTRUCTOR];
+    modelMaker[CONSTRUCTOR] = Box[CONSTRUCTOR];
 });

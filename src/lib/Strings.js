@@ -17,7 +17,7 @@ var cacheable = function (fn) {
             return cacher(string);
         };
     },
-    string = extend(wrap(gapSplit('toLowerCase toUpperCase trim'), function (method) {
+    string = _.extend(wrap(gapSplit('toLowerCase toUpperCase trim'), function (method) {
         return cacheable(function (item) {
             return item[method]();
         });
@@ -51,7 +51,7 @@ var cacheable = function (fn) {
     prefix = function (str, prefix, camelcase, splitter) {
         var myStr = prefix + str;
         if (camelcase !== UNDEFINED) {
-            myStr = prefix + (splitter || '-') + str;
+            myStr = prefix + (splitter || HYPHEN) + str;
             if (camelcase) {
                 myStr = camelCase(myStr, splitter);
             } else {
@@ -91,7 +91,7 @@ var cacheable = function (fn) {
             }
             return val;
         };
-    }, '-'),
+    }, HYPHEN),
     /**
      * @func
      */
@@ -107,7 +107,10 @@ var cacheable = function (fn) {
                 return s.toLowerCase();
             });
         };
-    }, '-'),
+    }, HYPHEN),
+    snakeCase = function (string) {
+        return unCamelCase(string, '_');
+    },
     /**
      * @func
      */
@@ -157,19 +160,23 @@ var cacheable = function (fn) {
     },
     isHttp = cacheable(function (str) {
         var ret = !1;
-        if ((str.indexOf(HTTP) === 0 && str.split('//').length >= 2) || str.indexOf('//') === 0) {
+        if ((str.indexOf(HTTP) === 0 && str.split('//')[LENGTH] >= 2) || str.indexOf('//') === 0) {
             ret = !0;
         }
         return ret;
     }),
     parseHash = cacheable(function (url) {
         var hash = EMPTY_STRING,
-            hashIdx = indexOf(url, '#') + 1;
+            hashIdx = smartIndexOf(url, '#') + 1;
         if (hashIdx) {
             hash = url.slice(hashIdx - 1);
         }
         return hash;
     }),
+    itemIs = function (list, item, index) {
+        return list[index || 0] === item;
+    },
+    startsWith = itemIs,
     parseURL = function (url) {
         var firstSlash, hostSplit, originNoProtocol, search = EMPTY_STRING,
             hash = EMPTY_STRING,
@@ -182,8 +189,8 @@ var cacheable = function (fn) {
             searchIdx = indexOf(url, '?') + 1,
             searchObject = {},
             protocols = [HTTP, HTTPS, 'file', 'about'],
-            protocolLength = protocols.length,
-            doubleSlash = '//';
+            protocolLength = protocols[LENGTH],
+            doubleSlash = SLASH + SLASH;
         if (searchIdx) {
             search = url.slice(searchIdx - 1);
             origin = origin.split(search).join(EMPTY_STRING);
@@ -194,13 +201,13 @@ var cacheable = function (fn) {
             hash = parseHash(url);
             origin = origin.split(hash).join(EMPTY_STRING);
         }
-        if (url[0] === '/' && url[1] === '/') {
-            protocol = window.location.protocol;
+        if (url[0] === SLASH && url[1] === SLASH) {
+            protocol = win.location.protocol;
             url = protocol + url;
             origin = protocol + origin;
         } else {
             while (protocolLength-- && !protocol) {
-                if (url.slice(0, protocols[protocolLength].length) === protocols[protocolLength]) {
+                if (url.slice(0, protocols[protocolLength][LENGTH]) === protocols[protocolLength]) {
                     protocol = protocols[protocolLength];
                 }
             }
@@ -208,13 +215,13 @@ var cacheable = function (fn) {
                 protocol = HTTP;
             }
             protocol += COLON;
-            if (origin.slice(0, protocol.length) + doubleSlash !== protocol + doubleSlash) {
+            if (origin.slice(0, protocol[LENGTH]) + doubleSlash !== protocol + doubleSlash) {
                 url = protocol + doubleSlash + url;
                 origin = protocol + doubleSlash + origin;
             }
         }
         originNoProtocol = origin.split(protocol + doubleSlash).join(EMPTY_STRING);
-        firstSlash = indexOf(originNoProtocol, '/') + 1;
+        firstSlash = indexOf(originNoProtocol, SLASH) + 1;
         pathname = originNoProtocol.slice(firstSlash - 1);
         host = originNoProtocol.slice(0, firstSlash - 1);
         origin = origin.split(pathname).join(EMPTY_STRING);
@@ -299,7 +306,9 @@ _.exports({
     prefixAll: prefixAll,
     upCase: upCase,
     unCamelCase: unCamelCase,
+    spinalCase: unCamelCase,
     camelCase: camelCase,
+    snakeCase: snakeCase,
     string: string,
     units: units,
     baseUnitList: baseUnitList,
@@ -307,5 +316,7 @@ _.exports({
     parseHash: parseHash,
     parseURL: parseURL,
     parseObject: parseObject,
-    time: time
+    time: time,
+    startsWith: startsWith,
+    itemIs: itemIs
 });

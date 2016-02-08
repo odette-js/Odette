@@ -38,25 +38,31 @@ application.scope().run(function (app, _, factories, $) {
             });
         });
         it('extends from factories.Model', function () {
-            expect(_.isInstance(box, factories.Model)).toEqual(true);
+            expect(factories.Model.isInstance(box)).toEqual(true);
+        });
+        it('and from factories.Container', function () {
+            expect(factories.Container.isInstance(box)).toEqual(true);
         });
         describe('Boxes are always created with...', function () {
             var box2 = Box();
             it('a unique id', function () {
                 expect(_.has(box2, 'id')).toEqual(true);
             });
-            it('a _previousAttributes hash', function () {
+            it('even if there is not one given', function () {
+                var box3 = Box({
+                    id: 5
+                });
+                expect(box2.id !== void 0).toEqual(true);
+                expect(box3.id === 5).toEqual(true);
+            });
+            it('an empty _previousAttributes hash', function () {
                 expect(_.has(box2, '_previousAttributes')).toEqual(true);
                 expect(_.isObject(box2._previousAttributes)).toEqual(true);
                 expect(_.isEmpty(box2._previousAttributes)).toEqual(true);
             });
-            // it('a _byId hash', function () {
-            // 	expect(_.has(box2, '_byId')).toEqual(true);
-            // 	expect(_.isObject(box2._byId)).toEqual(true);
-            // });
-            it('a collection of children', function () {
+            it('a collection for children', function () {
                 expect(_.has(box2, 'children')).toEqual(true);
-                expect(_.isInstance(box2.children, factories.Collection)).toEqual(true);
+                expect(factories.Collection.isInstance(box2.children)).toEqual(true);
                 expect(box2.children.length()).toEqual(0);
             });
             it('and an attributes object', function () {
@@ -88,50 +94,35 @@ application.scope().run(function (app, _, factories, $) {
                     eleven: 11,
                     twelve: 12
                 });
-                // expect(_.has(box._previousAttributes, 'ten')).toEqual(true);
-                // expect(box._previousAttributes.one).toEqual(void 0);
-                expect(box.attributes.ten).toEqual(10);
+                expect(box.get('ten')).toEqual(10);
             });
             it('you can modify existing properties', function () {
-                expect(box.attributes.one).toEqual(1);
+                expect(box.get('one')).toEqual(1);
                 box.set({
                     one: 2,
                     two: 3,
                     three: 4
                 });
-                // expect(_.has(box._previousAttributes, 'one')).toEqual(true);
-                // expect(box._previousAttributes.one).toEqual(1);
-                expect(box.attributes.one).toEqual(2);
+                expect(box.get('one')).toEqual(2);
             });
-            // it('modifying the attributes object can be done by passing in a variety of arguments, which are sequenced and extended onto the object', function () {
-            //     box.set('one', 5, {
-            //         three: 1,
-            //         four: 2,
-            //         five: 3
-            //     }, 'four', 4);
-            //     expect(box.attributes.one).toEqual(5);
-            //     expect(box.attributes.three).toEqual(1);
-            //     expect(box.attributes.four).toEqual(4);
-            //     expect(box.attributes.five).toEqual(3);
-            // });
             it('and you can remove properties by using the unset method', function () {
                 var box = Box();
-                expect(box.attributes.one).toEqual(void 0);
+                expect(box.get('one')).toEqual(void 0);
                 box.set({
                     one: 1
                 });
-                expect(box.attributes.one).toEqual(1);
+                expect(box.get('one')).toEqual(1);
                 box.unset('one');
-                expect(box.attributes.one).toEqual(void 0);
+                expect(box.get('one')).toEqual(void 0);
             });
             it('or remove a bunch of properties by passing in a space separated list to the unset method', function () {
-                expect(box.attributes.one).toEqual(1);
-                expect(box.attributes.three).toEqual(3);
-                expect(box.attributes.five).toEqual(5);
+                expect(box.get('one')).toEqual(1);
+                expect(box.get('three')).toEqual(3);
+                expect(box.get('five')).toEqual(5);
                 box.unset('one three five');
-                expect(box.attributes.one).toEqual(void 0);
-                expect(box.attributes.three).toEqual(void 0);
-                expect(box.attributes.five).toEqual(void 0);
+                expect(box.get('one')).toEqual(void 0);
+                expect(box.get('three')).toEqual(void 0);
+                expect(box.get('five')).toEqual(void 0);
             });
         });
         // pass to the on, once, off, listenTo, listenToOnce, and stopListening functions
@@ -150,19 +141,23 @@ application.scope().run(function (app, _, factories, $) {
             beforeEach(function () {
                 fired = 0;
             });
-            it('such as the digest event', function () {
-                box.on('digest', function () {
+            it('such as the change event', function () {
+                expect(fired).toEqual(0);
+                box.on('change', function () {
                     fired = 1;
                 });
+                expect(fired).toEqual(0);
                 box.set({
                     here: 'there'
                 });
                 expect(fired).toEqual(1);
             });
             it('and the alter event', function () {
+                expect(fired).toEqual(0);
                 box.on('change', function () {
                     fired = 1;
                 });
+                expect(fired).toEqual(0);
                 box.set({
                     one: 1,
                     two: 2
@@ -174,29 +169,20 @@ application.scope().run(function (app, _, factories, $) {
                 expect(fired).toEqual(1);
             });
             it('as well as alter events specific to each property', function () {
-                var obj = {
-                    one: 9,
-                    two: 8,
-                    three: 7
-                };
+                expect(fired).toEqual(0);
                 box.on('change:one change:two change:three', function () {
                     fired++;
                 });
-                box.set(obj);
-                expect(_.keys(obj).length).toEqual(fired);
+                expect(fired).toEqual(0);
+                box.set({
+                    one: 9,
+                    two: 8,
+                    three: 7
+                });
+                expect(fired).toEqual(3);
             });
         });
         describe('but beyond events and simple hashes, Boxes are able to manage themselves fairly well', function () {
-            var data = {
-                some: 'thing',
-                children: [{
-                    here: 'we',
-                    go: 'pause'
-                }, {
-                    one: 'more',
-                    time: 'pause'
-                }]
-            };
             it('they can get properties from the attributes object with the get method', function () {
                 expect(box.get('one')).toEqual(1);
             });
@@ -227,146 +213,144 @@ application.scope().run(function (app, _, factories, $) {
                 box.add(data.children);
                 expect(box.children.toString()).toEqual(JSON.stringify(data.children));
             });
-            // it('they can stringify themselves as a tree structure', function () {
-            //     box = factories.Box(data);
-            //     expect(box.stringifyTree()).toEqual(JSON.stringify(data));
-            // });
-            // it('they can stringify themselves as a tree structure', function () {
-            //     box = factories.Box(data);
-            //     expect(box.stringifyTree()).toEqual(JSON.stringify(data));
-            // });
         });
         describe('Boxes can register other objects against a key hash as well', function () {
             it('it can register', function () {
-                box.children.register('registering', {
+                var data = {
                     myObj: 1
-                });
-                expect(box.children._byId.id.registering.myObj).toEqual(1);
+                };
+                expect(box.children.get('registering')).toEqual(void 0);
+                box.children.register('registering', data);
+                expect(box.children.get('registering')).toEqual(data);
             });
             it('and retreive information', function () {
                 var data = {
                     myObj: 1
                 };
+                expect(box.children.get('registering')).toEqual(void 0);
                 box.children.register('registering', data);
-                expect(box.children.get('registering')).toEqual(data);
                 expect(box.children.get('registering') === data).toEqual(true);
             });
         });
-        describe('As you may have noticed, boxes', function () {
-            describe('can have children', function () {
-                it('you can add one at a time', function () {
-                    box.add({
-                        isChild: !0
-                    });
-                    expect(box.children.length()).toEqual(1);
+        describe('boxes can have children', function () {
+            it('you can add one at a time', function () {
+                expect(box.children.length()).toEqual(0);
+                box.add({
+                    isChild: !0
                 });
-                it('or many at once', function () {
-                    box.add([{
-                        isChild: !0
-                    }, {
-                        isChild: 'maybe'
-                    }]);
-                    expect(box.children.length()).toEqual(2);
-                });
-                it('you can also remove them', function () {
-                    box = factories.Box();
-                    box.add(data.children);
-                    expect(box.children.length()).toEqual(2);
-                });
-                it('or many at the same time', function () {
-                    box = factories.Box();
-                    box.add([{
-                        one: 1
-                    }, {
-                        one: 2
-                    }, {
-                        one: 3
-                    }, {
-                        one: 4
-                    }]);
-                    var children = box.children;
-                    expect(children.length()).toEqual(4);
-                    box.remove([children.index(1), children.index(3)]);
-                    expect(children.length()).toEqual(2);
-                });
+                expect(box.children.length()).toEqual(1);
             });
-            describe('they can', function () {
-                it('destroy themselves', function () {
-                    box = factories.Box();
-                    box.add([{
-                        one: 1
-                    }, {
-                        one: 2
-                    }, {
-                        one: 3
-                    }, {
-                        one: 4
-                    }]);
-                    var destroyer = box.children.index(2);
-                    expect(box.children.get('cid', destroyer.cid) === destroyer).toEqual(true);
-                    expect(box.children.get('id', destroyer.id) === destroyer).toEqual(true);
-                    destroyer.destroy();
-                    expect(box.children.get('cid', destroyer.cid)).toEqual(void 0);
-                    expect(box.children.get('id', destroyer.id)).toEqual(void 0);
+            it('or many at once', function () {
+                expect(box.children.length()).toEqual(0);
+                box.add([{
+                    isChild: !0
+                }, {
+                    isChild: 'maybe'
+                }, {
+                    isChild: 'may'
+                }]);
+                expect(box.children.length()).toEqual(3);
+            });
+            it('you can also remove them one at a time', function () {
+                box = factories.Box();
+                box.add(data.children);
+                expect(box.children.length()).toEqual(2);
+            });
+            it('or many at the same time', function () {
+                box = factories.Box();
+                var children = box.children;
+                expect(children.length()).toEqual(0);
+                box.add([{
+                    one: 1
+                }, {
+                    one: 2
+                }, {
+                    one: 3
+                }, {
+                    one: 4
+                }]);
+                expect(children.length()).toEqual(4);
+                box.remove([children.index(1), children.index(3)]);
+                expect(children.length()).toEqual(2);
+            });
+        });
+        describe('they can', function () {
+            it('destroy themselves', function () {
+                box = factories.Box();
+                box.add([{
+                    one: 1
+                }, {
+                    one: 2
+                }, {
+                    one: 3
+                }, {
+                    one: 4
+                }]);
+                var destroyer = box.children.index(2);
+                expect(box.children.get('cid', destroyer.cid) === destroyer).toEqual(true);
+                expect(box.children.get('id', destroyer.id) === destroyer).toEqual(true);
+                destroyer.destroy();
+                expect(box.children.get('cid', destroyer.cid)).toEqual(void 0);
+                expect(box.children.get('id', destroyer.id)).toEqual(void 0);
+            });
+            it('sort their children', function () {
+                box.add([{
+                    one: 1,
+                    two: 2,
+                    three: 3
+                }, {
+                    one: 2,
+                    two: 1,
+                    three: 3
+                }, {
+                    one: 3,
+                    two: 8,
+                    three: 9
+                }]);
+                box.comparator = 'two';
+                box.sort();
+                expect(box.children.map(function (model) {
+                    return model.get('two');
+                }).unwrap()).toEqual([1, 2, 8]);
+                box.comparator = '!two';
+                box.sort();
+                expect(box.children.map(function (model) {
+                    return model.get('two');
+                }).unwrap()).toEqual([8, 2, 1]);
+            });
+            it('set up events on their children', function () {
+                var counter = 0;
+                box.childEvents = {
+                    beep: function () {
+                        counter++;
+                        counter += (this !== box) && factories.Model.isInstance(box);
+                    },
+                    boop: function () {
+                        counter--;
+                    }
+                };
+                box.add([{}, {}, {}, {}]);
+                expect(counter).toEqual(0);
+                box.children.duff(function (model) {
+                    model.dispatchEvent('beep');
                 });
-                it('sort their children', function () {
-                    box.add([{
-                        one: 1,
-                        two: 2,
-                        three: 3
-                    }, {
-                        one: 2,
-                        two: 1,
-                        three: 3
-                    }, {
-                        one: 3,
-                        two: 8,
-                        three: 9
-                    }]);
-                    box.comparator = 'two';
-                    box.sort();
-                    expect(box.children.map(function (model) {
-                        return model.get('two');
-                    }).unwrap()).toEqual([1, 2, 8]);
-                    box.comparator = '!two';
-                    box.sort();
-                    expect(box.children.map(function (model) {
-                        return model.get('two');
-                    }).unwrap()).toEqual([8, 2, 1]);
+                expect(counter).toEqual(8);
+                box.children.duff(function (model) {
+                    model.dispatchEvent('boop');
                 });
-                it('set up events on their children', function () {
-                    var counter = 0;
-                    box.childEvents = {
-                        beep: function () {
-                            counter++;
-                            counter += (this !== box) && _.isInstance(box, factories.Model);
-                        },
-                        boop: function () {
-                            counter--;
-                        }
-                    };
-                    box.add([{}, {}, {}, {}]);
-                    box.children.duff(function (model) {
-                        model.dispatchEvent('beep');
-                    });
-                    expect(counter).toEqual(8);
-                    box.children.duff(function (model) {
-                        model.dispatchEvent('boop');
-                    });
-                    expect(counter).toEqual(4);
-                });
-                it('set up events on their parents', function () {
-                    var count = 0;
-                    Box.constructor.prototype.parentEvents = {
-                        beep: function () {
-                            count++;
-                        }
-                    };
-                    box.add([{}, {}, {}, {}]);
-                    box.dispatchEvent('beep');
-                    expect(count).toEqual(4);
-                    Box.constructor.prototype.parentEvents = blank;
-                });
+                expect(counter).toEqual(4);
+            });
+            it('set up events on their parents', function () {
+                var count = 0;
+                Box.constructor.prototype.parentEvents = {
+                    beep: function () {
+                        count++;
+                    }
+                };
+                box.add([{}, {}, {}, {}]);
+                box.dispatchEvent('beep');
+                expect(count).toEqual(4);
+                delete Box.constructor.prototype.parentEvents;
             });
         });
         describe('boxes can remove themselves', function () {

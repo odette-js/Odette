@@ -36,7 +36,7 @@ application.scope().run(function (app, _, factories, $) {
         });
         it('as well as in reverse order', function () {
             var list = [];
-            numberCollection.duffRev(function (item, idx) {
+            numberCollection.duffRight(function (item, idx) {
                 expect(numberCollection.index(idx)).toEqual(numberCollection._items[idx]);
                 list.push(item);
             });

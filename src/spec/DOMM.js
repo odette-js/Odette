@@ -237,15 +237,15 @@ application.scope().run(function (app, _, factories, $) {
                 it('one at a time', function () {
                     divs.on('_click', handler);
                     expect(count).toEqual(0);
-                    divs.dispatchEvent('click', true);
+                    divs.dispatchEvent('click', {}, true);
                     expect(count).toEqual(5);
                 });
                 it('many at a time', function () {
                     divs.on('_click _mouseover _mouseout', handler);
                     expect(count).toEqual(0);
-                    divs.dispatchEvent('click', true);
-                    divs.dispatchEvent('mouseover', true);
-                    divs.dispatchEvent('mouseout', true);
+                    divs.dispatchEvent('click', {}, true);
+                    divs.dispatchEvent('mouseover', {}, true);
+                    divs.dispatchEvent('mouseout', {}, true);
                     expect(count).toEqual(15);
                     // .duff(function (div, idx) {
                     //     var data = elementData.get(div);

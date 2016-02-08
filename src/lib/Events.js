@@ -2,10 +2,15 @@ var DISPATCH_EVENT = 'dispatchEvent';
 var _EVENTS = '_events';
 application.scope(function (app) {
     var remove = _.remove,
+        Collection = factories.Collection,
         SortedCollection = factories.SortedCollection,
         REMOVE_EVENTS = '_removeEvents',
         CURRENT_EVENTS = '_currentEvents',
         _LISTENING_TO = '_listeningTo',
+        _BY_NAME = '_byName',
+        LISTEN_ID = '_listenId',
+        LISTENING_PREFIX = 'l',
+        IS_STOPPED = 'isStopped',
         IMMEDIATE_PROP_IS_STOPPED = 'immediatePropagationIsStopped',
         SERIALIZED_DATA = 'serializedData',
         iterateOverObject = function (box, ctx, evnts, funs_, iterator, firstarg) {
@@ -17,7 +22,7 @@ application.scope(function (app) {
                 exception('handler must be a function');
             }
             return duff(splitevents, function (eventName) {
-                var namespace = eventName.split(':')[0];
+                var namespace = eventName.split(COLON)[0];
                 iterator(box, eventName, {
                     disabled: BOOLEAN_FALSE,
                     namespace: namespace,
@@ -51,14 +56,14 @@ application.scope(function (app) {
         },
         curriedEquality = function (key, original) {
             return function (e) {
-                return isEqual(original, e.target.get(key));
+                return isEqual(original, e[TARGET].get(key));
             };
         },
         turnOff = function (e) {
-            return e && e.target && e.target.off && e.target.off();
+            return e && e[TARGET] && e[TARGET].off && e[TARGET].off();
         },
         setupWatcher = function (iterator, nameOrObjectIndex, triggersOnce) {
-            var after = triggersOnce ? turnOff : _.noop;
+            var after = triggersOnce ? turnOff : noop;
             return function () {
                 var context, list, args, firstArg, handlersIndex, nameOrObject, original_handler, box = this,
                     ret = {};
@@ -92,40 +97,17 @@ application.scope(function (app) {
                 return ret;
             };
         },
-        tryToRemoveObject = function (cantRemove, obj, removeList, box) {
-            // because event triggers are always syncronous,
-            // we can just wait until the dispatchEvent function is done
-            if (cantRemove) {
-                removeList.add(obj);
-            } else {
-                box._removeEvent(obj);
-            }
-        },
-        removeEventObjectById = function (box, list, id) {
-            var events = box._getEvents(),
-                current = events[CURRENT_EVENTS],
-                obj = list.get(id),
-                ret = obj && box._removeEvent(obj);
-            attemptListWipe(box, list);
-            return ret;
-        },
-        attemptListWipe = function (box, list) {
-            if (!list[LENGTH]()) {
-                box[list.name] = UNDEFINED;
-            }
-        },
         removeEventObject = function (box, list, handler, ctx) {
             var obj, events = box._getEvents(),
                 current = events[CURRENT_EVENTS],
                 removeList = events[REMOVE_EVENTS],
                 currentLength = current[LENGTH]();
-            list.duffRev(function (obj, idx) {
+            list.duffRight(function (obj) {
                 if ((handler && obj.handler !== handler) || (ctx && obj.ctx !== ctx)) {
                     return;
                 }
-                tryToRemoveObject(currentLength, obj, removeList, box);
+                box._removeEvent(obj);
             });
-            attemptListWipe(box, list);
         },
         event_incrementer = 1,
         __FN_ID__ = '__fnid__',
@@ -136,7 +118,7 @@ application.scope(function (app) {
             box._attachEvent(name, eventObject);
         },
         retreiveListeningObject = function (thing, obj) {
-            var id = obj._listenId = obj._listenId || uniqueId('l'),
+            var id = obj[LISTEN_ID] = obj[LISTEN_ID] || uniqueId(LISTENING_PREFIX),
                 listeningTo = thing[_LISTENING_TO] || (thing[_LISTENING_TO] = {}),
                 listening = listeningTo[id];
             // This object is not listening to any other events on `obj` yet.
@@ -144,55 +126,54 @@ application.scope(function (app) {
             if (listening) {
                 return listening;
             }
-            thing._listenId = thing._listenId || uniqueId('l');
+            thing[LISTEN_ID] = thing[LISTEN_ID] || uniqueId(LISTENING_PREFIX);
             listening = listeningTo[id] = {
                 obj: obj,
                 objId: id,
-                id: thing._listenId,
+                id: thing[LISTEN_ID],
                 listeningTo: listeningTo,
                 ctx: thing,
                 count: 0
             };
             return listening;
         },
+        DEFAULT_PREVENTED = 'defaultPrevented',
         ObjectEvent = factories.Model.extend('ObjectEvent', {
             constructor: function (name, target, data) {
                 var evnt = this;
-                if (isInstance(data, Event)) {
-                    return data;
-                }
                 evnt.bubbles = BOOLEAN_FALSE;
                 evnt.dispatchChildren = BOOLEAN_FALSE;
                 evnt.dispatchTree = BOOLEAN_FALSE;
-                evnt.onMethodName = camelCase('on:' + name, ':');
+                evnt.onMethodName = camelCase('on:' + name, COLON);
                 evnt.propagationIsStopped = evnt[IMMEDIATE_PROP_IS_STOPPED] = BOOLEAN_FALSE;
-                evnt.target = target;
-                evnt.name = name;
-                evnt.type = name.split(':')[0];
-                evnt.timestamp = _.now();
+                evnt[TARGET] = target;
+                evnt[NAME] = name;
+                evnt[TYPE] = name.split(COLON)[0];
+                evnt.timeStamp = now();
                 evnt.data(data);
                 evnt.originalStack = BOOLEAN_TRUE;
+                evnt.isTrusted = BOOLEAN_TRUE;
+                evnt.returnValue = NULL;
+                evnt._actions = Collection();
+                evnt.namespace = evnt.getNamespace();
                 return evnt;
+            },
+            getNamespace: function () {
+                return this.name;
             },
             isStopped: function () {
                 return this.propagationIsStopped || this.immediatePropagationIsStopped;
             },
-            data: function (arg) {
-                var ret = this[SERIALIZED_DATA];
-                if (arguments[LENGTH]) {
-                    ret = this[SERIALIZED_DATA] = _.parse(_.stringify(isBlank(arg) ? {} : arg));
-                }
-                this[SERIALIZED_DATA] = ret;
-                ret = this[SERIALIZED_DATA];
-                return ret;
+            data: function () {
+                return this[ATTRIBUTES];
             },
             get: function (key) {
-                return this[SERIALIZED_DATA][key];
+                return this[ATTRIBUTES][key];
             },
             set: function (key, value) {
                 var evnt = this;
                 intendedObject(key, value, function (key, value) {
-                    evnt[SERIALIZED_DATA][key] = value;
+                    evnt[ATTRIBUTES][key] = value;
                 });
                 return this;
             },
@@ -203,29 +184,29 @@ application.scope(function (app) {
             stopPropagation: function () {
                 this.propagationIsStopped = BOOLEAN_TRUE;
             },
-            toJSON: function () {
-                return this.data(this.data());
-            },
-            toString: function () {
-                return stringify(this.toJSON());
-            },
             preventDefault: function () {
-                this.defaultPrevented = BOOLEAN_TRUE;
+                this[DEFAULT_PREVENTED] = BOOLEAN_TRUE;
+            },
+            defaultIsPrevented: function () {
+                return this[DEFAULT_PREVENTED];
             },
             action: function (fn) {
                 var evnt = this;
-                evnt._actions = evnt._actions || [];
                 evnt._actions.push(fn);
                 return evnt;
             },
             finished: function () {
                 var evnt = this;
-                duff(evnt._actions, function (fn) {
-                    fn(evnt);
-                });
+                evnt.isTrusted = BOOLEAN_FALSE;
                 evnt.originalStack = BOOLEAN_FALSE;
+                if (evnt.defaultIsPrevented()) {
+                    return;
+                }
+                if (evnt._actions) {
+                    evnt._actions.call(evnt);
+                }
             }
-        }),
+        }, BOOLEAN_TRUE),
         onceHandler = function (box, name, obj) {
             bindOnce(box, name, obj);
             box._attachEvent(name, obj);
@@ -266,9 +247,10 @@ application.scope(function (app) {
              * @param {Object} ctx - context that the handler will run in
              * @returns {Box} instance
              */
-            initialize: _.noop,
+            initialize: noop,
             constructor: function (opts) {
                 var model = this;
+                extend(model, opts);
                 model._getEvents();
                 model.on(model.events);
                 model.initialize(opts);
@@ -296,7 +278,7 @@ application.scope(function (app) {
                     list = this._makeEvents();
                 }
                 if (key) {
-                    list = list._byName[key] = list._byName[key] || SortedCollection(BOOLEAN_TRUE, BOOLEAN_TRUE);
+                    list = list[_BY_NAME][key] = list[_BY_NAME][key] || SortedCollection(BOOLEAN_TRUE, BOOLEAN_TRUE);
                 }
                 return list;
             },
@@ -317,18 +299,23 @@ application.scope(function (app) {
              * @name Box#off
              * @returns {Box} instance
              */
-            wipeEvents: function () {
+            swapEvents: function (validEventHash) {
+                var old = box._getEvents(),
+                    valid = box[_EVENTS] = validEventHash;
+                return old;
+            },
+            _resetEvents: function (newHash) {
                 var box = this,
-                    events = box._getEvents(),
-                    currentEventList = events[CURRENT_EVENTS],
-                    removeEventList = events[REMOVE_EVENTS],
-                    currentLength = currentEventList[LENGTH]();
-                each(events._byName, function (list, key, obj) {
-                    list.duffRev(function (obj) {
-                        tryToRemoveObject(currentLength, obj, removeEventList, box);
-                    });
-                    attemptListWipe(box, list);
-                });
+                    oldHash = (newHash ? box.swapEvents(newHash) : box._getEvents())[_BY_NAME];
+                each(oldHash, box.emptyList, box);
+                return box;
+            },
+            resetEvents: function () {
+                return this._resetEvents();
+            },
+            emptyList: function (list) {
+                var box = this;
+                list.duffRight(box._removeEvent, box);
                 return box;
             },
             off: function (name_, fn_, ctx_) {
@@ -338,7 +325,7 @@ application.scope(function (app) {
                     events = box._getEvents();
                 if (arguments[LENGTH]) {
                     if (!name) {
-                        each(events._byName, function (list, name) {
+                        each(events[_BY_NAME], function (list, name) {
                             removeEventObject(box, list, fn_, ctx_);
                         });
                     } else {
@@ -350,10 +337,7 @@ application.scope(function (app) {
                     currentEventList = events[CURRENT_EVENTS];
                     currentObj = currentEventList.last();
                     if (currentObj) {
-                        removeEventObjectById(box, events._byName[currentObj.name], currentObj.id);
-                        // if (!) {
-                        //     removeEventObject(box, events._byName[currentObj.name], currentObj.handler, currentObj.ctx);
-                        // }
+                        box._removeEvent(box._getEvents(currentObj[NAME]).get(currentObj.id));
                     }
                 }
                 return box;
@@ -362,8 +346,8 @@ application.scope(function (app) {
                 var ids, listening, stillListening = 0,
                     origin = this,
                     listeningTo = origin[_LISTENING_TO];
-                if (listeningTo && (!obj || obj._listenId)) {
-                    duff(obj ? [obj._listenId] : _.keys(listeningTo), function (id) {
+                if (listeningTo && (!obj || obj[LISTEN_ID])) {
+                    duff(obj ? [obj[LISTEN_ID]] : _.keys(listeningTo), function (id) {
                         var listening = listeningTo[id];
                         if (listening) {
                             listening.obj.off(name, callback);
@@ -392,72 +376,103 @@ application.scope(function (app) {
                 });
                 return box;
             },
+            // overwriteable helper functions
+            queueHandler: function (evnt, handler, currentEvents) {
+                (currentEvents || this._getEvents()._currentEvents).push(handler);
+                return BOOLEAN_TRUE;
+            },
+            unQueueHandler: function (evnt, handler, currentEvents_) {
+                var gah = (currentEvents_ || this._getEvents()).pop();
+            },
+            setEvent: function (evnt) {
+                this._getEvents()[CURRENT] = evnt;
+            },
+            unsetEvent: function () {
+                this._getEvents()[CURRENT] = NULL;
+            },
+            getEventList: function (evnt) {
+                return this._getEvents(evnt.getNamespace());
+            },
             _eventDispatcher: function (evnt) {
                 var box = this,
-                    name = evnt.name,
                     events = box._getEvents(),
                     currentEventArray = events[CURRENT_EVENTS],
-                    list = events._byName[name],
+                    list = box.getEventList(evnt, events),
                     ret = result(box, evnt.onMethodName, evnt),
-                    removeList = events[REMOVE_EVENTS],
-                    anotherRet = !evnt[IMMEDIATE_PROP_IS_STOPPED] && (!list || !!list.find(function (obj) {
-                        var gah;
-                        currentEventArray.push(obj);
-                        obj.fn(evnt);
-                        gah = currentEventArray.pop();
-                        return evnt[IMMEDIATE_PROP_IS_STOPPED];
-                    }));
+                    removeList = events[REMOVE_EVENTS];
+                if (evnt[IMMEDIATE_PROP_IS_STOPPED] || !list || !result(list, LENGTH)) {
+                    return;
+                }
+                list.find(function (handler) {
+                    var cached;
+                    box.setEvent(evnt);
+                    if (!handler.disabled && box.queueHandler(evnt, handler, currentEventArray)) {
+                        handler.fn(events[CURRENT]);
+                        cached = evnt[IMMEDIATE_PROP_IS_STOPPED];
+                        box.unQueueHandler(evnt, handler, currentEventArray);
+                        return cached;
+                    }
+                });
+                box.unsetEvent(evnt);
                 if (!currentEventArray[LENGTH]() && removeList[LENGTH]()) {
-                    removeList.duffRev(box._removeEvent, box);
+                    removeList.duffRight(box._removeEvent, box);
                     removeList.empty();
                 }
             },
             _createEvent: function (name, data) {
-                return new ObjectEvent(name, this, data);
+                return ObjectEvent(name, this, data);
             },
             dispatchEvent: function (name, data, evnt_) {
                 var box = this,
-                    methodName = upCase(camelCase('on:' + name, ':')),
-                    evnt = evnt_ || box._createEvent(name, data);
+                    evnt = box._createEvent(name, data, evnt_);
                 box._eventDispatcher(evnt);
                 evnt.finished();
-                return evnt;
+                return evnt.returnValue;
             },
             _attachEvent: function (name, eventObject) {
-                var list, obj = this;
+                var list, box = this;
                 eventObject.id = ++event_incrementer;
                 eventObject.valueOf = returnsId;
                 eventObject.ctx = eventObject.ctx || eventObject.origin;
                 eventObject.fn = bind(eventObject.fn || eventObject.handler, eventObject.ctx);
                 // attach the id to the bound function because that instance is private
                 eventObject.fn[__FN_ID__] = eventObject.id;
-                // events = obj[_EVENTS] = obj[_EVENTS] || {};
-                list = obj._getEvents(name);
-                // list = events[name] = events[name] || SortedCollection(BOOLEAN_TRUE, BOOLEAN_TRUE);
+                list = box._getEvents(name);
                 // attaching name so list can remove itself from hash
-                list.name = name;
+                list[NAME] = name;
                 // attached so event can remove itself
                 eventObject.list = list;
                 eventObject.maxIndex = list[LENGTH]();
-                list.add(eventObject);
+                box.attachEvent(list, eventObject);
             },
-            _wipeList: function (list) {
+            attachEvent: function (list, obj) {
+                return list.add(obj);
+            },
+            _resetList: function (list) {
                 var box = this;
-                if (!list[LENGTH]()) {
-                    box._getEvents()._byName[list.name] = UNDEFINED;
-                    return BOOLEAN_TRUE;
+                if (list[LENGTH]()) {
+                    return BOOLEAN_FALSE;
                 }
+                box.resetList(list);
+                return BOOLEAN_TRUE;
+            },
+            resetList: function (list) {
+                this._getEvents()[_BY_NAME][list[NAME]] = NULL;
+            },
+            removeEvent: function (list, evnt) {
+                list.remove(evnt);
             },
             _removeEvent: function (evnt) {
                 var listeningTo, box = this,
                     listening = evnt.listening,
                     list = evnt.list,
                     events = box._getEvents();
+                evnt.disabled = BOOLEAN_TRUE;
                 if (events[CURRENT_EVENTS][LENGTH]()) {
                     events[REMOVE_EVENTS].add(evnt);
                     return BOOLEAN_FALSE;
                 } else {
-                    list.remove(evnt);
+                    box.removeEvent(list, evnt);
                     // disconnect it from the list above it
                     evnt.list = UNDEFINED;
                     // check to see if it was a listening type
@@ -470,8 +485,8 @@ application.scope(function (app) {
                         return;
                     }
                     listeningTo = listening.listeningTo;
-                    listeningTo[listening.obj._listenId] = UNDEFINED;
-                    box._wipeList(list);
+                    listeningTo[listening.obj[LISTEN_ID]] = UNDEFINED;
+                    box._resetList(list);
                     return BOOLEAN_TRUE;
                 }
             }

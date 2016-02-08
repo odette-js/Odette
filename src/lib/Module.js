@@ -10,7 +10,7 @@ application.scope(function (app) {
         PARENT = 'parent',
         STOP = 'stop',
         START = 'start',
-        _EXTRA_MODULE_ARGS = '_extraModuleArgs',
+        _EXTRA_MODULE_ARGS = '_extraModuleArguments',
         startableMethods = {
             start: function (evnt) {
                 var startable = this;
@@ -118,7 +118,9 @@ application.scope(function (app) {
                 var module = this;
                 module.application = opts.application;
                 module.handlers = Collection();
-                factories.Messenger(this);
+                factories.Messenger({
+                    parent: module
+                });
                 module.modules = Collection();
                 Box.constructor.apply(this, arguments);
                 return module;
@@ -148,7 +150,7 @@ application.scope(function (app) {
         }),
         Module = factories.Box.extend('Module', moduleMethods, BOOLEAN_TRUE),
         appextendresult = app.extend(extend({}, factories.Events.constructor.prototype, moduleMethods, {
-            _extraModuleArgs: [],
+            _extraModuleArguments: [],
             children: Collection(),
             // module: moduleHandler,
             modules: Collection(),
@@ -163,11 +165,11 @@ application.scope(function (app) {
             },
             /**
              * @func
-             * @name Specless#addModuleArgs
+             * @name Specless#addModuleArguments
              * @param {Array} arr - list of arguments that will be added to the extraModule args list
              * @returns {Specless} instance
              */
-            addModuleArgs: function (arr) {
+            addModuleArguments: function (arr) {
                 var app = this;
                 app._.duff(arr, function (item) {
                     app._.add(app[_EXTRA_MODULE_ARGS], item);
@@ -176,11 +178,12 @@ application.scope(function (app) {
             },
             /**
              * @func
-             * @name Specless#removeModuleArgs
+             * @name Specless#removeModuleArguments
              * @param {Array} arr - list of objects or functions that will be removed from the extraModuleArgs
              * @returns {Specless} instance
              */
-            removeModuleArgs: function (arr) {
+            removeModuleArguments: function (arr) {
+                var app = this;
                 app._.duff(arr, function (item) {
                     app._.remove(app[_EXTRA_MODULE_ARGS], item);
                 });
@@ -199,4 +202,7 @@ application.scope(function (app) {
                 return module.getExports();
             }
         }));
+    factories.Messenger({
+        parent: app
+    });
 });

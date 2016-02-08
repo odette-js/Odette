@@ -6,17 +6,6 @@ application.scope().run(function (app, _, $) {
             makeArray = function () {
                 return baseString.split(' ');
             };
-        // describe('base string methods', function () {
-        //     it('_.split', function () {
-        //         var myString = 'my string is a great string';
-        //         expect(_.split(myString, ' ')).toEqual(myString.split(' '));
-        //     });
-        //     // test slice
-        //     it('_.slice', function () {
-        //         var actual = [1, 2, 3, 4, 5].join('');
-        //         expect(_.slice(actual, 0)).toEqual(actual.slice(0));
-        //     });
-        // });
         describe('base array methods', function () {
             it('_.listSlice', function () {
                 var actual = [1, 2, 3, 4, 5];
@@ -30,15 +19,8 @@ application.scope().run(function (app, _, $) {
                 expect(_.pop(baseString.split(' '))).toEqual(baseString.split(' ').pop());
             });
             it('_.push', function () {
-                expect(_.push(baseString.split(' '), 'string')).toEqual(baseString.split(' ').push('string'));
+                expect(_.push(baseString.split(' '), ['string'])).toEqual(baseString.split(' ').push('string'));
             });
-            // it('_.listHas', function () {
-            //     var list = ['list', 2, 1, null];
-            //     expect(_.listHas(list, 1)).toEqual(true);
-            //     expect(_.listHas(list, 'list')).toEqual(true);
-            //     expect(_.listHas(list, {})).toEqual(false);
-            //     expect(_.listHas(list, void 0)).toEqual(false);
-            // });
             it('_.shift', function () {
                 expect(_.shift(baseString.split(' '))).toEqual(baseString.split(' ').shift());
             });
@@ -410,43 +392,13 @@ application.scope().run(function (app, _, $) {
                 var make = function () {
                     return [1, 2, 3, 4, 5, 6];
                 };
-                expect(_.unshift(make(), 0)).toEqual(make().unshift(0));
+                expect(_.unshift(make(), [0])).toEqual(make().unshift(0));
             });
             // write async test
             it('_.fetch', function () {
-                var img = _.fetch('https://app.gospecless.com/favicon.ico');
+                var img = _.fetch("data:image/webp;base64,UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA");
                 expect(img instanceof Image).toEqual(true);
             });
-            // it('_.returnBuild', function () {
-            //     expect(_.returnBuild({
-            //         some: {
-            //             where: {
-            //                 only: {
-            //                     we: {
-            //                         know: {
-            //                             by: 'keane'
-            //                         }
-            //                     }
-            //                 }
-            //             }
-            //         }
-            //     }, 'some where only we know', [{}, {}, {}, {}, {}])).toEqual({
-            //         by: 'keane'
-            //     });
-            //     expect(_.returnBuild({
-            //         some: {
-            //             where: {
-            //                 only: {
-            //                     we: {
-            //                         know: {
-            //                             by: 'keane'
-            //                         }
-            //                     }
-            //                 }
-            //             }
-            //         }
-            //     }, 'some where here', [{}, {}, {}])).toEqual({});
-            // });
             it('_.parse', function () {
                 expect(_.parse('{"some":1,"one":true}')).toEqual({
                     some: 1,

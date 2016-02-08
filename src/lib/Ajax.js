@@ -12,7 +12,7 @@ application.scope().module('Ajax', function (module, app, _, factories) {
         FAILURE = 'failure',
         SUCCESS = 'success',
         READY_STATE = 'readyState',
-        XDomainRequest = window.XDomainRequest,
+        XDomainRequest = win.XDomainRequest,
         isObject = _.isObject,
         isArray = _.isArray,
         stringify = _.stringify,
@@ -54,7 +54,7 @@ application.scope().module('Ajax', function (module, app, _, factories) {
                     xhrReq.send.apply(xhrReq, args);
                 }, function (e) {
                     // handle an xhr req send error here
-                    factories.reportError('xhr', e + '');
+                    factories.reportError('xhr', e + EMPTY_STRING);
                 });
             };
         },
@@ -104,7 +104,7 @@ application.scope().module('Ajax', function (module, app, _, factories) {
                     method = 'onload';
                 }
                 if (!_.isObject(str)) {
-                    str = str || '';
+                    str = str || EMPTY_STRING;
                     type = GET;
                     typeThing = str.toUpperCase();
                     if (posit(validTypes, typeThing)) {
@@ -113,7 +113,7 @@ application.scope().module('Ajax', function (module, app, _, factories) {
                         url = str;
                     }
                     str = {
-                        url: url || '',
+                        url: url || EMPTY_STRING,
                         type: type
                     };
                 }

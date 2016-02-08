@@ -35,7 +35,7 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                 attrs = get(buster),
                 parts = buster.parts;
             if (app.topAccess) {
-                tippyTop = window[TOP];
+                tippyTop = win[TOP];
                 topDoc = tippyTop.document;
                 wrapper = topDoc.body;
             }
@@ -154,7 +154,7 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                         data: message,
                         frame: buster.el,
                         responder: receive,
-                        srcElement: window,
+                        srcElement: win,
                         timestamp: timestamp
                     });
                 };
@@ -278,10 +278,10 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                     calced = com.calculatedSize,
                     verticalPush = com.pushVertical,
                     horizontalPush = com.pushHorizontal;
-                if (verticalPush !== '') {
+                if (verticalPush !== EMPTY_STRING) {
                     vPushCount++;
                 }
-                if (horizontalPush !== '') {
+                if (horizontalPush !== EMPTY_STRING) {
                     hPushCount++;
                 }
                 if (com.isShowing && com.container === 'ad') {
@@ -794,10 +794,10 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
             //         parts = buster.parts,
             //         topWin = parts.top || {},
             //         location = topWin.location || {
-            //             hash: '',
-            //             pathname: '',
-            //             protocol: '',
-            //             search: ''
+            //             hash: EMPTY_STRING,
+            //             pathname: EMPTY_STRING,
+            //             protocol: EMPTY_STRING,
+            //             search: EMPTY_STRING
             //         },
             //         topData = attrs.topData = {
             //             innerHeight: topWin.innerHeight || 0,
@@ -943,7 +943,7 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
             }
         }, BOOLEAN_TRUE);
     if (app.topAccess()) {
-        $(window[TOP]).on('message', receive);
+        $(win[TOP]).on('message', receive);
     }
     _.exports({
         containerSize: containerSize

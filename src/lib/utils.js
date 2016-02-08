@@ -1,57 +1,4 @@
-var UNDEFINED, win = window,
-    doc = win.document,
-    EMPTY_STRING = '',
-    TO_STRING = 'toString',
-    TO_JSON = 'toJSON',
-    VALUE_OF = 'valueOf',
-    PROTOTYPE = 'prototype',
-    CONSTRUCTOR = 'constructor',
-    CHILD = 'child',
-    CHILDREN = CHILD + 'ren',
-    CHANGE = 'change',
-    COLON = ':',
-    BEFORE = 'before',
-    BEFORE_COLON = BEFORE + COLON,
-    RESET = 'reset',
-    ATTRIBUTES = 'attributes',
-    PARENT = 'parent',
-    DESTROY = 'destroy',
-    LENGTH = 'length',
-    OBJECT = 'object',
-    STRING = 'string',
-    BOOLEAN = 'boolean',
-    FUNCTION = 'function',
-    INDEX_OF = 'indexOf',
-    WINDOW = 'window',
-    DOCUMENT = 'document',
-    ATTRIBUTES = 'attributes',
-    COMPONENTS = 'components',
-    CLASS = 'class',
-    TOP = 'top',
-    LEFT = 'left',
-    RIGHT = 'right',
-    BOTTOM = 'bottom',
-    WIDTH = 'width',
-    HEIGHT = 'height',
-    INDEX = 'index',
-    INNER_HEIGHT = 'innerHeight',
-    INNER_WIDTH = 'innerWidth',
-    DISPATCH_EVENT = 'dispatchEvent',
-    HTTP = 'http',
-    HTTPS = HTTP + 's',
-    TO_ARRAY = 'toArray',
-    CONSTRUCTOR_KEY = '__' + CONSTRUCTOR + '__',
-    LOCATION = 'location',
-    EXTEND = 'extend',
-    BOOLEAN_TRUE = !0,
-    BOOLEAN_FALSE = !1,
-    INFINITY = Infinity,
-    NEGATIVE_INFINITY = -INFINITY,
-    BIG_INTEGER = 32767,
-    NEGATIVE_BIG_INTEGER = BIG_INTEGER - 1,
-    TWO_TO_THE_31 = 2147483647,
-    NULL = null,
-    factories = {},
+var factories = {},
     object = Object,
     fn = Function,
     array = Array,
@@ -96,9 +43,8 @@ var UNDEFINED, win = window,
     /**
      * @func
      */
-    push = function (obj, item) {
-        var args = splice(arguments, 1);
-        return arrayProto.push.apply(obj, args);
+    push = function (obj, list) {
+        return arrayProto.push.apply(obj, list);
     },
     /**
      * @func
@@ -175,23 +121,9 @@ var UNDEFINED, win = window,
         }
         return -1;
     },
-    // binaryIndexOf = function (array, searchElement, minIndex_, maxIndex_) {
-    //     var currentIndex, currentElement, minIndex = minIndex_ || 0,
-    //         maxIndex = maxIndex_ || array[LENGTH] - 1;
-    //     while (minIndex <= maxIndex) {
-    //         currentIndex = (minIndex + maxIndex) / 2 | 0;
-    //         currentElement = array[currentIndex];
-    //         // calls valueOf
-    //         if (currentElement < searchElement) {
-    //             minIndex = currentIndex + 1;
-    //         } else if (currentElement > searchElement) {
-    //             maxIndex = currentIndex - 1;
-    //         } else {
-    //             return currentIndex;
-    //         }
-    //     }
-    //     return~ maxIndex;
-    // },
+    smartIndexOf = function (array, item, _from, _to, _rtl) {
+        return (array && array[LENGTH] > 100 ? binaryIndexOf : indexOf)(array, item, _from, _to, _rtl);
+    },
     /**
      * @func
      */
@@ -320,9 +252,6 @@ var UNDEFINED, win = window,
     /**
      * @func
      */
-    // isBlank = isWrap('undefined', function (thing) {
-    //     return thing === NULL;
-    // }),
     isNull = function (thing) {
         return thing === NULL;
     },
@@ -432,19 +361,6 @@ var UNDEFINED, win = window,
     }()),
     now = function () {
         return +(new Date());
-    },
-    allKeys = function (obj) {
-        var key, keys = [];
-        if (isObject(obj)) {
-            for (key in obj) {
-                keys.push(key);
-            }
-            // Ahem, IE < 9.
-            if (hasEnumBug) {
-                collectNonEnumProps(obj, keys);
-            }
-        }
-        return keys;
     },
     /**
      * @func
@@ -624,20 +540,13 @@ var UNDEFINED, win = window,
         return values;
     },
     each = eachProxy(duff),
-    tackRev = function (fn, index, ctx) {
-        return function () {
-            var args = toArray(arguments);
-            while (args[LENGTH] < index) {
-                // fill it out with NULL
-                args.push(NULL);
-            }
-            // put -1 on as the last arg
-            args.push(-1);
-            return fn.apply(ctx || _, args);
+    tackRight = function (fn) {
+        return function (list, iterator, context) {
+            return fn(list, iterator, arguments[LENGTH] < 3 ? NULL : context, -1);
         };
     },
-    duffRev = tackRev(duff, 3),
-    eachRev = tackRev(each, 3),
+    duffRight = tackRight(duff),
+    eachRight = tackRight(each),
     /**
      * @func
      */
@@ -663,6 +572,17 @@ var UNDEFINED, win = window,
     },
     pI = function (num) {
         return parseInt(num, 10) || 0;
+    },
+    allKeys = function (obj) {
+        var key, keys = [];
+        for (key in obj) {
+            keys.push(key);
+        }
+        // Ahem, IE < 9.
+        if (hasEnumBug) {
+            collectNonEnumProps(obj, keys);
+        }
+        return keys;
     },
     keys = function (obj) {
         var key, keys = [];
@@ -739,8 +659,8 @@ var UNDEFINED, win = window,
             return isInstance(instance, Constructor);
         };
         __[CONSTRUCTOR] = Constructor;
-        __[EXTEND] = function () {
-            return Constructor[EXTEND].apply(Constructor, arguments);
+        __[EXTEND] = Constructor[EXTEND] = function () {
+            return constructorExtend.apply(Constructor, arguments);
         };
         return __;
     },
@@ -752,7 +672,7 @@ var UNDEFINED, win = window,
         return function () {
             if (!doIt) {
                 doIt = 1;
-                fn.apply(this, arguments);
+                return fn.apply(this, arguments);
             }
         };
     },
@@ -898,14 +818,8 @@ var UNDEFINED, win = window,
     /**
      * @func
      */
-    unshift = function (thing) {
-        var ret, items = [];
-        duff(arguments, function (arg, idx) {
-            if (idx) {
-                items.push(arg);
-            }
-        });
-        return [].unshift.apply(thing, items);
+    unshift = function (thing, items) {
+        return thing.unshift.apply(thing, items);
     },
     /**
      * @func
@@ -936,7 +850,10 @@ var UNDEFINED, win = window,
             if (val[0] === '{' || val[0] === '[') {
                 wraptry(function () {
                     val = JSON.parse(val);
-                });
+                }, console.error);
+            } else {
+                // parses the number out if it's a number
+                val = +val === val ? +val : val;
             }
         }
         return val;
@@ -972,12 +889,33 @@ var UNDEFINED, win = window,
         });
         return collection;
     },
+    arrayLikeToArray = function (arrayLike) {
+        return Array.apply(null, arrayLike);
+    },
+    objectToArray = function (obj) {
+        return foldl(obj, function (memo, item) {
+            memo.push(item);
+            return memo;
+        }, []);
+    },
     toArray = function (obj) {
-        var array = [];
-        each(obj, function (value, key) {
-            array.push(value);
-        });
-        return array;
+        return isArrayLike(obj) ? arrayLikeToArray(obj) : objectToArray(obj);
+    },
+    flattenArray = function (list, deep_) {
+        var deep = !!deep_;
+        return foldl(list, function (memo, item_) {
+            var item;
+            if (isArrayLike(item_)) {
+                item = deep ? flattenArray.call(NULL, item_, deep) : item_;
+                return memo.concat(item);
+            } else {
+                memo.push(item_);
+                return memo;
+            }
+        }, []);
+    },
+    flatten = function (list, deep) {
+        return flattenArray(isArrayLike(list) ? list : objectToArray(list), deep);
     },
     /**
      * @func
@@ -1043,7 +981,7 @@ var UNDEFINED, win = window,
         return val;
     },
     uuid = function () {
-        var UNDEFINED, cryptoCheck = 'crypto' in window && 'getRandomValues' in crypto,
+        var UNDEFINED, cryptoCheck = 'crypto' in win && 'getRandomValues' in crypto,
             sid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
                 var rnd, r, v;
                 if (cryptoCheck) {
@@ -1061,17 +999,6 @@ var UNDEFINED, win = window,
                 return v.toString(16);
             });
         return cryptoCheck ? sid : 'SF' + sid;
-    },
-    intendedArray = function (array, fn_) {
-        var fn = fn_,
-            isArrayLikeResult = isArrayLike(array);
-        if (isArrayLikeResult) {
-            duff(array, fn);
-        } else {
-            if (array) {
-                fn(array, 0, [array]);
-            }
-        }
     },
     intendedObject = function (key, value, fn_) {
         var fn = fn_,
@@ -1193,15 +1120,27 @@ var UNDEFINED, win = window,
             return !!which;
         }
     },
+    flow = function (bool, list_) {
+        var list = bool === BOOLEAN_TRUE ? list : arguments,
+            length = list[LENGTH];
+        return function () {
+            var start = length,
+                args = arguments;
+            while (start--) {
+                args = list[start].apply(NULL, args);
+            }
+            return args;
+        };
+    },
     _ = app._ = {
         months: gapSplit('january feburary march april may june july august september october november december'),
         weekdays: gapSplit('sunday monday tuesday wednesday thursday friday saturday'),
         constructorWrapper: constructorWrapper,
         stringifyQuery: stringifyQuery,
         intendedObject: intendedObject,
-        intendedArray: intendedArray,
         ensureFunction: ensureFunction,
         parseDecimal: parseDecimal,
+        flatten: flatten,
         reference: reference,
         isArrayLike: isArrayLike,
         isInstance: isInstance,
@@ -1265,8 +1204,8 @@ var UNDEFINED, win = window,
         clone: clone,
         bind: bind,
         duff: duff,
-        duffRev: duffRev,
-        eachRev: eachRev,
+        duffRight: duffRight,
+        eachRight: eachRight,
         sort: sort,
         join: join,
         wrap: wrap,
@@ -1275,6 +1214,7 @@ var UNDEFINED, win = window,
         once: once,
         each: each,
         push: push,
+        flow: flow,
         pop: pop,
         has: has,
         negate: negate,
@@ -1289,6 +1229,8 @@ var UNDEFINED, win = window,
         console: console,
         min: mathArray('min'),
         max: mathArray('max'),
+        arrayLikeToArray: arrayLikeToArray,
+        objectToArray: objectToArray,
         math: wrap(gapSplit('E LN2 LN10 LOG2E LOG10E PI SQRT1_2 SQRT2 abs acos acosh asin asinh atan atan2 atanh cbrt ceil clz32 cos cosh exp expm1 floor fround hypot imul log log1p log2 log10 pow random round sign sin sinh sqrt tan tanh trunc'), function (key) {
             return Math[key];
         })
@@ -1300,5 +1242,4 @@ function Model(attributes, options) {
     return this;
 }
 Model[PROTOTYPE] = {};
-Model[EXTEND] = constructorExtend;
 factories.Model = constructorWrapper(Model);
