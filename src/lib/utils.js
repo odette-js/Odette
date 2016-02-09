@@ -1168,6 +1168,11 @@ var factories = {},
             return !!which;
         }
     },
+    returns = function (thing) {
+        return function () {
+            return thing;
+        };
+    },
     flow = function (bool, list_) {
         var list = bool === BOOLEAN_TRUE ? list : arguments,
             length = list[LENGTH];

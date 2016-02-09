@@ -1,7 +1,8 @@
 application.scope(function (app) {
     var _ = app._,
         factories = _.factories,
-        hash = '_directivesHash';
+        hash = '_directivesHash',
+        returnsNull = returns(NULL);
     factories.Model.extend('Directive', {
         directive: function (name) {
             var that = this,
@@ -25,12 +26,13 @@ application.scope(function (app) {
         creation: {},
         destruction: {}
     };
-    app.registerDirective = function (name, creation, destruction) {
-        var err = (!isFunction(creation) || !isFunction(destruction)) && exception({
+    app.registerDirective = function (name, creation, destruction_) {
+        var err = !isFunction(creation) && exception({
             message: 'directives must be registered with both create and destroy functions'
         });
+        var destruction = isFunction(destruction_) ? destruction_ : returnsNull;
         directives.creation[name] = directives.creation[name] || creation;
-        directives.destruction[name] = directives.destruction[name] || destruction || NULL;
+        directives.destruction[name] = directives.destruction[name] || destruction;
     };
     var directiveMod = function (key, instance, name) {
         return (instance['directive:' + key + ':' + name] || directive[key][name] || noop)(instance, name);
