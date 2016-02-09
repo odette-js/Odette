@@ -140,7 +140,7 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 model._establishRegions();
                 return model;
             },
-            'directive:children': function () {
+            'directive:create:children': function () {
                 var children = RegionManager();
                 children[PARENT] = this;
                 return children;
@@ -386,7 +386,7 @@ application.scope().module('View', function (module, app, _, factories, $) {
         _View = factories.View,
         Region = View.extend('Region', {
             Child: _View,
-            'directive:children': Collection,
+            'directive:create:children': Collection,
             _ensureElement: function () {
                 this._setElement();
             },

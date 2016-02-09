@@ -324,6 +324,24 @@ application.scope().run(function (app, _, $) {
                     ['three', 2, obj]
                 ]);
             });
+            it('_.duff', function () {
+                var test1 = [1, 2, 3, 4];
+                var count = 0;
+                expect(count).toEqual(0);
+                _.duff(test1, function (item) {
+                    count += item;
+                });
+                expect(count).toEqual(10);
+                _.duff({
+                    one: 1,
+                    two: 2,
+                    three: 3,
+                    four: 4
+                }, function (item) {
+                    count += item;
+                });
+                expect(count).toEqual(10);
+            });
             it('_.toBoolean', function () {
                 expect(_.toBoolean('truth')).toEqual('truth');
                 expect(_.toBoolean('true')).toEqual(true);
@@ -460,6 +478,7 @@ application.scope().run(function (app, _, $) {
         });
     });
 });
+var _ = application.scope()._;
 application.scope().run(function (app, _) {
     describe('Strings', function () {
         it('_.camelCase', function () {

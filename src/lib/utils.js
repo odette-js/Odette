@@ -3,6 +3,7 @@ var factories = {},
     fn = Function,
     array = Array,
     string = String,
+    number = Number,
     BRACKET_OBJECT_SPACE = '[object ',
     stringProto = string[PROTOTYPE],
     objectProto = object[PROTOTYPE],
@@ -12,6 +13,11 @@ var factories = {},
     hasEnumBug = !{
         toString: NULL
     }.propertyIsEnumerable(TO_STRING),
+    MAX_VALUE = number.MAX_VALUE,
+    MIN_VALUE = number.MIN_VALUE,
+    MAX_SAFE_INTEGER = number.MAX_SAFE_INTEGER,
+    MIN_SAFE_INTEGER = number.MIN_SAFE_INTEGER,
+    MAX_ARRAY_LENGTH = 4294967295,
     noop = function () {},
     /**
      * @func
@@ -138,7 +144,10 @@ var factories = {},
      * @func
      */
     toString = function (obj) {
-        return (obj === NULL || obj === UNDEFINED) ? EMPTY_STRING : (obj + EMPTY_STRING);
+        return obj == NULL ? EMPTY_STRING : obj + EMPTY_STRING;
+    },
+    stringify = function (obj) {
+        return (isObject(obj) ? JSON.stringify(obj) : isFunction(obj) ? obj.toString() : obj) + EMPTY_STRING;
     },
     /**
      * @func
@@ -327,15 +336,10 @@ var factories = {},
     /**
      * @func
      */
-    stringify = function (obj) {
-        if (isObject(obj)) {
-            obj = JSON.stringify(obj);
-        }
-        if (isFunction(obj)) {
-            obj = obj.toString();
-        }
-        return obj + EMPTY_STRING;
-    },
+    // stringify = toString,
+    // stringify = function (obj) {
+    //     return (isObject(obj) ? JSON.stringify(obj) : isFunction(obj) ? obj.toString() : obj) + EMPTY_STRING;
+    // },
     /**
      * @func
      */
@@ -882,24 +886,23 @@ var factories = {},
         return isArrayLike(obj) ? [] : {};
     },
     map = function (objs, iteratee, context) {
-        var collection = returnDismorphicBase(objs);
-        var bound = bind(iteratee, context);
-        each(objs, function (item, index) {
+        var collection = returnDismorphicBase(objs),
+            bound = bind(iteratee, context);
+        return !objs ? collection : each(objs, function (item, index) {
             collection[index] = bound(item, index, objs);
-        });
-        return collection;
+        }) && collection;
     },
     arrayLikeToArray = function (arrayLike) {
         return Array.apply(null, arrayLike);
     },
     objectToArray = function (obj) {
-        return foldl(obj, function (memo, item) {
+        return !obj ? [] : foldl(obj, function (memo, item) {
             memo.push(item);
             return memo;
         }, []);
     },
     toArray = function (obj) {
-        return isArrayLike(obj) ? arrayLikeToArray(obj) : objectToArray(obj);
+        return isArrayLike(obj) ? arrayLikeToArray(obj) : (isString(obj) ? obj.split(EMPTY_STRING) : objectToArray(obj));
     },
     flattenArray = function (list, deep_) {
         var deep = !!deep_;
@@ -916,6 +919,40 @@ var factories = {},
     },
     flatten = function (list, deep) {
         return flattenArray(isArrayLike(list) ? list : objectToArray(list), deep);
+    },
+    baseClamp = function (number, lower, upper) {
+        if (number === number) {
+            if (upper !== UNDEFINED) {
+                number = number <= upper ? number : upper;
+            }
+            if (lower !== UNDEFINED) {
+                number = number >= lower ? number : lower;
+            }
+        }
+        return number;
+    },
+    safeInteger = function (number_) {
+        return baseClamp(number_, MIN_SAFE_VALUE, MAX_SAFE_VALUE);
+    },
+    isValidInteger = function (number) {
+        return number < MAX_VALUE && number > MIN_VALUE;
+    },
+    clampInteger = function (number) {
+        return baseClamp(number, MIN_VALUE, MAX_VALUE);
+    },
+    floatToInteger = function (value) {
+        var remainder = value % 1;
+        return value === value ? (remainder ? value - remainder : value) : 0;
+    },
+    toInteger = function (number, notSafe) {
+        var converted;
+        return floatToInteger((converted = +number) == number ? (notSafe ? converted : safeInteger(converted)) : 0);
+    },
+    isLength = function (number) {
+        return isNumber(number) && isValidInteger(number);
+    },
+    toLength = function (number) {
+        return number ? clampInteger(toInteger(number, BOOLEAN_TRUE), 0, MAX_ARRAY_LENGTH) : 0;
     },
     /**
      * @func
@@ -1174,6 +1211,7 @@ var factories = {},
         reverse: reverse,
         binaryIndexOf: binaryIndexOf,
         indexOfNaN: indexOfNaN,
+        toInteger: toInteger,
         indexOf: indexOf,
         joinGen: joinGen,
         toArray: toArray,
