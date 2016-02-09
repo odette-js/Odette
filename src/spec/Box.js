@@ -55,24 +55,24 @@ application.scope().run(function (app, _, factories, $) {
                 expect(box2.id !== void 0).toEqual(true);
                 expect(box3.id === 5).toEqual(true);
             });
-            it('an empty _previousAttributes hash', function () {
-                expect(_.has(box2, '_previousAttributes')).toEqual(true);
-                expect(_.isObject(box2._previousAttributes)).toEqual(true);
-                expect(_.isEmpty(box2._previousAttributes)).toEqual(true);
-            });
-            it('a collection for children', function () {
-                expect(_.has(box2, 'children')).toEqual(true);
-                expect(factories.Collection.isInstance(box2.children)).toEqual(true);
-                expect(box2.children.length()).toEqual(0);
-            });
-            it('and an attributes object', function () {
-                expect(_.has(box2, 'attributes')).toEqual(true);
-                expect(_.isObject(box2.attributes)).toEqual(true);
-            });
+            // it('an empty _previousAttributes hash', function () {
+            //     expect(_.has(box2, '_previousAttributes')).toEqual(true);
+            //     expect(_.isObject(box2._previousAttributes)).toEqual(true);
+            //     expect(_.isEmpty(box2._previousAttributes)).toEqual(true);
+            // });
+            // it('a collection for children', function () {
+            //     expect(_.has(box2, 'children')).toEqual(true);
+            //     expect(factories.Collection.isInstance(box2.directive('children'))).toEqual(true);
+            //     expect(box2.directive('children').length()).toEqual(0);
+            // });
+            // it('and an attributes object', function () {
+            //     expect(_.has(box2, 'attributes')).toEqual(true);
+            //     expect(_.isObject(box2.directive('data').current)).toEqual(true);
+            // });
         });
         describe('you can set properties on the box you\'re handling with the set method', function () {
             var box = Box(),
-                attrs = box.attributes;
+                attrs = box.directive('data');
             beforeEach(function () {
                 box = Box({
                     zero: 0,
@@ -191,13 +191,13 @@ application.scope().run(function (app, _, factories, $) {
             });
             it('they can clone it\'s attributes by using the toJSON method', function () {
                 var clone = box.toJSON();
-                expect(clone).toEqual(box.attributes);
-                expect(clone === box.attributes).toEqual(false);
+                expect(clone).toEqual(box.directive('data').current);
+                expect(clone === box.directive('data').current).toEqual(false);
             });
             it('they can clone children into an array', function () {
                 var clone;
                 box.add([factories.Box(), factories.Box()]);
-                clone = box.children.toJSON();
+                clone = box.directive('children').toJSON();
                 expect(clone).toEqual([{}, {}]);
             });
             it('they can stringify themselves', function () {
@@ -211,7 +211,7 @@ application.scope().run(function (app, _, factories, $) {
             it('they can stringify their children', function () {
                 box = factories.Box();
                 box.add(data.children);
-                expect(box.children.toString()).toEqual(JSON.stringify(data.children));
+                expect(box.directive('children').toString()).toEqual(JSON.stringify(data.children));
             });
         });
         describe('Boxes can register other objects against a key hash as well', function () {
@@ -219,29 +219,29 @@ application.scope().run(function (app, _, factories, $) {
                 var data = {
                     myObj: 1
                 };
-                expect(box.children.get('registering')).toEqual(void 0);
-                box.children.register('registering', data);
-                expect(box.children.get('registering')).toEqual(data);
+                expect(box.directive('children').get('registering')).toEqual(void 0);
+                box.directive('children').register('registering', data);
+                expect(box.directive('children').get('registering')).toEqual(data);
             });
             it('and retreive information', function () {
                 var data = {
                     myObj: 1
                 };
-                expect(box.children.get('registering')).toEqual(void 0);
-                box.children.register('registering', data);
-                expect(box.children.get('registering') === data).toEqual(true);
+                expect(box.directive('children').get('registering')).toEqual(void 0);
+                box.directive('children').register('registering', data);
+                expect(box.directive('children').get('registering') === data).toEqual(true);
             });
         });
         describe('boxes can have children', function () {
             it('you can add one at a time', function () {
-                expect(box.children.length()).toEqual(0);
+                expect(box.directive('children').length()).toEqual(0);
                 box.add({
                     isChild: !0
                 });
-                expect(box.children.length()).toEqual(1);
+                expect(box.directive('children').length()).toEqual(1);
             });
             it('or many at once', function () {
-                expect(box.children.length()).toEqual(0);
+                expect(box.directive('children').length()).toEqual(0);
                 box.add([{
                     isChild: !0
                 }, {
@@ -249,16 +249,16 @@ application.scope().run(function (app, _, factories, $) {
                 }, {
                     isChild: 'may'
                 }]);
-                expect(box.children.length()).toEqual(3);
+                expect(box.directive('children').length()).toEqual(3);
             });
             it('you can also remove them one at a time', function () {
                 box = factories.Box();
                 box.add(data.children);
-                expect(box.children.length()).toEqual(2);
+                expect(box.directive('children').length()).toEqual(2);
             });
             it('or many at the same time', function () {
                 box = factories.Box();
-                var children = box.children;
+                var children = box.directive('children');
                 expect(children.length()).toEqual(0);
                 box.add([{
                     one: 1
@@ -286,12 +286,12 @@ application.scope().run(function (app, _, factories, $) {
                 }, {
                     one: 4
                 }]);
-                var destroyer = box.children.index(2);
-                expect(box.children.get('cid', destroyer.cid) === destroyer).toEqual(true);
-                expect(box.children.get('id', destroyer.id) === destroyer).toEqual(true);
+                var destroyer = box.directive('children').index(2);
+                expect(box.directive('children').get('cid', destroyer.cid) === destroyer).toEqual(true);
+                expect(box.directive('children').get('id', destroyer.id) === destroyer).toEqual(true);
                 destroyer.destroy();
-                expect(box.children.get('cid', destroyer.cid)).toEqual(void 0);
-                expect(box.children.get('id', destroyer.id)).toEqual(void 0);
+                expect(box.directive('children').get('cid', destroyer.cid)).toEqual(void 0);
+                expect(box.directive('children').get('id', destroyer.id)).toEqual(void 0);
             });
             it('sort their children', function () {
                 box.add([{
@@ -309,12 +309,12 @@ application.scope().run(function (app, _, factories, $) {
                 }]);
                 box.comparator = 'two';
                 box.sort();
-                expect(box.children.map(function (model) {
+                expect(box.directive('children').map(function (model) {
                     return model.get('two');
                 }).unwrap()).toEqual([1, 2, 8]);
                 box.comparator = '!two';
                 box.sort();
-                expect(box.children.map(function (model) {
+                expect(box.directive('children').map(function (model) {
                     return model.get('two');
                 }).unwrap()).toEqual([8, 2, 1]);
             });
@@ -331,11 +331,11 @@ application.scope().run(function (app, _, factories, $) {
                 };
                 box.add([{}, {}, {}, {}]);
                 expect(counter).toEqual(0);
-                box.children.duff(function (model) {
+                box.directive('children').duff(function (model) {
                     model.dispatchEvent('beep');
                 });
                 expect(counter).toEqual(8);
-                box.children.duff(function (model) {
+                box.directive('children').duff(function (model) {
                     model.dispatchEvent('boop');
                 });
                 expect(counter).toEqual(4);
@@ -353,8 +353,8 @@ application.scope().run(function (app, _, factories, $) {
                 delete Box.constructor.prototype.parentEvents;
             });
         });
-        describe('boxes can remove themselves', function () {
-            it('if they are alone, only their events will be removed', function () {
+        describe('boxes can "destroy" themselves', function () {
+            it('their events will persist until they decide to reset their own events', function () {
                 box.on({
                     event1: counter,
                     event2: counter
@@ -367,41 +367,11 @@ application.scope().run(function (app, _, factories, $) {
                 box.destroy();
                 expect(count).toEqual(2);
                 box.dispatchEvent('event1');
-                expect(count).toEqual(2);
+                expect(count).toEqual(3);
+                box.resetEvents();
+                expect(count).toEqual(3);
                 box.dispatchEvent('event2');
-                expect(count).toEqual(2);
-            });
-            it('if they are listening to something then those listeners will also be removed', function () {
-                var box2 = factories.Box();
-                box.listenTo(box2, {
-                    event1: counter,
-                    event2: counter
-                });
-                expect(count).toEqual(0);
-                box2.dispatchEvent('event1');
-                expect(count).toEqual(1);
-                box2.dispatchEvent('event2');
-                expect(count).toEqual(2);
-                box2.destroy();
-                expect(count).toEqual(2);
-                box2.dispatchEvent('event1');
-                expect(count).toEqual(2);
-                box2.dispatchEvent('event2');
-                expect(count).toEqual(2);
-                // box.listenTo(box2, {
-                //     event1: function () {},
-                //     event2: function () {}
-                // });
-                // expect(box2._events.event1.length).toEqual(1);
-                // expect(_.keys(box._listeningTo).length).toEqual(1);
-                // box2.destroy();
-                // expect(box2._events.event1.length).toEqual(0);
-                // _.each(box._listeningTo, function (val, key) {
-                //     if (!_.isBlank(val)) {
-                //         events[key] = val;
-                //     }
-                // });
-                // expect(_.keys(events).length).toEqual(0);
+                expect(count).toEqual(3);
             });
             it('conversely, if the box has listening objects, it will remove it\'s handlers from other objects', function () {
                 var box2 = factories.Box();

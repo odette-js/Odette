@@ -14,13 +14,14 @@ application.scope(function (app) {
         SUCCESS = 'success',
         FAILURES = 'failures',
         EVERY = 'every',
+        BEFORE_DESTROY = BEFORE_COLON + DESTROY,
         INTERNAL_EVENTS = '_events',
         STOP_LISTENING = 'stopListening',
         EVENT_REMOVE = '_removeEventList',
         _DELEGATED_CHILD_EVENTS = '_delegatedParentEvents',
         _PARENT_DELEGATED_CHILD_EVENTS = '_parentDelgatedChildEvents',
         CHANGE_COUNTER = '_changeCounter',
-        PREVIOUS_ATTRIBUTES = '_previousAttributes',
+        PREVIOUS_DATA = 'previous',
         /**
          * @class Box
          * @description event and attribute extensor object that creates the Box Constructor and convenience method at _.Box
@@ -39,30 +40,28 @@ application.scope(function (app) {
                 Events[CONSTRUCTOR].call(this, secondary);
                 return model;
             },
-            _reset: function (attributes_) {
+            _reset: function (data_) {
                 var childModel, children, model = this,
-                    // automatically checks to see if the attributes are a string
-                    attributes = parse(attributes_) || {},
-                    // default attributes
-                    attrs = result(model, 'defaults', attributes),
-                    // build new attributes
-                    newAttributes = extend(attrs, attributes),
-                    // get the id
-                    idAttr = result(model, 'idAttribute', newAttributes),
-                    // stale attributes
-                    ret = model[ATTRIBUTES] || {};
+                    dataDirective = model.directive(DATA),
+                    current = dataDirective[CURRENT],
+                    // automatically checks to see if the data is a string
+                    passed = parse(data_) || {},
+                    // default data
+                    defaultsResult = result(model, 'defaults', passed),
+                    // build new data
+                    newAttributes = extend(current || {}, defaultsResult, passed),
+                    // try to get the id from the attributes
+                    idAttributeResult = result(model, 'idAttribute', newAttributes),
+                    discoveredId = model.id || newAttributes[idAttributeResult] || uniqueId(BOOLEAN_FALSE, BOOLEAN_TRUE);
+                // set the id of the object
+                model._setId(discoveredId);
                 // set id and let parent know what your new id is
                 model[DISPATCH_EVENT](BEFORE_COLON + RESET);
-                // set the id of the object
-                model._setId(model.id || newAttributes[idAttr] || uniqueId(BOOLEAN_FALSE, BOOLEAN_TRUE));
-                // setup previous attributes
-                model[PREVIOUS_ATTRIBUTES] = {};
-                // swaps attributes hash
-                model[ATTRIBUTES] = newAttributes;
+                // setup previous data
+                dataDirective[CURRENT] = newAttributes;
+                dataDirective[PREVIOUS_DATA] = {};
                 // let everything know that it is changing
                 model[DISPATCH_EVENT](RESET);
-                // return the attributes
-                return ret;
             },
             /**
              * @description remove attributes from the Box object. Does not completely remove from object with delete, but instead simply sets it to UNDEFINED / undefined
@@ -72,11 +71,9 @@ application.scope(function (app) {
              * @name Box#unset
              */
             unset: function (attrs) {
-                var attrObj = this[ATTRIBUTES];
+                var attrObj = this.directive(DATA)[CURRENT];
                 // blindly wipe the attributes
-                duff(gapSplit(attrs), function (attr) {
-                    attrObj[attr] = UNDEFINED;
-                });
+                var ret = !!attrObj && duff(gapSplit(attrs), wipeKey, attrObj);
                 return this;
             },
             /**
@@ -87,7 +84,7 @@ application.scope(function (app) {
              * @name Box#get
              */
             get: function (attr) {
-                return this[ATTRIBUTES][attr];
+                return this.directive(DATA)[CURRENT][attr];
             },
             /**
              * @func
@@ -98,20 +95,21 @@ application.scope(function (app) {
              */
             has: function (attrs) {
                 var box = this,
-                    attributes = box[ATTRIBUTES];
-                return find(gapSplit(attrs), function (attr) {
+                    attributes = box.directive(DATA)[CURRENT];
+                return !!attributes && find(gapSplit(attrs), function (attr) {
                     return attributes[attr] === UNDEFINED;
                 }) === UNDEFINED;
             },
             exists: function (key) {
-                return this[ATTRIBUTES][KEY] != NULL;
+                var current = this.directive(DATA)[CURRENT];
+                return !!current && current[KEY] != NULL;
             },
             insert: function (key, handler) {
                 var container = this,
                     newCount = 0,
                     attrs = {};
                 intendedObject(key, handler, function (key, handler) {
-                    if (container[ATTRIBUTES][key] == NULL) {
+                    if (container.directive(DATA)[key] == NULL) {
                         ++newCount;
                         attrs[key] = handler();
                     }
@@ -131,9 +129,10 @@ application.scope(function (app) {
             _set: function (key, newValue) {
                 var model = this,
                     didChange = BOOLEAN_FALSE,
-                    attrs = model[ATTRIBUTES],
+                    dataDirective = model.directive(DATA),
+                    attrs = dataDirective[CURRENT],
                     oldValue = attrs[key],
-                    previousAttrsObject = model[PREVIOUS_ATTRIBUTES] = model[PREVIOUS_ATTRIBUTES] || {};
+                    previousAttrsObject = dataDirective[PREVIOUS_DATA];
                 if (!isEqual(oldValue, newValue)) {
                     previousAttrsObject[key] = oldValue;
                     attrs[key] = newValue;
@@ -149,7 +148,7 @@ application.scope(function (app) {
             destroy: function () {
                 var removeRet, box = this;
                 // notify things like parent that it's about to destroy itself
-                box[DISPATCH_EVENT](BEFORE_COLON + 'destroy');
+                box[DISPATCH_EVENT](BEFORE_DESTROY);
                 // actually detach
                 box._destroy();
                 // stop listening to other views
@@ -157,7 +156,7 @@ application.scope(function (app) {
                 // stops listening to everything
                 box[STOP_LISTENING]();
                 // takes off all other event handlers
-                box.resetEvents();
+                // box.resetEvents();
                 return box;
             },
             digester: function (fn) {
@@ -168,14 +167,17 @@ application.scope(function (app) {
                 --model[CHANGE_COUNTER];
                 // this event should only ever exist here
                 if (!model[CHANGE_COUNTER]) {
-                    model[DISPATCH_EVENT](CHANGE, model[PREVIOUS_ATTRIBUTES]);
-                    model[PREVIOUS_ATTRIBUTES] = {};
+                    model[DISPATCH_EVENT](CHANGE, model[PREVIOUS_DATA]);
+                    model[PREVIOUS_DATA] = {};
                 }
                 return ret;
             },
             set: function (key, value) {
                 var changedList = [],
                     model = this,
+                    dataDirective = model.directive(DATA),
+                    current = dataDirective[CURRENT] = dataDirective[CURRENT] || {},
+                    previous = dataDirective[PREVIOUS_DATA] = dataDirective[PREVIOUS_DATA] || {},
                     compiled = {};
                 intendedObject(key, value, function (key, value) {
                     if (model._set(key, value)) {
@@ -183,10 +185,10 @@ application.scope(function (app) {
                         compiled[key] = value;
                     }
                 });
+                // do not digest... this time
                 if (!changedList[LENGTH]) {
                     return model;
                 }
-                // do not digest... this time
                 model.digester(function () {
                     duff(changedList, function (name) {
                         model[DISPATCH_EVENT](CHANGE_COLON + name);
@@ -205,10 +207,10 @@ application.scope(function (app) {
                 // does not prevent circular dependencies.
                 // swap this out for something else if you want
                 // to prevent circular dependencies
-                return clone(this[ATTRIBUTES]);
+                return clone(this.directive(DATA)[CURRENT]);
             },
-            clone: function () {
-                return clone(this[ATTRIBUTES]);
+            current: function () {
+                return clone(this.directive(DATA)[CURRENT]);
             },
             valueOf: function () {
                 return this.id;
@@ -348,7 +350,7 @@ application.scope(function (app) {
                     registered = sequencer.get(REGISTERED);
                 if (registered[target]) {
                     registered[target] = BOOLEAN_FALSE;
-                    this.stopListening(this.grandParent(), CHANGE_COLON + target, handler);
+                    this[STOP_LISTENING](this.grandParent(), CHANGE_COLON + target, handler);
                 }
             },
             is: addValue(),
@@ -428,15 +430,15 @@ application.scope(function (app) {
              * @name Box#constructor
              * @func
              */
-            constructor: function (attributes, secondary) {
-                var model = this;
-                model._ensureChildren();
-                Container.constructor.apply(model, arguments);
-                return model;
-            },
-            _ensureChildren: function () {
-                this[CHILDREN] = Collection();
-            },
+            // constructor: function (attributes, secondary) {
+            //     var model = this;
+            //     model._ensureChildren();
+            //     Container.constructor.apply(model, arguments);
+            //     return model;
+            // },
+            // _ensureChildren: function () {
+            //     this.directive(CHILDREN) = Collection();
+            // },
             /**
              * @description resets the box's attributes to the object that is passed in
              * @name Box#reset
@@ -446,7 +448,7 @@ application.scope(function (app) {
              */
             resetChildren: function (newChildren) {
                 var length, child, box = this,
-                    children = box[CHILDREN],
+                    children = box.directive(CHILDREN),
                     arr = children[UNWRAP]();
                 // this can be made far more efficient
                 while (arr[LENGTH]) {
@@ -468,7 +470,7 @@ application.scope(function (app) {
             // registers and actually adds child to hash
             _addToHash: function (newModel, where) {
                 var parent = this,
-                    children = this[where || CHILDREN];
+                    children = this.directive(CHILDREN);
                 // add to collection
                 children.add(newModel);
                 // register with parent
@@ -511,7 +513,7 @@ application.scope(function (app) {
             // this one forcefully adds
             _add: function (model) {
                 var parent = this,
-                    children = parent[CHILDREN],
+                    children = parent.directive(CHILDREN),
                     evt = model[DISPATCH_EVENT] && model[DISPATCH_EVENT](BEFORE_COLON + ADDED);
                 // let the child know it's about to be added
                 // (tied to it's parent via events)
@@ -531,7 +533,7 @@ application.scope(function (app) {
             // public facing version filters
             add: function (objs_, secondary_) {
                 var childAdded, parent = this,
-                    children = parent[CHILDREN],
+                    children = parent.directive(CHILDREN),
                     secondary = extend(result(parent, CHILD + 'Options'), secondary_ || {}),
                     list = Collection(objs_);
                 // unwrap it if you were passed a collection
@@ -564,15 +566,15 @@ application.scope(function (app) {
             },
             _removeFromHash: function (child) {
                 var parent = this,
-                    children = parent[CHILDREN];
+                    children = parent.directive(CHILDREN);
                 if (!children || !child) {
                     return;
                 }
                 // remove the child from the children hash
                 children.remove(child);
-                parent[CHILDREN].unRegister(ID, child.id);
+                parent.directive(CHILDREN).unRegister(ID, child.id);
                 // unregister from the child hash keys
-                parent[CHILDREN].unRegister(child.uniqueKey + ID, child[child.uniqueKey + ID]);
+                parent.directive(CHILDREN).unRegister(child.uniqueKey + ID, child[child.uniqueKey + ID]);
             },
             // only place that we mention parents
             _collectParents: function () {
@@ -626,13 +628,13 @@ application.scope(function (app) {
             },
             remove: function (idModel_) {
                 var parent = this,
-                    children = parent[CHILDREN],
+                    children = parent.directive(CHILDREN),
                     retList = Collection(),
                     args = toArray(arguments).splice(1),
                     idModel = idModel_;
                 if (!isObject(idModel)) {
                     // it's a string
-                    idModel = parent[CHILDREN].get(ID, idModel + EMPTY_STRING);
+                    idModel = parent.directive(CHILDREN).get(ID, idModel + EMPTY_STRING);
                 }
                 if (!idModel || !isObject(idModel)) {
                     return retList;
@@ -669,7 +671,7 @@ application.scope(function (app) {
              */
             sort: function (comparator_) {
                 var compString, isReversed, model = this,
-                    children = model[CHILDREN],
+                    children = model.directive(CHILDREN),
                     comparator = comparator_ || result(model, 'comparator');
                 if (isString(comparator)) {
                     isReversed = comparator[0] === '!';
@@ -694,5 +696,13 @@ application.scope(function (app) {
                 return model;
             }
         }, BOOLEAN_TRUE);
+    app.registerDirective('data', function () {
+        return {
+            current: {},
+            previous: {},
+            counter: 0
+        };
+    });
+    app.registerDirective('children', Collection);
     modelMaker[CONSTRUCTOR] = Box[CONSTRUCTOR];
 });

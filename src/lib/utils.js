@@ -1054,6 +1054,12 @@ var factories = {},
             return fn.call(this, _fn);
         };
     },
+    matchesOneToOne = function (key, value) {
+        this[key] = value;
+    },
+    wipeKey = function (key) {
+        this[key] = UNDEFINED;
+    },
     /**
      * @func
      */
@@ -1103,6 +1109,11 @@ var factories = {},
     }),
     exception = console.exception = function (options) {
         throw new Error(options);
+    },
+    validate = console.validate = function (boolean_, options) {
+        if (boolean_) {
+            exception(options);
+        }
     },
     wraptry = function (trythis, errthat, finalfunction) {
         try {

@@ -140,9 +140,10 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 model._establishRegions();
                 return model;
             },
-            _ensureChildren: function () {
-                this[CHILDREN] = RegionManager();
-                this[CHILDREN][PARENT] = this;
+            'directive:children': function () {
+                var children = RegionManager();
+                children[PARENT] = this;
+                return children;
             },
             $: function (selector) {
                 return this.el.find(selector);
@@ -157,7 +158,7 @@ application.scope().module('View', function (module, app, _, factories, $) {
             },
             _appendChildElements: function () {
                 var view = this;
-                view[CHILDREN].eachCall(APPEND_CHILD_ELEMENTS);
+                view.directive(CHILDREN).eachCall(APPEND_CHILD_ELEMENTS);
                 return view;
             },
             _establishRegions: function () {
@@ -167,7 +168,7 @@ application.scope().module('View', function (module, app, _, factories, $) {
                     return;
                 }
                 // add regions to the region manager
-                view[CHILDREN][ESTABLISH_REGIONS](regions);
+                view.directive(CHILDREN)[ESTABLISH_REGIONS](regions);
             },
             render: function () {
                 var view = this;
@@ -189,7 +190,7 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 view._establishRegions();
                 // console.log(view.parent.parent);
                 // tie the children of the region the the region's el
-                view[CHILDREN].eachCall(RENDER);
+                view.directive(CHILDREN).eachCall(RENDER);
                 // mark the view as rendered
                 view[IS_RENDERED] = BOOLEAN_TRUE;
                 // dispatch the render event
@@ -385,6 +386,7 @@ application.scope().module('View', function (module, app, _, factories, $) {
         _View = factories.View,
         Region = View.extend('Region', {
             Child: _View,
+            'directive:children': Collection,
             _ensureElement: function () {
                 this._setElement();
             },
@@ -408,9 +410,9 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 view._setElement(view.el);
                 parent._addBufferedView(view);
             },
-            _ensureChildren: function () {
-                this[CHILDREN] = this[CHILDREN] || Collection();
-            },
+            // _ensureChildren: function () {
+            //     this.directive(CHILDREN) = this.directive(CHILDREN) || Collection();
+            // },
             _ensureBufferedViews: function () {
                 var view = this,
                     bufferedViews = isArray(view._bufferedViews) ? 1 : view._resetBufferedViews(),
@@ -489,7 +491,7 @@ application.scope().module('View', function (module, app, _, factories, $) {
             _attachBufferedViews: function () {
                 var region = this,
                     parentView = region.parentView();
-                region[CHILDREN].duff(function (child) {
+                region.directive(CHILDREN).duff(function (child) {
                     if (result(child, 'filter')) {
                         child[RENDER]();
                         region._addBufferedView(child);

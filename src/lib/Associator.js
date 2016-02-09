@@ -14,7 +14,7 @@ application.scope().module('Associator', function (module, app, _, factories) {
         extend = _.extend,
         isObject = _.isObject,
         removeAt = _.removeAt,
-        Associator = factories.Model.extend('Associator', {
+        Associator = factories.Directive.extend('Associator', {
             /**
              * @func
              * @name Associator#get

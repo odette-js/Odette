@@ -967,7 +967,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                             idx = (indexOf(parent.children, el) + idxChange),
                             item = parent.children[idx];
                         if (item && !posit(list, item)) {
-                            add(collected, item)
+                            add(collected, item);
                         }
                     });
                 } else {
@@ -1153,27 +1153,32 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             }
             return found;
         },
-        dispatchEvent = function (el, evnt_, capturing_, data_, args, selector) {
-            var e = {},
-                data, gah, addQueue, list, capturingStack, events, stack, currentEventStack, selectorIsString, mainHandler, eventType, removeStack, $el, matches = 1,
-                evnt = validateEvent(evnt_, el),
-                capturing = !!capturing_;
-            if (!evnt || !evnt.type) {
-                return;
-            }
-            data = data_ || elementData.ensure(el, DOMM_STRING, DomManager);
-            events = data._getEvents();
-            capturingStack = events._captureHash[capturing];
-            if (!capturingStack) {
-                return;
-            }
-            eventType = evnt.type;
-            wraptry(function () {
-                data.dispatchEvent(evnt, NULL, capturing);
-            }, console.error);
-            events._removeEvents.duffRight(data._removeEvent, data);
-            return e.returnValue;
-        },
+        // dispatchEvent = function (el, evnt_, capturing_, data_, args, selector) {
+        //     // var e = {},
+        //     //     data, gah, addQueue, list, capturingStack, events, stack,
+        //     //     // currentEventStack,
+        //     //     // selectorIsString,
+        //     //     // mainHandler,
+        //     //     // eventType,
+        //     //     removeStack, $el, matches = 1,
+        //     //     evnt = validateEvent(evnt_, el),
+        //     //     capturing = !!capturing_;
+        //     // if (!evnt || !evnt.type) {
+        //     //     return;
+        //     // }
+        //     // data = data_ || elementData.ensure(el, DOMM_STRING, DomManager);
+        //     // events = data.directive(EVENTS);
+        //     // // capturingStack = events[HANDLERS][capturing];
+        //     // // if (!capturingStack) {
+        //     // //     return;
+        //     // // }
+        //     // // eventType = evnt.type;
+        //     // wraptry(function () {
+        //     //     data.dispatchEvent(evnt, NULL, capturing);
+        //     // }, console.error);
+        //     // events.removeQueue.duffRight(data._removeEvent, data);
+        //     // return e.returnValue;
+        // },
         _eventExpander = wrap({
             ready: 'DOMContentLoaded',
             deviceorientation: 'deviceorientation mozOrientation',
@@ -1228,30 +1233,11 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             unwrap: function () {
                 return this[TARGET];
             },
-            getEventList: function (evnt, _events) {
-                var captureHash = _events._captureHash[evnt.capturing];
-                return captureHash && captureHash[evnt.originalType];
-            },
-            constructor: function () {
-                factories.Events[CONSTRUCTOR].apply(this, arguments);
-                this[ATTRIBUTES] = {};
-                return this;
-            },
             get: function (where, defaults) {
                 var events = this,
-                    attrs = events[ATTRIBUTES],
+                    attrs = events.directive(ATTRIBUTES),
                     found = attrs[where] = attrs[where] || defaults();
                 return found;
-            },
-            _makeEvents: function () {
-                var list = this[_EVENTS] = this[_EVENTS] = {
-                    _byName: {},
-                    _elementHandlers: {},
-                    _captureHash: {},
-                    _currentEvents: SortedCollection(),
-                    _removeEvents: SortedCollection()
-                };
-                return list;
             },
             queueHandler: function (evnt, handler, list) {
                 var selectorsMatch, ctx, domManager = this,
@@ -1300,7 +1286,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 if (node.innerText) {
                     obj.innerText = node.innerText;
                 }
-                duff(node[ATTRIBUTES], function (attr) {
+                duff(node.directive(DATA), function (attr) {
                     obj[camelCase(attr[LOCAL_NAME])] = attr.nodeValue;
                 });
                 return obj;
@@ -1308,17 +1294,16 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         }, BOOLEAN_TRUE),
         _addEventListener = function (manager, types, namespace, selector, fn_, capture) {
             var handleObj, eventHandler, el = manager.unwrap(),
-                events = manager._getEvents(),
-                captureHash = events._captureHash[capture] = events._captureHash[capture] || {},
+                events = manager.directive(EVENTS),
+                elementHandlers = events.elementHandlers = events.elementHandlers || {},
                 fn = bind(fn_, el);
             duff(gapSplit(types), eventExpander(function (name, passedName) {
                 var foundDuplicate, handlerKey = capture + COLON + name,
-                    elementHandlers = events._elementHandlers,
-                    mainHandler = elementHandlers[handlerKey],
-                    namespaceCache = captureHash[name] = captureHash[name] || SortedCollection();
+                    handlers = events[HANDLERS][handlerKey] = events[HANDLERS][handlerKey] || SortedCollection(),
+                    mainHandler = elementHandlers[handlerKey];
                 if (!mainHandler) {
                     eventHandler = function (e) {
-                        return dispatchEvent(this, e, capture, manager);
+                        return manager.dispatchEvent(e, EMPTY_STRING, capture);
                     };
                     mainHandler = elementHandlers[handlerKey] = {
                         fn: eventHandler,
@@ -1329,7 +1314,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                     };
                     el.addEventListener(name, eventHandler, capture);
                 }
-                foundDuplicate = namespaceCache.find(function (obj) {
+                foundDuplicate = handlers.find(function (obj) {
                     // remove any duplicates
                     if (fn_ === obj.handler && obj.namespace === namespace && selector === obj.selector) {
                         return BOOLEAN_TRUE;
@@ -1345,7 +1330,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                     handler: fn_,
                     persist: BOOLEAN_TRUE,
                     disabled: BOOLEAN_FALSE,
-                    list: namespaceCache,
+                    list: handlers,
                     namespace: namespace,
                     mainHandler: mainHandler,
                     selector: selector,
@@ -1404,6 +1389,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         },
         _removeEventListener = function (el, name, namespace, selector, handler, capture_) {
             var data = elementData.ensure(el, DOMM_STRING, DomManager),
+                directive = data.directive(EVENTS),
                 removeFromList = function (list, name) {
                     return list && list.duffRight(function (obj) {
                         if ((!name || name === obj[NAME]) && (!handler || obj.handler === handler) && (!namespace || obj.namespace === namespace) && (!selector || obj.selector === selector)) {
@@ -1411,7 +1397,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                         }
                     });
                 };
-            return name ? removeFromList(data._getEvents(name), name) : each(data._getEvents()._captureHash[!!capture_], removeFromList);
+            return name ? removeFromList(directive[HANDLERS][name], name) : each(directive[HANDLERS][!!capture_], removeFromList);
         },
         /**
          * @class DOMM
@@ -1563,34 +1549,13 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         eq = _.eq,
         objectMatches = _.matches,
         createDomFilter = function (filtr) {
-            var filter;
-            if (isFunction(filtr)) {
-                filter = filtr;
-            } else {
-                if (isObject(filtr)) {
-                    filter = objectMatches(filtr);
-                } else {
-                    if (isString(filtr)) {
-                        filter = filterExpressions[filtr];
-                        if (!filter) {
-                            filter = function (item) {
-                                return matches(item, filtr);
-                            };
-                        }
-                    } else {
-                        if (isNumber(filtr)) {
-                            filter = function (el, idx) {
-                                return idx === filtr;
-                            };
-                        } else {
-                            filter = function () {
-                                return BOOLEAN_TRUE;
-                            };
-                        }
-                    }
-                }
-            }
-            return filter;
+            return isFunction(filtr) ? filtr : (isString(filtr) ? (filterExpressions[filtr] || function (item) {
+                return matches(item, filtr);
+            }) : (isNumber(filtr) ? function (el, idx) {
+                return idx === filtr;
+            } : (isObject(filtr) ? objectMatches(filtr) : function () {
+                return BOOLEAN_TRUE;
+            })));
         },
         unwrapsOnLoop = function (fn) {
             return function (manager, idx, list) {

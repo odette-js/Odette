@@ -74,7 +74,7 @@ application.scope().module('Looper', function (module, app, _, factories) {
                 };
             }
         }()),
-        Looper = factories.Model.extend('Looper', {
+        Looper = factories.Directive.extend('Looper', {
             constructor: function (_runner) {
                 var fns, stopped = BOOLEAN_FALSE,
                     halted = BOOLEAN_FALSE,

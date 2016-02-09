@@ -1,18 +1,18 @@
 var DISPATCH_EVENT = 'dispatchEvent';
 var _EVENTS = '_events';
+var EVENTS = 'events';
+var HANDLERS = 'handlers';
 application.scope(function (app) {
     var remove = _.remove,
         Collection = factories.Collection,
         SortedCollection = factories.SortedCollection,
-        REMOVE_EVENTS = '_removeEvents',
-        CURRENT_EVENTS = '_currentEvents',
+        REMOVE_QUEUE = 'removeQueue',
         _LISTENING_TO = '_listeningTo',
-        _BY_NAME = '_byName',
-        LISTEN_ID = '_listenId',
+        LISTEN_ID = 'listenId',
         LISTENING_PREFIX = 'l',
         IS_STOPPED = 'isStopped',
+        STOP_LISTENING = 'stopListening',
         IMMEDIATE_PROP_IS_STOPPED = 'immediatePropagationIsStopped',
-        SERIALIZED_DATA = 'serializedData',
         iterateOverObject = function (box, ctx, evnts, funs_, iterator, firstarg) {
             // intendedObject(key, value, function (evnts, funs_) {
             // only accepts a string or a function
@@ -37,6 +37,7 @@ application.scope(function (app) {
         flattenMatrix = function (iterator, nameOrObjectIndex) {
             return function () {
                 var args, handlersIndex, firstArg, list, nameOrObject, names, box = this;
+                var eventsDirective = box.directive(EVENTS);
                 if (!arguments[0]) {
                     return box;
                 }
@@ -97,11 +98,7 @@ application.scope(function (app) {
                 return ret;
             };
         },
-        removeEventObject = function (box, list, handler, ctx) {
-            var obj, events = box._getEvents(),
-                current = events[CURRENT_EVENTS],
-                removeList = events[REMOVE_EVENTS],
-                currentLength = current[LENGTH]();
+        seekAndDestroy = function (box, list, handler, ctx) {
             list.duffRight(function (obj) {
                 if ((handler && obj.handler !== handler) || (ctx && obj.ctx !== ctx)) {
                     return;
@@ -138,7 +135,7 @@ application.scope(function (app) {
             return listening;
         },
         DEFAULT_PREVENTED = 'defaultPrevented',
-        ObjectEvent = factories.Model.extend('ObjectEvent', {
+        ObjectEvent = factories.Directive.extend('ObjectEvent', {
             constructor: function (name, target, data) {
                 var evnt = this;
                 evnt.bubbles = BOOLEAN_FALSE;
@@ -151,10 +148,8 @@ application.scope(function (app) {
                 evnt[TYPE] = name.split(COLON)[0];
                 evnt.timeStamp = now();
                 evnt.data(data);
-                evnt.originalStack = BOOLEAN_TRUE;
                 evnt.isTrusted = BOOLEAN_TRUE;
                 evnt.returnValue = NULL;
-                evnt._actions = Collection();
                 evnt.namespace = evnt.getNamespace();
                 return evnt;
             },
@@ -165,16 +160,13 @@ application.scope(function (app) {
                 return this.propagationIsStopped || this.immediatePropagationIsStopped;
             },
             data: function () {
-                return this[ATTRIBUTES];
+                return this[DATA];
             },
             get: function (key) {
-                return this[ATTRIBUTES][key];
+                return this[DATA][key];
             },
             set: function (key, value) {
-                var evnt = this;
-                intendedObject(key, value, function (key, value) {
-                    evnt[ATTRIBUTES][key] = value;
-                });
+                intendedObject(key, value, matchesOneToOne, this[DATA]);
                 return this;
             },
             stopImmediatePropagation: function () {
@@ -192,18 +184,17 @@ application.scope(function (app) {
             },
             action: function (fn) {
                 var evnt = this;
-                evnt._actions.push(fn);
+                evnt.directive('actions').push(fn);
                 return evnt;
             },
             finished: function () {
                 var evnt = this;
                 evnt.isTrusted = BOOLEAN_FALSE;
-                evnt.originalStack = BOOLEAN_FALSE;
                 if (evnt.defaultIsPrevented()) {
                     return;
                 }
-                if (evnt._actions) {
-                    evnt._actions.call(evnt);
+                if (evnt.directiveCheck('actions')) {
+                    evnt.directive('actions').call(evnt);
                 }
             }
         }, BOOLEAN_TRUE),
@@ -219,7 +210,9 @@ application.scope(function (app) {
             });
         },
         listenToHandler = function (box, name, obj, target) {
-            var listeningObject = retreiveListeningObject(box, target);
+            var listeningObject = retreiveListeningObject(box, target),
+                eventsDirective = target.directive(EVENTS),
+                handlers = eventsDirective[HANDLERS] = eventsDirective[HANDLERS] || {};
             preBindListeners(obj, listeningObject);
             target._attachEvent(name, obj);
         },
@@ -235,9 +228,9 @@ application.scope(function (app) {
             return obj && (obj.bubbles || obj.dispatchChildren || opts.dispatchTree);
         },
         secretOffIterator = function (box, name, obj) {
-            removeEventObject(box, !name || box._getEvents(name), obj.handler, obj.ctx);
+            seekAndDestroy(box, !name || box.directive(EVENTS)[HANDLERS][name], obj.handler, obj.ctx);
         },
-        Events = factories.Model.extend('Events', {
+        Events = factories.Directive.extend('Events', {
             /**
              * @description attach event handlers to the Box event loop
              * @func
@@ -251,7 +244,7 @@ application.scope(function (app) {
             constructor: function (opts) {
                 var model = this;
                 extend(model, opts);
-                model._getEvents();
+                model.directive(EVENTS);
                 model.on(model.events);
                 model.initialize(opts);
                 return model;
@@ -264,24 +257,24 @@ application.scope(function (app) {
             watchOnce: setupWatcher(attachEventObject, 0, 1),
             watchOther: setupWatcher(listenToHandler, 1),
             watchOtherOnce: setupWatcher(listenToHandler, 1, 1),
-            _makeEvents: function () {
-                var list = this[_EVENTS] = this[_EVENTS] = {
-                    _byName: {},
-                    _currentEvents: SortedCollection(),
-                    _removeEvents: SortedCollection()
-                };
-                return list;
-            },
-            _getEvents: function (key) {
-                var list = this[_EVENTS];
-                if (!list) {
-                    list = this._makeEvents();
-                }
-                if (key) {
-                    list = list[_BY_NAME][key] = list[_BY_NAME][key] || SortedCollection(BOOLEAN_TRUE, BOOLEAN_TRUE);
-                }
-                return list;
-            },
+            // _makeEvents: function () {
+            //     var list = this[_EVENTS] = this[_EVENTS] = {
+            //         _byName: {},
+            //         current: SortedCollection(),
+            //         _removeEvents: SortedCollection()
+            //     };
+            //     return list;
+            // },
+            // _getEvents: function (key) {
+            //     var list = this[_EVENTS];
+            //     if (!list) {
+            //         list = this._makeEvents();
+            //     }
+            //     if (key) {
+            //         list = list[HANDLERS][key] = list[HANDLERS][key] || SortedCollection(BOOLEAN_TRUE, BOOLEAN_TRUE);
+            //     }
+            //     return list;
+            // },
             /**
              * @description attaches an event handler to the events object, and takes it off as soon as it runs once
              * @func
@@ -300,13 +293,14 @@ application.scope(function (app) {
              * @returns {Box} instance
              */
             swapEvents: function (validEventHash) {
-                var old = box._getEvents(),
+                var eventDirective = box.directive(EVENTS),
+                    // old =
                     valid = box[_EVENTS] = validEventHash;
                 return old;
             },
             _resetEvents: function (newHash) {
                 var box = this,
-                    oldHash = (newHash ? box.swapEvents(newHash) : box._getEvents())[_BY_NAME];
+                    oldHash = (newHash ? box.swapEvents(newHash) : box.directive(EVENTS))[HANDLERS];
                 each(oldHash, box.emptyList, box);
                 return box;
             },
@@ -322,11 +316,11 @@ application.scope(function (app) {
                 var fn_id, currentEventList, currentObj, box = this,
                     name = name_,
                     ctx = isObject(name) ? fn_ : ctx_,
-                    events = box._getEvents();
+                    events = box.directive(EVENTS);
                 if (arguments[LENGTH]) {
                     if (!name) {
-                        each(events[_BY_NAME], function (list, name) {
-                            removeEventObject(box, list, fn_, ctx_);
+                        each(events[HANDLERS], function (list, name) {
+                            seekAndDestroy(box, list, fn_, ctx_);
                         });
                     } else {
                         intendedObject(name, fn_, function (name, fn_) {
@@ -334,20 +328,22 @@ application.scope(function (app) {
                         });
                     }
                 } else {
-                    currentEventList = events[CURRENT_EVENTS];
+                    currentEventList = events[STACK];
                     currentObj = currentEventList.last();
                     if (currentObj) {
-                        box._removeEvent(box._getEvents(currentObj[NAME]).get(currentObj.id));
+                        box._removeEvent(currentObj);
                     }
                 }
                 return box;
             },
+            // hash this out later
+            stopTalking: function () {},
             stopListening: function (obj, name, callback) {
                 var ids, listening, stillListening = 0,
                     origin = this,
                     listeningTo = origin[_LISTENING_TO];
                 if (listeningTo && (!obj || obj[LISTEN_ID])) {
-                    duff(obj ? [obj[LISTEN_ID]] : _.keys(listeningTo), function (id) {
+                    duff(obj ? [obj[LISTEN_ID]] : keys(listeningTo), function (id) {
                         var listening = listeningTo[id];
                         if (listening) {
                             listening.obj.off(name, callback);
@@ -372,49 +368,52 @@ application.scope(function (app) {
             dispatchEvents: function (names, data, eventOptions) {
                 var box = this;
                 duff(gapSplit(names), function (str) {
-                    box.dispatchEvent(str, data, eventOptions);
+                    box[DISPATCH_EVENT](str, data, eventOptions);
                 });
                 return box;
             },
             // overwriteable helper functions
-            queueHandler: function (evnt, handler, currentEvents) {
-                (currentEvents || this._getEvents()._currentEvents).push(handler);
+            queueHandler: function (evnt, handler, current) {
+                (current || this.directive(EVENTS)[STACK]).add(handler);
                 return BOOLEAN_TRUE;
             },
-            unQueueHandler: function (evnt, handler, currentEvents_) {
-                var gah = (currentEvents_ || this._getEvents()).pop();
+            unQueueHandler: function (evnt, handler, current_) {
+                var gah = (current_ || this.directive(EVENTS)[STACK]).pop();
             },
-            setEvent: function (evnt) {
-                this._getEvents()[CURRENT] = evnt;
-            },
-            unsetEvent: function () {
-                this._getEvents()[CURRENT] = NULL;
-            },
-            getEventList: function (evnt) {
-                return this._getEvents(evnt.getNamespace());
-            },
+            // setEvent: function (evnt) {
+            //     this.directive(EVENTS)[CURRENT] = evnt;
+            // },
+            // unsetEvent: function () {
+            //     this.directive(EVENTS)[CURRENT] = NULL;
+            // },
+            // getEventList: function (evnt) {
+            //     var eventsDirective = this.directive(EVENTS);
+            //     var handlers = eventsDirective[HANDLERS];
+            //     return handlers && handlers[evnt.getNamespace()];
+            // },
             _eventDispatcher: function (evnt) {
                 var box = this,
-                    events = box._getEvents(),
-                    currentEventArray = events[CURRENT_EVENTS],
-                    list = box.getEventList(evnt, events),
+                    events = box.directive(EVENTS),
+                    eventStack = events[STACK],
+                    handlers = events[HANDLERS],
+                    list = handlers[evnt.getNamespace()],
                     ret = result(box, evnt.onMethodName, evnt),
-                    removeList = events[REMOVE_EVENTS];
+                    removeList = events[REMOVE_QUEUE];
                 if (evnt[IMMEDIATE_PROP_IS_STOPPED] || !list || !result(list, LENGTH)) {
                     return;
                 }
                 list.find(function (handler) {
                     var cached;
-                    box.setEvent(evnt);
-                    if (!handler.disabled && box.queueHandler(evnt, handler, currentEventArray)) {
-                        handler.fn(events[CURRENT]);
+                    // box.setEvent(evnt);
+                    if (!handler.disabled && box.queueHandler(evnt, handler, eventStack)) {
+                        handler.fn(evnt);
                         cached = evnt[IMMEDIATE_PROP_IS_STOPPED];
-                        box.unQueueHandler(evnt, handler, currentEventArray);
+                        box.unQueueHandler(evnt, handler, eventStack);
                         return cached;
                     }
                 });
-                box.unsetEvent(evnt);
-                if (!currentEventArray[LENGTH]() && removeList[LENGTH]()) {
+                // box.unsetEvent(evnt);
+                if (!eventStack[LENGTH]() && removeList[LENGTH]()) {
                     removeList.duffRight(box._removeEvent, box);
                     removeList.empty();
                 }
@@ -430,14 +429,19 @@ application.scope(function (app) {
                 return evnt.returnValue;
             },
             _attachEvent: function (name, eventObject) {
-                var list, box = this;
+                var list, box = this,
+                    eventsDirective = box.directive(EVENTS),
+                    handlers = eventsDirective[HANDLERS],
+                    ret = !handlers && exception({
+                        message: 'events directive needs a handler object'
+                    });
                 eventObject.id = ++event_incrementer;
                 eventObject.valueOf = returnsId;
                 eventObject.ctx = eventObject.ctx || eventObject.origin;
                 eventObject.fn = bind(eventObject.fn || eventObject.handler, eventObject.ctx);
                 // attach the id to the bound function because that instance is private
                 eventObject.fn[__FN_ID__] = eventObject.id;
-                list = box._getEvents(name);
+                list = handlers[name] = handlers[name] || SortedCollection(BOOLEAN_TRUE, BOOLEAN_TRUE);
                 // attaching name so list can remove itself from hash
                 list[NAME] = name;
                 // attached so event can remove itself
@@ -457,7 +461,7 @@ application.scope(function (app) {
                 return BOOLEAN_TRUE;
             },
             resetList: function (list) {
-                this._getEvents()[_BY_NAME][list[NAME]] = NULL;
+                this.directive(EVENTS)[HANDLERS][list[NAME]] = NULL;
             },
             removeEvent: function (list, evnt) {
                 list.remove(evnt);
@@ -466,10 +470,10 @@ application.scope(function (app) {
                 var listeningTo, box = this,
                     listening = evnt.listening,
                     list = evnt.list,
-                    events = box._getEvents();
-                evnt.disabled = BOOLEAN_TRUE;
-                if (events[CURRENT_EVENTS][LENGTH]()) {
-                    events[REMOVE_EVENTS].add(evnt);
+                    events = box.directive(EVENTS),
+                    disabled = evnt.disabled = BOOLEAN_TRUE;
+                if (events[STACK][LENGTH]()) {
+                    events[REMOVE_QUEUE].add(evnt);
                     return BOOLEAN_FALSE;
                 } else {
                     box.removeEvent(list, evnt);
@@ -477,12 +481,12 @@ application.scope(function (app) {
                     evnt.list = UNDEFINED;
                     // check to see if it was a listening type
                     if (!listening) {
-                        return;
+                        return BOOLEAN_TRUE;
                     }
                     // if it was then decrement it
                     listening.count--;
                     if (listening.count) {
-                        return;
+                        return BOOLEAN_TRUE;
                     }
                     listeningTo = listening.listeningTo;
                     listeningTo[listening.obj[LISTEN_ID]] = UNDEFINED;
@@ -490,5 +494,14 @@ application.scope(function (app) {
                     return BOOLEAN_TRUE;
                 }
             }
-        }, BOOLEAN_TRUE);
+        }, BOOLEAN_TRUE),
+        listeningCounter = 0;
+    app.registerDirective(EVENTS, function () {
+        return {
+            listenId: 'l' + (++listeningCounter),
+            handlers: {},
+            stack: SortedCollection(),
+            removeQueue: SortedCollection()
+        };
+    });
 });

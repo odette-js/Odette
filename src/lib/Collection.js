@@ -12,6 +12,12 @@ application.scope(function (app) {
                 result(item, method, arg);
             }, NULL, -1);
         },
+        eachCallWith = function (array, method, args_) {
+            var args = args_ || [];
+            return duff(array, function (item) {
+                item[method].apply(item, args);
+            });
+        },
         /**
          * @func
          */
@@ -341,7 +347,7 @@ application.scope(function (app) {
                 this.unwrap()[name]();
                 return this;
             };
-        })), wrap(gapSplit('count countTo countFrom merge'), function (name) {
+        })), wrap(gapSplit('count countTo countFrom merge eachCallWith'), function (name) {
             return function (one, two, three) {
                 var ctx = this;
                 _[name](ctx.unwrap(), one, ctx, two, three);
@@ -363,6 +369,7 @@ application.scope(function (app) {
         ret = _.exports({
             eachCall: eachCall,
             eachCallRight: eachCallRight,
+            eachCallWith: eachCallWith,
             filter: filter,
             matches: matches,
             add: add,
@@ -403,7 +410,7 @@ application.scope(function (app) {
                 return fun(instance, categoryHash, category, key, thing, passedCategory);
             };
         },
-        Collection = Model.extend('Collection', extend({
+        Collection = factories.Directive.extend('Collection', extend({
             range: recreateSelf(range),
             concat: recreateSelf(function () {
                 // this allows us to mix collections with regular arguments
@@ -584,15 +591,23 @@ application.scope(function (app) {
                     sorted.registerNew(valueOfResult, object);
                 }
             },
+            _remove: function (object, under) {
+                var sorted = this;
+                sorted.removeAt(sorted.indexOf(object));
+                sorted.unRegisterOld(under);
+            },
             remove: function (object) {
                 var where, sorted = this,
-                    valueOfResult = object && object.valueOf(),
-                    retrieved = sorted.get(valueOfResult);
-                if (object != NULL) {
-                    where = sorted.indexOf(retrieved);
-                    sorted.removeAt(where);
-                    sorted.unRegisterOld(valueOfResult);
+                    valueOfResult = object && object.valueOf();
+                if (object != NULL && sorted.get(valueOfResult)) {
+                    sorted._remove(object, valueOfResult);
                 }
+            },
+            pop: function () {
+                return this.remove(this.last());
+            },
+            shift: function () {
+                return this.remove(this.first());
             },
             // encouraged to replace
             registerNew: function (key, object) {
@@ -602,7 +617,7 @@ application.scope(function (app) {
                 this.unRegister(key);
             }
         }, BOOLEAN_TRUE),
-        StringObject = Model.extend('StringObject', {
+        StringObject = factories.Directive.extend('StringObject', {
             constructor: function (value, parent) {
                 var string = this;
                 string.value = value;

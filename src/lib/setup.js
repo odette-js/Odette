@@ -4,5 +4,5 @@ Application(this, 'application', 'dev', function (innerGlobalApp, scopedApp) {
     // global app is the object that will be shared with all other iframes
     var globalApplication = innerGlobalApp.touchTop(global);
     // log it out for you to see
-    console.log(globalApplication);
+    // console.log(globalApplication);
 });
