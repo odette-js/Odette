@@ -18,15 +18,16 @@ application.scope(function (app) {
                 directiveMod('destruction', that, name);
             }) && that;
         },
-        directiveCheck: function (key) {
-            return !!(this[hash] && this[hash][key] != NULL);
+        checkDirective: function (key) {
+            var hashed = this[hash];
+            return (!!hashed && hashed[key] != NULL) && hashed[key];
         }
     }, BOOLEAN_TRUE);
     var directives = {
         creation: {},
         destruction: {}
     };
-    app.registerDirective = function (name, creation, destruction_) {
+    app.defineDirective = function (name, creation, destruction_) {
         var err = !isFunction(creation) && exception({
             message: 'directives must be registered with both create and destroy functions'
         });
@@ -35,6 +36,24 @@ application.scope(function (app) {
         directives.destruction[name] = directives.destruction[name] || destruction;
     };
     var directiveMod = function (key, instance, name) {
-        return (instance['directive:' + key + ':' + name] || directive[key][name] || noop)(instance, name);
+        return (instance['directive:' + key + ':' + name] || directives[key][name] || noop)(instance, name);
     };
+    var parody = function (directive, method) {
+        return function (one, two, three) {
+            return this.directive(directive)[method](one, two, three);
+        };
+    };
+    var iterate = function (directive, method) {
+        return function (list) {
+            var dir = this.directive(directive);
+            duff(list, dir[method], dir);
+            return this;
+        };
+    };
+    _.exports({
+        directives: {
+            parody: parody,
+            iterate: iterate
+        }
+    });
 });

@@ -400,14 +400,14 @@ application.scope(function (app) {
         }),
         interactWithById = function (fun, expecting) {
             return function (one, two, three) {
-                var instance = this,
-                    bycategories = instance.getRegistry(),
+                var directive = this,
+                    bycategories = directive.register,
                     passedCategory = arguments[LENGTH] === expecting,
                     category = passedCategory ? one : ID,
                     categoryHash = bycategories[category] = bycategories[category] || {},
                     key = passedCategory ? two : one,
                     thing = passedCategory ? three : two;
-                return fun(instance, categoryHash, category, key, thing, passedCategory);
+                return fun(directive, categoryHash, category, key, thing, passedCategory);
             };
         },
         Collection = factories.Directive.extend('Collection', extend({
@@ -435,28 +435,26 @@ application.scope(function (app) {
                 return this;
             },
             unwrap: function () {
-                return this[ITEMS];
+                return this.directive('list').items;
             },
-            setupList: function (list) {
-                this[ITEMS] = list || [];
-            },
-            getRegistry: function () {
-                return this[BY_ID];
-            },
-            setupRegistry: function (registry) {
-                this[BY_ID] = registry || {};
-            },
-            empty: function () {
-                var collection = this;
-                collection.setupList();
-                collection.setupRegistry();
-                return collection;
-            },
-            swap: function (arr, hash) {
-                var collection = this;
-                collection.setupList(arr);
-                collection.setupRegistry(hash);
-                return collection;
+            // setupList: function (list) {
+            //     this[ITEMS] = list || [];
+            // },
+            // getRegistry: function () {
+            //     return this[BY_ID];
+            // },
+            // setupRegistry: function (registry) {
+            //     this[BY_ID] = registry || {};
+            // },
+            // empty: function () {
+            //     var collection = this;
+            //     // collection.setupList();
+            //     // collection.setupRegistry();
+            //     return collection;
+            // },
+            empty: _.flow(_.directives.parody('list', 'empty'), _.directives.parody('registry', 'reset')),
+            swap: function (arr) {
+                this.directive('list').items = arr || [];
             },
             length: function () {
                 return this.unwrap()[LENGTH];
@@ -474,6 +472,14 @@ application.scope(function (app) {
                 sort(this.unwrap(), fn_);
                 return this;
             },
+            toString: function () {
+                return stringify(this.unwrap());
+            },
+            toJSON: function () {
+                return map(this.unwrap(), function (item) {
+                    return isObject(item) ? result(item, TO_JSON) : item;
+                });
+            },
             constructor: function (arr) {
                 var collection = this;
                 if (isArrayLike(arr)) {
@@ -488,35 +494,10 @@ application.scope(function (app) {
                 collection.swap(arr);
                 return collection;
             },
-            toString: function () {
-                return stringify(this.unwrap());
-            },
-            toJSON: function () {
-                return map(this.unwrap(), function (item) {
-                    return isObject(item) ? result(item, TO_JSON) : item;
-                });
-            },
-            get: interactWithById(function (instance, categoryHash, category, key) {
-                return categoryHash[key];
-            }, 2),
-            register: interactWithById(function (instance, categoryHash, category, key, newItem) {
-                categoryHash[key] = newItem;
-            }, 3),
-            unRegister: interactWithById(function (instance, categoryHash, category, key) {
-                var registeredItem = categoryHash[key];
-                if (registeredItem !== UNDEFINED) {
-                    categoryHash[key] = UNDEFINED;
-                }
-                return registeredItem;
-            }, 2),
-            swapRegister: interactWithById(function (instance, categoryHash, category, key, newItem) {
-                var registeredItem = categoryHash[key];
-                if (registeredItem !== UNDEFINED) {
-                    categoryHash[key] = UNDEFINED;
-                }
-                categoryHash[key] = newItem;
-                return registeredItem;
-            }, 3),
+            get: _.directives.parody('registry', 'get'),
+            register: _.directives.parody('registry', 'keep'),
+            unRegister: _.directives.parody('registry', 'drop'),
+            swapRegister: _.directives.parody('registry', 'swap')
             /**
              * @description adds models to the children array
              * @param {Object|Object[]} objs - object or array of objects to be passed through the model factory and pushed onto the children array
@@ -525,20 +506,17 @@ application.scope(function (app) {
              * @name Box#add
              * @func
              */
-            mambo: function (fn) {
-                var collection = this;
-                externalMambo(collection.unwrap(), function () {
-                    fn(collection);
-                });
-                return collection;
-            }
         }, wrappedCollectionMethods), BOOLEAN_TRUE),
+        isNullMessage = {
+            message: 'object must not be null or undefined'
+        },
+        validIdMessage = {
+            message: 'objects in sorted collections must have either a number or string for their valueOf result'
+        },
         SortedCollection = Collection.extend('SortedCollection', {
             constructor: function (list_, skip) {
                 var sorted = this;
-                sorted.reversed = BOOLEAN_FALSE;
-                sorted.empty();
-                if (!skip) {
+                if (list_ && !skip) {
                     sorted.load(isArrayLike(list_) ? list_ : [list_]);
                 }
                 return sorted;
@@ -561,21 +539,11 @@ application.scope(function (app) {
             closest: function (value) {
                 return closest(this.unwrap(), value);
             },
-            validateId: function (id) {
+            validIDType: function (id) {
                 return isNumber(id) || isString(id);
             },
-            push: function (object, valueOfResult_) {
-                var sorted = this,
-                    valueOfResult = valueOfResult_ || object && object.valueOf();
-                if (!sorted.validateId(valueOfResult)) {
-                    exception('objects in sorted collections must have either a number or string for their valueOf result');
-                }
-                sorted.addAt(object, sorted.closest(valueOfResult) + 1);
-                return sorted;
-            },
             indexOf: function (object) {
-                var array = this.unwrap();
-                return (array[LENGTH] > 25 ? binaryIndexOf : indexOf)(array, object);
+                return smartIndexOf(this.unwrap(), object);
             },
             load: function (values) {
                 var sm = this;
@@ -583,24 +551,24 @@ application.scope(function (app) {
                 return sm;
             },
             add: function (object) {
-                var sorted = this,
+                var registryDirective, sorted = this,
+                    isNotNull = object == NULL && exception(isNullMessage),
                     valueOfResult = object && object.valueOf(),
-                    retrieved = sorted.get(valueOfResult);
-                if (retrieved == NULL && object != NULL) {
-                    sorted.push(object, valueOfResult);
-                    sorted.registerNew(valueOfResult, object);
+                    retrieved = (registryDirective = sorted.checkDirective('registry')) && sorted.get('id', valueOfResult);
+                if (!retrieved) {
+                    ret = !sorted.validIDType(valueOfResult) && exception(validIdMessage);
+                    sorted.addAt(object, sorted.closest(valueOfResult) + 1);
+                    (registryDirective || sorted.directive('registry')).keep('id', valueOfResult, object);
+                    return BOOLEAN_TRUE;
                 }
-            },
-            _remove: function (object, under) {
-                var sorted = this;
-                sorted.removeAt(sorted.indexOf(object));
-                sorted.unRegisterOld(under);
             },
             remove: function (object) {
                 var where, sorted = this,
+                    isNotNull = object == NULL && exception(isNullMessage),
                     valueOfResult = object && object.valueOf();
-                if (object != NULL && sorted.get(valueOfResult)) {
-                    sorted._remove(object, valueOfResult);
+                if (object != NULL && sorted.get('id', valueOfResult) != NULL) {
+                    sorted.removeAt(sorted.indexOf(object));
+                    sorted.unRegister('id', valueOfResult);
                 }
             },
             pop: function () {
@@ -608,16 +576,9 @@ application.scope(function (app) {
             },
             shift: function () {
                 return this.remove(this.first());
-            },
-            // encouraged to replace
-            registerNew: function (key, object) {
-                this.register(key, object);
-            },
-            unRegisterOld: function (key) {
-                this.unRegister(key);
             }
         }, BOOLEAN_TRUE),
-        StringObject = factories.Directive.extend('StringObject', {
+        StringObject = factories.Model.extend('StringObject', {
             constructor: function (value, parent) {
                 var string = this;
                 string.value = value;
@@ -654,14 +615,14 @@ application.scope(function (app) {
             Child: StringObject,
             add: function (string) {
                 var sm = this,
-                    found = sm.get(string);
+                    found = sm.get('id', string);
                 if (string) {
                     if (found) {
                         found.isValid(BOOLEAN_TRUE);
                     } else {
                         found = sm.Child(string, sm);
                         sm.unwrap().push(found);
-                        sm.register(string, found);
+                        sm.register('id', string, found);
                     }
                 }
                 return found;
@@ -681,7 +642,7 @@ application.scope(function (app) {
             },
             remove: function (string) {
                 var sm = this,
-                    found = sm.get(string);
+                    found = sm.get('id', string);
                 if (string) {
                     if (found) {
                         found.isValid(BOOLEAN_FALSE);
@@ -691,7 +652,7 @@ application.scope(function (app) {
             },
             toggle: function (string) {
                 var sm = this,
-                    found = sm.get(string);
+                    found = sm.get('id', string);
                 if (!found) {
                     sm.add(string);
                 } else {
@@ -745,5 +706,55 @@ application.scope(function (app) {
                 sm.load(array);
                 return sm;
             }
-        }, BOOLEAN_TRUE);
+        }, BOOLEAN_TRUE),
+        unwrap = function () {
+            return this.items;
+        },
+        list_swap = function (list) {
+            this.items = list;
+        },
+        empty = function () {
+            this.items = [];
+            this.iterating = 0;
+        };
+    app.defineDirective('list', function () {
+        return {
+            items: [],
+            reversed: BOOLEAN_FALSE,
+            iterating: 0,
+            empty: empty
+        };
+    });
+    var get = function (category, id) {
+        var cat = this.register[category];
+        return cat && cat[id];
+    };
+    var keep = function (category, id, value) {
+        var register = this.register,
+            cat = register[category] = register[category] || {};
+        cat[id] = value;
+    };
+    var drop = function (category, id) {
+        return this.swap(category, id);
+    };
+    var swap = function (category, id, value) {
+        var cached = this.get(category, id);
+        this.keep(category, id, value);
+        return cached;
+    };
+    var reset = function () {
+        this.register = {};
+        this.count = 0;
+    };
+    app.defineDirective('registry', function () {
+        return {
+            register: {},
+            count: 0,
+            get: get,
+            keep: keep,
+            drop: drop,
+            swap: swap,
+            reset: reset
+        };
+    });
 });

@@ -151,4 +151,16 @@ application.scope().run(function (app, _, factories, $) {
             });
         });
     });
+    var box = factories.Box();
+    var collection = [];
+    _.count(collection, function (item, index, list) {
+        list.push({});
+    }, null, 0, 100000);
+    var timestamp = _.now();
+    _.duff(collection, function (item) {
+        box.dispatchEvent('test');
+    });
+    var div = document.createElement('div');
+    div.innerHTML = _.now() - timestamp;
+    document.body.insertBefore(div, document.body.children[0]);
 });

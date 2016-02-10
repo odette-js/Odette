@@ -502,44 +502,45 @@ var factories = {},
         }
         return fn;
     },
-    duff = function (values, process, context, direction) {
-        var iterations, val, i, leftover, deltaFn;
-        if (values && isFunction(process)) {
-            i = 0;
-            val = values[LENGTH];
-            leftover = val % 8;
-            iterations = Math.floor(val / 8);
-            if (direction < 0) {
-                i = val - 1;
-            }
-            direction = direction || 1;
-            process = bind(process, context);
-            if (leftover > 0) {
-                do {
-                    process(values[i], i, values);
-                    i += direction;
-                } while (--leftover > 0);
-            }
-            if (iterations) {
-                do {
-                    process(values[i], i, values);
-                    i += direction;
-                    process(values[i], i, values);
-                    i += direction;
-                    process(values[i], i, values);
-                    i += direction;
-                    process(values[i], i, values);
-                    i += direction;
-                    process(values[i], i, values);
-                    i += direction;
-                    process(values[i], i, values);
-                    i += direction;
-                    process(values[i], i, values);
-                    i += direction;
-                    process(values[i], i, values);
-                    i += direction;
-                } while (--iterations > 0);
-            }
+    duff = function (values, runner_, context, direction) {
+        var runner, iterations, val, i, leftover, deltaFn;
+        if (!values) {
+            return;
+        }
+        i = 0;
+        val = values[LENGTH];
+        leftover = val % 8;
+        iterations = parseInt(val / 8, 10);
+        if (direction < 0) {
+            i = val - 1;
+        }
+        direction = direction || 1;
+        runner = bind(runner_, context);
+        if (leftover > 0) {
+            do {
+                runner(values[i], i, values);
+                i += direction;
+            } while (--leftover > 0);
+        }
+        if (iterations) {
+            do {
+                runner(values[i], i, values);
+                i += direction;
+                runner(values[i], i, values);
+                i += direction;
+                runner(values[i], i, values);
+                i += direction;
+                runner(values[i], i, values);
+                i += direction;
+                runner(values[i], i, values);
+                i += direction;
+                runner(values[i], i, values);
+                i += direction;
+                runner(values[i], i, values);
+                i += direction;
+                runner(values[i], i, values);
+                i += direction;
+            } while (--iterations > 0);
         }
         return values;
     },
@@ -1138,6 +1139,7 @@ var factories = {},
     foldr = createReduce(-1),
     _console = win.console || {},
     _log = _console.log || noop,
+    // use same name so that we can ensure browser compatability
     console = wrap(gapSplit('trace log dir error'), function (key) {
         var method = _console[key] || _log;
         return function () {
@@ -1145,7 +1147,7 @@ var factories = {},
         };
     }),
     exception = console.exception = function (options) {
-        throw new Error(options);
+        throw new Error(options && options.message || options);
     },
     validate = console.validate = function (boolean_, options) {
         if (boolean_) {
@@ -1174,15 +1176,15 @@ var factories = {},
         };
     },
     flow = function (bool, list_) {
-        var list = bool === BOOLEAN_TRUE ? list : arguments,
+        var list = bool === BOOLEAN_TRUE ? list_ : arguments,
             length = list[LENGTH];
         return function () {
             var start = length,
                 args = arguments;
             while (start--) {
-                args = list[start].apply(NULL, args);
+                args = list[start].apply(this, args);
             }
-            return args;
+            return this;
         };
     },
     _ = app._ = {

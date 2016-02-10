@@ -7,7 +7,7 @@ application.scope(function (app) {
         UNWRAP = 'unwrap',
         REMOVED = 'removed',
         CURRENT = 'current',
-        _COUNTER = '_counter',
+        // _COUNTER = '_counter',
         DESTROY = 'destroy',
         GROUP_INDEX = 'groupIndex',
         REGISTERED = 'registered',
@@ -21,7 +21,7 @@ application.scope(function (app) {
         _DELEGATED_CHILD_EVENTS = '_delegatedParentEvents',
         _PARENT_DELEGATED_CHILD_EVENTS = '_parentDelgatedChildEvents',
         CHANGE_COUNTER = '_changeCounter',
-        PREVIOUS_DATA = 'previous',
+        PREVIOUS = 'previous',
         /**
          * @class Box
          * @description event and attribute extensor object that creates the Box Constructor and convenience method at _.Box
@@ -58,8 +58,9 @@ application.scope(function (app) {
                 // set id and let parent know what your new id is
                 model[DISPATCH_EVENT](BEFORE_COLON + RESET);
                 // setup previous data
-                dataDirective[CURRENT] = newAttributes;
-                dataDirective[PREVIOUS_DATA] = {};
+                dataDirective.reset(newAttributes);
+                // dataDirective[CURRENT] = newAttributes;
+                dataDirective[PREVIOUS] = {};
                 // let everything know that it is changing
                 model[DISPATCH_EVENT](RESET);
             },
@@ -70,12 +71,7 @@ application.scope(function (app) {
              * @func
              * @name Box#unset
              */
-            unset: function (attrs) {
-                var attrObj = this.directive(DATA)[CURRENT];
-                // blindly wipe the attributes
-                var ret = !!attrObj && duff(gapSplit(attrs), wipeKey, attrObj);
-                return this;
-            },
+            unset: _.directives.parody(DATA, 'unset'),
             /**
              * @description returns attribute passed into
              * @param {String} attr - property string that is being gotten from the attributes object
@@ -83,9 +79,7 @@ application.scope(function (app) {
              * @func
              * @name Box#get
              */
-            get: function (attr) {
-                return this.directive(DATA)[CURRENT][attr];
-            },
+            get: _.directives.parody(DATA, 'get'),
             /**
              * @func
              * @param {String} attr - property string that is being gotten from the attributes object
@@ -126,20 +120,7 @@ application.scope(function (app) {
              * @name Box#set
              * @returns {Box} instance
              */
-            _set: function (key, newValue) {
-                var model = this,
-                    didChange = BOOLEAN_FALSE,
-                    dataDirective = model.directive(DATA),
-                    attrs = dataDirective[CURRENT],
-                    oldValue = attrs[key],
-                    previousAttrsObject = dataDirective[PREVIOUS_DATA];
-                if (!isEqual(oldValue, newValue)) {
-                    previousAttrsObject[key] = oldValue;
-                    attrs[key] = newValue;
-                    didChange = BOOLEAN_TRUE;
-                }
-                return didChange;
-            },
+            // _set: ,
             _destroy: function () {
                 var container = this,
                     // removes all parent / parent's child listeners
@@ -159,28 +140,16 @@ application.scope(function (app) {
                 // box.resetEvents();
                 return box;
             },
-            digester: function (fn) {
-                var ret, model = this;
-                model[CHANGE_COUNTER] = model[CHANGE_COUNTER] || 0;
-                ++model[CHANGE_COUNTER];
-                ret = fn();
-                --model[CHANGE_COUNTER];
-                // this event should only ever exist here
-                if (!model[CHANGE_COUNTER]) {
-                    model[DISPATCH_EVENT](CHANGE, model[PREVIOUS_DATA]);
-                    model[PREVIOUS_DATA] = {};
-                }
-                return ret;
-            },
+            // digester: ,
             set: function (key, value) {
                 var changedList = [],
                     model = this,
                     dataDirective = model.directive(DATA),
                     current = dataDirective[CURRENT] = dataDirective[CURRENT] || {},
-                    previous = dataDirective[PREVIOUS_DATA] = dataDirective[PREVIOUS_DATA] || {},
+                    previous = dataDirective[PREVIOUS] = dataDirective[PREVIOUS] || {},
                     compiled = {};
                 intendedObject(key, value, function (key, value) {
-                    if (model._set(key, value)) {
+                    if (dataDirective.set(key, value)) {
                         changedList.push(key);
                         compiled[key] = value;
                     }
@@ -189,12 +158,16 @@ application.scope(function (app) {
                 if (!changedList[LENGTH]) {
                     return model;
                 }
-                model.digester(function () {
+                dataDirective.digest(function () {
                     duff(changedList, function (name) {
                         model[DISPATCH_EVENT](CHANGE_COLON + name);
                     });
-                    model[DISPATCH_EVENT](CHANGE, compiled);
                 });
+                // this event should only ever exist here
+                if (!dataDirective[CHANGE_COUNTER]) {
+                    model[DISPATCH_EVENT](CHANGE, dataDirective[PREVIOUS]);
+                    dataDirective[PREVIOUS] = {};
+                }
                 return model;
             },
             /**
@@ -474,7 +447,7 @@ application.scope(function (app) {
                 // add to collection
                 children.add(newModel);
                 // register with parent
-                children.register(newModel.id, newModel);
+                children.register(ID, newModel.id, newModel);
                 children.register(newModel.uniqueKey + ID, newModel[newModel.uniqueKey + ID], newModel);
             },
             // ties child events to new child
@@ -590,23 +563,24 @@ application.scope(function (app) {
                 return parents;
             },
             // has to completely replace previous event dispatcher
-            dispatchEvent: function (name_, data, evnt_) {
-                var origin = this,
-                    name = (evnt_ && evnt_.methodName) || name_,
-                    methodName = (evnt_ && evnt_.methodName) || upCase(camelCase('on:' + name, COLON)),
-                    childMethodName = upCase(camelCase('on:bubble:' + name, COLON)),
-                    // onMethod = isFunction(origin[methodName]),
-                    evnt = evnt_ || origin._createEvent(name, data),
-                    parents = origin._collectParents(),
-                    i = parents[LENGTH] - 1;
-                // should all be BOOLEAN_TRUE the first time around
-                while (origin && origin._eventDispatcher && !evnt.isStopped()) {
-                    origin._eventDispatcher(evnt);
-                    origin = !evnt.isStopped() && evnt.bubbles && origin[PARENT];
-                }
-                evnt.finished();
-                return evnt;
-            },
+            // dispatchEvent: function (name_, data, evnt_) {
+            //     var origin = this,
+            //         // events
+            //         name = (evnt_ && evnt_.methodName) || name_,
+            //         // methodName = (evnt_ && evnt_.methodName) || upCase(camelCase('on:' + name, COLON)),
+            //         // childMethodName = upCase(camelCase('on:bubble:' + name, COLON)),
+            //         // onMethod = isFunction(origin[methodName]),
+            //         evnt = evnt_ || origin._createEvent(name, data),
+            //         parents = origin._collectParents(),
+            //         i = parents[LENGTH] - 1;
+            //     // should all be BOOLEAN_TRUE the first time around
+            //     while (origin && origin._eventDispatcher && !evnt.isStopped()) {
+            //         origin._eventDispatcher(evnt);
+            //         origin = !evnt.isStopped() && evnt.bubbles && origin[PARENT];
+            //     }
+            //     evnt.finished();
+            //     return evnt;
+            // },
             _remove: function (model) {
                 // cache the parent
                 var parent = this;
@@ -695,14 +669,50 @@ application.scope(function (app) {
                 model[DISPATCH_EVENT](SORT, model);
                 return model;
             }
-        }, BOOLEAN_TRUE);
-    app.registerDirective('data', function () {
+        }, BOOLEAN_TRUE),
+        set = function (key, newValue) {
+            var dataDirective = this,
+                current = dataDirective[CURRENT],
+                oldValue = current[key],
+                previousAttrsObject = dataDirective[PREVIOUS];
+            if (!isEqual(oldValue, newValue)) {
+                previousAttrsObject[key] = oldValue;
+                current[key] = newValue;
+                return BOOLEAN_TRUE;
+            }
+            return BOOLEAN_FALSE;
+        },
+        get = function (key) {
+            return this[CURRENT][key];
+        },
+        unset = function (key) {
+            this[CURRENT][key] = UNDEFINED;
+        },
+        reset = function (hash) {
+            this[CURRENT] = hash;
+            // this.counter = 0;
+        },
+        digest = function (fn) {
+            var ret, directive = this;
+            ++directive.digesting;
+            ret = fn();
+            --directive.digesting;
+            return directive;
+        };
+    app.defineDirective('data', function () {
         return {
             current: {},
             previous: {},
-            counter: 0
+            digesting: 0,
+            set: set,
+            get: get,
+            unset: unset,
+            reset: reset,
+            digest: digest
         };
     });
-    app.registerDirective('children', Collection);
+    app.defineDirective('children', function () {
+        return Collection();
+    });
     modelMaker[CONSTRUCTOR] = Box[CONSTRUCTOR];
 });

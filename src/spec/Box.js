@@ -115,15 +115,15 @@ application.scope().run(function (app, _, factories, $) {
                 box.unset('one');
                 expect(box.get('one')).toEqual(void 0);
             });
-            it('or remove a bunch of properties by passing in a space separated list to the unset method', function () {
-                expect(box.get('one')).toEqual(1);
-                expect(box.get('three')).toEqual(3);
-                expect(box.get('five')).toEqual(5);
-                box.unset('one three five');
-                expect(box.get('one')).toEqual(void 0);
-                expect(box.get('three')).toEqual(void 0);
-                expect(box.get('five')).toEqual(void 0);
-            });
+            // it('or remove a bunch of properties by passing in a space separated list to the unset method', function () {
+            //     expect(box.get('one')).toEqual(1);
+            //     expect(box.get('three')).toEqual(3);
+            //     expect(box.get('five')).toEqual(5);
+            //     box.unset('one three five');
+            //     expect(box.get('one')).toEqual(void 0);
+            //     expect(box.get('three')).toEqual(void 0);
+            //     expect(box.get('five')).toEqual(void 0);
+            // });
         });
         // pass to the on, once, off, listenTo, listenToOnce, and stopListening functions
         describe('there are super special characters that you can use for terseness', function () {
@@ -219,17 +219,17 @@ application.scope().run(function (app, _, factories, $) {
                 var data = {
                     myObj: 1
                 };
-                expect(box.directive('children').get('registering')).toEqual(void 0);
-                box.directive('children').register('registering', data);
-                expect(box.directive('children').get('registering')).toEqual(data);
+                expect(box.directive('children').get('id', 'key')).toEqual(void 0);
+                box.directive('children').register('id', 'key', data);
+                expect(box.directive('children').get('id', 'key')).toEqual(data);
             });
             it('and retreive information', function () {
                 var data = {
                     myObj: 1
                 };
-                expect(box.directive('children').get('registering')).toEqual(void 0);
-                box.directive('children').register('registering', data);
-                expect(box.directive('children').get('registering') === data).toEqual(true);
+                expect(box.directive('children').get('id', 'key')).toEqual(void 0);
+                box.directive('children').register('id', 'key', data);
+                expect(box.directive('children').get('id', 'key') === data).toEqual(true);
             });
         });
         describe('boxes can have children', function () {
