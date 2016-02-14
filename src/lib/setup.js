@@ -5,4 +5,5 @@ Application(this, 'application', 'dev', function (innerGlobalApp, scopedApp) {
     var globalApplication = innerGlobalApp.touchTop(global);
     // log it out for you to see
     // console.log(globalApplication);
+    global.app = scopedApp;
 });

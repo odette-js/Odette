@@ -60,21 +60,21 @@ application.scope(function (app) {
                     originalParent = parent,
                     name = name_,
                     globalname = name,
-                    namespace = name.split('.'),
-                    module = parent.modules.get(name_);
+                    namespace = name.split(PERIOD),
+                    parentModulesDirective = parent.directive('modules'),
+                    module = parentModulesDirective.get(name_);
                 while (namespace.length > 1) {
                     parent = parent.module(namespace[0]);
                     namespace.shift();
                 }
-                modules = parent.modules;
-                name = namespace.join('.');
-                module = parent.modules.get(name);
+                name = namespace.join(PERIOD);
+                module = parentModulesDirective.get(name);
                 if (!module) {
                     parentIsModule = _.isInstance(parent, Module);
                     if (parentIsModule) {
                         namespace.unshift(globalname);
                     }
-                    namespace = namespace.join('.');
+                    namespace = namespace.join(PERIOD);
                     module = Module({
                         id: name,
                         globalname: namespace
@@ -83,12 +83,12 @@ application.scope(function (app) {
                         parent: parent
                     });
                     if (module.topLevel()) {
-                        modules.add(module);
+                        parentModulesDirective.add(module);
                     } else {
                         parent.add(module);
                     }
-                    modules.register(name, module);
-                    app.modules.register(globalname, module);
+                    parentModulesDirective.register(name, module);
+                    app.directive('modules').register(globalname, module);
                 }
                 if (!module.hasInitialized && isFunction(fn)) {
                     module.hasInitialized = BOOLEAN_TRUE;
@@ -118,10 +118,7 @@ application.scope(function (app) {
                 var module = this;
                 module.application = opts.application;
                 module.handlers = Collection();
-                factories.Messenger({
-                    parent: module
-                });
-                module.modules = Collection();
+                // module.modules = Collection();
                 Box.constructor.apply(this, arguments);
                 return module;
             },
@@ -151,9 +148,6 @@ application.scope(function (app) {
         Module = factories.Box.extend('Module', moduleMethods, BOOLEAN_TRUE),
         appextendresult = app.extend(extend({}, factories.Events.constructor.prototype, moduleMethods, {
             _extraModuleArguments: [],
-            children: Collection(),
-            // module: moduleHandler,
-            modules: Collection(),
             /**
              * @func
              * @name Specless#baseModuleArguments
@@ -187,7 +181,7 @@ application.scope(function (app) {
                 app._.duff(arr, function (item) {
                     app._.remove(app[_EXTRA_MODULE_ARGS], item);
                 });
-                return this;
+                return app;
             },
             /**
              * @func
@@ -202,7 +196,7 @@ application.scope(function (app) {
                 return module.getExports();
             }
         }));
-    factories.Messenger({
-        parent: app
+    app.defineDirective('modules', function () {
+        return Collection();
     });
 });

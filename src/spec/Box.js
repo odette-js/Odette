@@ -323,7 +323,7 @@ application.scope().run(function (app, _, factories, $) {
                 box.childEvents = {
                     beep: function () {
                         counter++;
-                        counter += (this !== box) && factories.Model.isInstance(box);
+                        counter += (this === box);
                     },
                     boop: function () {
                         counter--;
@@ -331,13 +331,9 @@ application.scope().run(function (app, _, factories, $) {
                 };
                 box.add([{}, {}, {}, {}]);
                 expect(counter).toEqual(0);
-                box.directive('children').duff(function (model) {
-                    model.dispatchEvent('beep');
-                });
+                box.directive('children').results('dispatchEvent', 'beep');
                 expect(counter).toEqual(8);
-                box.directive('children').duff(function (model) {
-                    model.dispatchEvent('boop');
-                });
+                box.directive('children').results('dispatchEvent', 'boop');
                 expect(counter).toEqual(4);
             });
             it('set up events on their parents', function () {

@@ -56,21 +56,23 @@ this.Application = function (global, WHERE, version, fn) {
         return app;
     };
     Application[PROTOTYPE].parody = function (list) {
-        var i = 0,
+        var app = this,
+            i = 0,
             extendor = {},
-            parent = this.parent;
+            parent = app.parent;
         for (; i < list[LENGTH]; i++) {
             extendor[list[i]] = makeParody(parent, parent[list[i]]);
         }
-        this.extend(extendor);
-        return this;
+        app.extend(extendor);
+        return app;
     };
     Application[PROTOTYPE].scope = function (name, fn_) {
-        var fn = name && (isFunction(name) ? name : (isFunction(fn_) ? fn_ : NULL));
+        var app = this,
+            fn = name && (isFunction(name) ? name : (isFunction(fn_) ? fn_ : NULL));
         if (fn) {
-            this[PARENT].scope(this.version, fn);
+            app[PARENT].scope(app.version, fn);
         }
-        return this;
+        return app;
     };
     // Application[PROTOTYPE].loadedAgainst = function (win) {};
     // Application[PROTOTYPE].lastLoaded = function () {};

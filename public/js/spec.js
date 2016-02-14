@@ -943,33 +943,191 @@ application.scope().run(function (app, _, factories, $) {
                 });
                 it('or many at a time', function () {
                     box.listenTo(box2, 'evnt eventer mikesevent', handler);
+                    box.listenTo(box2, 'evnt eventer mikesevent', function () {
+                        count += this === box;
+                    });
                     expect(count).toEqual(0);
                     box2.dispatchEvent('evnt');
                     box2.dispatchEvent('eventer');
                     box2.dispatchEvent('mikesevent');
-                    expect(count).toEqual(3);
+                    expect(count).toEqual(6);
                     box.stopListening(box2, 'evnt eventer mikesevent', handler);
-                    expect(count).toEqual(3);
+                    expect(count).toEqual(6);
                     box2.dispatchEvent('evnt');
                     box2.dispatchEvent('eventer');
                     box2.dispatchEvent('mikesevent');
-                    expect(count).toEqual(3);
+                    expect(count).toEqual(9);
+                });
+            });
+            describe('listenTo', function () {
+                it('should have an equivalent context', function () {
+                    box.listenTo(box2, 'e1', function () {
+                        count++;
+                        count += (this === box);
+                    });
+                    expect(count).toEqual(0);
+                    box2.dispatchEvent('e1');
+                    expect(count).toEqual(2);
+                });
+                it('can be overridden with an extra argument', function () {
+                    box.listenTo(box2, 'e1', function () {
+                        count++;
+                        count += this === box2;
+                    }, box2);
+                    expect(count).toEqual(0);
+                    box2.dispatchEvent('e1');
+                    expect(count).toEqual(2);
+                });
+            });
+            describe('watch directive', function () {
+                it('can listenTo the object that it belongs to', function () {
+                    box.watch('here', 'there', function () {
+                        count++;
+                    });
+                    expect(count).toEqual(0);
+                    box.set('here', 1);
+                    expect(count).toEqual(0);
+                    box.set('here', 'there');
+                    expect(count).toEqual(1);
+                    box.set('here', 'where');
+                    expect(count).toEqual(1);
+                    box.set('here', 'there');
+                    expect(count).toEqual(2);
+                });
+            });
+            describe('when directive', function () {
+                it('gives an api synonymous with english', function () {
+                    box.when('here').is('there').and('when').is('now').then(function () {
+                        count++;
+                    }).otherwise(function () {
+                        count--;
+                    });
+                    expect(count).toEqual(0);
+                    box.set('here', 'nothere');
+                    expect(count).toEqual(-1);
+                    box.set('when', 'later');
+                    expect(count).toEqual(-1);
+                    box.set('when', 'now');
+                    expect(count).toEqual(-1);
+                    box.set('here', 'there');
+                    expect(count).toEqual(0);
+                });
+                it('allows for negatives to be used like isNot and isnt', function () {
+                    box.when('one').isNot(2).and('up').isnt('down').then(function () {
+                        count++;
+                    }).otherwise(function () {
+                        count--;
+                    });
+                    expect(count).toEqual(0);
+                    box.set('up', 'down');
+                    expect(count).toEqual(-1);
+                    box.set('one', 2);
+                    expect(count).toEqual(-1);
+                    box.set('one', 1);
+                    expect(count).toEqual(-1);
+                    box.set('up', 'side');
+                    expect(count).toEqual(0);
+                });
+                it('can compare numbers using basic operators and negation', function () {
+                    box.when('one').isGreaterThan(5).and('ten').isLessThan(4).and('phone').isNotLessThan(5).then(function () {
+                        count++;
+                    }).otherwise(function () {
+                        count--;
+                    });
+                    expect(count).toEqual(0);
+                    box.set('phone', 10);
+                    expect(count).toEqual(-1);
+                    box.set('one', 6);
+                    expect(count).toEqual(-1);
+                    box.set('ten', 5);
+                    expect(count).toEqual(-1);
+                    box.set('ten', 2);
+                    expect(count).toEqual(0);
+                });
+                it('can compare string values using basic operators and negation', function () {
+                    box.when('one').isGreaterThan('a').and('ten').isLessThan('b').then(function () {
+                        count++;
+                    }).otherwise(function () {
+                        count--;
+                    });
+                    expect(count).toEqual(0);
+                    box.set('one', '0');
+                    expect(count).toEqual(-1);
+                    box.set('ten', 'beach');
+                    expect(count).toEqual(-1);
+                    box.set('ten', 'aardvark');
+                    expect(count).toEqual(-1);
+                    box.set('one', 'ten');
+                    expect(count).toEqual(0);
+                });
+                it('can also handle custom functions', function () {
+                    box.when('one').is(function () {
+                        return box.get('one') > 5;
+                    }).then(function () {
+                        count++;
+                    }).otherwise(function () {
+                        count--;
+                    });
+                    expect(count).toEqual(0);
+                    box.set('one', 10);
+                    expect(count).toEqual(1);
+                    box.set('one', 3);
+                    expect(count).toEqual(0);
+                });
+                it('can also make "groups" using the or method', function () {
+                    var sequence = box.when('one').is(1).or('truth').is(true).then(function () {
+                        count++;
+                    }).otherwise(function () {
+                        count--;
+                    });
+                    expect(count).toEqual(0);
+                    box.set('one', 2);
+                    expect(count).toEqual(-1);
+                    box.set('one', 0);
+                    expect(count).toEqual(-1);
+                    box.set('truth', true);
+                    expect(count).toEqual(0);
+                    box.set('one', 1);
+                    expect(count).toEqual(0);
+                    box.set('truth', false);
+                    expect(count).toEqual(0);
+                });
+                it('can also have multiple watchers on a particular instance that run independently', function () {
+                    var last;
+                    var sequence = box.when('five').isLessThan(10).then(function () {
+                        count++;
+                        last = 1;
+                    });
+                    var sequence2 = box.when('here').is('there').then(function () {
+                        count++;
+                        last = 2;
+                    });
+                    expect(count).toEqual(0);
+                    expect(last).toEqual(void 0);
+                    box.set('five', 3);
+                    expect(count).toEqual(1);
+                    expect(last).toEqual(1);
+                    box.set('here', 'there');
+                    expect(count).toEqual(2);
+                    expect(last).toEqual(2);
                 });
             });
         });
     });
-    var box = factories.Box();
-    var collection = [];
-    _.count(collection, function (item, index, list) {
-        list.push({});
-    }, null, 0, 100000);
-    var timestamp = _.now();
-    _.duff(collection, function (item) {
-        box.dispatchEvent('test');
-    });
-    var div = document.createElement('div');
-    div.innerHTML = _.now() - timestamp;
-    document.body.insertBefore(div, document.body.children[0]);
+    // var box = factories.Box();
+    // var collection = [];
+    // var collection2 = [];
+    // _.count(collection, function (item, index, list) {
+    //     list.push(0);
+    // }, null, 0, 100000);
+    // var timestamp = _.now();
+    // _.duff(collection, function (item) {
+    //     collection2.push(factories.Box());
+    // });
+    // var div = document.createElement('div');
+    // div.innerHTML = _.now() - timestamp;
+    // console.log(collection2);
+    // document.body.insertBefore(div, document.body.children[0]);
 });
 application.scope().run(function (app, _, factories, $) {
     // var factories = _.factories;
@@ -1296,7 +1454,7 @@ application.scope().run(function (app, _, factories, $) {
                 box.childEvents = {
                     beep: function () {
                         counter++;
-                        counter += (this !== box) && factories.Model.isInstance(box);
+                        counter += (this === box);
                     },
                     boop: function () {
                         counter--;
@@ -1304,13 +1462,9 @@ application.scope().run(function (app, _, factories, $) {
                 };
                 box.add([{}, {}, {}, {}]);
                 expect(counter).toEqual(0);
-                box.directive('children').duff(function (model) {
-                    model.dispatchEvent('beep');
-                });
+                box.directive('children').results('dispatchEvent', 'beep');
                 expect(counter).toEqual(8);
-                box.directive('children').duff(function (model) {
-                    model.dispatchEvent('boop');
-                });
+                box.directive('children').results('dispatchEvent', 'boop');
                 expect(counter).toEqual(4);
             });
             it('set up events on their parents', function () {
@@ -2092,9 +2246,9 @@ application.scope().run(function (app, _, factories, $) {
         describe('the each function is special because', function () {
             it('it wraps each element in a DOMM object before passing it through your iterator', function () {
                 divs.each(function (el, idx) {
-                    expect(_.isInstance(el, factories.DOMM)).toEqual(true);
-                    expect(el.length()).toEqual(1);
-                    expect(divs.element(idx) === el.element());
+                    expect(_.isInstance(el, factories.DOMM)).toEqual(false);
+                    expect(factories.DomManager.isInstance(el)).toEqual(true);
+                    expect(divs.element(idx) === el.unwrap());
                 });
             });
             it('where the duff and forEach function just gives you the element at each index, just like a collection', function () {
@@ -2245,147 +2399,17 @@ application.scope().run(function (app, _, factories, $) {
         });
     });
 });
-// Specless.run(function (specless, _, extendFrom, factories, $) {
-//     describe('View', function () {
-//         var blank, view, $con,
-//             ExtendedView = extendFrom.View({
-//                 hovered: function () {},
-//                 events: {
-//                     'event1': function () {}
-//                 },
-//                 elementEvents: {
-//                     click: function () {
-//                         clicked = 1;
-//                     },
-//                     mouseover: 'hovered'
-//                 }
-//             }),
-//             create = function () {
-//                 clicked = blank;
-//                 $con = _.makeEl('div').attr({
-//                     id: 'view-test'
-//                 });
-//                 view = new ExtendedView($con);
-//                 $(document.body).append($con);
-//             },
-//             duff = _.duff;
-//         beforeEach(create);
-//         afterEach(function () {
-//             $con.remove();
-//         });
-//         it('has a domm element associated with it', function () {
-//             expect(_.is(view.el, _.DOMM)).toEqual(true);
-//         });
-//         it('even if there\'s no element', function () {
-//             var view = _.View();
-//             expect(_.is(view.el, _.DOMM)).toEqual(true);
-//             expect(view.el.length()).toEqual(0);
-//         });
-//         describe('to define an element to be associated with it, pass it one', function () {
-//             it('either through the domm wrapper', function () {
-//                 var view = _.View($('body'));
-//                 expect(view.el.length()).toEqual(1);
-//             });
-//             it('or as a regular dom node', function () {
-//                 var view = _.View(document.body);
-//                 expect(view.el.length()).toEqual(1);
-//             });
-//         });
-//         it('views are most helpful as a building block', function () {
-//             var extended = extendFrom.View({});
-//             expect(extended === factories.View).toEqual(false);
-//             expect(new extended() instanceof factories.View).toEqual(true);
-//         });
-//         describe('views add events to elements from an object called elementEvents', function () {
-//             it('by default, none are added', function () {
-//                 var view = _.View(_.makeEl('div'));
-//                 var data = _.associator.get(view.el.get());
-//                 expect(data.events).toEqual(void 0);
-//             });
-//             it('but a quick change to a new constructor\'s prototype will result in an opulence of event handlers', function () {
-//                 var data = _.associator.get(view.el.get());
-//                 expect(data.events).not.toEqual(blank);
-//                 expect(clicked).toEqual(blank);
-//                 view.el.click();
-//                 expect(clicked).toEqual(1);
-//             });
-//             it('preparses the event list, and generates a namespace, so it can take the handlers off later', function () {
-//                 var data = _.associator.get(view.el.get());
-//                 duff(data.events['false'].click, function (handler) {
-//                     expect(handler.namespace.indexOf('delegateEvents')).not.toEqual(-1);
-//                 });
-//             });
-//             it('can also take handlers off', function () {
-//                 var handler = function () {},
-//                     data = _.associator.get(view.el.get()),
-//                     clicks = data.events['false'].click;
-//                 view.undelegateEvents();
-//                 expect(clicks.length).toEqual(0);
-//                 view.delegate('click', handler);
-//                 expect(clicks.length).toEqual(1);
-//                 view.undelegateEvents();
-//                 expect(clicks.length).toEqual(0);
-//             });
-//             it('will not take off handlers that it did not delegate with it\'s own namespace', function () {
-//                 var handler = function () {},
-//                     data = _.associator.get(view.el.get()),
-//                     clicks = data.events['false'].click;
-//                 view.undelegateEvents();
-//                 expect(clicks.length).toEqual(0);
-//                 view.el.on('click', handler);
-//                 expect(clicks.length).toEqual(1);
-//                 view.undelegateEvents();
-//                 // will not take handlers off it it did not put it on
-//                 expect(clicks.length).toEqual(1);
-//                 expect(clicks[0].fn === handler).toEqual(true);
-//             });
-//         });
-//         describe('it can also add delegated events for ui elements', function () {
-//             it('every view has a ui hash', function () {
-//                 expect(_.has(view, 'ui')).toEqual(true);
-//             });
-//             it('by default, it\'s empty', function () {
-//                 expect(view.ui).toEqual({});
-//             });
-//             it('but it can be filled with ui DOMM references', function () {
-//                 var Extendor = extendFrom.View({
-//                     ui: {
-//                         list: 'ul',
-//                         items: 'li'
-//                     }
-//                 });
-//                 var extendor = new Extendor(_.makeEl('div').append(_.makeEl('ul').append(_.makeEl('li'))));
-//                 _.each(extendor.ui, function (domm, key) {
-//                     expect(_.is(domm, _.DOMM)).toEqual(true);
-//                 });
-//             });
-//         });
-//         it('the View object also has a relative $ implementation to allow you to find with the $ as the top most element, and only look down', function () {
-//             var li = _.makeEl('li');
-//             var div = _.makeEl('div').append(_.makeEl('ul').append(li));
-//             $(document.body).append(div);
-//             var view = _.View(div);
-//             expect(view.$('li').get() === li.get()).toEqual(true);
-//             view.destroy();
-//         });
-//         it('can also destroy itself', function () {
-//             var count = 0;
-//             $(document.body).append(view.el);
-//             view.on('cleeek', function () {});
-//             _.each(view._events, function (arr) {
-//                 count += arr.length;
-//             });
-//             expect(count).not.toEqual(0);
-//             view.destroy();
-//             count = 0;
-//             expect(view.el.parent().length()).toEqual(0);
-//             _.each(view._events, function (arr, id) {
-//                 count += arr.length;
-//             });
-//             expect(count).toEqual(0);
-//         });
-//     });
-// });
+application.scope().run(function (app, _, factories, $) {
+    describe('View', function () {
+        var view;
+        beforeEach(function () {
+            view = factories.View();
+        });
+        it('is an object', function () {
+            expect(_.isObject(view)).toEqual(true);
+        });
+    });
+});
 application.scope().run(function (app, _, factories, $) {
     var $iframe = $('iframe');
     describe('Buster', function () {

@@ -308,9 +308,9 @@ application.scope().run(function (app, _, factories, $) {
         describe('the each function is special because', function () {
             it('it wraps each element in a DOMM object before passing it through your iterator', function () {
                 divs.each(function (el, idx) {
-                    expect(_.isInstance(el, factories.DOMM)).toEqual(true);
-                    expect(el.length()).toEqual(1);
-                    expect(divs.element(idx) === el.element());
+                    expect(_.isInstance(el, factories.DOMM)).toEqual(false);
+                    expect(factories.DomManager.isInstance(el)).toEqual(true);
+                    expect(divs.element(idx) === el.unwrap());
                 });
             });
             it('where the duff and forEach function just gives you the element at each index, just like a collection', function () {

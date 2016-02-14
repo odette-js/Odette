@@ -7,50 +7,48 @@ application.scope(function (app) {
         Collection = factories.Collection,
         SortedCollection = factories.SortedCollection,
         REMOVE_QUEUE = 'removeQueue',
-        _LISTENING_TO = '_listeningTo',
-        LISTEN_ID = 'listenId',
+        LISTENING_TO = 'listeningTo',
+        TALKER_ID = 'talkerId',
+        REGISTERED = 'registered',
         LISTENING_PREFIX = 'l',
+        STATE = 'state',
         IS_STOPPED = 'isStopped',
         STOP_LISTENING = 'stopListening',
         IMMEDIATE_PROP_IS_STOPPED = 'immediatePropagationIsStopped',
-        iterateOverObject = function (box, ctx, evnts, funs_, iterator, firstarg) {
-            // intendedObject(key, value, function (evnts, funs_) {
+        iterateOverObject = function (box, context, events, handler, iterator, firstArg) {
+            // intendedObject(key, value, function (events, handler) {
             // only accepts a string or a function
-            var fn = isString(funs_) ? box[funs_] : funs_,
-                splitevents = gapSplit(evnts);
-            if (!isFunction(fn)) {
-                exception('handler must be a function');
-            }
-            return duff(splitevents, function (eventName) {
-                var namespace = eventName.split(COLON)[0];
+            var fn = isString(handler) ? box[handler] : handler,
+                valid = !isFunction(fn) && exception({
+                    message: 'handler must be a function'
+                });
+            return duff(gapSplit(events), function (eventName) {
                 iterator(box, eventName, {
                     disabled: BOOLEAN_FALSE,
-                    namespace: namespace,
+                    namespace: eventName.split(COLON)[0],
                     name: eventName,
                     handler: fn,
-                    ctx: ctx,
+                    context: context,
                     origin: box
-                }, firstarg);
+                }, firstArg);
             });
         },
         // user friendly version
-        flattenMatrix = function (iterator, nameOrObjectIndex) {
-            return function () {
-                var args, handlersIndex, firstArg, list, nameOrObject, names, box = this;
-                if (!arguments[0]) {
+        flattenMatrix = function (iterator, _nameOrObjectIndex) {
+            return function (first) {
+                var context, args, nameOrObjectIndex, handlersIndex, list, nameOrObject, box = this;
+                // if no name or no listen target then fail
+                if (!first) {
                     return box;
                 }
-                var eventsDirective = box.directive(EVENTS);
                 args = toArray(arguments);
-                handlersIndex = nameOrObjectIndex;
+                nameOrObjectIndex = _nameOrObjectIndex;
+                handlersIndex = _nameOrObjectIndex;
                 list = args.splice(nameOrObjectIndex);
                 nameOrObject = list[0];
-                firstArg = args[0];
-                if (nameOrObjectIndex && !firstArg) {
-                    return box;
-                }
+                context = list[(isObject(nameOrObject) ? 1 : 2)] || box;
                 intendedObject(nameOrObject, list[1], function (events, handlers) {
-                    iterateOverObject(box, args[0], events, handlers, iterator, firstArg);
+                    iterateOverObject(box, context, events, handlers, iterator, args[0]);
                 });
                 return box;
             };
@@ -76,8 +74,7 @@ application.scope(function (app) {
                 list = args.splice(nameOrObjectIndex);
                 nameOrObject = list[0];
                 context = args[handlersIndex - 1];
-                firstArg = args[0];
-                if (nameOrObjectIndex && !firstArg) {
+                if (nameOrObjectIndex && !args[0]) {
                     return ret;
                 }
                 intendedObject(nameOrObject, list[1], function (key_, value_, isObject_) {
@@ -92,16 +89,16 @@ application.scope(function (app) {
                             }
                         };
                     original_handler = fun_things;
-                    iterateOverObject(box, context, CHANGE + COLON + key, handler, iterator, firstArg);
+                    iterateOverObject(box, context, CHANGE + COLON + key, handler, iterator, args[0]);
                     ret[key] = handler;
                 });
                 return ret;
             };
         },
-        seekAndDestroy = function (box, list, handler, ctx) {
+        seekAndDestroy = function (box, list, handler, context) {
             var events = box.directive(EVENTS);
             list.duffRight(function (obj) {
-                if (obj.disabled || (handler && obj.handler !== handler) || (ctx && obj.ctx !== ctx)) {
+                if (obj.disabled || (handler && obj.handler !== handler) || (context && obj.context !== context)) {
                     return;
                 }
                 events.detach(obj);
@@ -115,22 +112,24 @@ application.scope(function (app) {
         attachEventObject = function (box, name, eventObject) {
             box.directive(EVENTS).attach(name, eventObject);
         },
-        retreiveListeningObject = function (thing, obj) {
-            var id = obj[LISTEN_ID] = obj[LISTEN_ID] || uniqueId(LISTENING_PREFIX),
-                listeningTo = thing[_LISTENING_TO] || (thing[_LISTENING_TO] = {}),
-                listening = listeningTo[id];
-            // This object is not listening to any other events on `obj` yet.
-            // Setup the necessary references to track the listening callbacks.
+        retreiveListeningObject = function (listener, talker) {
+            var listenerDirective = listener.directive(EVENTS),
+                talkerDirective = talker.directive(EVENTS),
+                talkerId = talkerDirective[TALKER_ID],
+                listeningTo = listenerDirective[LISTENING_TO],
+                listening = listeningTo[talkerId];
             if (listening) {
                 return listening;
             }
-            thing[LISTEN_ID] = thing[LISTEN_ID] || uniqueId(LISTENING_PREFIX);
-            listening = listeningTo[id] = {
-                obj: obj,
-                objId: id,
-                id: thing[LISTEN_ID],
+            // This talkerect is not listening to any other events on `talker` yet.
+            // Setup the necessary references to track the listening callbacks.
+            listenerDirective[TALKER_ID] = listenerDirective[TALKER_ID] || uniqueId(LISTENING_PREFIX);
+            listening = listeningTo[talkerId] = {
+                talker: talker,
+                talkerId: talkerId,
+                id: listenerDirective[TALKER_ID],
                 listeningTo: listeningTo,
-                ctx: thing,
+                // context: listener,
                 count: 0
             };
             return listening;
@@ -189,47 +188,39 @@ application.scope(function (app) {
                 return evnt;
             },
             finished: function () {
-                var evnt = this;
+                var actions, evnt = this;
                 evnt.isTrusted = BOOLEAN_FALSE;
                 if (evnt.defaultIsPrevented()) {
                     return;
                 }
-                if (evnt.checkDirective('actions')) {
-                    evnt.directive('actions').call(evnt);
+                if ((actions = evnt.checkDirective('actions'))) {
+                    actions.call(evnt);
                 }
             }
         }, BOOLEAN_TRUE),
         onceHandler = function (box, name, obj) {
-            bindOnce(box, name, obj);
+            var fn = obj.fn || obj.handler;
+            obj.fn = once(function (e) {
+                box.off();
+                return fn.apply(this, arguments);
+            });
             attachEventObject(box, name, obj);
         },
-        bindOnce = function (box, name, obj) {
-            var fn = obj.handler;
-            obj.fn = once(function (e) {
-                turnOff(e);
-                fn.apply(this, arguments);
-            });
-        },
         listenToHandler = function (box, name, obj, target) {
-            var listeningObject = retreiveListeningObject(box, target),
+            var valid, targetDirective = target.directive(EVENTS),
+                listeningObject = retreiveListeningObject(box, target),
                 eventsDirective = target.directive(EVENTS),
                 handlers = eventsDirective[HANDLERS] = eventsDirective[HANDLERS] || {};
-            preBindListeners(obj, listeningObject);
+            listeningObject.count++;
+            obj.listening = listeningObject;
             attachEventObject(target, name, obj);
-        },
-        preBindListeners = function (obj, listening) {
-            listening.count++;
-            obj.listening = listening;
         },
         listenToOnceHandler = function (box, name, obj, extra) {
             bindOnce(box, name, obj);
             listenToHandler(box, name, obj, extra);
         },
-        // overrideEventCreation = function (obj) {
-        //     return obj && (obj.bubbles || obj.dispatchChildren || opts.dispatchTree);
-        // },
         secretOffIterator = function (box, name, obj) {
-            seekAndDestroy(box, !name || box.directive(EVENTS)[HANDLERS][name], obj.handler, obj.ctx);
+            seekAndDestroy(box, !name || box.directive(EVENTS)[HANDLERS][name], obj.handler, obj.context);
         },
         Events = factories.Directive.extend('Events', {
             /**
@@ -238,13 +229,16 @@ application.scope(function (app) {
              * @name Box#on
              * @param {String} str - event name to listen to
              * @param {Function|String} fn - event handler or string corresponding to handler on prototype to use for handler
-             * @param {Object} ctx - context that the handler will run in
+             * @param {Object} context - context that the handler will run in
              * @returns {Box} instance
              */
+            uniqueKey: 'c',
             initialize: noop,
             constructor: function (opts) {
                 var model = this;
                 extend(model, opts);
+                model[model.uniqueKey + ID] = model[model.uniqueKey + ID] || uniqueId(model.uniqueKey);
+                // reacting to self
                 model.on(model.events);
                 model.initialize(opts);
                 return model;
@@ -263,7 +257,7 @@ application.scope(function (app) {
              * @name Box#once
              * @param {String} string - event name that will be triggered
              * @param {Function} fn - event handler that will run only once
-             * @param {Object} ctx - context that will be applied to the handler
+             * @param {Object} context - context that will be applied to the handler
              * @returns {Box} instance
              */
             /**
@@ -274,37 +268,23 @@ application.scope(function (app) {
              * @name Box#off
              * @returns {Box} instance
              */
-            swapEvents: function (validEventHash) {
-                var eventDirective = box.directive(EVENTS),
-                    // old =
-                    valid = box[_EVENTS] = validEventHash;
-                return old;
-            },
-            // _resetEvents: function (newHash) {
-            //     var box = this,
-            //         oldHash = (newHash ? box.swapEvents(newHash) : box.directive(EVENTS))[HANDLERS];
-            //     each(oldHash, box.emptyList, box);
-            //     return box;
-            // },
-            resetEvents: function () {
-                return this.directive(EVENTS).reset();
-            },
-            off: function (name_, fn_, ctx_) {
-                var ctx, currentObj, box = this,
+            resetEvents: _.directives.parody(EVENTS, 'reset'),
+            off: function (name_, fn_, context_) {
+                var context, currentObj, box = this,
                     name = name_,
                     events = box.checkDirective(EVENTS);
                 if (!events) {
                     return;
                 }
-                ctx = isObject(name) ? fn_ : ctx_;
+                context = isObject(name) ? fn_ : context_;
                 if (arguments[LENGTH]) {
                     if (!name) {
                         each(events[HANDLERS], function (list, name) {
-                            seekAndDestroy(box, list, fn_, ctx_);
+                            seekAndDestroy(box, list, fn_, context_);
                         });
                     } else {
                         intendedObject(name, fn_, function (name, fn_) {
-                            iterateOverObject(box, ctx, name, fn_, secretOffIterator);
+                            iterateOverObject(box, context, name, fn_, secretOffIterator);
                         });
                     }
                 } else {
@@ -315,25 +295,32 @@ application.scope(function (app) {
                 }
                 return box;
             },
+            request: _.directives.parody('messenger', 'request'),
+            reply: _.directives.parody('messenger', 'reply'),
+            when: _.directives.parody('Linguistics', 'when'),
             // hash this out later
             stopTalking: function () {},
-            stopListening: function (obj, name, callback) {
-                var ids, listening, stillListening = 0,
+            stopListening: function (target, name, callback) {
+                var ids, targetEventsDirective, stillListening = 0,
                     origin = this,
-                    listeningTo = origin[_LISTENING_TO];
-                if (listeningTo && (!obj || obj[LISTEN_ID])) {
-                    duff(obj ? [obj[LISTEN_ID]] : keys(listeningTo), function (id) {
-                        var listening = listeningTo[id];
-                        if (listening) {
-                            listening.obj.off(name, callback);
-                        }
-                        stillListening += listeningTo[id] ? 1 : 0;
-                    });
-                    if (!stillListening && !find(ids, function (id, key) {
-                        return listeningTo[id];
-                    })) {
-                        origin[_LISTENING_TO] = UNDEFINED;
+                    originEventsDirective = origin.checkDirective(EVENTS),
+                    listeningTo = originEventsDirective[LISTENING_TO],
+                    notTalking = (target && !(targetEventsDirective = target.checkDirective(EVENTS)));
+                if (!originEventsDirective || notTalking) {
+                    return origin;
+                }
+                ids = target ? [targetEventsDirective[TALKER_ID]] : keys(listeningTo);
+                duff(ids, function (id) {
+                    var listening = listeningTo[id];
+                    if (listening) {
+                        listening.talker.off(name, callback);
                     }
+                    stillListening = listening[id] ? 1 : 0;
+                });
+                if (!stillListening && !find(target ? keys(listeningTo) : ids, function (id, key) {
+                    return listeningTo[id];
+                })) {
+                    originEventsDirective[LISTENING_TO] = {};
                 }
                 return origin;
             },
@@ -344,27 +331,24 @@ application.scope(function (app) {
              * @param {String} name of the event loop to be triggered
              * @returns {Box} object instance the method is being called on
              */
-            dispatchEvents: function (names, data, eventOptions) {
-                var box = this;
-                duff(gapSplit(names), function (str) {
-                    box[DISPATCH_EVENT](str, data, eventOptions);
-                });
-                return box;
+            createEvent: function (name, data, options) {
+                return ObjectEvent(name, this, data, options);
             },
-            createEvent: function (name, data) {
-                return ObjectEvent(name, this, data);
+            dispatchEvents: function (names) {
+                var box = this;
+                return duff(gapSplit(names), box.dispatchStack, box) && box;
+            },
+            dispatchStack: function (name) {
+                return this[DISPATCH_EVENT](name);
             },
             dispatchEvent: function (name, data, options) {
                 var evnt, eventsDirective, box = this,
                     has = (eventsDirective = box.checkDirective(EVENTS)) && eventsDirective.has(name);
                 if (has) {
-                    evnt = eventsDirective && box.createEvent(name, data, options);
+                    evnt = box.createEvent(name, data, options);
                     eventsDirective.dispatch(name, evnt);
                     return evnt.returnValue;
                 }
-            },
-            attachEvent: function (list, obj) {
-                return list.add(obj);
             }
         }, BOOLEAN_TRUE),
         listeningCounter = 0,
@@ -376,8 +360,8 @@ application.scope(function (app) {
                 });
             eventObject.id = ++event_incrementer;
             eventObject.valueOf = returnsId;
-            eventObject.ctx = eventObject.ctx || eventObject.origin;
-            eventObject.fn = bind(eventObject.fn || eventObject.handler, eventObject.ctx);
+            eventObject.context = eventObject.context || eventObject.origin;
+            eventObject.fn = bind(eventObject.fn || eventObject.handler, eventObject.context);
             // attach the id to the bound function because that instance is private
             eventObject.fn[__FN_ID__] = eventObject.id;
             list = handlers[name] = handlers[name] || SortedCollection(BOOLEAN_TRUE, BOOLEAN_TRUE);
@@ -385,7 +369,6 @@ application.scope(function (app) {
             list[NAME] = name;
             // attached so event can remove itself
             eventObject.list = list;
-            eventObject.maxIndex = list[LENGTH]();
             list.add(eventObject);
         },
         detach = function (evnt) {
@@ -410,8 +393,8 @@ application.scope(function (app) {
                     return BOOLEAN_TRUE;
                 }
                 listeningTo = listening.listeningTo;
-                listeningTo[listening.obj[LISTEN_ID]] = UNDEFINED;
-                this.reset(list);
+                listeningTo[listening[TALKER_ID]] = UNDEFINED;
+                this.wipe(list);
                 return BOOLEAN_TRUE;
             }
         },
@@ -429,10 +412,10 @@ application.scope(function (app) {
         reset = function () {
             return each(this.handlers, this.scrub, this);
         },
-        queue = function (evnt, handler, stack) {
+        queue = function (stack, handler, evnt) {
             return stack.add(handler);
         },
-        unQueue = function (evnt, handler, stack) {
+        unQueue = function (stack, handler, evnt) {
             return stack.pop();
         },
         has = function (key) {
@@ -440,7 +423,7 @@ application.scope(function (app) {
         },
         dispatch = function (name, evnt) {
             var events = this,
-                eventStack = events[STACK],
+                stack = events[STACK],
                 handlers = events[HANDLERS],
                 list = handlers[name],
                 removeList = events[REMOVE_QUEUE];
@@ -449,14 +432,14 @@ application.scope(function (app) {
             }
             list.find(function (handler) {
                 var cached;
-                if (!handler.disabled && events.queue(evnt, handler, eventStack)) {
+                if (!handler.disabled && events.queue(stack, handler, evnt)) {
                     handler.fn(evnt);
                     cached = evnt[IMMEDIATE_PROP_IS_STOPPED];
-                    events.unQueue(evnt, handler, eventStack);
+                    events.unQueue(stack, handler, evnt);
                     return cached;
                 }
             });
-            if (!eventStack[LENGTH]() && removeList[LENGTH]()) {
+            if (!stack[LENGTH]() && removeList[LENGTH]()) {
                 removeList.duffRight(events.detach, events);
                 removeList.empty();
             }
@@ -466,6 +449,7 @@ application.scope(function (app) {
         return {
             listenId: 'l' + (++listeningCounter),
             handlers: {},
+            listeningTo: {},
             stack: Collection(),
             removeQueue: Collection(),
             attach: attach,
@@ -473,8 +457,8 @@ application.scope(function (app) {
             has: has,
             wipe: wipe,
             scrub: scrub,
-            queue: queue,
             reset: reset,
+            queue: queue,
             unQueue: unQueue,
             dispatch: dispatch
         };

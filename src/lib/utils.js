@@ -902,8 +902,8 @@ var factories = {},
             return memo;
         }, []);
     },
-    toArray = function (obj) {
-        return isArrayLike(obj) ? arrayLikeToArray(obj) : (isString(obj) ? obj.split(EMPTY_STRING) : objectToArray(obj));
+    toArray = function (obj, delimiter) {
+        return isArrayLike(obj) ? isArray(obj) ? obj : arrayLikeToArray(obj) : (isString(obj) ? obj.split(isString(delimiter) ? delimiter : EMPTY_STRING) : objectToArray(obj));
     },
     flattenArray = function (list, deep_) {
         var deep = !!deep_;
@@ -1078,7 +1078,7 @@ var factories = {},
         return (parseInt((mult * val), 10) / mult);
     },
     result = function (obj, str, arg, knows) {
-        return obj && (knows || isFunction(obj[str]) ? obj[str](arg) : obj[str]);
+        return isObject(obj) ? (knows || isFunction(obj[str]) ? obj[str](arg) : obj[str]) : obj;
     },
     maths = Math,
     mathArray = function (method) {
@@ -1140,20 +1140,22 @@ var factories = {},
     _console = win.console || {},
     _log = _console.log || noop,
     // use same name so that we can ensure browser compatability
-    console = wrap(gapSplit('trace log dir error'), function (key) {
+    console = extend(wrap(gapSplit('trace log dir error'), function (key) {
         var method = _console[key] || _log;
         return function () {
             return method.apply(_console, arguments);
         };
-    }),
-    exception = console.exception = function (options) {
-        throw new Error(options && options.message || options);
-    },
-    validate = console.validate = function (boolean_, options) {
-        if (boolean_) {
-            exception(options);
+    }), {
+        exception: function (options) {
+            throw new Error(options && options.message || options);
+        },
+        validate: function (boolean_, options) {
+            if (boolean_) {
+                exception(options);
+            }
         }
-    },
+    }),
+    exception = console.exception,
     wraptry = function (trythis, errthat, finalfunction) {
         try {
             return trythis();
@@ -1179,12 +1181,14 @@ var factories = {},
         var list = bool === BOOLEAN_TRUE ? list_ : arguments,
             length = list[LENGTH];
         return function () {
-            var start = length,
-                args = arguments;
-            while (start--) {
-                args = list[start].apply(this, args);
+            var start = 1,
+                args = arguments,
+                arg = list[0].apply(this, args);
+            while (start < length) {
+                arg = list[start].call(this, arg);
+                ++start;
             }
-            return this;
+            return arg;
         };
     },
     _ = app._ = {
@@ -1228,6 +1232,7 @@ var factories = {},
         isArray: isArray,
         isEmpty: isEmpty,
         splice: splice,
+        returns: returns,
         isBoolean: isBoolean,
         invert: invert,
         extend: extend,

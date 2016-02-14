@@ -1,18 +1,6 @@
 application.scope().module('View', function (module, app, _, factories, $) {
-    var blank, appVersion = app.version,
-        each = _.each,
-        duff = _.duff,
-        Box = factories.Box,
+    var Box = factories.Box,
         Collection = factories.Collection,
-        isArray = _.isArray,
-        isString = _.isString,
-        gapSplit = _.gapSplit,
-        bind = _.bind,
-        map = _.map,
-        has = _.has,
-        clone = _.clone,
-        result = _.result,
-        reduce = _.reduce,
         protoProp = _.protoProp,
         isFragment = _.isFragment,
         isInstance = _.isInstance,
@@ -21,25 +9,20 @@ application.scope().module('View', function (module, app, _, factories, $) {
         reverseParams = _.reverseParams,
         intendedObject = _.intendedObject,
         createDocumentFragment = _.createDocumentFragment,
-        EMPTY = '',
-        INDEX = 'index',
-        LENGTH = 'length',
         RENDER = 'render',
-        PARENT = 'parent',
         OPTIONS = 'options',
-        CHILDREN = 'children',
         IS_RENDERED = '_isRendered',
         PARENT_NODE = 'parentNode',
         CONSTRUCTOR = 'constructor',
         ESTABLISH_REGIONS = 'establishRegions',
         ESTABLISHED_REGIONS = '_establishedRegions',
         APPEND_CHILD_ELEMENTS = '_appendChildElements',
-        PROTOTYPE = 'prototype',
+        ELEMENT = 'element',
         REGION_MANAGER = 'regionManager',
         templates = {},
         compile = function (id, force) {
-            var matches, tag, template, attrs, templates_ = templates[appVersion] = templates[appVersion] || {},
-                templateFn = templates_[id];
+            var matches, tag, template, attrs,
+                templateFn = templates[id];
             if (templateFn && !force) {
                 return templateFn;
             }
@@ -49,16 +32,16 @@ application.scope().module('View', function (module, app, _, factories, $) {
             attrs = map(matches || [], function (match) {
                 return {
                     match: match,
-                    attr: match.split('{{').join(EMPTY).split('}}').join(EMPTY).trim()
+                    attr: match.split('{{').join(EMPTY_STRING).split('}}').join(EMPTY_STRING).trim()
                 };
             });
             // template = template.trim();
-            templateFn = templates_[id] = function (obj) {
+            templateFn = templates[id] = function (obj) {
                 var str = template,
                     cloneResult = clone(obj);
                 duff(attrs, function (match) {
                     if (!cloneResult[match.attr]) {
-                        cloneResult[match.attr] = EMPTY;
+                        cloneResult[match.attr] = EMPTY_STRING;
                     }
                     str = str.replace(match.match, cloneResult[match.attr]);
                 });
@@ -71,16 +54,16 @@ application.scope().module('View', function (module, app, _, factories, $) {
         },
         makeDelegateEventKeys = function (view, key, namespace) {
             if (namespace) {
-                namespace = '.' + namespace;
+                namespace = PERIOD + namespace;
             } else {
-                namespace = EMPTY;
+                namespace = EMPTY_STRING;
             }
             var viewNamespace = 'delegateEvents' + view.cid;
             return map(gapSplit(key), function (_key) {
-                var __key = _key.split('.');
+                var __key = _key.split(PERIOD);
                 if (__key[1] !== viewNamespace) {
                     __key.splice(1, 0, viewNamespace);
-                    _key = __key.join('.');
+                    _key = __key.join(PERIOD);
                 }
                 return _key += namespace;
             }).join(' ');
@@ -96,20 +79,22 @@ application.scope().module('View', function (module, app, _, factories, $) {
         // Returns a new, non-mutated, parsed events hash.
         normalizeUIKeys = function (hash, ui) {
             return reduce(hash, function (memo, val, key) {
-                var normalizedKey = Marionette.normalizeUIString(key, ui);
+                var normalizedKey = normalizeUIString(key, ui);
                 memo[normalizedKey] = val;
                 return memo;
             }, {});
         },
-        viewGetRegionPlacer = function (place) {
-            return function (key) {
-                var region, view = this,
-                    regionManager = view[place] = view[place] || RegionManager();
-                if (regionManager) {
-                    region = regionManager.get(key);
+        getRegion = function (key) {
+            return this.directive(REGION_MANAGER).list.get('id', key);
+        },
+        addRegion = function (key, selector) {
+            var regionManagerDirective = this.directive(REGION_MANAGER);
+            intendedObject(key, selector, function (key, selector) {
+                var region = regionManagerDirective.list.get(key);
+                if (!region) {
+                    regionManagerDirective.establish(key, selector);
                 }
-                return region;
-            };
+            });
         },
         /**
          * @class View
@@ -120,7 +105,109 @@ application.scope().module('View', function (module, app, _, factories, $) {
         // region views are useful if you're constructing different components
         // from a separate place and just want it to be in the attach pipeline
         // very useful for componentizing your ui
-        View = factories.Box.extend('View', {
+        // LeafView = factories.
+        // regionConstructor = ,
+        Region = factories.Events.extend('Region', {
+            tagName: 'div',
+            // constructor: function (secondary) {
+            //     var model = this;
+            //     factories.Events[CONSTRUCTOR].call(model, secondary);
+            //     //
+            //     return model;
+            // },
+            // 'directive:creation:regionManager': function () {
+            //     return NULL;
+            // },
+            // _ensureElement: function () {
+            //     this._setElement();
+            // },
+            // constructor: function (options) {
+            //     var view = this;
+            //     _View[CONSTRUCTOR].call(view, options);
+            //     return view;
+            // },
+            add: function (models_) {
+                var ret, _bufferedViews, region = this,
+                    bufferedViewsDirective = region.directive('bufferedViews');
+                bufferedViewsDirective.ensure();
+                Collection(models_).each(region.bufferView, region);
+                return ret;
+            },
+            // _add: function (view) {
+            //     // var parent = this,
+            //     //     regionManagerDirective = view.directive(REGION_MANAGER);
+            //     // Box[CONSTRUCTOR][PROTOTYPE]._add.call(parent, view);
+            //     // ensure the element buffer
+            //     // append to the view list buffer
+            //     // attached buffered element here so we don't have to loop through the list later
+            //     // view._setElement(view.el);
+            //     // parent.bufferView(view);
+            // },
+            bufferView: function (view) {
+                var bufferDirective = this.directive('bufferedViews'),
+                    el = view.el && view.el.unwrap();
+                if (el) {
+                    bufferDirective.els.appendChild(el);
+                    bufferDirective.views.push(view);
+                }
+            },
+            setElement: function () {
+                var manager, region = this,
+                    selector = region.selector,
+                    parent = region[PARENT][PARENT];
+                if (parent !== app) {
+                    manager = parent.$(selector);
+                } else {
+                    manager = $(selector)[INDEX](0);
+                }
+                region.directive(ELEMENT).set(manager);
+            },
+            renderChildren: function () {
+                var buffers = this;
+                duff(this.views, function (child) {
+                    if (result(child, 'filter')) {
+                        child[RENDER]();
+                        buffers.region.directive(REGION_MANAGER).list.add(child);
+                    }
+                });
+            },
+            render: function () {
+                var region = this,
+                    bufferDirective = region.directive('bufferedViews'),
+                    elementDirective = region.directive(ELEMENT);
+                region[IS_RENDERED] = BOOLEAN_FALSE;
+                // doc frags on regionviews, list of children to trigger events on
+                bufferDirective.ensure();
+                // request extra data or something before rendering: dom is still completely intact
+                region[DISPATCH_EVENT]('before:' + RENDER);
+                // unbinds and rebinds element only if it changes
+                // region._setElement();
+                // update new element's attributes
+                region.setElement();
+                // attrs = view.attributes();
+                elementDirective.setAttributes();
+                // puts children back inside parent
+                bufferDirective.attach();
+                // attach region element
+                // appends child elements
+                elementDirective.el.append(bufferDirective.els);
+                // mark the view as rendered
+                region[IS_RENDERED] = BOOLEAN_TRUE;
+                // reset buffered objects
+                bufferDirective.reset();
+                // dispatch the render event
+                region[DISPATCH_EVENT](RENDER);
+                return region;
+                // },
+                // _appendChildElements: function () {
+                //     var region = this,
+                //         buffered = region.directive('bufferedViews');
+                //     if (buffered && region.el) {
+                //         region.el.appendChild(buffered.els);
+                //     }
+            }
+        }, BOOLEAN_TRUE),
+        View = Region.extend('View', {
             /**
              * @func
              * @name View # constructor
@@ -130,177 +217,59 @@ application.scope().module('View', function (module, app, _, factories, $) {
              * @param {DOMM|Node} el - element or Node that is attached directly to the View object
              * @returns {View} instance
              */
-            tagName: 'div',
             filter: BOOLEAN_TRUE,
-            getRegion: viewGetRegionPlacer(CHILDREN),
-            constructor: function (attributes, secondary) {
+            getRegion: getRegion,
+            constructor: function (secondary) {
                 var model = this;
-                Box[CONSTRUCTOR].apply(model, arguments);
-                model._ensureElement();
-                model._establishRegions();
+                factories.Events[CONSTRUCTOR].call(model, secondary);
+                model.directive(ELEMENT).ensure();
+                model.directive(REGION_MANAGER).establish(result(model, 'regions'));
                 return model;
-            },
-            'directive:create:children': function () {
-                var children = RegionManager();
-                children[PARENT] = this;
-                return children;
             },
             $: function (selector) {
                 return this.el.find(selector);
             },
-            template: function (ctx) {
-                return EMPTY;
+            template: function () {
+                return EMPTY_STRING;
             },
-            _renderHTML: function () {
+            setElement: function (element) {
                 var view = this,
-                    innerHtml = result(view, 'template', view.toJSON());
-                view.el.html(innerHtml);
-            },
-            _appendChildElements: function () {
-                var view = this;
-                view.directive(CHILDREN).eachCall(APPEND_CHILD_ELEMENTS);
+                    previousElement = view.el,
+                    elementDirective = view.directive(ELEMENT);
+                // detaches events with this view's namespace
+                elementDirective.set(element);
+                if (previousElement !== view.el) {
+                    elementDirective.undelegate(previousElement);
+                    elementDirective.delegate();
+                }
+                // attaches events with this view's namespace
                 return view;
             },
-            _establishRegions: function () {
-                var regionsManager, view = this,
-                    regions = view[ESTABLISHED_REGIONS] = view[ESTABLISHED_REGIONS] || result(view, 'regions');
-                if (!view[ESTABLISHED_REGIONS]) {
-                    return;
-                }
-                // add regions to the region manager
-                view.directive(CHILDREN)[ESTABLISH_REGIONS](regions);
-            },
             render: function () {
-                var view = this;
+                var ret, view = this,
+                    regionsManagerDirective = view.checkDirective(REGION_MANAGER),
+                    element = view.directive(ELEMENT);
                 view[IS_RENDERED] = BOOLEAN_FALSE;
                 // prep the object with extra members (doc frags on regionviews,
                 // list of children to trigger events on)
-                // view._ensureBufferedViews();
                 // request extra data or something before rendering: dom is still completely intact
                 view[DISPATCH_EVENT]('before:' + RENDER);
                 // unbinds and rebinds element only if it changes
                 view.setElement(view.el);
                 // update new element's attributes
-                view._setElAttributes();
+                element.setAttributes();
                 // renders the html
-                view._renderHTML();
+                element.render(result(view, 'template', view.model && view.model.toJSON()));
                 // gathers the ui elements
                 view._bindUIElements();
                 // ties regions back to newly formed parent template
-                view._establishRegions();
-                // console.log(view.parent.parent);
+                ret = regionsManagerDirective && regionsManagerDirective.establish();
                 // tie the children of the region the the region's el
-                view.directive(CHILDREN).eachCall(RENDER);
+                view.directive(REGION_MANAGER).list.eachCall(RENDER);
                 // mark the view as rendered
                 view[IS_RENDERED] = BOOLEAN_TRUE;
                 // dispatch the render event
                 view[DISPATCH_EVENT](RENDER);
-                return view;
-            },
-            setElement: function (element) {
-                var view = this,
-                    previousElement = view.el;
-                // detaches events with this view's namespace
-                // view._unDelegateEvents();
-                view._setElement(element);
-                if (previousElement !== view.el) {
-                    view._unDelegateEvents(previousElement);
-                    view._delegateEvents();
-                }
-                // attaches events with this view's namespace
-                return view;
-            },
-            // Creates the `this.el` and `this.$el` references for this view using the
-            // given `el`. `el` can be a CSS selector or an HTML string, a jQuery
-            // context or an element. Subclasses can override this to utilize an
-            // alternative DOM manipulation API and are only required to set the
-            // `this.el` property.
-            _setElement: function (el) {
-                this.el = $(el);
-            },
-            _createElement: function (tag) {
-                return $('<' + tag + '>');
-            },
-            // Ensure that the View has a DOM element to render into.
-            // If `this.el` is a string, pass it through `$()`, take the first
-            // matching element, and re-assign it to `el`. Otherwise, create
-            // an element from the `id`, `className` and `tagName` properties.
-            _ensureElement: function () {
-                var el, view = this,
-                    _elementSelector = view._elementSelector || result(view, 'el');
-                if (_elementSelector) {
-                    view._elementSelector = _elementSelector;
-                }
-                if (!isInstance(_elementSelector, factories.DOMM)) {
-                    if (isString(_elementSelector)) {
-                        // sets external element
-                        el = _elementSelector;
-                    } else {
-                        // defauts back to wrapping the element
-                        // creates internal element
-                        el = view._createElement(result(view, 'tagName'));
-                        // subclassed to expand the attributes that can be used
-                    }
-                    view.setElement(el);
-                }
-            },
-            _setElAttributes: function () {
-                var view = this;
-                var attrs = result(view, 'elementAttributes') || {};
-                if (view.className) {
-                    attrs['class'] = result(view, 'className');
-                }
-                view._setAttributes(attrs);
-            },
-            // Set attributes from a hash on this view's element.  Exposed for
-            // subclasses using an alternative DOM manipulation API.
-            _setAttributes: function (attributes) {
-                this.el.attr(attributes);
-            },
-            // pairs. Callbacks will be bound to the view, with `this` set properly.
-            // Uses event delegation for efficiency.
-            // Omitting the selector binds the event to `this.el`.
-            _delegateEvents: function (el, bindings_) {
-                var key, method, match,
-                    view = this,
-                    _elementEventBindings = view._elementEventBindings || view.elementEvents,
-                    bindings = bindings_ || _elementEventBindings,
-                    __events = {};
-                if (_elementEventBindings) {
-                    view._elementEventBindings = _elementEventBindings;
-                }
-                if (el) {
-                    each(bindings, function (key, methods_) {
-                        // assumes is array
-                        var methods = gapSplit(methods_);
-                        if (isFunction(methods_)) {
-                            methods = [methods_];
-                        }
-                        __events[makeDelegateEventKeys(view, key)] = map(methods, function (method, idx) {
-                            return bind(view[method] || method, view);
-                        });
-                    });
-                    el.on(__events);
-                }
-                return view;
-            },
-            _unDelegateEvents: function (el, bindings_) {
-                var key, method, match,
-                    view = this,
-                    _elementEventBindings = view._elementEventBindings || view.elementEvents,
-                    bindings = bindings_ || _elementEventBindings,
-                    __events = {};
-                if (_elementEventBindings) {
-                    view._elementEventBindings = _elementEventBindings;
-                }
-                if (!el) {
-                    return view;
-                }
-                each(bindings, function (key, methods_) {
-                    var method = bind(isString(methods_) ? view[methods_] : methods_, view);
-                    __events[makeDelegateEventKeys(view, key)] = method;
-                });
-                el.on(__events);
                 return view;
             },
             parentView: function () {
@@ -383,177 +352,221 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 return this.isDestroyed;
             }
         }, BOOLEAN_TRUE),
+        // ElementDirective = app.defineDirective('element', function (target) {
+        //     //
+        // }),
         _View = factories.View,
-        Region = View.extend('Region', {
-            Child: _View,
-            'directive:create:children': Collection,
-            _ensureElement: function () {
-                this._setElement();
-            },
-            constructor: function (options) {
-                var view = this;
-                _View[CONSTRUCTOR].call(view, {}, options);
+        ensureElement = function () {
+            var el, elementDirective = this,
+                view = elementDirective.view,
+                selector = elementDirective.selector || result(view, 'el');
+            if (selector) {
+                elementDirective.selector = selector;
+            }
+            if (!isInstance(selector, factories.DOMM)) {
+                if (isString(selector)) {
+                    // sets external element
+                    el = selector;
+                } else {
+                    // defauts back to wrapping the element
+                    // creates internal element
+                    el = elementDirective.create(result(view, 'tagName'));
+                    // subclassed to expand the attributes that can be used
+                }
+                elementDirective.set(el);
+            }
+        },
+        createElement = function (tag) {
+            return $('<' + tag + '>').index(0);
+        },
+        setElement = function (el) {
+            this.view.el = this.el = factories.DomManager.isInstance(el) ? el : $(el).index(0);
+        },
+        delegateElementEvents = function (bindings_) {
+            var key, method, match,
+                elementDirective = this,
+                view = elementDirective.view,
+                eventBindings = view.eventBindings || result(view, 'elementEvents'),
+                // bindings = bindings_ || eventBindings,
+                __events = {};
+            if (eventBindings) {
+                elementDirective.eventBindings = eventBindings;
+            }
+            if (!el) {
+                return elementDirective;
+            }
+            each(bindings, function (key, methods_) {
+                // assumes is array
+                var methods = gapSplit(methods_);
+                if (isFunction(methods_)) {
+                    methods = [methods_];
+                }
+                __events[makeDelegateEventKeys(view, key)] = map(methods, function (method, idx) {
+                    return bind(view[method] || method, view);
+                });
+            });
+            el.on(__events);
+            return elementDirective;
+        },
+        unDelegateElementEvents = function (el, bindings_) {
+            var key, method, match, elementDirective = this,
+                view = elementDirective.view,
+                eventBindings = elementDirective.eventBindings || result(view, 'elementEvents'),
+                // bindings = bindings_ || eventBindings,
+                __events = {};
+            if (eventBindings) {
+                elementDirective.eventBindings = eventBindings;
+            }
+            if (!el) {
                 return view;
-            },
-            add: function (models_) {
-                var ret, _bufferedViews, view = this;
-                view._ensureBufferedViews();
-                ret = Box[CONSTRUCTOR][PROTOTYPE].add.call(view, models_);
-                return ret;
-            },
-            _add: function (view) {
-                var parent = this;
-                Box[CONSTRUCTOR][PROTOTYPE]._add.call(parent, view);
-                // ensure the element buffer
-                // append to the view list buffer
-                // attached buffered element here so we don't have to loop through the list later
-                view._setElement(view.el);
-                parent._addBufferedView(view);
-            },
-            // _ensureChildren: function () {
-            //     this.directive(CHILDREN) = this.directive(CHILDREN) || Collection();
-            // },
-            _ensureBufferedViews: function () {
-                var view = this,
-                    bufferedViews = isArray(view._bufferedViews) ? 1 : view._resetBufferedViews(),
-                    _bufferedEls = isFragment(view._bufferedEls) ? 1 : view._resetBufferedEls();
-            },
-            _addBufferedView: function (view) {
-                var parent = this,
-                    el = view.el && view.el[INDEX](0);
-                if (el) {
-                    parent._bufferedEls.appendChild(el);
-                    parent._bufferedViews.push(view);
-                }
-            },
-            _resetBuffered: function () {
-                this._resetBufferedEls();
-                this._resetBufferedViews();
-            },
-            _resetBufferedViews: function () {
-                this._bufferedViews = [];
-            },
-            _resetBufferedEls: function () {
-                this._bufferedEls = createDocumentFragment();
-            },
-            _setElement: function () {
-                var region = this,
-                    selector = region.selector,
-                    parent = region[PARENT];
-                if (parent !== app) {
-                    region.el = parent.$(selector);
-                } else {
-                    region.el = $($(selector)[INDEX](0));
-                }
-            },
-            render: function () {
-                var region = this;
-                region[IS_RENDERED] = BOOLEAN_FALSE;
-                // doc frags on regionviews, list of children to trigger events on
-                region._ensureBufferedViews();
-                // request extra data or something before rendering: dom is still completely intact
-                region[DISPATCH_EVENT]('before:' + RENDER);
-                // unbinds and rebinds element only if it changes
-                region._setElement();
-                // update new element's attributes
-                region._setElAttributes();
-                // puts children back inside parent
-                region._attachBufferedViews();
-                // attach region element
-                // appends child elements
-                region[APPEND_CHILD_ELEMENTS]();
-                // mark the view as rendered
-                region[IS_RENDERED] = BOOLEAN_TRUE;
-                // reset buffered objects
-                region._resetBuffered();
-                // dispatch the render event
-                region[DISPATCH_EVENT](RENDER);
-                return region;
-            },
-            _appendChildElements: function () {
-                var region = this,
-                    buffered = region._bufferedEls,
-                    el = region.el[INDEX](0);
-                if (buffered && el) {
-                    el.appendChild(buffered);
-                }
-            },
-            _getElementFromParent: function (selector) {
-                var $selected, region = this,
-                    parent = region[PARENT];
-                if (parent !== app) {
-                    $selected = $(parent.$(selector)[INDEX](0));
-                } else {
-                    $selected = $($(selector)[INDEX](0));
-                }
-                region.el = $selected;
-            },
-            _attachBufferedViews: function () {
-                var region = this,
-                    parentView = region.parentView();
-                region.directive(CHILDREN).duff(function (child) {
-                    if (result(child, 'filter')) {
-                        child[RENDER]();
-                        region._addBufferedView(child);
-                    }
-                });
             }
-        }, BOOLEAN_TRUE),
-        RegionManager = factories.Collection.extend('RegionManager', {
-            createRegion: function (where, region_) {
-                var key, regionManager = this,
-                    parent = regionManager[PARENT],
-                    // assume that it is a region
-                    region = region_;
-                if (isInstance(region, Region)) {
-                    return region;
-                }
-                region = Region({
-                    id: where,
-                    selector: isString(region) ? region : EMPTY,
-                    parent: parent
-                });
-                key = REGION_MANAGER;
-                if (parent !== app) {
-                    key = CHILDREN;
-                    parent.add(region);
-                }
-                parent._addToHash(region, key);
-                return region;
-            },
-            removeRegion: function (region_) {
-                var regionManager = this;
-                var region = isString(region_) ? regionManager.get(region_) : region_;
-                regionManager.remove(region);
-                regionManager.unRegister(region.id, region);
-            },
-            establishRegions: function (key, value) {
-                var regionManager = this,
-                    parentView = regionManager[PARENT];
-                intendedObject(key, value, function (key, value) {
-                    var region = regionManager.get(key);
+            each(bindings, function (key, methods_) {
+                var method = bind(isString(methods_) ? view[methods_] : methods_, view);
+                __events[makeDelegateEventKeys(view, key)] = method;
+            });
+            el.on(__events);
+            return view;
+        },
+        setElementAttributes = function () {
+            var elementDirective = this,
+                view = elementDirective.view,
+                attrs = result(view, 'elementAttributes');
+            if (view.className) {
+                attrs = attrs || {};
+                attrs['class'] = result(view, 'className');
+            }
+            if (attrs) {
+                elementDirective.el.attr(attrs);
+            }
+        },
+        renderElement = function (html) {
+            this.el.html(html || '');
+        };
+    app.defineDirective(ELEMENT, function (instance) {
+        return {
+            view: instance,
+            ensure: ensureElement,
+            create: createElement,
+            set: setElement,
+            render: renderElement,
+            setAttributes: setElementAttributes,
+            delegate: delegateElementEvents,
+            undelegate: unDelegateElementEvents
+        };
+    });
+    var establishRegion = function (key, selector) {
+            var regionManagerDirective = this,
+                parentView = regionManagerDirective[PARENT];
+            if (key) {
+                intendedObject(key, selector, function (key, selector) {
+                    var $selected, region = regionManagerDirective.list.get(key);
                     if (!region) {
-                        region = regionManager.createRegion(key, value);
+                        region = regionManagerDirective.create(key, selector);
                     }
-                    region._getElementFromParent();
+                    // region = this;
+                    if (parentView !== app) {
+                        $selected = parentView.$(selector)[INDEX](0);
+                    } else {
+                        $selected = $(selector)[INDEX](0);
+                    }
+                    if ($selected) {
+                        region.el = $selected;
+                    }
                 });
-                return regionManager;
             }
-        }, BOOLEAN_TRUE);
+            return regionManagerDirective;
+        },
+        removeRegion = function (region_) {
+            // var regionManager = this;
+            // var region = isString(region_) ? regionManager.get(region_) : region_;
+            // regionManager.remove(region);
+            // regionManager.unRegister(region.id, region);
+        },
+        createRegion = function (where, region_) {
+            var key, regionManagerDirective = this,
+                parent = regionManagerDirective[PARENT],
+                // assume that it is a region
+                region = region_;
+            if (isInstance(region, Region)) {
+                return region;
+            }
+            region = Region({
+                id: where,
+                selector: isString(region) ? region : EMPTY_STRING,
+                parent: regionManagerDirective
+            });
+            key = REGION_MANAGER;
+            // if (parent !== app) {
+            //     // key = CHILDREN;
+            //     parent.add(region);
+            // }
+            regionManagerDirective.list.push(region);
+            regionManagerDirective.list.register('id', where, region);
+            return region;
+        },
+        bufferedEnsure = function () {
+            var buffers = this,
+                _bufferedViews = isArray(buffers.views) ? 1 : buffers.resetViews(),
+                _bufferedEls = isFragment(buffers.els) ? 1 : buffers.resetEls();
+        },
+        bufferedReset = function () {
+            this.resetEls();
+            this.resetViews();
+        },
+        bufferedElsReset = function () {
+            this.els = createDocumentFragment();
+        },
+        bufferedViewsReset = function () {
+            this.views = [];
+        },
+        bufferedAttach = function () {
+            var buffers = this;
+            duff(this.views, function (child) {
+                if (result(child, 'filter')) {
+                    child[RENDER]();
+                    buffers.region.directive(REGION_MANAGER).list.add(child);
+                }
+            });
+        };
+    app.defineDirective(REGION_MANAGER, function (instance) {
+        return {
+            list: Collection(),
+            parent: instance,
+            create: createRegion,
+            establish: establishRegion,
+            remove: removeRegion,
+            add: addRegion
+        };
+    });
+    app.defineDirective('bufferedViews', function (instance) {
+        return {
+            region: instance,
+            els: createDocumentFragment(),
+            views: [],
+            reset: bufferedReset,
+            ensure: bufferedEnsure,
+            resetViews: bufferedViewsReset,
+            resetEls: bufferedElsReset,
+            attach: bufferedAttach
+        };
+    });
     _.exports({
         compile: compile
     });
     app.extend({
         _addToHash: Box[CONSTRUCTOR][PROTOTYPE]._addToHash,
-        getRegion: viewGetRegionPlacer(REGION_MANAGER),
-        addRegion: function (id, selector) {
-            var app = this;
-            // ensure region manager
-            var blank = app.getRegion();
-            var regionManager = app[REGION_MANAGER];
-            regionManager[PARENT] = app;
-            regionManager[ESTABLISH_REGIONS](id, selector);
-            return app;
-        }
+        // getRegion: viewGetRegionPlacer(REGION_MANAGER),
+        getRegion: getRegion,
+        addRegion: addRegion
+        // addRegion: function (id, selector) {
+        //     var app = this;
+        //     // ensure region manager
+        //     // var blank = app.getRegion();
+        //     this.directive(REGION_MANAGER).establish(id, selector);
+        //     // var regionManager = app[REGION_MANAGER];
+        //     // regionManager[PARENT] = app;
+        //     // regionManager[ESTABLISH_REGIONS](id, selector);
+        //     return app;
+        // }
     });
 });

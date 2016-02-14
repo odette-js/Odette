@@ -9,18 +9,13 @@ application.scope(function (app) {
         CURRENT = 'current',
         // _COUNTER = '_counter',
         DESTROY = 'destroy',
-        GROUP_INDEX = 'groupIndex',
-        REGISTERED = 'registered',
-        SUCCESS = 'success',
-        FAILURES = 'failures',
-        EVERY = 'every',
         BEFORE_DESTROY = BEFORE_COLON + DESTROY,
         INTERNAL_EVENTS = '_events',
         STOP_LISTENING = 'stopListening',
         EVENT_REMOVE = '_removeEventList',
         _DELEGATED_CHILD_EVENTS = '_delegatedParentEvents',
         _PARENT_DELEGATED_CHILD_EVENTS = '_parentDelgatedChildEvents',
-        CHANGE_COUNTER = '_changeCounter',
+        CHANGE_COUNTER = 'counter',
         PREVIOUS = 'previous',
         /**
          * @class Box
@@ -30,26 +25,22 @@ application.scope(function (app) {
         Container = factories.Events.extend('Container', {
             // this id prefix is nonsense
             // define the actual key
-            uniqueKey: 'c',
             idAttribute: ID,
             comparator: ID,
             constructor: function (attributes, secondary) {
                 var model = this;
-                model[model.uniqueKey + ID] = model[model.uniqueKey + ID] = uniqueId(model.uniqueKey);
                 model.reset(attributes);
                 Events[CONSTRUCTOR].call(this, secondary);
                 return model;
             },
-            _reset: function (data_) {
+            reset: function (data_) {
                 var childModel, children, model = this,
                     dataDirective = model.directive(DATA),
                     current = dataDirective[CURRENT],
                     // automatically checks to see if the data is a string
                     passed = parse(data_) || {},
-                    // default data
-                    defaultsResult = result(model, 'defaults', passed),
                     // build new data
-                    newAttributes = extend(current || {}, defaultsResult, passed),
+                    newAttributes = extend(result(model, 'defaults', passed), passed),
                     // try to get the id from the attributes
                     idAttributeResult = result(model, 'idAttribute', newAttributes),
                     discoveredId = model.id || newAttributes[idAttributeResult] || uniqueId(BOOLEAN_FALSE, BOOLEAN_TRUE);
@@ -59,7 +50,6 @@ application.scope(function (app) {
                 model[DISPATCH_EVENT](BEFORE_COLON + RESET);
                 // setup previous data
                 dataDirective.reset(newAttributes);
-                // dataDirective[CURRENT] = newAttributes;
                 dataDirective[PREVIOUS] = {};
                 // let everything know that it is changing
                 model[DISPATCH_EVENT](RESET);
@@ -71,7 +61,7 @@ application.scope(function (app) {
              * @func
              * @name Box#unset
              */
-            unset: _.directives.parody(DATA, 'unset'),
+            unset: _.directives.parodyCheck(DATA, 'unset'),
             /**
              * @description returns attribute passed into
              * @param {String} attr - property string that is being gotten from the attributes object
@@ -79,7 +69,7 @@ application.scope(function (app) {
              * @func
              * @name Box#get
              */
-            get: _.directives.parody(DATA, 'get'),
+            get: _.directives.parodyCheck(DATA, 'get'),
             /**
              * @func
              * @param {String} attr - property string that is being gotten from the attributes object
@@ -87,32 +77,7 @@ application.scope(function (app) {
              * @description checks to see if the current attribute is on the attributes object as anything other an undefined
              * @name Box#has
              */
-            has: function (attrs) {
-                var box = this,
-                    attributes = box.directive(DATA)[CURRENT];
-                return !!attributes && find(gapSplit(attrs), function (attr) {
-                    return attributes[attr] === UNDEFINED;
-                }) === UNDEFINED;
-            },
-            exists: function (key) {
-                var current = this.directive(DATA)[CURRENT];
-                return !!current && current[KEY] != NULL;
-            },
-            insert: function (key, handler) {
-                var container = this,
-                    newCount = 0,
-                    attrs = {};
-                intendedObject(key, handler, function (key, handler) {
-                    if (container.directive(DATA)[key] == NULL) {
-                        ++newCount;
-                        attrs[key] = handler();
-                    }
-                });
-                if (newCount) {
-                    container.set(attrs);
-                }
-                return container;
-            },
+            has: _.directives.parodyCheck(DATA, 'has'),
             /**
              * @description collects a splat of arguments and condenses them into a single object. Object is then extended onto the attributes object and any items that are different will be fired as events
              * @param {...*} series - takes a series of key value pairs. can be mixed with objects. All key value pairs will be placed on a new object, which is to be passed into the function below
@@ -120,27 +85,18 @@ application.scope(function (app) {
              * @name Box#set
              * @returns {Box} instance
              */
-            // _set: ,
-            _destroy: function () {
-                var container = this,
-                    // removes all parent / parent's child listeners
-                    removeRet = container[PARENT] && container[PARENT].remove(container);
-            },
             destroy: function () {
                 var removeRet, box = this;
                 // notify things like parent that it's about to destroy itself
                 box[DISPATCH_EVENT](BEFORE_DESTROY);
                 // actually detach
-                box._destroy();
+                removeRet = box[PARENT] && box[PARENT].remove(box);
                 // stop listening to other views
                 box[DISPATCH_EVENT](DESTROY);
                 // stops listening to everything
                 box[STOP_LISTENING]();
-                // takes off all other event handlers
-                // box.resetEvents();
                 return box;
             },
-            // digester: ,
             set: function (key, value) {
                 var changedList = [],
                     model = this,
@@ -149,7 +105,7 @@ application.scope(function (app) {
                     previous = dataDirective[PREVIOUS] = dataDirective[PREVIOUS] || {},
                     compiled = {};
                 intendedObject(key, value, function (key, value) {
-                    if (dataDirective.set(key, value)) {
+                    if (dataDirective.set(key, value) && !dataDirective.changing[name]) {
                         changedList.push(key);
                         compiled[key] = value;
                     }
@@ -158,16 +114,33 @@ application.scope(function (app) {
                 if (!changedList[LENGTH]) {
                     return model;
                 }
-                dataDirective.digest(function () {
+                // list
+                dataDirective.digest(model, function () {
                     duff(changedList, function (name) {
+                        dataDirective.changing[name] = BOOLEAN_TRUE;
                         model[DISPATCH_EVENT](CHANGE_COLON + name);
+                        dataDirective.changing[name] = BOOLEAN_FALSE;
                     });
                 });
-                // this event should only ever exist here
-                if (!dataDirective[CHANGE_COUNTER]) {
-                    model[DISPATCH_EVENT](CHANGE, dataDirective[PREVIOUS]);
-                    dataDirective[PREVIOUS] = {};
+                return model;
+            },
+            setDeep: function (where, value) {
+                var former, lastkey, model = this,
+                    dataDirective = model.directive(DATA),
+                    triggers = [],
+                    path = toArray(where, PERIOD);
+                if (!dataDirective.setDeep(path, value)) {
+                    return model;
                 }
+                dataDirective.digest(model, function () {
+                    duffRev(path, function (item) {
+                        var name = path.join(PERIOD);
+                        dataDirective.changing[name] = BOOLEAN_TRUE;
+                        model[DISPATCH_EVENT](CHANGE_COLON + name);
+                        dataDirective.changing[name] = BOOLEAN_FALSE;
+                        path.pop();
+                    });
+                });
                 return model;
             },
             /**
@@ -201,196 +174,6 @@ application.scope(function (app) {
                 var model = this,
                     id = id_ === UNDEFINED ? uniqueId(BOOLEAN_FALSE) : id_;
                 model.id = id;
-            },
-            reset: function (attrs) {
-                this._reset(attrs);
-                return this;
-            },
-            setAndDispatch: function (key, value, fn, evnt) {
-                var ret, container = this;
-                if (container._set(key, value)) {
-                    fn.call(container);
-                    ret = evnt && container[DISPATCH_EVENT](evnt);
-                }
-                return container;
-            }
-        }, BOOLEAN_TRUE),
-        // intentional modification of Events prototype
-        ret = factories.Events[CONSTRUCTOR][PROTOTYPE].when = function (key) {
-            var sequencer, manager, parent = this;
-            if (parent && !parent._linguisticSequencer) {
-                manager = parent._linguisticSequencer = Box({}, {
-                    parent: parent,
-                    Child: LinguisticSequencer
-                });
-                manager.listenTo(parent, {
-                    destroy: manager.destroy,
-                    change: function (e) {
-                        manager.children.results('apply', e);
-                    }
-                });
-            }
-            sequencer = manager.add({})[0];
-            sequencer.and(key);
-            return sequencer;
-        },
-        curriedEquivalence = function (value) {
-            return function (current) {
-                return isEqual(current, value);
-            };
-        },
-        curriedGreaterThan = function (value) {
-            return function (current) {
-                return current > value;
-            };
-        },
-        curriedLessThan = function (value) {
-            return function (current) {
-                return current < value;
-            };
-        },
-        push = function (where) {
-            return function (fn) {
-                var sequencer = this;
-                sequencer[where].push(bind(fn, sequencer));
-                return sequencer;
-            };
-        },
-        addValue = function (constant1, constant2) {
-            return function () {
-                var sequencer = this;
-                duff(arguments, function (value) {
-                    sequencer.add(value, constant1, constant2);
-                });
-                return sequencer;
-            };
-        },
-        isNot = addValue(BOOLEAN_TRUE),
-        LinguisticSequencer = Container.extend('LinguisticSequencer', {
-            then: push(SUCCESS),
-            always: push(EVERY),
-            otherwise: push(FAILURES),
-            initialize: function () {
-                var sequencer = this;
-                sequencer[_COUNTER] = 0;
-                sequencer.logic = Collection();
-                sequencer[SUCCESS] = Collection();
-                sequencer[FAILURES] = Collection();
-                sequencer[EVERY] = Collection();
-                sequencer.group();
-            },
-            defaults: function () {
-                return {
-                    groupIndex: -1,
-                    registered: {}
-                };
-            },
-            and: function (key) {
-                var sequencer = this;
-                sequencer.set(CURRENT, key);
-                sequencer.bind(key, sequencer.increment);
-                return sequencer;
-            },
-            or: function (key) {
-                this.group();
-                this.add(key);
-                return this;
-            },
-            group: function () {
-                var sequencer = this,
-                    value = sequencer.get(GROUP_INDEX);
-                ++value;
-                sequencer.set(GROUP_INDEX, value);
-                sequencer.logic.push({
-                    index: value,
-                    list: Collection()
-                });
-                return sequencer;
-            },
-            increment: function () {
-                ++this[_COUNTER];
-            },
-            bind: function (target, handler) {
-                var sequencer = this,
-                    registered = sequencer.get(REGISTERED);
-                if (!registered[target]) {
-                    registered[target] = BOOLEAN_TRUE;
-                    this.listenTo(this.grandParent(), CHANGE_COLON + target, handler);
-                }
-            },
-            unbind: function (target, handler) {
-                var sequencer = this,
-                    registered = sequencer.get(REGISTERED);
-                if (registered[target]) {
-                    registered[target] = BOOLEAN_FALSE;
-                    this[STOP_LISTENING](this.grandParent(), CHANGE_COLON + target, handler);
-                }
-            },
-            is: addValue(),
-            isNot: isNot,
-            isnt: isNot,
-            isGreaterThan: addValue(BOOLEAN_FALSE, curriedGreaterThan),
-            isLessThan: addValue(BOOLEAN_FALSE, curriedLessThan),
-            isNotGreaterThan: addValue(BOOLEAN_TRUE, curriedGreaterThan),
-            isNotLessThan: addValue(BOOLEAN_TRUE, curriedLessThan),
-            value: function (value, defaultFn) {
-                return isFunction(value) ? value : defaultFn(value);
-            },
-            add: function (value_, negate, defaultFn) {
-                var object, sequencer = this;
-                var current = sequencer.get(CURRENT);
-                var value = sequencer.value(value_, defaultFn || curriedEquivalence);
-                var made = sequencer._makeLogicObject(current, value, negate);
-                sequencer.logic.index(sequencer.get(GROUP_INDEX)).list.push(made);
-                return sequencer;
-            },
-            grandParent: function () {
-                return this.parent.parent;
-            },
-            check: function () {
-                var sequencer = this,
-                    grandparent = sequencer.grandParent();
-                return !!sequencer[_COUNTER] && !sequencer.logic.find(function (group) {
-                    return group.list.find(function (item) {
-                        return !item.fn(grandparent.get(item.key));
-                    });
-                });
-            },
-            restart: function () {
-                this[_COUNTER] = 0;
-                return this;
-            },
-            _makeLogicObject: function (key, handler, negate) {
-                var context = this,
-                    bound = bind(handler, context);
-                bound = negate ? _.negate(bound) : bound;
-                return {
-                    key: key,
-                    context: context,
-                    handler: handler,
-                    fn: bound
-                };
-            },
-            handle: function (key, arg) {
-                var sequencer = this;
-                var ret = sequencer[key] && sequencer[key].call(arg);
-                return sequencer;
-            },
-            run: function () {
-                var sequencer = this;
-                if (sequencer.get('state')) {
-                    sequencer.handle(SUCCESS);
-                } else {
-                    sequencer.handle(FAILURES);
-                }
-                sequencer.handle(EVERY);
-            },
-            apply: function () {
-                var sequencer = this,
-                    checked = sequencer.check();
-                sequencer.restart();
-                sequencer.setAndDispatch('state', checked, sequencer.run, CHANGE_COLON + 'state');
-                return sequencer;
             }
         }, BOOLEAN_TRUE),
         modelMaker = function (attributes, options) {
@@ -398,20 +181,6 @@ application.scope(function (app) {
         },
         Box = factories.Container.extend('Box', {
             Child: modelMaker,
-            /**
-             * @description constructor function for the Box Object
-             * @name Box#constructor
-             * @func
-             */
-            // constructor: function (attributes, secondary) {
-            //     var model = this;
-            //     model._ensureChildren();
-            //     Container.constructor.apply(model, arguments);
-            //     return model;
-            // },
-            // _ensureChildren: function () {
-            //     this.directive(CHILDREN) = Collection();
-            // },
             /**
              * @description resets the box's attributes to the object that is passed in
              * @name Box#reset
@@ -549,38 +318,6 @@ application.scope(function (app) {
                 // unregister from the child hash keys
                 parent.directive(CHILDREN).unRegister(child.uniqueKey + ID, child[child.uniqueKey + ID]);
             },
-            // only place that we mention parents
-            _collectParents: function () {
-                var eventr = this,
-                    parents = [],
-                    parent = eventr[PARENT];
-                while (parent) {
-                    if (isInstance(parent, Events)) {
-                        parents.push(parent);
-                    }
-                    parent = parent[PARENT];
-                }
-                return parents;
-            },
-            // has to completely replace previous event dispatcher
-            // dispatchEvent: function (name_, data, evnt_) {
-            //     var origin = this,
-            //         // events
-            //         name = (evnt_ && evnt_.methodName) || name_,
-            //         // methodName = (evnt_ && evnt_.methodName) || upCase(camelCase('on:' + name, COLON)),
-            //         // childMethodName = upCase(camelCase('on:bubble:' + name, COLON)),
-            //         // onMethod = isFunction(origin[methodName]),
-            //         evnt = evnt_ || origin._createEvent(name, data),
-            //         parents = origin._collectParents(),
-            //         i = parents[LENGTH] - 1;
-            //     // should all be BOOLEAN_TRUE the first time around
-            //     while (origin && origin._eventDispatcher && !evnt.isStopped()) {
-            //         origin._eventDispatcher(evnt);
-            //         origin = !evnt.isStopped() && evnt.bubbles && origin[PARENT];
-            //     }
-            //     evnt.finished();
-            //     return evnt;
-            // },
             _remove: function (model) {
                 // cache the parent
                 var parent = this;
@@ -644,18 +381,18 @@ application.scope(function (app) {
              * @name Box#sort
              */
             sort: function (comparator_) {
-                var compString, isReversed, model = this,
+                var comparatorString, isReversed, model = this,
                     children = model.directive(CHILDREN),
                     comparator = comparator_ || result(model, 'comparator');
                 if (isString(comparator)) {
                     isReversed = comparator[0] === '!';
-                    compString = comparator;
+                    comparatorString = comparator;
                     if (isReversed) {
-                        compString = comparator.slice(1);
+                        comparatorString = comparator.slice(1);
                     }
                     comparator = function (a, b) {
-                        var val_, val_A = a.get(compString),
-                            val_B = b.get(compString);
+                        var val_, val_A = a.get(comparatorString),
+                            val_B = b.get(comparatorString);
                         if (isReversed) {
                             val_ = val_B - val_A;
                         } else {
@@ -673,10 +410,8 @@ application.scope(function (app) {
         set = function (key, newValue) {
             var dataDirective = this,
                 current = dataDirective[CURRENT],
-                oldValue = current[key],
-                previousAttrsObject = dataDirective[PREVIOUS];
+                oldValue = current[key];
             if (!isEqual(oldValue, newValue)) {
-                previousAttrsObject[key] = oldValue;
                 current[key] = newValue;
                 return BOOLEAN_TRUE;
             }
@@ -692,20 +427,42 @@ application.scope(function (app) {
             this[CURRENT] = hash;
             // this.counter = 0;
         },
-        digest = function (fn) {
-            var ret, directive = this;
-            ++directive.digesting;
-            ret = fn();
-            --directive.digesting;
-            return directive;
+        setDeep = function (path, value) {
+            var previous, dataDirective = this,
+                current = dataDirective[CURRENT];
+            duff(path, function (key, index) {
+                var no_more = index === path[LENGTH] - 1;
+                previous = current;
+                current = no_more ? current[key] : isObject(current[key]) ? current[key] : (previous[key] = {});
+            });
+            if (previous && !isEqual(current, value)) {
+                previous[key] = value;
+                return BOOLEAN_TRUE;
+            }
+        },
+        digest = function (model, fn) {
+            var dataDirective = this;
+            dataDirective[CHANGE_COUNTER]++;
+            fn();
+            dataDirective[CHANGE_COUNTER]--;
+            // this event should only ever exist here
+            if (!dataDirective[CHANGE_COUNTER]) {
+                model[DISPATCH_EVENT](CHANGE, dataDirective[PREVIOUS]);
+                dataDirective[PREVIOUS] = {};
+                dataDirective.changing = {};
+            }
+        },
+        has = function (key) {
+            return this.current[key] != NULL;
         };
     app.defineDirective('data', function () {
         return {
             current: {},
-            previous: {},
-            digesting: 0,
+            changing: {},
+            counter: 0,
             set: set,
             get: get,
+            has: has,
             unset: unset,
             reset: reset,
             digest: digest

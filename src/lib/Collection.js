@@ -437,21 +437,6 @@ application.scope(function (app) {
             unwrap: function () {
                 return this.directive('list').items;
             },
-            // setupList: function (list) {
-            //     this[ITEMS] = list || [];
-            // },
-            // getRegistry: function () {
-            //     return this[BY_ID];
-            // },
-            // setupRegistry: function (registry) {
-            //     this[BY_ID] = registry || {};
-            // },
-            // empty: function () {
-            //     var collection = this;
-            //     // collection.setupList();
-            //     // collection.setupRegistry();
-            //     return collection;
-            // },
             empty: _.flow(_.directives.parody('list', 'empty'), _.directives.parody('registry', 'reset')),
             swap: function (arr) {
                 this.directive('list').items = arr || [];
@@ -477,9 +462,17 @@ application.scope(function (app) {
             },
             toJSON: function () {
                 return map(this.unwrap(), function (item) {
-                    return isObject(item) ? result(item, TO_JSON) : item;
+                    return result(item, TO_JSON);
                 });
             },
+            /**
+             * @description adds models to the children array
+             * @param {Object|Object[]} objs - object or array of objects to be passed through the model factory and pushed onto the children array
+             * @param {Object} [secondary] - secondary hash that is common among all of the objects being created. The parent property is automatically overwritten as the object that the add method was called on
+             * @returns {Object|Box} the object that was just created, or the object that the method was called on
+             * @name Box#add
+             * @func
+             */
             constructor: function (arr) {
                 var collection = this;
                 if (isArrayLike(arr)) {
@@ -498,14 +491,6 @@ application.scope(function (app) {
             register: _.directives.parody('registry', 'keep'),
             unRegister: _.directives.parody('registry', 'drop'),
             swapRegister: _.directives.parody('registry', 'swap')
-            /**
-             * @description adds models to the children array
-             * @param {Object|Object[]} objs - object or array of objects to be passed through the model factory and pushed onto the children array
-             * @param {Object} [secondary] - secondary hash that is common among all of the objects being created. The parent property is automatically overwritten as the object that the add method was called on
-             * @returns {Object|Box} the object that was just created, or the object that the method was called on
-             * @name Box#add
-             * @func
-             */
         }, wrappedCollectionMethods), BOOLEAN_TRUE),
         isNullMessage = {
             message: 'object must not be null or undefined'
@@ -728,21 +713,21 @@ application.scope(function (app) {
     var get = function (category, id) {
         var cat = this.register[category];
         return cat && cat[id];
-    };
-    var keep = function (category, id, value) {
+    },
+    keep = function (category, id, value) {
         var register = this.register,
             cat = register[category] = register[category] || {};
         cat[id] = value;
-    };
-    var drop = function (category, id) {
+    },
+    drop = function (category, id) {
         return this.swap(category, id);
-    };
-    var swap = function (category, id, value) {
+    },
+    swap = function (category, id, value) {
         var cached = this.get(category, id);
         this.keep(category, id, value);
         return cached;
-    };
-    var reset = function () {
+    },
+    reset = function () {
         this.register = {};
         this.count = 0;
     };

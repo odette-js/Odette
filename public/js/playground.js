@@ -18,7 +18,9 @@ application.scope().module('playground', function (module, app, _, factories, $)
     });
     var topLayer = app.getRegion('main');
     var middleLayer = SomeView({
-        text: 'here'
+        model: factories.Box({
+            text: 'here'
+        })
     });
     var middleHighRegion = middleLayer.getRegion('high');
     var bottomLayer1 = SomeView();
@@ -28,4 +30,5 @@ application.scope().module('playground', function (module, app, _, factories, $)
     middleHighRegion.add([bottomLayer1, bottomLayer2, bottomLayer3, bottomLayer4]);
     topLayer.add(middleLayer);
     topLayer.render();
+    console.log(topLayer);
 });

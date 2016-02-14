@@ -28,12 +28,28 @@ application.scope(function (app) {
         destruction: {}
     };
     app.defineDirective = function (name, creation, destruction_) {
-        var err = !isFunction(creation) && exception({
+        var err = (!isString(name) && exception({
+            message: 'directives must be registered with a string for a name'
+        })) || (!isFunction(creation)) && exception({
             message: 'directives must be registered with both create and destroy functions'
         });
         var destruction = isFunction(destruction_) ? destruction_ : returnsNull;
         directives.creation[name] = directives.creation[name] || creation;
         directives.destruction[name] = directives.destruction[name] || destruction;
+    };
+    app.extendDirective = function (oldName, newName, handler_, destruction_) {
+        var destruction = destruction_ || returnsThird;
+        var handler = handler_ || returnsThird;
+        return app.defineDirective(newName, function (instance, name, third) {
+            var directive = directives.creation[oldName](instance, name, third);
+            return handler(instance, name, directive);
+        }, function (instance, name, third) {
+            var directive = directives.destruction[oldName](instance, name, third);
+            return destruction(instance, name, directive);
+        });
+    };
+    var returnsThird = function (one, two, three) {
+        return three;
     };
     var directiveMod = function (key, instance, name) {
         return (instance['directive:' + key + ':' + name] || directives[key][name] || noop)(instance, name);
@@ -50,9 +66,16 @@ application.scope(function (app) {
             return this;
         };
     };
+    var parodyCheck = function (directive, method) {
+        return function (one, two, three) {
+            var directiveInstance = this.checkDirective(directive);
+            return directiveInstance && directiveInstance[method](one, two, three);
+        };
+    };
     _.exports({
         directives: {
             parody: parody,
+            parodyCheck: parodyCheck,
             iterate: iterate
         }
     });

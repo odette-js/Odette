@@ -86,8 +86,8 @@ application.scope().module('Associator', function (module, app, _, factories) {
             },
             ensure: function (el, attr, failure) {
                 var data = this.get(el);
-                data[attr] = data[attr] || failure();
-                data[attr][TARGET] = data[attr][TARGET] || data[TARGET];
+                data[attr] = data[attr] || failure(el);
+                // data[attr][TARGET] = data[attr][TARGET] || data[TARGET];
                 return data[attr];
             }
         }, BOOLEAN_TRUE);
