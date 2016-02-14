@@ -502,8 +502,19 @@ var factories = {},
         }
         return fn;
     },
-    duff = function (values, runner_, context, direction) {
-        var runner, iterations, val, i, leftover, deltaFn;
+    // alternative each
+    // duff = function (values, runner_, context, direction_) {
+    //     var idx, direction = direction_ || 1,
+    //         i = values[LENGTH],
+    //         bound = bind(runner_, context);
+    //     while (--i >= 0) {
+    //         idx = ((values[LENGTH] * direction) - (i * direction)) - 1;
+    //         bound(values[idx], idx, values);
+    //     }
+    //     return values;
+    // },
+    duff = function (values, runner_, context, direction_) {
+        var direction, runner, iterations, val, i, leftover, deltaFn;
         if (!values) {
             return;
         }
@@ -511,10 +522,10 @@ var factories = {},
         val = values[LENGTH];
         leftover = val % 8;
         iterations = parseInt(val / 8, 10);
-        if (direction < 0) {
+        if (direction_ < 0) {
             i = val - 1;
         }
-        direction = direction || 1;
+        direction = direction_ || 1;
         runner = bind(runner_, context);
         if (leftover > 0) {
             do {
@@ -1137,6 +1148,14 @@ var factories = {},
      * @func
      */
     foldr = createReduce(-1),
+    some = function (array, handler) {
+        return foldl(array, function (memo, value, key) {
+            if (handler(value, key, array)) {
+                memo.push(value);
+            }
+            return memo;
+        }, []);
+    },
     _console = win.console || {},
     _log = _console.log || noop,
     // use same name so that we can ensure browser compatability
@@ -1242,6 +1261,7 @@ var factories = {},
         foldl: foldl,
         foldr: foldr,
         now: now,
+        some: some,
         map: map,
         result: result,
         isUndefined: isUndefined,

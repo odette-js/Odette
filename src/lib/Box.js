@@ -50,7 +50,7 @@ application.scope(function (app) {
                 model[DISPATCH_EVENT](BEFORE_COLON + RESET);
                 // setup previous data
                 dataDirective.reset(newAttributes);
-                dataDirective[PREVIOUS] = {};
+                // dataDirective[PREVIOUS] = {};
                 // let everything know that it is changing
                 model[DISPATCH_EVENT](RESET);
             },

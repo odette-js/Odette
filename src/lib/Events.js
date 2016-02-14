@@ -55,11 +55,11 @@ application.scope(function (app) {
         },
         curriedEquality = function (key, original) {
             return function (e) {
-                return isEqual(original, e[TARGET].get(key));
+                return isEqual(original, e[ORIGIN].get(key));
             };
         },
         turnOff = function (e) {
-            return e && e[TARGET] && e[TARGET].off && e[TARGET].off();
+            return e && e[ORIGIN] && e[ORIGIN].off && e[ORIGIN].off();
         },
         setupWatcher = function (iterator, nameOrObjectIndex, triggersOnce) {
             var after = triggersOnce ? turnOff : noop;
@@ -73,7 +73,7 @@ application.scope(function (app) {
                 handlersIndex = nameOrObjectIndex;
                 list = args.splice(nameOrObjectIndex);
                 nameOrObject = list[0];
-                context = args[handlersIndex - 1];
+                context = list[(isObject(nameOrObject) ? 2 : 3)] || box;
                 if (nameOrObjectIndex && !args[0]) {
                     return ret;
                 }
@@ -143,7 +143,7 @@ application.scope(function (app) {
                 evnt.dispatchTree = BOOLEAN_FALSE;
                 evnt.onMethodName = camelCase('on:' + name, COLON);
                 evnt.propagationIsStopped = evnt[IMMEDIATE_PROP_IS_STOPPED] = BOOLEAN_FALSE;
-                evnt[TARGET] = target;
+                evnt[ORIGIN] = target;
                 evnt[NAME] = name;
                 evnt[TYPE] = name.split(COLON)[0];
                 evnt.timeStamp = now();

@@ -357,7 +357,7 @@ application.scope(function (app) {
             return function (fn, ctx, memo) {
                 return _[name](this.unwrap(), fn, ctx, memo);
             };
-        }), wrap(gapSplit('add addAt remove removeAt indexOf posit foldr foldl reduce'), function (name) {
+        }), wrap(gapSplit('add addAt remove removeAt indexOf posit foldr foldl reduce splice'), function (name) {
             return function (one, two, three) {
                 return _[name](this.unwrap(), one, two, three);
             };
@@ -644,20 +644,34 @@ application.scope(function (app) {
                     found.toggle();
                 }
             },
+            rebuild: function () {
+                // rebuilds the registry
+                var parent = this,
+                    validResult = foldl(parent.unwrap(), function (memo, stringInstance) {
+                        if (stringInstance.isValid()) {
+                            memo.list.push(stringInstance);
+                            memo.registry.id[stringInstance.value] = stringInstance;
+                        }
+                        return memo;
+                    }, {
+                        list: [],
+                        registry: {
+                            id: {}
+                        }
+                    });
+                parent.swap(validResult.list);
+                parent.directive('registry').reset(validResult.registry);
+            },
             generate: function (delimiter_) {
-                var string = EMPTY_STRING,
+                var validResult, string = EMPTY_STRING,
                     parent = this,
                     previousDelimiter = parent.delimiter,
                     delimiter = delimiter_;
-                if (!this._changeCounter && previousDelimiter === previousDelimiter) {
-                    return this.current();
+                if (!parent._changeCounter && delimiter === previousDelimiter) {
+                    return parent.current();
                 }
-                parent[ITEMS] = parent.foldl(function (memo, stringInstance) {
-                    if (stringInstance.isValid()) {
-                        memo.push(stringInstance);
-                    }
-                    return memo;
-                }, []);
+                parent.delimiter = delimiter;
+                parent.rebuild();
                 string = parent.unwrap().join(delimiter);
                 parent.current(string);
                 return string;
@@ -727,8 +741,8 @@ application.scope(function (app) {
         this.keep(category, id, value);
         return cached;
     },
-    reset = function () {
-        this.register = {};
+    reset = function (registry) {
+        this.register = registry || {};
         this.count = 0;
     };
     app.defineDirective('registry', function () {

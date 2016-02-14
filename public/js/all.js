@@ -281,6 +281,7 @@ var UNDEFINED, win = window,
     BEFORE = 'before',
     CHANGE = 'change',
     TARGET = 'target',
+    ORIGIN = 'origin',
     BEFORE_COLON = BEFORE + COLON,
     CHANGE_COLON = CHANGE + COLON,
     RESET = 'reset',
@@ -831,8 +832,19 @@ var factories = {},
         }
         return fn;
     },
-    duff = function (values, runner_, context, direction) {
-        var runner, iterations, val, i, leftover, deltaFn;
+    // alternative each
+    // duff = function (values, runner_, context, direction_) {
+    //     var idx, direction = direction_ || 1,
+    //         i = values[LENGTH],
+    //         bound = bind(runner_, context);
+    //     while (--i >= 0) {
+    //         idx = ((values[LENGTH] * direction) - (i * direction)) - 1;
+    //         bound(values[idx], idx, values);
+    //     }
+    //     return values;
+    // },
+    duff = function (values, runner_, context, direction_) {
+        var direction, runner, iterations, val, i, leftover, deltaFn;
         if (!values) {
             return;
         }
@@ -840,10 +852,10 @@ var factories = {},
         val = values[LENGTH];
         leftover = val % 8;
         iterations = parseInt(val / 8, 10);
-        if (direction < 0) {
+        if (direction_ < 0) {
             i = val - 1;
         }
-        direction = direction || 1;
+        direction = direction_ || 1;
         runner = bind(runner_, context);
         if (leftover > 0) {
             do {
@@ -1466,6 +1478,14 @@ var factories = {},
      * @func
      */
     foldr = createReduce(-1),
+    some = function (array, handler) {
+        return foldl(array, function (memo, value, key) {
+            if (handler(value, key, array)) {
+                memo.push(value);
+            }
+            return memo;
+        }, []);
+    },
     _console = win.console || {},
     _log = _console.log || noop,
     // use same name so that we can ensure browser compatability
@@ -1571,6 +1591,7 @@ var factories = {},
         foldl: foldl,
         foldr: foldr,
         now: now,
+        some: some,
         map: map,
         result: result,
         isUndefined: isUndefined,
@@ -2622,7 +2643,7 @@ application.scope(function (app) {
             return function (fn, ctx, memo) {
                 return _[name](this.unwrap(), fn, ctx, memo);
             };
-        }), wrap(gapSplit('add addAt remove removeAt indexOf posit foldr foldl reduce'), function (name) {
+        }), wrap(gapSplit('add addAt remove removeAt indexOf posit foldr foldl reduce splice'), function (name) {
             return function (one, two, three) {
                 return _[name](this.unwrap(), one, two, three);
             };
@@ -2909,20 +2930,34 @@ application.scope(function (app) {
                     found.toggle();
                 }
             },
+            rebuild: function () {
+                // rebuilds the registry
+                var parent = this,
+                    validResult = foldl(parent.unwrap(), function (memo, stringInstance) {
+                        if (stringInstance.isValid()) {
+                            memo.list.push(stringInstance);
+                            memo.registry.id[stringInstance.value] = stringInstance;
+                        }
+                        return memo;
+                    }, {
+                        list: [],
+                        registry: {
+                            id: {}
+                        }
+                    });
+                parent.swap(validResult.list);
+                parent.directive('registry').reset(validResult.registry);
+            },
             generate: function (delimiter_) {
-                var string = EMPTY_STRING,
+                var validResult, string = EMPTY_STRING,
                     parent = this,
                     previousDelimiter = parent.delimiter,
                     delimiter = delimiter_;
-                if (!this._changeCounter && previousDelimiter === previousDelimiter) {
-                    return this.current();
+                if (!parent._changeCounter && delimiter === previousDelimiter) {
+                    return parent.current();
                 }
-                parent[ITEMS] = parent.foldl(function (memo, stringInstance) {
-                    if (stringInstance.isValid()) {
-                        memo.push(stringInstance);
-                    }
-                    return memo;
-                }, []);
+                parent.delimiter = delimiter;
+                parent.rebuild();
                 string = parent.unwrap().join(delimiter);
                 parent.current(string);
                 return string;
@@ -2992,8 +3027,8 @@ application.scope(function (app) {
         this.keep(category, id, value);
         return cached;
     },
-    reset = function () {
-        this.register = {};
+    reset = function (registry) {
+        this.register = registry || {};
         this.count = 0;
     };
     app.defineDirective('registry', function () {
@@ -3083,11 +3118,11 @@ application.scope(function (app) {
         },
         curriedEquality = function (key, original) {
             return function (e) {
-                return isEqual(original, e[TARGET].get(key));
+                return isEqual(original, e[ORIGIN].get(key));
             };
         },
         turnOff = function (e) {
-            return e && e[TARGET] && e[TARGET].off && e[TARGET].off();
+            return e && e[ORIGIN] && e[ORIGIN].off && e[ORIGIN].off();
         },
         setupWatcher = function (iterator, nameOrObjectIndex, triggersOnce) {
             var after = triggersOnce ? turnOff : noop;
@@ -3101,7 +3136,7 @@ application.scope(function (app) {
                 handlersIndex = nameOrObjectIndex;
                 list = args.splice(nameOrObjectIndex);
                 nameOrObject = list[0];
-                context = args[handlersIndex - 1];
+                context = list[(isObject(nameOrObject) ? 2 : 3)] || box;
                 if (nameOrObjectIndex && !args[0]) {
                     return ret;
                 }
@@ -3171,7 +3206,7 @@ application.scope(function (app) {
                 evnt.dispatchTree = BOOLEAN_FALSE;
                 evnt.onMethodName = camelCase('on:' + name, COLON);
                 evnt.propagationIsStopped = evnt[IMMEDIATE_PROP_IS_STOPPED] = BOOLEAN_FALSE;
-                evnt[TARGET] = target;
+                evnt[ORIGIN] = target;
                 evnt[NAME] = name;
                 evnt[TYPE] = name.split(COLON)[0];
                 evnt.timeStamp = now();
@@ -3734,7 +3769,7 @@ application.scope(function (app) {
                 model[DISPATCH_EVENT](BEFORE_COLON + RESET);
                 // setup previous data
                 dataDirective.reset(newAttributes);
-                dataDirective[PREVIOUS] = {};
+                // dataDirective[PREVIOUS] = {};
                 // let everything know that it is changing
                 model[DISPATCH_EVENT](RESET);
             },
@@ -4362,38 +4397,30 @@ application.scope(function (app) {
 application.scope().module('Looper', function (module, app, _, factories) {
     var blank, x = 0,
         lastTime = 0,
-        LENGTH = 'length',
-        isFunction = _.isFunction,
-        isNumber = _.isNumber,
         pI = _.pI,
         posit = _.posit,
         nowish = _.now,
         gapSplit = _.gapSplit,
         vendors = gapSplit('ms moz webkit o'),
         REQUEST_ANIMATION_FRAME = 'requestAnimationFrame',
+        CANCEL_ANIMATION_FRAME = 'cancelAnimationFrame',
         allLoopers = [],
         runningLoopers = [],
-        bind = _.bind,
-        duff = _.duff,
+        eachCall = _.eachCall,
+        time = _.time,
         remove = _.remove,
-        removeAll = _.removeAll,
-        duffRev = _.duffRight,
-        extend = _.extend,
-        BOOLEAN_TRUE = !0,
-        BOOLEAN_FALSE = !1,
         running = BOOLEAN_FALSE,
         setup = function () {
             running = BOOLEAN_TRUE;
             win[REQUEST_ANIMATION_FRAME](function (time) {
-                duff(runningLoopers, function (looper) {
-                    looper.run(time);
-                });
+                eachCall(runningLoopers, 'run', time);
                 teardown();
             });
         },
         teardown = function () {
             duffRight(runningLoopers, function (looper, idx) {
                 if (looper.halted() || looper.stopped() || looper.destroyed() || !looper.length()) {
+                    looper.stop();
                     runningLoopers.splice(idx, 1);
                 }
             });
@@ -4416,7 +4443,7 @@ application.scope().module('Looper', function (module, app, _, factories) {
         shim = (function () {
             for (; x < vendors[LENGTH] && !win[REQUEST_ANIMATION_FRAME]; ++x) {
                 win[REQUEST_ANIMATION_FRAME] = win[vendors[x] + 'RequestAnimationFrame'];
-                win.cancelAnimationFrame = win[vendors[x] + 'CancelAnimationFrame'] || win[vendors[x] + 'CancelRequestAnimationFrame'];
+                win[CANCEL_ANIMATION_FRAME] = win[vendors[x] + _.upCase(CANCEL_ANIMATION_FRAME)] || win[vendors[x] + 'CancelRequestAnimationFrame'];
             }
             if (!win[REQUEST_ANIMATION_FRAME]) {
                 win[REQUEST_ANIMATION_FRAME] = function (callback) {
@@ -4429,15 +4456,15 @@ application.scope().module('Looper', function (module, app, _, factories) {
                     return id;
                 };
             }
-            if (!win.cancelAnimationFrame) {
-                win.cancelAnimationFrame = function (id) {
+            if (!win[CANCEL_ANIMATION_FRAME]) {
+                win[CANCEL_ANIMATION_FRAME] = function (id) {
                     win.clearTimeout(id);
                 };
             }
         }()),
         Looper = factories.Directive.extend('Looper', {
             constructor: function (_runner) {
-                var fns, stopped = BOOLEAN_FALSE,
+                var fns, stopped = BOOLEAN_TRUE,
                     halted = BOOLEAN_FALSE,
                     destroyed = BOOLEAN_FALSE,
                     running = BOOLEAN_FALSE,
@@ -4452,20 +4479,25 @@ application.scope().module('Looper', function (module, app, _, factories) {
                             addList = [];
                         }
                     };
+                // keeps things private
                 extend(looper, {
                     length: function () {
                         return fnList[LENGTH];
                     },
                     destroy: function () {
                         destroyed = BOOLEAN_TRUE;
-                        remove(allLoopers, this);
+                        // remove(allLoopers, this);
                         return this.halt();
                     },
                     destroyed: function () {
                         return destroyed;
                     },
                     running: function () {
+                        // actual object that is currently being run
                         return !!running;
+                    },
+                    started: function () {
+                        return !stopped;
                     },
                     run: function () {
                         var tween = this,
@@ -4476,25 +4508,32 @@ application.scope().module('Looper', function (module, app, _, factories) {
                         }
                         combineAdd();
                         duff(fnList, function (fnObj) {
-                            if (!posit(removeList, fnObj)) {
-                                if (!fnObj.disabled && !halted) {
-                                    running = fnObj;
-                                    fnObj.fn(_nowish);
-                                }
-                            } else {
+                            if (posit(removeList, fnObj)) {
                                 removeLater.push(fnObj);
+                            } else {
+                                if (fnObj.disabled || halted) {
+                                    return;
+                                }
+                                running = fnObj;
+                                wraptry(function () {
+                                    fnObj.fn(_nowish);
+                                });
                             }
                         });
                         running = BOOLEAN_FALSE;
                         combineAdd();
-                        removeAll(fnList, removeList.concat(removeLater));
+                        duff(removeList.concat(removeLater), function (item) {
+                            remove(fnList, item);
+                        });
                         removeList = [];
                     },
                     remove: function (id) {
-                        var ret, fnObj, i = 0;
+                        var fnObj, i = 0,
+                            ret = BOOLEAN_FALSE;
                         if (!arguments[LENGTH]) {
                             if (running) {
-                                id = running.id;
+                                removeList.push(running);
+                                return BOOLEAN_TRUE;
                             }
                         }
                         if (isNumber(id)) {
@@ -4503,7 +4542,7 @@ application.scope().module('Looper', function (module, app, _, factories) {
                                 if (fnObj.id === id) {
                                     if (!posit(removeList, fnObj)) {
                                         removeList.push(fnObj);
-                                        ret = 1;
+                                        ret = BOOLEAN_TRUE;
                                     }
                                 }
                             }
@@ -4594,47 +4633,48 @@ application.scope().module('Looper', function (module, app, _, factories) {
                     fn(ms, !last, count);
                 });
             },
-            tween: function (time, fn_) {
-                var fn, added = nowish();
-                if (!time) {
-                    time = 0;
+            tween: function (time__, fn_) {
+                var fn, added = nowish(),
+                    time_ = _.time(time__);
+                if (!time_) {
+                    time_ = 0;
                 }
-                if (!isFunction(fn)) {
+                if (!isFunction(fn_)) {
                     return;
                 }
                 fn = this.bind(fn_);
                 return this.interval(0, function (ms) {
                     var tween = 1,
                         diff = ms - added;
-                    if (diff >= time) {
+                    if (diff >= time_) {
                         tween = 0;
                         this.remove();
                     }
-                    fn(ms, Math.min(1, (diff / time)), !tween);
+                    fn(ms, Math.min(1, (diff / time_)), !tween);
                 });
             },
-            time: function (time, fn_) {
+            time: function (time_, fn_) {
                 var fn;
-                if (!isFunction(fn)) {
+                if (!isFunction(fn_)) {
                     return this;
                 }
                 fn = this.bind(fn_);
-                return this.interval(time, function (ms) {
+                return this.interval(time(time_), function (ms) {
                     this.remove();
                     fn(ms);
                 });
             },
-            frameRate: function (time, fn_, min) {
+            frameRate: function (time__, fn_, min) {
                 var fn, tween = this,
                     minimum = Math.min(min || 0.8, 0.8),
                     expectedFrameRate = 30 * minimum,
                     lastDate = 1,
-                    lastSkip = nowish();
-                time = time || 125;
+                    lastSkip = nowish(),
+                    time_ = time__ || 125;
                 if (!isFunction(fn_)) {
                     return tween;
                 }
-                fn = bind(fn_, this);
+                fn = this.bind(fn_);
                 return tween.add(function (ms) {
                     var frameRate = 1000 / (ms - lastDate);
                     if (frameRate > 40) {
@@ -4643,7 +4683,7 @@ application.scope().module('Looper', function (module, app, _, factories) {
                     if (frameRate < expectedFrameRate) {
                         lastSkip = ms;
                     }
-                    if (ms - lastSkip > time) {
+                    if (ms - lastSkip > time_) {
                         this.remove();
                         fn(ms);
                     }
@@ -4652,13 +4692,13 @@ application.scope().module('Looper', function (module, app, _, factories) {
             },
             interval: function (time, fn_) {
                 var fn, last = nowish();
-                if (!isFunction(fn)) {
+                if (!isFunction(fn_)) {
                     return;
                 }
                 if (!time) {
                     time = 0;
                 }
-                fn = this.bind(fn);
+                fn = this.bind(fn_);
                 return this.add(function (ms) {
                     if (ms - time >= last) {
                         last = ms;
@@ -4666,9 +4706,9 @@ application.scope().module('Looper', function (module, app, _, factories) {
                     }
                 });
             }
-        }, !0);
+        }, BOOLEAN_TRUE);
     _.exports({
-        AF: new Looper()
+        AF: Looper()
     });
 });
 application.scope().module('Promise', function (module, app, _, factories) {
@@ -5263,12 +5303,139 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         ELEMENT = 'element',
         devicePixelRatio = (win.devicePixelRatio || 1),
         ua = navigator.userAgent,
+        templates = Collection(),
+        // By default, Underscore uses ERB-style template delimiters, change the
+        // following template settings to use alternative delimiters.
+        templateSettings = {
+            evaluate: /<%([\s\S]+?)%>/g,
+            interpolate: /<%=([\s\S]+?)%>/g,
+            escape: /<%-([\s\S]+?)%>/g
+        },
+        // When customizing `templateSettings`, if you don't want to define an
+        // interpolation, evaluation or escaping regex, we need one that is
+        // guaranteed not to match.
+        noMatch = /(.)^/,
+        // Certain characters need to be escaped so that they can be put into a
+        // string literal.
+        escapes = {
+            "'": "'",
+            '\\': '\\',
+            '\r': 'r',
+            '\n': 'n',
+            '\u2028': 'u2028',
+            '\u2029': 'u2029'
+        },
+        escapeRegExp = /\\|'|\r|\n|\u2028|\u2029/g,
+        escapeChar = function (match) {
+            return '\\' + escapes[match];
+        },
+        // List of HTML entities for escaping,
+        escapeMap = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#x27;',
+            '`': '&#x60;'
+        },
+        unescapeMap = invert(escapeMap),
+        // Functions for escaping and unescaping strings to/from HTML interpolation,
+        createEscaper = function (map) {
+            var escaper = function (match) {
+                return map[match];
+            };
+            // Regexes for identifying a key that needs to be escaped.
+            var source = '(?:' + keys(map).join('|') + ')';
+            var testRegexp = RegExp(source);
+            var replaceRegexp = RegExp(source, 'g');
+            return function (string) {
+                string = string == NULL ? EMPTY_STRING : EMPTY_STRING + string;
+                return testRegexp.test(string) ? string.replace(replaceRegexp, escaper) : string;
+            };
+        },
+        escape = createEscaper(escapeMap),
+        unescape = createEscaper(unescapeMap),
+        // JavaScript micro-templating, similar to John Resig's implementation.
+        // Underscore templating handles arbitrary delimiters, preserves whitespace,
+        // and correctly escapes quotes within interpolated code.
+        // NB: `oldSettings` only exists for backwards compatibility.
+        templateGenerator = function (text, settings) {
+            settings = extend({}, settings, templateSettings);
+            // Combine delimiters into one regular expression via alternation.
+            var matcher = RegExp([
+                (settings.escape || noMatch).source, (settings.interpolate || noMatch).source, (settings.evaluate || noMatch).source
+            ].join('|') + '|$', 'g');
+            // Compile the template source, escaping string literals appropriately.
+            var index = 0;
+            var source = "__p+='";
+            text.replace(matcher, function (match, escape, interpolate, evaluate, offset) {
+                source += text.slice(index, offset).replace(escapeRegExp, escapeChar);
+                index = offset + match.length;
+                if (escape) {
+                    source += "'+\n((__t=(this." + escape + "))==null?'':_.escape(__t))+\n'";
+                } else if (interpolate) {
+                    source += "'+\n((__t=(this." + interpolate + "))==null?'':__t)+\n'";
+                } else if (evaluate) {
+                    source += "';\n" + evaluate + "\n__p+='";
+                }
+                // Adobe VMs need the match returned to produce the correct offset.
+                return match;
+            });
+            source += "';\n";
+            // If a variable is not specified, place data values in local scope.
+            // if (!settings.variable) source = 'with(this||{}){\n' + source + '}\n';
+            source = "var __t,__p='',__j=Array.prototype.join," + "print=function(){__p+=__j.call(arguments,'');};\n" + source + 'return __p;\n';
+            var render;
+            try {
+                render = new Function.constructor(settings.variable || '_', source);
+            } catch (e) {
+                e.source = source;
+                throw e;
+            }
+            var template = function (data) {
+                return render.call(data || {}, _);
+            };
+            // Provide the compiled source as a convenience for precompilation.
+            var argument = settings.variable || 'obj';
+            template.source = 'function(' + argument + '){\n' + source + '}';
+            return template;
+        },
+        compile = function (id, template_, force) {
+            var matches, tag, attrs, template,
+                templateObject = templates.get('id', id);
+            if (templateObject && !force) {
+                return templateObject;
+            }
+            template = template_ || $('#' + id).html();
+            matches = template.match(/\{\{([\w\s\d]*)\}\}/mgi);
+            templateObject = {
+                id: id,
+                attributes: map(matches || [], function (match) {
+                    return {
+                        match: match,
+                        attr: match.split('{{').join(EMPTY_STRING).split('}}').join(EMPTY_STRING).trim()
+                    };
+                }),
+                render: templateGenerator(template)
+                // render: function (obj) {
+                //     var str = template,
+                //         cloneResult = clone(obj);
+                //     duff(this.attributes, function (match) {
+                //         if (!cloneResult[match.attr]) {
+                //             cloneResult[match.attr] = EMPTY_STRING;
+                //         }
+                //         str = str.replace(match.match, cloneResult[match.attr]);
+                //     });
+                //     return str;
+                // }
+            };
+            templates.push(templateObject);
+            templates.register('id', id, templateObject);
+            return templateObject;
+        },
         isElement = function (object) {
             return !!(object && isNumber(object[NODE_TYPE]) && object[NODE_TYPE] === object.ELEMENT_NODE);
         },
-        // isElementUnwrapped = function (manager) {
-        //     return isElement(manager.unwrap());
-        // },
         /**
          * @private
          * @func
@@ -5607,7 +5774,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         },
         attributeApplication = function (fn, key, applies) {
             return function (one, two) {
-                return fn(this, one, two, key, applies);
+                return fn([this], one, two, key, applies);
             };
         },
         managerContainsClass = function (classes) {
@@ -6328,29 +6495,21 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 });
             }
         },
-        // ensureOne = function (fn) {
-        //     return function () {
-        //         if (this[LENGTH]()) {
-        //             fn.apply(this, arguments);
-        //         }
-        //         return this;
-        //     };
-        // },
         expandEventListenerArguments = function (fn) {
             return function () {
-                var args, obj, selector, domm = this;
-                // if there's nothing selected, then do nothing
-                args = toArray(arguments);
-                obj = args.shift();
-                if (isObject(obj)) {
+                var selector, domm = this,
+                    // if there's nothing selected, then do nothing
+                    args = toArray(arguments),
+                    nameOrObject = args.shift();
+                if (isObject(nameOrObject)) {
                     if (isString(args[0])) {
                         selector = args.shift();
                     }
-                    each(obj, function (key, handlers) {
-                        createSelector(domm, [key, selector, handlers].concat(args), fn);
+                    each(nameOrObject, function (key, handler) {
+                        createSelector(domm, [key, selector, handler].concat(args), fn);
                     });
                 } else {
-                    args.unshift(obj);
+                    args.unshift(nameOrObject);
                     createSelector(domm, args, fn);
                 }
             };
@@ -6374,9 +6533,9 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             if (eventPhase === 1) {
                 capturing = BOOLEAN_TRUE;
             }
-            if (eventPhase === 2 && !evnt.bubbles && isElement(evnt.srcElement)) {
-                capturing = BOOLEAN_TRUE;
-            }
+            // if (eventPhase === 2 && !evnt.bubbles && isElement(evnt.srcElement)) {
+            //     capturing = BOOLEAN_TRUE;
+            // }
             return capturing;
         },
         findMatch = function (el, target, selector) {
@@ -6621,6 +6780,12 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             addClass: attributeApplication(addClass, UNDEFINED, WRITE),
             removeClass: attributeApplication(removeClass, UNDEFINED, WRITE),
             toggleClass: attributeApplication(toggleClass, UNDEFINED, WRITE),
+            changeClass: attributeApplication(changeClass, UNDEFINED, WRITE),
+            booleanClass: attributeApplication(booleanClass, UNDEFINED, WRITE),
+            hasClass: function (classes) {
+                var newClasses = gapSplit(classes);
+                return newClasses[LENGTH] && !managerContainsClass(newClasses)(this);
+            },
             resetEvents: noop,
             applyStyle: function (key, value) {
                 var manager = this;
@@ -6643,18 +6808,13 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                     manager.isRemoving = cachedRemoving;
                 }
             },
-            hasClass: function (classes) {
-                var newClasses = gapSplit(classes);
-                return newClasses[LENGTH] && !managerContainsClass(newClasses)(this);
-            },
-            changeClass: attributeApplication(changeClass, UNDEFINED, WRITE),
-            booleanClass: attributeApplication(booleanClass, UNDEFINED, WRITE),
             find: function (selector) {
                 return $(this[TARGET].querySelectorAll(selector), this.wrap());
             },
             createEvent: function (type, original, opts) {
-                return new DomEvent[CONSTRUCTOR](original, {
+                return DomEvent(original, {
                     target: this.target,
+                    origin: this,
                     capturing: toBoolean(type.split(COLON)[0]),
                     arg2: opts
                 });
@@ -6900,6 +7060,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 if (isInstance(evnt, DomEvent[CONSTRUCTOR])) {
                     return evnt;
                 }
+                e.origin = opts.origin;
                 e.originalEvent = evnt;
                 e.delegateTarget = opts.target;
                 fixHooks.make(e, evnt, opts.arg2);
@@ -6979,19 +7140,17 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         },
         dommFind = attachPrevious(function (str) {
             var passedString = isString(str),
+                matchers = [],
                 push = function (el) {
-                    matchers.push(el);
+                    matchers.push(returnsElementData(el));
                 };
-            return foldl(this.unwrap(), function (memo, el) {
+            return duff(this.unwrap(), function (el) {
                 if (passedString) {
-                    duff(Sizzle(str, el.unwrap()), function (el) {
-                        memo.push(returnsElementData(el));
-                    });
+                    duff(Sizzle(str, el.unwrap()), push);
                 } else {
-                    memo.push(returnsElementData(el));
+                    push(el);
                 }
-                return memo;
-            }, []);
+            }) && matchers;
         }),
         makeDataKey = function (_key) {
             var dataString = 'data-',
@@ -7057,6 +7216,9 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             center: center,
             closer: closer,
             distance: distance,
+            compile: compile,
+            escape: escape,
+            unescape: unescape,
             css: css,
             box: box,
             fragment: fragment,
@@ -7072,22 +7234,20 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             numberToUnit: numberToUnit
         }),
         // removeChild = eachProc(),
-        setupDomContentLoaded = function (ctx) {
+        setupDomContentLoaded = function (handler, ctx) {
             var $doc = DOMM(ctx),
-                docEl = $doc[INDEX](),
-                docData = returnsElementData(docEl),
-                handler = bind(str, $doc);
+                docData = $doc[INDEX](),
+                bound = bind(handler, $doc);
             if (docData.isReady) {
                 // make it async
                 _.AF.once(function () {
-                    handler($, docData.DOMContentLoadedEvent);
+                    bound($, docData.DOMContentLoadedEvent);
                 });
                 els = dom.unwrap();
             } else {
-                dom = $doc.on('DOMContentLoaded', function (e) {
-                    handler($, e);
+                $doc.on('DOMContentLoaded', function (e) {
+                    bound($, e);
                 });
-                els = dom.unwrap();
             }
             return $doc;
         },
@@ -7112,7 +7272,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                     unwrapped = context.unwrap();
                 if (isFunction(str)) {
                     if (isDocument(unwrapped)) {
-                        return setupDomContentLoaded(unwrapped);
+                        return setupDomContentLoaded(str, unwrapped);
                     }
                 } else {
                     if (!isValid) {
@@ -7225,18 +7385,6 @@ application.scope().module('DOMM', function (module, app, _, factories) {
              * @returns {DOMM} instance
              */
             resetEvents: applyToEach('resetEvents'),
-            // resetEvents: eachProc(function (manager) {
-            //     // var el = manager.unwrap();
-            //     // each(data.handlers, function (key, fn, eH) {
-            //     //     // var wasCapt, split = key.split(COLON);
-            //     //     // eH[key] = UNDEFINED;
-            //     //     // wasCapt = data[_EVENTS][split[0]];
-            //     //     // if (wasCapt) {
-            //     //     //     wasCapt[split[1]] = [];
-            //     //     // }
-            //     // });
-            //     // elementData.remove(el);
-            // }),
             /**
              * @name DOMM#off
              * @param {String|Function} type - event type
@@ -7271,25 +7419,15 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 return ret;
             },
             style: applyToEach('style'),
-            // style: function (key, value) {
-            //     intendedObject(key, value, this.applyStyle, this);
-            // },
-            // style: ensureOne(function (key, value) {
-            //     style(this.unwrap(), key, value);
-            //     return this;
-            // }),
             /**
              * @func
              * @name DOMM#allDom
              * @returns {Boolean} value indicating whether or not there were any non dom elements found in the collection
              */
             allElements: function () {
-                var count = 0,
-                    length = this[LENGTH](),
-                    result = length && find(this.unwrap(), negate(function (manager) {
-                        return isElement(manager.unwrap());
-                    }));
-                return length && result === UNDEFINED;
+                return !!(this[LENGTH]() && !find(this.unwrap(), function (manager) {
+                    return !manager.isElement;
+                }));
             },
             /**
              * @func
@@ -7331,16 +7469,6 @@ application.scope().module('DOMM', function (module, app, _, factories) {
              */
             attr: domAttrManipulator(trackedAttributeInterface),
             prop: domAttrManipulator(trackedAttributeInterface, BOOLEAN_TRUE),
-            // prop: domAttrManipulator(function (el, key, val) {
-            //     var value;
-            //     if (val == NULL) {
-            //         value = el[key];
-            //         value = value == NULL ? NULL : value;
-            //     } else {
-            //         el[key] = val == NULL ? NULL : val;
-            //     }
-            //     return value;
-            // }),
             /**
              * @func
              * @name DOMM#eq
@@ -7356,23 +7484,15 @@ application.scope().module('DOMM', function (module, app, _, factories) {
              * @param {Number} [num=0] - item who's bounding client rect will be assessed and extended
              * @returns {Object} hash of dimensional properties (getBoundingClientRect)
              */
-            clientRect: function (num) {
+            rect: function (num) {
                 return clientRect(eq(this.unwrap(), num)[0]);
             },
-            /**
-             * @func
-             * @name DOMM#each
-             * @param {Function} callback - iterator to apply to each item on the list
-             * @param {Boolean} elOnly - switches the first argument from a DOMM wrapped object to the Node itself
-             * @returns {DOMM} instance
-             */
-            // each: ensureOne(function (callback_) {
-            //     var domm = this,
-            //         callback = bind(callback_, domm);
-            //     domm.duff(function (item_, index, all) {
-            //         callback(DOMM([item_]), index, all);
-            //     }, NULL);
-            // }),
+            box: function (num) {
+                return box(this[INDEX](num), this.context);
+            },
+            flow: function (num) {
+                return flow(this[INDEX](num), this.context);
+            },
             /**
              * @func
              * @name DOMM#addClass
@@ -7415,12 +7535,6 @@ application.scope().module('DOMM', function (module, app, _, factories) {
              * @name DOMM#box
              * @param {Number} [num=0] - index to get the boxmodel of
              */
-            box: function (num) {
-                return box(this[INDEX](num), this.context);
-            },
-            flow: function (num) {
-                return flow(this[INDEX](num), this.context);
-            },
             /**
              * @func
              * @name DOMM#end
@@ -7591,7 +7705,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             has: function (els) {
                 var domm = this,
                     collection = Collection(els),
-                    length = collection.length();
+                    length = collection[LENGTH]();
                 return !!length && collection.find(function (el) {
                     return domm.posit(el) ? BOOLEAN_FALSE : BOOLEAN_TRUE;
                 });
@@ -7603,7 +7717,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
              * @returns {Number} index of the element
              */
             element: function (idx) {
-                var manager = this.index(idx);
+                var manager = this[INDEX](idx);
                 return manager && manager.unwrap();
             },
             /**
@@ -7714,10 +7828,9 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 attr = api;
             }
             return function (str) {
-                var item, setter = {};
-                if (isString(str)) {
-                    setter[attr] = str;
-                    return this.attr(setter);
+                var item;
+                if (str !== UNDEFINED) {
+                    return this.attr(attr, str);
                 }
                 item = this[INDEX](str);
                 if (item) {
@@ -7730,7 +7843,11 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         }, triggerEventWrapper), wrap(gapSplit('blur focus focusin focusout load resize scroll unload click dblclick mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave change select submit keydown keypress keyup error contextmenu'), function (attr) {
             return triggerEventWrapper(attr);
         })), BOOLEAN_TRUE),
-        $ = _.$ = _DOMM(doc);
+        $ = _.$ = _DOMM(doc),
+        templatescripts = $('script[id]').each(function (script) {
+            compile(script.unwrap().id, script.html());
+        });
+    window.$ = $;
     app.addModuleArguments([$]);
     app.defineDirective('attributes', function () {
         return {};
@@ -7749,7 +7866,7 @@ application.scope().module('View', function (module, app, _, factories, $) {
         createDocumentFragment = _.createDocumentFragment,
         RENDER = 'render',
         OPTIONS = 'options',
-        IS_RENDERED = '_isRendered',
+        IS_RENDERED = 'isRendered',
         PARENT_NODE = 'parentNode',
         CONSTRUCTOR = 'constructor',
         ESTABLISH_REGIONS = 'establishRegions',
@@ -7757,54 +7874,30 @@ application.scope().module('View', function (module, app, _, factories, $) {
         APPEND_CHILD_ELEMENTS = '_appendChildElements',
         ELEMENT = 'element',
         REGION_MANAGER = 'regionManager',
-        templates = {},
-        compile = function (id, force) {
-            var matches, tag, template, attrs,
-                templateFn = templates[id];
-            if (templateFn && !force) {
-                return templateFn;
-            }
-            tag = $(id);
-            template = tag.html();
-            matches = template.match(/\{\{([\w\s\d]*)\}\}/mgi);
-            attrs = map(matches || [], function (match) {
-                return {
-                    match: match,
-                    attr: match.split('{{').join(EMPTY_STRING).split('}}').join(EMPTY_STRING).trim()
-                };
-            });
-            // template = template.trim();
-            templateFn = templates[id] = function (obj) {
-                var str = template,
-                    cloneResult = clone(obj);
-                duff(attrs, function (match) {
-                    if (!cloneResult[match.attr]) {
-                        cloneResult[match.attr] = EMPTY_STRING;
-                    }
-                    str = str.replace(match.match, cloneResult[match.attr]);
-                });
-                return str;
-            };
-            return templateFn;
-        },
-        makeDelegateEventKey = function (view, name) {
-            return name + '.delegateEvents' + view.cid;
-        },
-        makeDelegateEventKeys = function (view, key, namespace) {
+        makeDelegateEventKeys = function (cid, bindings, key, namespace_) {
+            var viewNamespace = 'delegateEvents' + cid,
+                namespace = namespace_;
             if (namespace) {
                 namespace = PERIOD + namespace;
             } else {
                 namespace = EMPTY_STRING;
             }
-            var viewNamespace = 'delegateEvents' + view.cid;
-            return map(gapSplit(key), function (_key) {
+            return foldl(gapSplit(key), function (memo, _key) {
                 var __key = _key.split(PERIOD);
-                if (__key[1] !== viewNamespace) {
-                    __key.splice(1, 0, viewNamespace);
-                    _key = __key.join(PERIOD);
+                if (__key[0][0] === '@') {
+                    memo.selector = normalizeUIString(_key, bindings);
+                } else {
+                    if (__key[1] !== viewNamespace) {
+                        __key.splice(1, 0, viewNamespace);
+                        _key = __key.join(PERIOD);
+                    }
+                    memo.events.push(_key + namespace);
                 }
-                return _key += namespace;
-            }).join(' ');
+                return memo;
+            }, {
+                events: [],
+                selector: ''
+            });
         },
         normalizeUIString = function (uiString, ui) {
             return uiString.replace(/@ui\.[a-zA-Z_$0-9]*/g, function (r) {
@@ -7847,40 +7940,30 @@ application.scope().module('View', function (module, app, _, factories, $) {
         // regionConstructor = ,
         Region = factories.Events.extend('Region', {
             tagName: 'div',
-            // constructor: function (secondary) {
-            //     var model = this;
-            //     factories.Events[CONSTRUCTOR].call(model, secondary);
-            //     //
-            //     return model;
-            // },
-            // 'directive:creation:regionManager': function () {
-            //     return NULL;
-            // },
-            // _ensureElement: function () {
-            //     this._setElement();
-            // },
-            // constructor: function (options) {
-            //     var view = this;
-            //     _View[CONSTRUCTOR].call(view, options);
-            //     return view;
-            // },
-            add: function (models_) {
+            toView: function () {},
+            add: function (models_, viewConstructor, dataConstructor) {
                 var ret, _bufferedViews, region = this,
                     bufferedViewsDirective = region.directive('bufferedViews');
                 bufferedViewsDirective.ensure();
-                Collection(models_).each(region.bufferView, region);
+                Collection(models_).each(function (view_) {
+                    var view = view_;
+                    if (!View.isInstance(view)) {
+                        if (!factories.Container.isInstance(view)) {
+                            view = (dataConstructor || factories.Container)(view);
+                        }
+                        view = (viewConstructor || region.Child || factories.View)({
+                            model: view,
+                            parent: region
+                        });
+                    }
+                    region.setParent(view);
+                    region.bufferView(view);
+                });
                 return ret;
             },
-            // _add: function (view) {
-            //     // var parent = this,
-            //     //     regionManagerDirective = view.directive(REGION_MANAGER);
-            //     // Box[CONSTRUCTOR][PROTOTYPE]._add.call(parent, view);
-            //     // ensure the element buffer
-            //     // append to the view list buffer
-            //     // attached buffered element here so we don't have to loop through the list later
-            //     // view._setElement(view.el);
-            //     // parent.bufferView(view);
-            // },
+            setParent: function (view) {
+                view.parent = this;
+            },
             bufferView: function (view) {
                 var bufferDirective = this.directive('bufferedViews'),
                     el = view.el && view.el.unwrap();
@@ -7910,7 +7993,7 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 });
             },
             render: function () {
-                var region = this,
+                var list, region = this,
                     bufferDirective = region.directive('bufferedViews'),
                     elementDirective = region.directive(ELEMENT);
                 region[IS_RENDERED] = BOOLEAN_FALSE;
@@ -7925,10 +8008,12 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 // attrs = view.attributes();
                 elementDirective.setAttributes();
                 // puts children back inside parent
-                bufferDirective.attach();
+                list = bufferDirective.attach();
                 // attach region element
                 // appends child elements
                 elementDirective.el.append(bufferDirective.els);
+                // pass the buffered views up
+                region.passBuffered(list);
                 // mark the view as rendered
                 region[IS_RENDERED] = BOOLEAN_TRUE;
                 // reset buffered objects
@@ -7936,25 +8021,22 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 // dispatch the render event
                 region[DISPATCH_EVENT](RENDER);
                 return region;
-                // },
-                // _appendChildElements: function () {
-                //     var region = this,
-                //         buffered = region.directive('bufferedViews');
-                //     if (buffered && region.el) {
-                //         region.el.appendChild(buffered.els);
-                //     }
+            },
+            passBuffered: function (list) {
+                var viewList, region = this,
+                    parentview = region[PARENT][PARENT];
+                if (isInstance(parentview, View) && !region.isAttached) {
+                    viewList = parentview.directive('bufferedViews').views;
+                    viewList.push.apply(viewList, list);
+                } else {
+                    duff(this.directive('bufferedViews').views, function (view) {
+                        view.isAttached = BOOLEAN_TRUE;
+                        view[DISPATCH_EVENT]('attach');
+                    });
+                }
             }
         }, BOOLEAN_TRUE),
         View = Region.extend('View', {
-            /**
-             * @func
-             * @name View # constructor
-             * @description constructor for new view object
-             * @param {Object | DOMM | Node} attributes - hash with non - circular data on it. Is set later with the Box constructor
-             * @param {Object} secondary - options such as defining the parent object, or the element if necessary
-             * @param {DOMM|Node} el - element or Node that is attached directly to the View object
-             * @returns {View} instance
-             */
             filter: BOOLEAN_TRUE,
             getRegion: getRegion,
             constructor: function (secondary) {
@@ -7984,7 +8066,7 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 return view;
             },
             render: function () {
-                var ret, view = this,
+                var bufferedDirective, template, view = this,
                     regionsManagerDirective = view.checkDirective(REGION_MANAGER),
                     element = view.directive(ELEMENT);
                 view[IS_RENDERED] = BOOLEAN_FALSE;
@@ -7997,18 +8079,25 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 // update new element's attributes
                 element.setAttributes();
                 // renders the html
-                element.render(result(view, 'template', view.model && view.model.toJSON()));
+                template = result(view.template, RENDER, view.model && view.model.toJSON());
+                element.render(template);
                 // gathers the ui elements
-                view._bindUIElements();
+                // view._bindUIElements();
                 // ties regions back to newly formed parent template
-                ret = regionsManagerDirective && regionsManagerDirective.establish();
                 // tie the children of the region the the region's el
                 view.directive(REGION_MANAGER).list.eachCall(RENDER);
                 // mark the view as rendered
                 view[IS_RENDERED] = BOOLEAN_TRUE;
+                bufferedDirective = view.checkDirective('bufferedViews');
+                template = bufferedDirective && view.passBuffered(bufferedDirective.views);
+                // pass buffered views up to region
                 // dispatch the render event
                 view[DISPATCH_EVENT](RENDER);
                 return view;
+            },
+            passBuffered: function (list) {
+                var parentBuffered = this.parent.directive('bufferedViews');
+                parentBuffered.views = parentBuffered.views.concat(list);
             },
             parentView: function () {
                 var found, view = this,
@@ -8021,24 +8110,6 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 }
                 return found;
             },
-            _bindUIElements: function () {
-                var view = this,
-                    _uiBindings = view._uiBindings || result(view, 'ui');
-                view.ui = view.ui || {};
-                if (_uiBindings) {
-                    return view;
-                }
-                // save it to skip the result call later
-                view._uiBindings = _uiBindings;
-                view.ui = map(_uiBindings, function (key, selector) {
-                    return view.$(selector);
-                });
-                return view;
-            },
-            _unBindUIElements: function () {
-                var view = this;
-                view.ui = view._uiBindings;
-            },
             remove: function () {
                 var el, view = this;
                 Box[CONSTRUCTOR][PROTOTYPE].remove.apply(view, arguments);
@@ -8047,41 +8118,23 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 view.detach();
                 return view;
             },
-            _detachElement: function () {
-                var view = this,
-                    el = view.el && view.el[INDEX](0);
-                if (el && el[PARENT_NODE]) {
-                    el[PARENT_NODE].removeChild(el);
-                }
-            },
-            _removeViewElement: function (el, frag) {
-                var parent = this;
-                if (frag) {
-                    frag.appendChild(el);
-                } else {
-                    if (el[PARENT_NODE]) {
-                        el[PARENT_NODE].removeChild(el);
-                    }
-                }
-            },
-            detach: function () {
-                var view = this;
+            detach: function (fragment) {
+                var el, view = this;
                 if (view.isDetaching) {
                     return;
                 }
                 view.isDetaching = BOOLEAN_TRUE;
                 view[DISPATCH_EVENT]('before:detach');
                 view.isDetached = BOOLEAN_TRUE;
-                view._detachElement();
-            },
-            destroy: function (opts) {
-                var view = this;
-                view[IS_RENDERED] = BOOLEAN_FALSE;
-                view.detach();
-                // remove all events
-                // should internally call remove
-                Box[CONSTRUCTOR][PROTOTYPE].destroy.call(view);
-                return view;
+                el = view.el && view.el[INDEX](0);
+                if (el && el[PARENT_NODE]) {
+                    if (fragment) {
+                        fragment.appendChild(el);
+                    } else {
+                        el[PARENT_NODE].removeChild(el);
+                    }
+                }
+                view[DISPATCH_EVENT]('detach');
             },
             rendered: function () {
                 return this[IS_RENDERED];
@@ -8090,9 +8143,6 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 return this.isDestroyed;
             }
         }, BOOLEAN_TRUE),
-        // ElementDirective = app.defineDirective('element', function (target) {
-        //     //
-        // }),
         _View = factories.View,
         ensureElement = function () {
             var el, elementDirective = this,
@@ -8120,65 +8170,112 @@ application.scope().module('View', function (module, app, _, factories, $) {
         setElement = function (el) {
             this.view.el = this.el = factories.DomManager.isInstance(el) ? el : $(el).index(0);
         },
-        delegateElementEvents = function (bindings_) {
-            var key, method, match,
-                elementDirective = this,
-                view = elementDirective.view,
-                eventBindings = view.eventBindings || result(view, 'elementEvents'),
-                // bindings = bindings_ || eventBindings,
-                __events = {};
-            if (eventBindings) {
-                elementDirective.eventBindings = eventBindings;
+        delegateElementEvents = function () {
+            var key, method, match, elDir = this,
+                view = elDir.view,
+                el = elDir.el,
+                elementBindings = elDir.elementBindings || result(view, 'elementEvents'),
+                __events = [];
+            if (elDir.elementBindings) {
+                elDir.elementBindings = elementBindings;
             }
             if (!el) {
-                return elementDirective;
+                return elDir;
             }
-            each(bindings, function (key, methods_) {
-                // assumes is array
-                var methods = gapSplit(methods_);
-                if (isFunction(methods_)) {
-                    methods = [methods_];
-                }
-                __events[makeDelegateEventKeys(view, key)] = map(methods, function (method, idx) {
-                    return bind(view[method] || method, view);
-                });
+            each(elementBindings, function (method, key) {
+                var object = makeDelegateEventKeys(view.cid, elDir.uiBindings, key),
+                    bound = object.fn = bind(view[method] || method, view);
+                el.on(object.events.join(' '), object.selector, bound);
             });
-            el.on(__events);
-            return elementDirective;
+            elDir.cachedElementBindings = __events;
+            return elDir;
         },
-        unDelegateElementEvents = function (el, bindings_) {
-            var key, method, match, elementDirective = this,
-                view = elementDirective.view,
-                eventBindings = elementDirective.eventBindings || result(view, 'elementEvents'),
-                // bindings = bindings_ || eventBindings,
-                __events = {};
-            if (eventBindings) {
-                elementDirective.eventBindings = eventBindings;
+        unDelegateElementEvents = function () {
+            var key, method, match, elDir = this,
+                view = elDir.view,
+                el = elDir.el,
+                elementBindings = elDir.cachedElementBindings;
+            if (!elDir.cachedElementBindings || !el) {
+                return elDir;
+            }
+            duff(elementBindings, function (binding) {
+                el.off(binding.events.join(' '), binding.selector, binding.fn);
+            });
+            elDir.cachedElementBindings = UNDEFINED;
+            return elDir;
+        },
+        basicViewTrigger = function (name, e) {
+            return this[DISPATCH_EVENT](name, e);
+        },
+        delegateElementTriggers = function () {
+            var key, method, match, elDir = this,
+                view = elDir.view,
+                el = elDir.el,
+                elementTriggers = elDir.elementTriggers || result(view, 'elementTriggers'),
+                __events = [];
+            if (!elDir.elementTriggers) {
+                elDir.elementTriggers = elementTriggers;
             }
             if (!el) {
-                return view;
+                return elDir;
             }
-            each(bindings, function (key, methods_) {
-                var method = bind(isString(methods_) ? view[methods_] : methods_, view);
-                __events[makeDelegateEventKeys(view, key)] = method;
+            each(elementTriggers, function (method, key) {
+                var object = makeDelegateEventKeys(view.cid, elDir.uiBindings, key),
+                    bound = object.fn = basicViewTrigger.bind(view, method);
+                el.on(object.events.join(' '), object.selector, bound);
             });
-            el.on(__events);
-            return view;
+            elDir.cachedElementTriggers = __events;
+        },
+        undelegateElementTriggers = function () {
+            var key, method, match, elDir = this,
+                view = elDir.view,
+                el = elDir.el,
+                elementBindings = elDir.cachedElementTriggers;
+            if (!elDir.cachedElementTriggers || !el) {
+                return elDir;
+            }
+            duff(elementBindings, function (binding) {
+                el.off(binding.events.join(' '), binding.selector, binding.fn);
+            });
+            elDir.cachedElementTriggers = UNDEFINED;
+            return elDir;
         },
         setElementAttributes = function () {
-            var elementDirective = this,
-                view = elementDirective.view,
+            var elDir = this,
+                view = elDir.view,
                 attrs = result(view, 'elementAttributes');
             if (view.className) {
                 attrs = attrs || {};
                 attrs['class'] = result(view, 'className');
             }
             if (attrs) {
-                elementDirective.el.attr(attrs);
+                elDir.el.attr(attrs);
             }
         },
         renderElement = function (html) {
+            this.undelegate();
+            this.undelegateTriggers();
+            this.unbindUI();
             this.el.html(html || '');
+            this.bindUI();
+            this.delegate();
+            this.delegateTriggers();
+        },
+        bindUI = function () {
+            var elDir = this,
+                uiBindings = elDir.uiBindings || result(elDir.view, 'ui'),
+                ui = elDir.ui = elDir.ui || {};
+            if (elDir.uiBindings) {
+                return elDir;
+            }
+            // save it to skip the result call later
+            elDir.uiBindings = uiBindings;
+            elDir.ui = elDir.view.ui = map(uiBindings, elDir.el.find, elDir.el);
+            return elDir;
+        },
+        unbindUI = function () {
+            var elDir = this;
+            elDir.ui = elDir.uiBindings;
         };
     app.defineDirective(ELEMENT, function (instance) {
         return {
@@ -8188,30 +8285,34 @@ application.scope().module('View', function (module, app, _, factories, $) {
             set: setElement,
             render: renderElement,
             setAttributes: setElementAttributes,
+            bindUI: bindUI,
+            unbindUI: unbindUI,
             delegate: delegateElementEvents,
-            undelegate: unDelegateElementEvents
+            undelegate: unDelegateElementEvents,
+            undelegateTriggers: undelegateElementTriggers,
+            delegateTriggers: delegateElementTriggers
         };
     });
     var establishRegion = function (key, selector) {
             var regionManagerDirective = this,
                 parentView = regionManagerDirective[PARENT];
-            if (key) {
-                intendedObject(key, selector, function (key, selector) {
-                    var $selected, region = regionManagerDirective.list.get(key);
-                    if (!region) {
-                        region = regionManagerDirective.create(key, selector);
-                    }
-                    // region = this;
-                    if (parentView !== app) {
-                        $selected = parentView.$(selector)[INDEX](0);
-                    } else {
-                        $selected = $(selector)[INDEX](0);
-                    }
-                    if ($selected) {
-                        region.el = $selected;
-                    }
-                });
+            if (!key) {
+                return regionManagerDirective;
             }
+            intendedObject(key, selector, function (key, selector) {
+                var $selected, region = regionManagerDirective.list.get(key);
+                if (!region) {
+                    region = regionManagerDirective.create(key, selector);
+                }
+                if (parentView !== app) {
+                    $selected = parentView.$(region.selector)[INDEX](0);
+                } else {
+                    $selected = $(region.selector)[INDEX](0);
+                }
+                if ($selected) {
+                    region.el = $selected;
+                }
+            });
             return regionManagerDirective;
         },
         removeRegion = function (region_) {
@@ -8224,22 +8325,20 @@ application.scope().module('View', function (module, app, _, factories, $) {
             var key, regionManagerDirective = this,
                 parent = regionManagerDirective[PARENT],
                 // assume that it is a region
+                selector = region_,
                 region = region_;
             if (isInstance(region, Region)) {
                 return region;
             }
-            region = Region({
+            region = Region(extend({
+                selector: selector || EMPTY_STRING
+            }, isObject(region) ? region : {}, {
                 id: where,
-                selector: isString(region) ? region : EMPTY_STRING,
-                parent: regionManagerDirective
-            });
-            key = REGION_MANAGER;
-            // if (parent !== app) {
-            //     // key = CHILDREN;
-            //     parent.add(region);
-            // }
+                parent: regionManagerDirective,
+                isAttached: parent === app ? BOOLEAN_TRUE : parent.isAttached
+            }));
             regionManagerDirective.list.push(region);
-            regionManagerDirective.list.register('id', where, region);
+            regionManagerDirective.list.register(ID, where, region);
             return region;
         },
         bufferedEnsure = function () {
@@ -8248,8 +8347,10 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 _bufferedEls = isFragment(buffers.els) ? 1 : buffers.resetEls();
         },
         bufferedReset = function () {
+            var cached = this.views;
             this.resetEls();
             this.resetViews();
+            return cached;
         },
         bufferedElsReset = function () {
             this.els = createDocumentFragment();
@@ -8258,13 +8359,16 @@ application.scope().module('View', function (module, app, _, factories, $) {
             this.views = [];
         },
         bufferedAttach = function () {
-            var buffers = this;
+            var buffers = this,
+                attached = [];
             duff(this.views, function (child) {
                 if (result(child, 'filter')) {
                     child[RENDER]();
-                    buffers.region.directive(REGION_MANAGER).list.add(child);
+                    buffers.region.directive(CHILDREN).push(child);
+                    attached.push(child);
                 }
             });
+            return attached;
         };
     app.defineDirective(REGION_MANAGER, function (instance) {
         return {
@@ -8288,24 +8392,282 @@ application.scope().module('View', function (module, app, _, factories, $) {
             attach: bufferedAttach
         };
     });
-    _.exports({
-        compile: compile
-    });
     app.extend({
-        _addToHash: Box[CONSTRUCTOR][PROTOTYPE]._addToHash,
-        // getRegion: viewGetRegionPlacer(REGION_MANAGER),
         getRegion: getRegion,
-        addRegion: addRegion
-        // addRegion: function (id, selector) {
-        //     var app = this;
-        //     // ensure region manager
-        //     // var blank = app.getRegion();
-        //     this.directive(REGION_MANAGER).establish(id, selector);
-        //     // var regionManager = app[REGION_MANAGER];
-        //     // regionManager[PARENT] = app;
-        //     // regionManager[ESTABLISH_REGIONS](id, selector);
-        //     return app;
-        // }
+        addRegion: addRegion,
+        removeRegion: removeRegion
+    });
+});
+application.scope().module('Router', function (module, app, _, factories, $) {
+    // Cached regex for stripping a leading hash/slash and trailing space.
+    var routeStripper = /^[#\/]|\s+$/g,
+        // Cached regex for stripping leading and trailing slashes.
+        rootStripper = /^\/+|\/+$/g,
+        // Cached regex for stripping urls of hash.
+        pathStripper = /#.*$/,
+        COLON0 = ':0',
+        jsNull = 'javascript' + COLON0,
+        // Has the history handling already been started?
+        Router = factories.Events.extend('Router', {
+            constructor: function (windo, options) {
+                var router = this;
+                factories.Events[CONSTRUCTOR].call(router, options);
+                router.handlers = [];
+                router.watching = windo;
+                router.checkUrl = _.bind(router.checkUrl, router);
+                return router;
+            },
+            // The default interval to poll for hash changes, if necessary, is
+            // twenty times a second.
+            interval: 50,
+            // Are we at the app root?
+            atRoot: function () {
+                var path = this.watching.location.pathname.replace(/[^\/]$/, '$&/');
+                return path === this.root && !this.getSearch();
+            },
+            // Does the pathname match the root?
+            matchRoot: function () {
+                var path = this.decodeFragment(this.watching.location.pathname);
+                var root = path.slice(0, this.root.length - 1) + '/';
+                return root === this.root;
+            },
+            // Unicode characters in `location.pathname` are percent encoded so they're
+            // decoded for comparison. `%25` should not be decoded since it may be part
+            // of an encoded parameter.
+            decodeFragment: function (fragment) {
+                return decodeURI(fragment.replace(/%25/g, '%2525'));
+            },
+            // In IE6, the hash fragment and search params are incorrect if the
+            // fragment contains `?`.
+            getSearch: function () {
+                var match = this.watching.location.href.replace(/#.*/, '').match(/\?.+/);
+                return match ? match[0] : '';
+            },
+            // Gets the true hash value. Cannot use location.hash directly due to bug
+            // in Firefox where location.hash will always be decoded.
+            getHash: function (watching) {
+                var match = (watching || this.watching).location.href.match(/#(.*)$/);
+                return match ? match[1] : '';
+            },
+            // Get the pathname and search params, without the root.
+            getPath: function () {
+                var path = this.decodeFragment(this.watching.location.pathname + this.getSearch()).slice(this.root.length - 1);
+                return path.charAt(0) === '/' ? path.slice(1) : path;
+            },
+            // Get the cross-browser normalized URL fragment from the path or hash.
+            getFragment: function (fragment) {
+                if (fragment == NULL) {
+                    if (this._usePushState || !this._wantsHashChange) {
+                        fragment = this.getPath();
+                    } else {
+                        fragment = this.getHash();
+                    }
+                }
+                return fragment.replace(routeStripper, '');
+            },
+            // Start the hash change handling, returning `BOOLEAN_TRUE` if the current URL matches
+            // an existing route, and `BOOLEAN_FALSE` otherwise.
+            start: function (options) {
+                var root, router = this;
+                if (Router.started) {
+                    return router;
+                }
+                Router.started = BOOLEAN_TRUE;
+                // Figure out the initial configuration. Do we need an iframe?
+                // Is pushState desired ... is it available?
+                router.options = _.extend({
+                    root: '/'
+                }, router.options, options);
+                router.root = router.options.root;
+                router._wantsHashChange = router.options.hashChange !== BOOLEAN_FALSE;
+                router._hasHashChange = 'onhashchange' in router.watching && (document.documentMode === UNDEFINED || document.documentMode > 7);
+                router._useHashChange = router._wantsHashChange && router._hasHashChange;
+                router._wantsPushState = !!router.options.pushState;
+                router._hasPushState = !!(router.watching.history && router.watching.history.pushState);
+                router._usePushState = router._wantsPushState && router._hasPushState;
+                router.fragment = router.getFragment();
+                // Normalize root to always include a leading and trailing slash.
+                router.root = ('/' + router.root + '/').replace(rootStripper, '/');
+                // Transition from hashChange to pushState or vice versa if both are
+                // requested.
+                if (router._wantsHashChange && router._wantsPushState) {
+                    // If we've started off with a route from a `pushState`-enabled
+                    // browser, but we're currently in a browser that doesn't support it...
+                    if (!router._hasPushState && !router.atRoot()) {
+                        root = router.root.slice(0, -1) || '/';
+                        router.location.replace(root + '#' + router.getPath());
+                        // Return immediately as browser will do redirect to new url
+                        return BOOLEAN_TRUE;
+                        // Or if we've started out with a hash-based route, but we're currently
+                        // in a browser where it could be `pushState`-based instead...
+                    } else if (router._hasPushState && router.atRoot()) {
+                        router.navigate(router.getHash(), {
+                            replace: BOOLEAN_TRUE
+                        });
+                    }
+                }
+                // Proxy an iframe to handle location events if the browser doesn't
+                // support the `hashchange` event, HTML5 history, or the user wants
+                // `hashChange` but not `pushState`.
+                if (!router._hasHashChange && router._wantsHashChange && !router._usePushState) {
+                    router.iframe = document.createElement('iframe');
+                    router.iframe.src = jsNull;
+                    router.iframe.style.display = NONE;
+                    router.iframe.tabIndex = -1;
+                    var body = document.body;
+                    // Using `appendChild` will throw on IE < 9 if the document is not ready.
+                    var iWindow = body.insertBefore(router.iframe, body.firstChild).contentWindow;
+                    iWindow.document.open();
+                    iWindow.document.close();
+                    iWindow.location.hash = '#' + router.fragment;
+                }
+                // Add a cross-platform `addEventListener` shim for older browsers.
+                var addEventListener = router.watching.addEventListener || function (eventName, listener) {
+                    return attachEvent('on' + eventName, listener);
+                };
+                // Depending on whether we're using pushState or hashes, and whether
+                // 'onhashchange' is supported, determine how we check the URL state.
+                if (router._usePushState) {
+                    addEventListener('popstate', router.checkUrl, BOOLEAN_FALSE);
+                } else if (router._useHashChange && !router.iframe) {
+                    addEventListener('hashchange', router.checkUrl, BOOLEAN_FALSE);
+                } else if (router._wantsHashChange) {
+                    router._checkUrlInterval = setInterval(router.checkUrl, router.interval);
+                }
+                if (!router.options.silent) return router.loadUrl();
+            },
+            // Disable Backbone.watching.history, perhaps temporarily. Not useful in a real app,
+            // but possibly useful for unit testing Routers.
+            stop: function () {
+                // Add a cross-platform `removeEventListener` shim for older browsers.
+                var removeEventListener = this.watching.removeEventListener || function (eventName, listener) {
+                    return detachEvent('on' + eventName, listener);
+                };
+                // Remove window listeners.
+                if (this._usePushState) {
+                    removeEventListener('popstate', this.checkUrl, BOOLEAN_FALSE);
+                } else if (this._useHashChange && !this.iframe) {
+                    removeEventListener('hashchange', this.checkUrl, BOOLEAN_FALSE);
+                }
+                // Clean up the iframe if necessary.
+                if (this.iframe) {
+                    document.body.removeChild(this.iframe);
+                    this.iframe = null;
+                }
+                // Some environments will throw when clearing an undefined interval.
+                if (this._checkUrlInterval) {
+                    clearInterval(this._checkUrlInterval);
+                }
+                Router.started = BOOLEAN_FALSE;
+            },
+            // Add a route to be tested when the fragment changes. Routes added later
+            // may override previous routes.
+            route: function (route, callback) {
+                this.handlers.unshift({
+                    route: route,
+                    callback: callback
+                });
+            },
+            // Checks the current URL to see if it has changed, and if it has,
+            // calls `loadUrl`, normalizing across the hidden iframe.
+            checkUrl: function (e) {
+                var current = this.getFragment();
+                // If the user pressed the back button, the iframe's hash will have
+                // changed and we should use that for comparison.
+                if (current === this.fragment && this.iframe) {
+                    current = this.getHash(this.iframe.contentWindow);
+                }
+                if (current === this.fragment) return BOOLEAN_FALSE;
+                if (this.iframe) this.navigate(current);
+                this.loadUrl();
+            },
+            // Attempt to load the current URL fragment. If a route succeeds with a
+            // match, returns `BOOLEAN_TRUE`. If no defined routes matches the fragment,
+            // returns `BOOLEAN_FALSE`.
+            loadUrl: function (fragment) {
+                // If the root doesn't match, no routes can match either.
+                if (!this.matchRoot()) return BOOLEAN_FALSE;
+                fragment = this.fragment = this.getFragment(fragment);
+                return _.some(this.handlers, function (handler) {
+                    if (handler.route.test(fragment)) {
+                        handler.callback(fragment);
+                        return BOOLEAN_TRUE;
+                    }
+                });
+            },
+            // Save a fragment into the hash history, or replace the URL state if the
+            // 'replace' option is passed. You are responsible for properly URL-encoding
+            // the fragment in advance.
+            //
+            // The options object can contain `trigger: BOOLEAN_TRUE` if you wish to have the
+            // route callback be fired (not usually desirable), or `replace: BOOLEAN_TRUE`, if
+            // you wish to modify the current URL without adding an entry to the history.
+            navigate: function (fragment, options) {
+                if (!Router.started) return BOOLEAN_FALSE;
+                if (!options || options === BOOLEAN_TRUE) options = {
+                    trigger: BOOLEAN_TRUE
+                };
+                options.trigger = options.trigger === UNDEFINED ? BOOLEAN_TRUE : BOOLEAN_FALSE;
+                // Normalize the fragment.
+                fragment = this.getFragment(fragment || '');
+                // Don't include a trailing slash on the root.
+                var root = this.root;
+                if (fragment === '' || fragment.charAt(0) === '?') {
+                    root = root.slice(0, -1) || '/';
+                }
+                var url = root + fragment;
+                // Strip the hash and decode for matching.
+                fragment = this.decodeFragment(fragment.replace(pathStripper, ''));
+                if (this.fragment && this.fragment === fragment) {
+                    return;
+                }
+                this.fragment = fragment;
+                // If pushState is available, we use it to set the fragment as a real URL.
+                if (this._usePushState) {
+                    this.watching.history[options.replace ? 'replaceState' : 'pushState']({}, document.title, url);
+                    // If hash changes haven't been explicitly disabled, update the hash
+                    // fragment to store history.
+                } else if (this._wantsHashChange) {
+                    this._updateHash(this.watching.location, fragment, options.replace);
+                    if (this.iframe && (fragment !== this.getHash(this.iframe.contentWindow))) {
+                        var iWindow = this.iframe.contentWindow;
+                        // Opening and closing the iframe tricks IE7 and earlier to push a
+                        // history entry on hash-tag change.  When replace is BOOLEAN_TRUE, we don't
+                        // want this.
+                        if (!options.replace) {
+                            iWindow.document.open();
+                            iWindow.document.close();
+                        }
+                        this._updateHash(iWindow.location, fragment, options.replace);
+                    }
+                    // If you've told us that you explicitly don't want fallback hashchange-
+                    // based history, then `navigate` becomes a page refresh.
+                } else {
+                    return this.watching.location.assign(url);
+                }
+                if (options.trigger) {
+                    return this.loadUrl(fragment);
+                }
+            },
+            // Update the hash location, either replacing the current entry, or adding
+            // a new one to the browser history.
+            _updateHash: function (location, fragment, replace) {
+                if (replace) {
+                    var href = location.href.replace(/(javascript:|#).*$/, '');
+                    location.replace(href + '#' + fragment);
+                } else {
+                    // Some browsers require that `hash` contains a leading #.
+                    location.hash = '#' + fragment;
+                }
+            }
+        }, BOOLEAN_TRUE),
+        started = Router.started = BOOLEAN_FALSE,
+        router = app.router = Router(window);
+    // console.log(router);
+    $(function () {
+        return !Router.started && router.start({
+            pushState: true
+        });
     });
 });
 application.scope().module('Buster', function (module, app, _, factories, $) {

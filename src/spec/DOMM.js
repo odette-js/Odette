@@ -40,7 +40,7 @@ application.scope().run(function (app, _, factories, $) {
         });
         it('it knows it\'s own client rect', function () {
             var div = divs.eq(0);
-            expect(div.clientRect()).toEqual(_.extend({}, div.element().getBoundingClientRect()));
+            expect(div.rect()).toEqual(_.extend({}, div.element().getBoundingClientRect()));
         });
         it('can show and hide elements', function () {
             expect(divs.hide().map(function (manager) {
@@ -250,16 +250,6 @@ application.scope().run(function (app, _, factories, $) {
                     divs.dispatchEvent('mouseover', {}, true);
                     divs.dispatchEvent('mouseout', {}, true);
                     expect(count).toEqual(15);
-                    // .duff(function (div, idx) {
-                    //     var data = elementData.get(div);
-                    //     _.each(data.handlers, function (_handler, key) {
-                    //         var split = key.split(':');
-                    //         expect(split[0]).toEqual('true');
-                    //         _.duff(data.events[split[0]][split[1]], function (fn, idx) {
-                    //             expect(fn.fn === handler).toEqual(true);
-                    //         });
-                    //     });
-                    // });
                 });
             });
             it('will only add a method to the queue once. if a duplicate is passed in, it will be ignored (just like the browser implementation)', function () {
@@ -269,32 +259,14 @@ application.scope().run(function (app, _, factories, $) {
                 expect(count).toEqual(5);
                 divs.dispatchEvent('click');
                 expect(count).toEqual(10);
-                // .duff(function (div, idx) {
-                //     var data = elementData.get(div);
-                //     expect(data.events['false'].click[1]).toEqual(void 0);
-                // });
             });
             it('once wrappers can also be used with the once method and they can be added the same way as once', function () {
-                // var isDone = 0,
-                //     handler = function () {
-                //         isDone--;
-                //     };
                 divs.once('click', handler);
                 expect(count).toEqual(0);
                 divs.dispatchEvent('click');
                 expect(count).toEqual(5);
                 divs.dispatchEvent('click');
                 expect(count).toEqual(5);
-                // $(document.body).append(divs);
-                // divs.duff(function (div, idx) {
-                //     isDone++;
-                //     var data = elementData.get(div);
-                //     expect(_.isFunction(data.events['false'].click[0].fn)).toEqual(true);
-                //     $(div).click();
-                //     data = elementData.get(div);
-                //     expect(data.events['false'].click[0]).toEqual(void 0);
-                // });
-                // divs.remove();
             });
             it('be careful with the once function because they can be added multiple times to the queue, since they use a proxy function, like the one available at _.once', function () {
                 divs.once('click', handler);

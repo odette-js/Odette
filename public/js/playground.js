@@ -1,34 +1,53 @@
 application.scope().module('playground', function (module, app, _, factories, $) {
-    window.app = app;
-    window._ = _;
-    window.factories = factories;
-    window.$ = $;
-    var SomeView = factories.View.extend({
+    var data = [{
+        text: 'there'
+    }, {
+        text: 'where'
+    }, {
+        text: 'there'
+    }, {
+        text: 'overthere'
+    }];
+    var moarData = [{
+        text: 'there'
+    }, {
+        text: 'where'
+    }, {
+        text: 'there'
+    }, {
+        text: 'overthere'
+    }];
+    var SomeParentView = factories.View.extend({
         className: 'some',
-        template: _.compile('#basic'),
-        regions: function () {
-            return {
-                high: '.region-1',
-                tight: '.region-2'
-            };
+        template: _.compile('basic'),
+        regions: {
+            high: '.region-1',
+            tight: '.region-2'
+        },
+        ui: {
+            spanner: 'span'
+        },
+        elementTriggers: {
+            'click @ui.spanner': 'external:event'
+        },
+        events: {
+            'external:event': function (e) {
+                console.log(this);
+            }
         }
     });
     app.addRegion({
         main: '#main-region'
     });
     var topLayer = app.getRegion('main');
-    var middleLayer = SomeView({
-        model: factories.Box({
+    var middleLayer = SomeParentView({
+        model: factories.Container({
             text: 'here'
         })
     });
     var middleHighRegion = middleLayer.getRegion('high');
-    var bottomLayer1 = SomeView();
-    var bottomLayer2 = SomeView();
-    var bottomLayer3 = SomeView();
-    var bottomLayer4 = SomeView();
-    middleHighRegion.add([bottomLayer1, bottomLayer2, bottomLayer3, bottomLayer4]);
+    middleHighRegion.add(data, SomeParentView);
+    middleLayer.getRegion('tight').add(moarData, SomeParentView);
     topLayer.add(middleLayer);
     topLayer.render();
-    console.log(topLayer);
 });

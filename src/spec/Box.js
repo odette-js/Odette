@@ -429,7 +429,7 @@ application.scope().run(function (app, _, factories, $) {
             it('it does not have a context in the first argument', function () {
                 var count = 0;
                 box.watch('there', function (e) {
-                    return e.target === box && this !== box;
+                    return e.origin === box && this !== box;
                 }, function (e) {
                     count++;
                 });

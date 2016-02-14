@@ -23,12 +23,139 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         ELEMENT = 'element',
         devicePixelRatio = (win.devicePixelRatio || 1),
         ua = navigator.userAgent,
+        templates = Collection(),
+        // By default, Underscore uses ERB-style template delimiters, change the
+        // following template settings to use alternative delimiters.
+        templateSettings = {
+            evaluate: /<%([\s\S]+?)%>/g,
+            interpolate: /<%=([\s\S]+?)%>/g,
+            escape: /<%-([\s\S]+?)%>/g
+        },
+        // When customizing `templateSettings`, if you don't want to define an
+        // interpolation, evaluation or escaping regex, we need one that is
+        // guaranteed not to match.
+        noMatch = /(.)^/,
+        // Certain characters need to be escaped so that they can be put into a
+        // string literal.
+        escapes = {
+            "'": "'",
+            '\\': '\\',
+            '\r': 'r',
+            '\n': 'n',
+            '\u2028': 'u2028',
+            '\u2029': 'u2029'
+        },
+        escapeRegExp = /\\|'|\r|\n|\u2028|\u2029/g,
+        escapeChar = function (match) {
+            return '\\' + escapes[match];
+        },
+        // List of HTML entities for escaping,
+        escapeMap = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#x27;',
+            '`': '&#x60;'
+        },
+        unescapeMap = invert(escapeMap),
+        // Functions for escaping and unescaping strings to/from HTML interpolation,
+        createEscaper = function (map) {
+            var escaper = function (match) {
+                return map[match];
+            };
+            // Regexes for identifying a key that needs to be escaped.
+            var source = '(?:' + keys(map).join('|') + ')';
+            var testRegexp = RegExp(source);
+            var replaceRegexp = RegExp(source, 'g');
+            return function (string) {
+                string = string == NULL ? EMPTY_STRING : EMPTY_STRING + string;
+                return testRegexp.test(string) ? string.replace(replaceRegexp, escaper) : string;
+            };
+        },
+        escape = createEscaper(escapeMap),
+        unescape = createEscaper(unescapeMap),
+        // JavaScript micro-templating, similar to John Resig's implementation.
+        // Underscore templating handles arbitrary delimiters, preserves whitespace,
+        // and correctly escapes quotes within interpolated code.
+        // NB: `oldSettings` only exists for backwards compatibility.
+        templateGenerator = function (text, settings) {
+            settings = extend({}, settings, templateSettings);
+            // Combine delimiters into one regular expression via alternation.
+            var matcher = RegExp([
+                (settings.escape || noMatch).source, (settings.interpolate || noMatch).source, (settings.evaluate || noMatch).source
+            ].join('|') + '|$', 'g');
+            // Compile the template source, escaping string literals appropriately.
+            var index = 0;
+            var source = "__p+='";
+            text.replace(matcher, function (match, escape, interpolate, evaluate, offset) {
+                source += text.slice(index, offset).replace(escapeRegExp, escapeChar);
+                index = offset + match.length;
+                if (escape) {
+                    source += "'+\n((__t=(this." + escape + "))==null?'':_.escape(__t))+\n'";
+                } else if (interpolate) {
+                    source += "'+\n((__t=(this." + interpolate + "))==null?'':__t)+\n'";
+                } else if (evaluate) {
+                    source += "';\n" + evaluate + "\n__p+='";
+                }
+                // Adobe VMs need the match returned to produce the correct offset.
+                return match;
+            });
+            source += "';\n";
+            // If a variable is not specified, place data values in local scope.
+            // if (!settings.variable) source = 'with(this||{}){\n' + source + '}\n';
+            source = "var __t,__p='',__j=Array.prototype.join," + "print=function(){__p+=__j.call(arguments,'');};\n" + source + 'return __p;\n';
+            var render;
+            try {
+                render = new Function.constructor(settings.variable || '_', source);
+            } catch (e) {
+                e.source = source;
+                throw e;
+            }
+            var template = function (data) {
+                return render.call(data || {}, _);
+            };
+            // Provide the compiled source as a convenience for precompilation.
+            var argument = settings.variable || 'obj';
+            template.source = 'function(' + argument + '){\n' + source + '}';
+            return template;
+        },
+        compile = function (id, template_, force) {
+            var matches, tag, attrs, template,
+                templateObject = templates.get('id', id);
+            if (templateObject && !force) {
+                return templateObject;
+            }
+            template = template_ || $('#' + id).html();
+            matches = template.match(/\{\{([\w\s\d]*)\}\}/mgi);
+            templateObject = {
+                id: id,
+                attributes: map(matches || [], function (match) {
+                    return {
+                        match: match,
+                        attr: match.split('{{').join(EMPTY_STRING).split('}}').join(EMPTY_STRING).trim()
+                    };
+                }),
+                render: templateGenerator(template)
+                // render: function (obj) {
+                //     var str = template,
+                //         cloneResult = clone(obj);
+                //     duff(this.attributes, function (match) {
+                //         if (!cloneResult[match.attr]) {
+                //             cloneResult[match.attr] = EMPTY_STRING;
+                //         }
+                //         str = str.replace(match.match, cloneResult[match.attr]);
+                //     });
+                //     return str;
+                // }
+            };
+            templates.push(templateObject);
+            templates.register('id', id, templateObject);
+            return templateObject;
+        },
         isElement = function (object) {
             return !!(object && isNumber(object[NODE_TYPE]) && object[NODE_TYPE] === object.ELEMENT_NODE);
         },
-        // isElementUnwrapped = function (manager) {
-        //     return isElement(manager.unwrap());
-        // },
         /**
          * @private
          * @func
@@ -367,7 +494,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         },
         attributeApplication = function (fn, key, applies) {
             return function (one, two) {
-                return fn(this, one, two, key, applies);
+                return fn([this], one, two, key, applies);
             };
         },
         managerContainsClass = function (classes) {
@@ -1088,29 +1215,21 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 });
             }
         },
-        // ensureOne = function (fn) {
-        //     return function () {
-        //         if (this[LENGTH]()) {
-        //             fn.apply(this, arguments);
-        //         }
-        //         return this;
-        //     };
-        // },
         expandEventListenerArguments = function (fn) {
             return function () {
-                var args, obj, selector, domm = this;
-                // if there's nothing selected, then do nothing
-                args = toArray(arguments);
-                obj = args.shift();
-                if (isObject(obj)) {
+                var selector, domm = this,
+                    // if there's nothing selected, then do nothing
+                    args = toArray(arguments),
+                    nameOrObject = args.shift();
+                if (isObject(nameOrObject)) {
                     if (isString(args[0])) {
                         selector = args.shift();
                     }
-                    each(obj, function (key, handlers) {
-                        createSelector(domm, [key, selector, handlers].concat(args), fn);
+                    each(nameOrObject, function (key, handler) {
+                        createSelector(domm, [key, selector, handler].concat(args), fn);
                     });
                 } else {
-                    args.unshift(obj);
+                    args.unshift(nameOrObject);
                     createSelector(domm, args, fn);
                 }
             };
@@ -1134,9 +1253,9 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             if (eventPhase === 1) {
                 capturing = BOOLEAN_TRUE;
             }
-            if (eventPhase === 2 && !evnt.bubbles && isElement(evnt.srcElement)) {
-                capturing = BOOLEAN_TRUE;
-            }
+            // if (eventPhase === 2 && !evnt.bubbles && isElement(evnt.srcElement)) {
+            //     capturing = BOOLEAN_TRUE;
+            // }
             return capturing;
         },
         findMatch = function (el, target, selector) {
@@ -1381,6 +1500,12 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             addClass: attributeApplication(addClass, UNDEFINED, WRITE),
             removeClass: attributeApplication(removeClass, UNDEFINED, WRITE),
             toggleClass: attributeApplication(toggleClass, UNDEFINED, WRITE),
+            changeClass: attributeApplication(changeClass, UNDEFINED, WRITE),
+            booleanClass: attributeApplication(booleanClass, UNDEFINED, WRITE),
+            hasClass: function (classes) {
+                var newClasses = gapSplit(classes);
+                return newClasses[LENGTH] && !managerContainsClass(newClasses)(this);
+            },
             resetEvents: noop,
             applyStyle: function (key, value) {
                 var manager = this;
@@ -1403,18 +1528,13 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                     manager.isRemoving = cachedRemoving;
                 }
             },
-            hasClass: function (classes) {
-                var newClasses = gapSplit(classes);
-                return newClasses[LENGTH] && !managerContainsClass(newClasses)(this);
-            },
-            changeClass: attributeApplication(changeClass, UNDEFINED, WRITE),
-            booleanClass: attributeApplication(booleanClass, UNDEFINED, WRITE),
             find: function (selector) {
                 return $(this[TARGET].querySelectorAll(selector), this.wrap());
             },
             createEvent: function (type, original, opts) {
-                return new DomEvent[CONSTRUCTOR](original, {
+                return DomEvent(original, {
                     target: this.target,
+                    origin: this,
                     capturing: toBoolean(type.split(COLON)[0]),
                     arg2: opts
                 });
@@ -1660,6 +1780,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 if (isInstance(evnt, DomEvent[CONSTRUCTOR])) {
                     return evnt;
                 }
+                e.origin = opts.origin;
                 e.originalEvent = evnt;
                 e.delegateTarget = opts.target;
                 fixHooks.make(e, evnt, opts.arg2);
@@ -1739,19 +1860,17 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         },
         dommFind = attachPrevious(function (str) {
             var passedString = isString(str),
+                matchers = [],
                 push = function (el) {
-                    matchers.push(el);
+                    matchers.push(returnsElementData(el));
                 };
-            return foldl(this.unwrap(), function (memo, el) {
+            return duff(this.unwrap(), function (el) {
                 if (passedString) {
-                    duff(Sizzle(str, el.unwrap()), function (el) {
-                        memo.push(returnsElementData(el));
-                    });
+                    duff(Sizzle(str, el.unwrap()), push);
                 } else {
-                    memo.push(returnsElementData(el));
+                    push(el);
                 }
-                return memo;
-            }, []);
+            }) && matchers;
         }),
         makeDataKey = function (_key) {
             var dataString = 'data-',
@@ -1817,6 +1936,9 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             center: center,
             closer: closer,
             distance: distance,
+            compile: compile,
+            escape: escape,
+            unescape: unescape,
             css: css,
             box: box,
             fragment: fragment,
@@ -1832,22 +1954,20 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             numberToUnit: numberToUnit
         }),
         // removeChild = eachProc(),
-        setupDomContentLoaded = function (ctx) {
+        setupDomContentLoaded = function (handler, ctx) {
             var $doc = DOMM(ctx),
-                docEl = $doc[INDEX](),
-                docData = returnsElementData(docEl),
-                handler = bind(str, $doc);
+                docData = $doc[INDEX](),
+                bound = bind(handler, $doc);
             if (docData.isReady) {
                 // make it async
                 _.AF.once(function () {
-                    handler($, docData.DOMContentLoadedEvent);
+                    bound($, docData.DOMContentLoadedEvent);
                 });
                 els = dom.unwrap();
             } else {
-                dom = $doc.on('DOMContentLoaded', function (e) {
-                    handler($, e);
+                $doc.on('DOMContentLoaded', function (e) {
+                    bound($, e);
                 });
-                els = dom.unwrap();
             }
             return $doc;
         },
@@ -1872,7 +1992,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                     unwrapped = context.unwrap();
                 if (isFunction(str)) {
                     if (isDocument(unwrapped)) {
-                        return setupDomContentLoaded(unwrapped);
+                        return setupDomContentLoaded(str, unwrapped);
                     }
                 } else {
                     if (!isValid) {
@@ -1985,18 +2105,6 @@ application.scope().module('DOMM', function (module, app, _, factories) {
              * @returns {DOMM} instance
              */
             resetEvents: applyToEach('resetEvents'),
-            // resetEvents: eachProc(function (manager) {
-            //     // var el = manager.unwrap();
-            //     // each(data.handlers, function (key, fn, eH) {
-            //     //     // var wasCapt, split = key.split(COLON);
-            //     //     // eH[key] = UNDEFINED;
-            //     //     // wasCapt = data[_EVENTS][split[0]];
-            //     //     // if (wasCapt) {
-            //     //     //     wasCapt[split[1]] = [];
-            //     //     // }
-            //     // });
-            //     // elementData.remove(el);
-            // }),
             /**
              * @name DOMM#off
              * @param {String|Function} type - event type
@@ -2031,25 +2139,15 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 return ret;
             },
             style: applyToEach('style'),
-            // style: function (key, value) {
-            //     intendedObject(key, value, this.applyStyle, this);
-            // },
-            // style: ensureOne(function (key, value) {
-            //     style(this.unwrap(), key, value);
-            //     return this;
-            // }),
             /**
              * @func
              * @name DOMM#allDom
              * @returns {Boolean} value indicating whether or not there were any non dom elements found in the collection
              */
             allElements: function () {
-                var count = 0,
-                    length = this[LENGTH](),
-                    result = length && find(this.unwrap(), negate(function (manager) {
-                        return isElement(manager.unwrap());
-                    }));
-                return length && result === UNDEFINED;
+                return !!(this[LENGTH]() && !find(this.unwrap(), function (manager) {
+                    return !manager.isElement;
+                }));
             },
             /**
              * @func
@@ -2091,16 +2189,6 @@ application.scope().module('DOMM', function (module, app, _, factories) {
              */
             attr: domAttrManipulator(trackedAttributeInterface),
             prop: domAttrManipulator(trackedAttributeInterface, BOOLEAN_TRUE),
-            // prop: domAttrManipulator(function (el, key, val) {
-            //     var value;
-            //     if (val == NULL) {
-            //         value = el[key];
-            //         value = value == NULL ? NULL : value;
-            //     } else {
-            //         el[key] = val == NULL ? NULL : val;
-            //     }
-            //     return value;
-            // }),
             /**
              * @func
              * @name DOMM#eq
@@ -2116,23 +2204,15 @@ application.scope().module('DOMM', function (module, app, _, factories) {
              * @param {Number} [num=0] - item who's bounding client rect will be assessed and extended
              * @returns {Object} hash of dimensional properties (getBoundingClientRect)
              */
-            clientRect: function (num) {
+            rect: function (num) {
                 return clientRect(eq(this.unwrap(), num)[0]);
             },
-            /**
-             * @func
-             * @name DOMM#each
-             * @param {Function} callback - iterator to apply to each item on the list
-             * @param {Boolean} elOnly - switches the first argument from a DOMM wrapped object to the Node itself
-             * @returns {DOMM} instance
-             */
-            // each: ensureOne(function (callback_) {
-            //     var domm = this,
-            //         callback = bind(callback_, domm);
-            //     domm.duff(function (item_, index, all) {
-            //         callback(DOMM([item_]), index, all);
-            //     }, NULL);
-            // }),
+            box: function (num) {
+                return box(this[INDEX](num), this.context);
+            },
+            flow: function (num) {
+                return flow(this[INDEX](num), this.context);
+            },
             /**
              * @func
              * @name DOMM#addClass
@@ -2175,12 +2255,6 @@ application.scope().module('DOMM', function (module, app, _, factories) {
              * @name DOMM#box
              * @param {Number} [num=0] - index to get the boxmodel of
              */
-            box: function (num) {
-                return box(this[INDEX](num), this.context);
-            },
-            flow: function (num) {
-                return flow(this[INDEX](num), this.context);
-            },
             /**
              * @func
              * @name DOMM#end
@@ -2351,7 +2425,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             has: function (els) {
                 var domm = this,
                     collection = Collection(els),
-                    length = collection.length();
+                    length = collection[LENGTH]();
                 return !!length && collection.find(function (el) {
                     return domm.posit(el) ? BOOLEAN_FALSE : BOOLEAN_TRUE;
                 });
@@ -2363,7 +2437,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
              * @returns {Number} index of the element
              */
             element: function (idx) {
-                var manager = this.index(idx);
+                var manager = this[INDEX](idx);
                 return manager && manager.unwrap();
             },
             /**
@@ -2474,10 +2548,9 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 attr = api;
             }
             return function (str) {
-                var item, setter = {};
-                if (isString(str)) {
-                    setter[attr] = str;
-                    return this.attr(setter);
+                var item;
+                if (str !== UNDEFINED) {
+                    return this.attr(attr, str);
                 }
                 item = this[INDEX](str);
                 if (item) {
@@ -2490,7 +2563,11 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         }, triggerEventWrapper), wrap(gapSplit('blur focus focusin focusout load resize scroll unload click dblclick mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave change select submit keydown keypress keyup error contextmenu'), function (attr) {
             return triggerEventWrapper(attr);
         })), BOOLEAN_TRUE),
-        $ = _.$ = _DOMM(doc);
+        $ = _.$ = _DOMM(doc),
+        templatescripts = $('script[id]').each(function (script) {
+            compile(script.unwrap().id, script.html());
+        });
+    window.$ = $;
     app.addModuleArguments([$]);
     app.defineDirective('attributes', function () {
         return {};

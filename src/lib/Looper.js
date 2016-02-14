@@ -1,38 +1,30 @@
 application.scope().module('Looper', function (module, app, _, factories) {
     var blank, x = 0,
         lastTime = 0,
-        LENGTH = 'length',
-        isFunction = _.isFunction,
-        isNumber = _.isNumber,
         pI = _.pI,
         posit = _.posit,
         nowish = _.now,
         gapSplit = _.gapSplit,
         vendors = gapSplit('ms moz webkit o'),
         REQUEST_ANIMATION_FRAME = 'requestAnimationFrame',
+        CANCEL_ANIMATION_FRAME = 'cancelAnimationFrame',
         allLoopers = [],
         runningLoopers = [],
-        bind = _.bind,
-        duff = _.duff,
+        eachCall = _.eachCall,
+        time = _.time,
         remove = _.remove,
-        removeAll = _.removeAll,
-        duffRev = _.duffRight,
-        extend = _.extend,
-        BOOLEAN_TRUE = !0,
-        BOOLEAN_FALSE = !1,
         running = BOOLEAN_FALSE,
         setup = function () {
             running = BOOLEAN_TRUE;
             win[REQUEST_ANIMATION_FRAME](function (time) {
-                duff(runningLoopers, function (looper) {
-                    looper.run(time);
-                });
+                eachCall(runningLoopers, 'run', time);
                 teardown();
             });
         },
         teardown = function () {
             duffRight(runningLoopers, function (looper, idx) {
                 if (looper.halted() || looper.stopped() || looper.destroyed() || !looper.length()) {
+                    looper.stop();
                     runningLoopers.splice(idx, 1);
                 }
             });
@@ -55,7 +47,7 @@ application.scope().module('Looper', function (module, app, _, factories) {
         shim = (function () {
             for (; x < vendors[LENGTH] && !win[REQUEST_ANIMATION_FRAME]; ++x) {
                 win[REQUEST_ANIMATION_FRAME] = win[vendors[x] + 'RequestAnimationFrame'];
-                win.cancelAnimationFrame = win[vendors[x] + 'CancelAnimationFrame'] || win[vendors[x] + 'CancelRequestAnimationFrame'];
+                win[CANCEL_ANIMATION_FRAME] = win[vendors[x] + _.upCase(CANCEL_ANIMATION_FRAME)] || win[vendors[x] + 'CancelRequestAnimationFrame'];
             }
             if (!win[REQUEST_ANIMATION_FRAME]) {
                 win[REQUEST_ANIMATION_FRAME] = function (callback) {
@@ -68,15 +60,15 @@ application.scope().module('Looper', function (module, app, _, factories) {
                     return id;
                 };
             }
-            if (!win.cancelAnimationFrame) {
-                win.cancelAnimationFrame = function (id) {
+            if (!win[CANCEL_ANIMATION_FRAME]) {
+                win[CANCEL_ANIMATION_FRAME] = function (id) {
                     win.clearTimeout(id);
                 };
             }
         }()),
         Looper = factories.Directive.extend('Looper', {
             constructor: function (_runner) {
-                var fns, stopped = BOOLEAN_FALSE,
+                var fns, stopped = BOOLEAN_TRUE,
                     halted = BOOLEAN_FALSE,
                     destroyed = BOOLEAN_FALSE,
                     running = BOOLEAN_FALSE,
@@ -91,20 +83,25 @@ application.scope().module('Looper', function (module, app, _, factories) {
                             addList = [];
                         }
                     };
+                // keeps things private
                 extend(looper, {
                     length: function () {
                         return fnList[LENGTH];
                     },
                     destroy: function () {
                         destroyed = BOOLEAN_TRUE;
-                        remove(allLoopers, this);
+                        // remove(allLoopers, this);
                         return this.halt();
                     },
                     destroyed: function () {
                         return destroyed;
                     },
                     running: function () {
+                        // actual object that is currently being run
                         return !!running;
+                    },
+                    started: function () {
+                        return !stopped;
                     },
                     run: function () {
                         var tween = this,
@@ -115,25 +112,32 @@ application.scope().module('Looper', function (module, app, _, factories) {
                         }
                         combineAdd();
                         duff(fnList, function (fnObj) {
-                            if (!posit(removeList, fnObj)) {
-                                if (!fnObj.disabled && !halted) {
-                                    running = fnObj;
-                                    fnObj.fn(_nowish);
-                                }
-                            } else {
+                            if (posit(removeList, fnObj)) {
                                 removeLater.push(fnObj);
+                            } else {
+                                if (fnObj.disabled || halted) {
+                                    return;
+                                }
+                                running = fnObj;
+                                wraptry(function () {
+                                    fnObj.fn(_nowish);
+                                });
                             }
                         });
                         running = BOOLEAN_FALSE;
                         combineAdd();
-                        removeAll(fnList, removeList.concat(removeLater));
+                        duff(removeList.concat(removeLater), function (item) {
+                            remove(fnList, item);
+                        });
                         removeList = [];
                     },
                     remove: function (id) {
-                        var ret, fnObj, i = 0;
+                        var fnObj, i = 0,
+                            ret = BOOLEAN_FALSE;
                         if (!arguments[LENGTH]) {
                             if (running) {
-                                id = running.id;
+                                removeList.push(running);
+                                return BOOLEAN_TRUE;
                             }
                         }
                         if (isNumber(id)) {
@@ -142,7 +146,7 @@ application.scope().module('Looper', function (module, app, _, factories) {
                                 if (fnObj.id === id) {
                                     if (!posit(removeList, fnObj)) {
                                         removeList.push(fnObj);
-                                        ret = 1;
+                                        ret = BOOLEAN_TRUE;
                                     }
                                 }
                             }
@@ -233,47 +237,48 @@ application.scope().module('Looper', function (module, app, _, factories) {
                     fn(ms, !last, count);
                 });
             },
-            tween: function (time, fn_) {
-                var fn, added = nowish();
-                if (!time) {
-                    time = 0;
+            tween: function (time__, fn_) {
+                var fn, added = nowish(),
+                    time_ = _.time(time__);
+                if (!time_) {
+                    time_ = 0;
                 }
-                if (!isFunction(fn)) {
+                if (!isFunction(fn_)) {
                     return;
                 }
                 fn = this.bind(fn_);
                 return this.interval(0, function (ms) {
                     var tween = 1,
                         diff = ms - added;
-                    if (diff >= time) {
+                    if (diff >= time_) {
                         tween = 0;
                         this.remove();
                     }
-                    fn(ms, Math.min(1, (diff / time)), !tween);
+                    fn(ms, Math.min(1, (diff / time_)), !tween);
                 });
             },
-            time: function (time, fn_) {
+            time: function (time_, fn_) {
                 var fn;
-                if (!isFunction(fn)) {
+                if (!isFunction(fn_)) {
                     return this;
                 }
                 fn = this.bind(fn_);
-                return this.interval(time, function (ms) {
+                return this.interval(time(time_), function (ms) {
                     this.remove();
                     fn(ms);
                 });
             },
-            frameRate: function (time, fn_, min) {
+            frameRate: function (time__, fn_, min) {
                 var fn, tween = this,
                     minimum = Math.min(min || 0.8, 0.8),
                     expectedFrameRate = 30 * minimum,
                     lastDate = 1,
-                    lastSkip = nowish();
-                time = time || 125;
+                    lastSkip = nowish(),
+                    time_ = time__ || 125;
                 if (!isFunction(fn_)) {
                     return tween;
                 }
-                fn = bind(fn_, this);
+                fn = this.bind(fn_);
                 return tween.add(function (ms) {
                     var frameRate = 1000 / (ms - lastDate);
                     if (frameRate > 40) {
@@ -282,7 +287,7 @@ application.scope().module('Looper', function (module, app, _, factories) {
                     if (frameRate < expectedFrameRate) {
                         lastSkip = ms;
                     }
-                    if (ms - lastSkip > time) {
+                    if (ms - lastSkip > time_) {
                         this.remove();
                         fn(ms);
                     }
@@ -291,13 +296,13 @@ application.scope().module('Looper', function (module, app, _, factories) {
             },
             interval: function (time, fn_) {
                 var fn, last = nowish();
-                if (!isFunction(fn)) {
+                if (!isFunction(fn_)) {
                     return;
                 }
                 if (!time) {
                     time = 0;
                 }
-                fn = this.bind(fn);
+                fn = this.bind(fn_);
                 return this.add(function (ms) {
                     if (ms - time >= last) {
                         last = ms;
@@ -305,8 +310,8 @@ application.scope().module('Looper', function (module, app, _, factories) {
                     }
                 });
             }
-        }, !0);
+        }, BOOLEAN_TRUE);
     _.exports({
-        AF: new Looper()
+        AF: Looper()
     });
 });

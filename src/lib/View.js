@@ -11,7 +11,7 @@ application.scope().module('View', function (module, app, _, factories, $) {
         createDocumentFragment = _.createDocumentFragment,
         RENDER = 'render',
         OPTIONS = 'options',
-        IS_RENDERED = '_isRendered',
+        IS_RENDERED = 'isRendered',
         PARENT_NODE = 'parentNode',
         CONSTRUCTOR = 'constructor',
         ESTABLISH_REGIONS = 'establishRegions',
@@ -19,54 +19,30 @@ application.scope().module('View', function (module, app, _, factories, $) {
         APPEND_CHILD_ELEMENTS = '_appendChildElements',
         ELEMENT = 'element',
         REGION_MANAGER = 'regionManager',
-        templates = {},
-        compile = function (id, force) {
-            var matches, tag, template, attrs,
-                templateFn = templates[id];
-            if (templateFn && !force) {
-                return templateFn;
-            }
-            tag = $(id);
-            template = tag.html();
-            matches = template.match(/\{\{([\w\s\d]*)\}\}/mgi);
-            attrs = map(matches || [], function (match) {
-                return {
-                    match: match,
-                    attr: match.split('{{').join(EMPTY_STRING).split('}}').join(EMPTY_STRING).trim()
-                };
-            });
-            // template = template.trim();
-            templateFn = templates[id] = function (obj) {
-                var str = template,
-                    cloneResult = clone(obj);
-                duff(attrs, function (match) {
-                    if (!cloneResult[match.attr]) {
-                        cloneResult[match.attr] = EMPTY_STRING;
-                    }
-                    str = str.replace(match.match, cloneResult[match.attr]);
-                });
-                return str;
-            };
-            return templateFn;
-        },
-        makeDelegateEventKey = function (view, name) {
-            return name + '.delegateEvents' + view.cid;
-        },
-        makeDelegateEventKeys = function (view, key, namespace) {
+        makeDelegateEventKeys = function (cid, bindings, key, namespace_) {
+            var viewNamespace = 'delegateEvents' + cid,
+                namespace = namespace_;
             if (namespace) {
                 namespace = PERIOD + namespace;
             } else {
                 namespace = EMPTY_STRING;
             }
-            var viewNamespace = 'delegateEvents' + view.cid;
-            return map(gapSplit(key), function (_key) {
+            return foldl(gapSplit(key), function (memo, _key) {
                 var __key = _key.split(PERIOD);
-                if (__key[1] !== viewNamespace) {
-                    __key.splice(1, 0, viewNamespace);
-                    _key = __key.join(PERIOD);
+                if (__key[0][0] === '@') {
+                    memo.selector = normalizeUIString(_key, bindings);
+                } else {
+                    if (__key[1] !== viewNamespace) {
+                        __key.splice(1, 0, viewNamespace);
+                        _key = __key.join(PERIOD);
+                    }
+                    memo.events.push(_key + namespace);
                 }
-                return _key += namespace;
-            }).join(' ');
+                return memo;
+            }, {
+                events: [],
+                selector: ''
+            });
         },
         normalizeUIString = function (uiString, ui) {
             return uiString.replace(/@ui\.[a-zA-Z_$0-9]*/g, function (r) {
@@ -109,40 +85,30 @@ application.scope().module('View', function (module, app, _, factories, $) {
         // regionConstructor = ,
         Region = factories.Events.extend('Region', {
             tagName: 'div',
-            // constructor: function (secondary) {
-            //     var model = this;
-            //     factories.Events[CONSTRUCTOR].call(model, secondary);
-            //     //
-            //     return model;
-            // },
-            // 'directive:creation:regionManager': function () {
-            //     return NULL;
-            // },
-            // _ensureElement: function () {
-            //     this._setElement();
-            // },
-            // constructor: function (options) {
-            //     var view = this;
-            //     _View[CONSTRUCTOR].call(view, options);
-            //     return view;
-            // },
-            add: function (models_) {
+            toView: function () {},
+            add: function (models_, viewConstructor, dataConstructor) {
                 var ret, _bufferedViews, region = this,
                     bufferedViewsDirective = region.directive('bufferedViews');
                 bufferedViewsDirective.ensure();
-                Collection(models_).each(region.bufferView, region);
+                Collection(models_).each(function (view_) {
+                    var view = view_;
+                    if (!View.isInstance(view)) {
+                        if (!factories.Container.isInstance(view)) {
+                            view = (dataConstructor || factories.Container)(view);
+                        }
+                        view = (viewConstructor || region.Child || factories.View)({
+                            model: view,
+                            parent: region
+                        });
+                    }
+                    region.setParent(view);
+                    region.bufferView(view);
+                });
                 return ret;
             },
-            // _add: function (view) {
-            //     // var parent = this,
-            //     //     regionManagerDirective = view.directive(REGION_MANAGER);
-            //     // Box[CONSTRUCTOR][PROTOTYPE]._add.call(parent, view);
-            //     // ensure the element buffer
-            //     // append to the view list buffer
-            //     // attached buffered element here so we don't have to loop through the list later
-            //     // view._setElement(view.el);
-            //     // parent.bufferView(view);
-            // },
+            setParent: function (view) {
+                view.parent = this;
+            },
             bufferView: function (view) {
                 var bufferDirective = this.directive('bufferedViews'),
                     el = view.el && view.el.unwrap();
@@ -172,7 +138,7 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 });
             },
             render: function () {
-                var region = this,
+                var list, region = this,
                     bufferDirective = region.directive('bufferedViews'),
                     elementDirective = region.directive(ELEMENT);
                 region[IS_RENDERED] = BOOLEAN_FALSE;
@@ -187,10 +153,12 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 // attrs = view.attributes();
                 elementDirective.setAttributes();
                 // puts children back inside parent
-                bufferDirective.attach();
+                list = bufferDirective.attach();
                 // attach region element
                 // appends child elements
                 elementDirective.el.append(bufferDirective.els);
+                // pass the buffered views up
+                region.passBuffered(list);
                 // mark the view as rendered
                 region[IS_RENDERED] = BOOLEAN_TRUE;
                 // reset buffered objects
@@ -198,25 +166,22 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 // dispatch the render event
                 region[DISPATCH_EVENT](RENDER);
                 return region;
-                // },
-                // _appendChildElements: function () {
-                //     var region = this,
-                //         buffered = region.directive('bufferedViews');
-                //     if (buffered && region.el) {
-                //         region.el.appendChild(buffered.els);
-                //     }
+            },
+            passBuffered: function (list) {
+                var viewList, region = this,
+                    parentview = region[PARENT][PARENT];
+                if (isInstance(parentview, View) && !region.isAttached) {
+                    viewList = parentview.directive('bufferedViews').views;
+                    viewList.push.apply(viewList, list);
+                } else {
+                    duff(this.directive('bufferedViews').views, function (view) {
+                        view.isAttached = BOOLEAN_TRUE;
+                        view[DISPATCH_EVENT]('attach');
+                    });
+                }
             }
         }, BOOLEAN_TRUE),
         View = Region.extend('View', {
-            /**
-             * @func
-             * @name View # constructor
-             * @description constructor for new view object
-             * @param {Object | DOMM | Node} attributes - hash with non - circular data on it. Is set later with the Box constructor
-             * @param {Object} secondary - options such as defining the parent object, or the element if necessary
-             * @param {DOMM|Node} el - element or Node that is attached directly to the View object
-             * @returns {View} instance
-             */
             filter: BOOLEAN_TRUE,
             getRegion: getRegion,
             constructor: function (secondary) {
@@ -246,7 +211,7 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 return view;
             },
             render: function () {
-                var ret, view = this,
+                var bufferedDirective, template, view = this,
                     regionsManagerDirective = view.checkDirective(REGION_MANAGER),
                     element = view.directive(ELEMENT);
                 view[IS_RENDERED] = BOOLEAN_FALSE;
@@ -259,18 +224,25 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 // update new element's attributes
                 element.setAttributes();
                 // renders the html
-                element.render(result(view, 'template', view.model && view.model.toJSON()));
+                template = result(view.template, RENDER, view.model && view.model.toJSON());
+                element.render(template);
                 // gathers the ui elements
-                view._bindUIElements();
+                // view._bindUIElements();
                 // ties regions back to newly formed parent template
-                ret = regionsManagerDirective && regionsManagerDirective.establish();
                 // tie the children of the region the the region's el
                 view.directive(REGION_MANAGER).list.eachCall(RENDER);
                 // mark the view as rendered
                 view[IS_RENDERED] = BOOLEAN_TRUE;
+                bufferedDirective = view.checkDirective('bufferedViews');
+                template = bufferedDirective && view.passBuffered(bufferedDirective.views);
+                // pass buffered views up to region
                 // dispatch the render event
                 view[DISPATCH_EVENT](RENDER);
                 return view;
+            },
+            passBuffered: function (list) {
+                var parentBuffered = this.parent.directive('bufferedViews');
+                parentBuffered.views = parentBuffered.views.concat(list);
             },
             parentView: function () {
                 var found, view = this,
@@ -283,24 +255,6 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 }
                 return found;
             },
-            _bindUIElements: function () {
-                var view = this,
-                    _uiBindings = view._uiBindings || result(view, 'ui');
-                view.ui = view.ui || {};
-                if (_uiBindings) {
-                    return view;
-                }
-                // save it to skip the result call later
-                view._uiBindings = _uiBindings;
-                view.ui = map(_uiBindings, function (key, selector) {
-                    return view.$(selector);
-                });
-                return view;
-            },
-            _unBindUIElements: function () {
-                var view = this;
-                view.ui = view._uiBindings;
-            },
             remove: function () {
                 var el, view = this;
                 Box[CONSTRUCTOR][PROTOTYPE].remove.apply(view, arguments);
@@ -309,41 +263,23 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 view.detach();
                 return view;
             },
-            _detachElement: function () {
-                var view = this,
-                    el = view.el && view.el[INDEX](0);
-                if (el && el[PARENT_NODE]) {
-                    el[PARENT_NODE].removeChild(el);
-                }
-            },
-            _removeViewElement: function (el, frag) {
-                var parent = this;
-                if (frag) {
-                    frag.appendChild(el);
-                } else {
-                    if (el[PARENT_NODE]) {
-                        el[PARENT_NODE].removeChild(el);
-                    }
-                }
-            },
-            detach: function () {
-                var view = this;
+            detach: function (fragment) {
+                var el, view = this;
                 if (view.isDetaching) {
                     return;
                 }
                 view.isDetaching = BOOLEAN_TRUE;
                 view[DISPATCH_EVENT]('before:detach');
                 view.isDetached = BOOLEAN_TRUE;
-                view._detachElement();
-            },
-            destroy: function (opts) {
-                var view = this;
-                view[IS_RENDERED] = BOOLEAN_FALSE;
-                view.detach();
-                // remove all events
-                // should internally call remove
-                Box[CONSTRUCTOR][PROTOTYPE].destroy.call(view);
-                return view;
+                el = view.el && view.el[INDEX](0);
+                if (el && el[PARENT_NODE]) {
+                    if (fragment) {
+                        fragment.appendChild(el);
+                    } else {
+                        el[PARENT_NODE].removeChild(el);
+                    }
+                }
+                view[DISPATCH_EVENT]('detach');
             },
             rendered: function () {
                 return this[IS_RENDERED];
@@ -352,9 +288,6 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 return this.isDestroyed;
             }
         }, BOOLEAN_TRUE),
-        // ElementDirective = app.defineDirective('element', function (target) {
-        //     //
-        // }),
         _View = factories.View,
         ensureElement = function () {
             var el, elementDirective = this,
@@ -382,65 +315,112 @@ application.scope().module('View', function (module, app, _, factories, $) {
         setElement = function (el) {
             this.view.el = this.el = factories.DomManager.isInstance(el) ? el : $(el).index(0);
         },
-        delegateElementEvents = function (bindings_) {
-            var key, method, match,
-                elementDirective = this,
-                view = elementDirective.view,
-                eventBindings = view.eventBindings || result(view, 'elementEvents'),
-                // bindings = bindings_ || eventBindings,
-                __events = {};
-            if (eventBindings) {
-                elementDirective.eventBindings = eventBindings;
+        delegateElementEvents = function () {
+            var key, method, match, elDir = this,
+                view = elDir.view,
+                el = elDir.el,
+                elementBindings = elDir.elementBindings || result(view, 'elementEvents'),
+                __events = [];
+            if (elDir.elementBindings) {
+                elDir.elementBindings = elementBindings;
             }
             if (!el) {
-                return elementDirective;
+                return elDir;
             }
-            each(bindings, function (key, methods_) {
-                // assumes is array
-                var methods = gapSplit(methods_);
-                if (isFunction(methods_)) {
-                    methods = [methods_];
-                }
-                __events[makeDelegateEventKeys(view, key)] = map(methods, function (method, idx) {
-                    return bind(view[method] || method, view);
-                });
+            each(elementBindings, function (method, key) {
+                var object = makeDelegateEventKeys(view.cid, elDir.uiBindings, key),
+                    bound = object.fn = bind(view[method] || method, view);
+                el.on(object.events.join(' '), object.selector, bound);
             });
-            el.on(__events);
-            return elementDirective;
+            elDir.cachedElementBindings = __events;
+            return elDir;
         },
-        unDelegateElementEvents = function (el, bindings_) {
-            var key, method, match, elementDirective = this,
-                view = elementDirective.view,
-                eventBindings = elementDirective.eventBindings || result(view, 'elementEvents'),
-                // bindings = bindings_ || eventBindings,
-                __events = {};
-            if (eventBindings) {
-                elementDirective.eventBindings = eventBindings;
+        unDelegateElementEvents = function () {
+            var key, method, match, elDir = this,
+                view = elDir.view,
+                el = elDir.el,
+                elementBindings = elDir.cachedElementBindings;
+            if (!elDir.cachedElementBindings || !el) {
+                return elDir;
+            }
+            duff(elementBindings, function (binding) {
+                el.off(binding.events.join(' '), binding.selector, binding.fn);
+            });
+            elDir.cachedElementBindings = UNDEFINED;
+            return elDir;
+        },
+        basicViewTrigger = function (name, e) {
+            return this[DISPATCH_EVENT](name, e);
+        },
+        delegateElementTriggers = function () {
+            var key, method, match, elDir = this,
+                view = elDir.view,
+                el = elDir.el,
+                elementTriggers = elDir.elementTriggers || result(view, 'elementTriggers'),
+                __events = [];
+            if (!elDir.elementTriggers) {
+                elDir.elementTriggers = elementTriggers;
             }
             if (!el) {
-                return view;
+                return elDir;
             }
-            each(bindings, function (key, methods_) {
-                var method = bind(isString(methods_) ? view[methods_] : methods_, view);
-                __events[makeDelegateEventKeys(view, key)] = method;
+            each(elementTriggers, function (method, key) {
+                var object = makeDelegateEventKeys(view.cid, elDir.uiBindings, key),
+                    bound = object.fn = basicViewTrigger.bind(view, method);
+                el.on(object.events.join(' '), object.selector, bound);
             });
-            el.on(__events);
-            return view;
+            elDir.cachedElementTriggers = __events;
+        },
+        undelegateElementTriggers = function () {
+            var key, method, match, elDir = this,
+                view = elDir.view,
+                el = elDir.el,
+                elementBindings = elDir.cachedElementTriggers;
+            if (!elDir.cachedElementTriggers || !el) {
+                return elDir;
+            }
+            duff(elementBindings, function (binding) {
+                el.off(binding.events.join(' '), binding.selector, binding.fn);
+            });
+            elDir.cachedElementTriggers = UNDEFINED;
+            return elDir;
         },
         setElementAttributes = function () {
-            var elementDirective = this,
-                view = elementDirective.view,
+            var elDir = this,
+                view = elDir.view,
                 attrs = result(view, 'elementAttributes');
             if (view.className) {
                 attrs = attrs || {};
                 attrs['class'] = result(view, 'className');
             }
             if (attrs) {
-                elementDirective.el.attr(attrs);
+                elDir.el.attr(attrs);
             }
         },
         renderElement = function (html) {
+            this.undelegate();
+            this.undelegateTriggers();
+            this.unbindUI();
             this.el.html(html || '');
+            this.bindUI();
+            this.delegate();
+            this.delegateTriggers();
+        },
+        bindUI = function () {
+            var elDir = this,
+                uiBindings = elDir.uiBindings || result(elDir.view, 'ui'),
+                ui = elDir.ui = elDir.ui || {};
+            if (elDir.uiBindings) {
+                return elDir;
+            }
+            // save it to skip the result call later
+            elDir.uiBindings = uiBindings;
+            elDir.ui = elDir.view.ui = map(uiBindings, elDir.el.find, elDir.el);
+            return elDir;
+        },
+        unbindUI = function () {
+            var elDir = this;
+            elDir.ui = elDir.uiBindings;
         };
     app.defineDirective(ELEMENT, function (instance) {
         return {
@@ -450,30 +430,34 @@ application.scope().module('View', function (module, app, _, factories, $) {
             set: setElement,
             render: renderElement,
             setAttributes: setElementAttributes,
+            bindUI: bindUI,
+            unbindUI: unbindUI,
             delegate: delegateElementEvents,
-            undelegate: unDelegateElementEvents
+            undelegate: unDelegateElementEvents,
+            undelegateTriggers: undelegateElementTriggers,
+            delegateTriggers: delegateElementTriggers
         };
     });
     var establishRegion = function (key, selector) {
             var regionManagerDirective = this,
                 parentView = regionManagerDirective[PARENT];
-            if (key) {
-                intendedObject(key, selector, function (key, selector) {
-                    var $selected, region = regionManagerDirective.list.get(key);
-                    if (!region) {
-                        region = regionManagerDirective.create(key, selector);
-                    }
-                    // region = this;
-                    if (parentView !== app) {
-                        $selected = parentView.$(selector)[INDEX](0);
-                    } else {
-                        $selected = $(selector)[INDEX](0);
-                    }
-                    if ($selected) {
-                        region.el = $selected;
-                    }
-                });
+            if (!key) {
+                return regionManagerDirective;
             }
+            intendedObject(key, selector, function (key, selector) {
+                var $selected, region = regionManagerDirective.list.get(key);
+                if (!region) {
+                    region = regionManagerDirective.create(key, selector);
+                }
+                if (parentView !== app) {
+                    $selected = parentView.$(region.selector)[INDEX](0);
+                } else {
+                    $selected = $(region.selector)[INDEX](0);
+                }
+                if ($selected) {
+                    region.el = $selected;
+                }
+            });
             return regionManagerDirective;
         },
         removeRegion = function (region_) {
@@ -486,22 +470,20 @@ application.scope().module('View', function (module, app, _, factories, $) {
             var key, regionManagerDirective = this,
                 parent = regionManagerDirective[PARENT],
                 // assume that it is a region
+                selector = region_,
                 region = region_;
             if (isInstance(region, Region)) {
                 return region;
             }
-            region = Region({
+            region = Region(extend({
+                selector: selector || EMPTY_STRING
+            }, isObject(region) ? region : {}, {
                 id: where,
-                selector: isString(region) ? region : EMPTY_STRING,
-                parent: regionManagerDirective
-            });
-            key = REGION_MANAGER;
-            // if (parent !== app) {
-            //     // key = CHILDREN;
-            //     parent.add(region);
-            // }
+                parent: regionManagerDirective,
+                isAttached: parent === app ? BOOLEAN_TRUE : parent.isAttached
+            }));
             regionManagerDirective.list.push(region);
-            regionManagerDirective.list.register('id', where, region);
+            regionManagerDirective.list.register(ID, where, region);
             return region;
         },
         bufferedEnsure = function () {
@@ -510,8 +492,10 @@ application.scope().module('View', function (module, app, _, factories, $) {
                 _bufferedEls = isFragment(buffers.els) ? 1 : buffers.resetEls();
         },
         bufferedReset = function () {
+            var cached = this.views;
             this.resetEls();
             this.resetViews();
+            return cached;
         },
         bufferedElsReset = function () {
             this.els = createDocumentFragment();
@@ -520,13 +504,16 @@ application.scope().module('View', function (module, app, _, factories, $) {
             this.views = [];
         },
         bufferedAttach = function () {
-            var buffers = this;
+            var buffers = this,
+                attached = [];
             duff(this.views, function (child) {
                 if (result(child, 'filter')) {
                     child[RENDER]();
-                    buffers.region.directive(REGION_MANAGER).list.add(child);
+                    buffers.region.directive(CHILDREN).push(child);
+                    attached.push(child);
                 }
             });
+            return attached;
         };
     app.defineDirective(REGION_MANAGER, function (instance) {
         return {
@@ -550,23 +537,9 @@ application.scope().module('View', function (module, app, _, factories, $) {
             attach: bufferedAttach
         };
     });
-    _.exports({
-        compile: compile
-    });
     app.extend({
-        _addToHash: Box[CONSTRUCTOR][PROTOTYPE]._addToHash,
-        // getRegion: viewGetRegionPlacer(REGION_MANAGER),
         getRegion: getRegion,
-        addRegion: addRegion
-        // addRegion: function (id, selector) {
-        //     var app = this;
-        //     // ensure region manager
-        //     // var blank = app.getRegion();
-        //     this.directive(REGION_MANAGER).establish(id, selector);
-        //     // var regionManager = app[REGION_MANAGER];
-        //     // regionManager[PARENT] = app;
-        //     // regionManager[ESTABLISH_REGIONS](id, selector);
-        //     return app;
-        // }
+        addRegion: addRegion,
+        removeRegion: removeRegion
     });
 });
