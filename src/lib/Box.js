@@ -221,32 +221,38 @@ application.scope(function (app) {
             },
             // ties child events to new child
             _delegateChildEvents: function (model) {
-                var parent = this,
+                var childsEventDirective, parent = this,
                     childEvents = _.result(parent, CHILD + 'Events');
                 if (model && childEvents) {
-                    model[_PARENT_DELEGATED_CHILD_EVENTS] = childEvents;
+                    childsEventDirective = model.directive(EVENTS);
+                    // stash them
+                    childsEventDirective[_PARENT_DELEGATED_CHILD_EVENTS] = childEvents;
                     parent.listenTo(model, childEvents);
                 }
             },
             // ties child events to new child
             _unDelegateChildEvents: function (model) {
-                if (model && model[_PARENT_DELEGATED_CHILD_EVENTS] && this[STOP_LISTENING]) {
-                    this[STOP_LISTENING](model, model[_PARENT_DELEGATED_CHILD_EVENTS]);
+                var childsEventDirective, parent = this;
+                if (model && parent[STOP_LISTENING] && (childsEventDirective = model.checkDirective(EVENTS)) && childsEventDirective[_PARENT_DELEGATED_CHILD_EVENTS]) {
+                    parent[STOP_LISTENING](model, model[_PARENT_DELEGATED_CHILD_EVENTS]);
+                    childsEventDirective[_PARENT_DELEGATED_CHILD_EVENTS] = UNDEFINED;
                 }
             },
             _delegateParentEvents: function (model) {
-                var parent = model[PARENT],
-                    parentEvents = _.result(model, 'parentEvents');
+                var childsEventDirective, parent = model[PARENT],
+                    parentEvents = _.result(model, PARENT + 'Events');
                 if (parent && parentEvents) {
-                    model[_DELEGATED_CHILD_EVENTS] = parentEvents;
+                    childsEventDirective = model.directive(EVENTS);
+                    childsEventDirective[_DELEGATED_CHILD_EVENTS] = parentEvents;
                     model.listenTo(parent, parentEvents);
                 }
             },
             // ties child events to new child
             _unDelegateParentEvents: function (model) {
-                var parent = this;
-                if (model[STOP_LISTENING] && model[_DELEGATED_CHILD_EVENTS]) {
+                var childsEventDirective, parent = this;
+                if (model[STOP_LISTENING] && (childsEventDirective = model.checkDirective(EVENTS)) && childsEventDirective[_DELEGATED_CHILD_EVENTS]) {
                     model[STOP_LISTENING](parent, model[_DELEGATED_CHILD_EVENTS]);
+                    childsEventDirective[_DELEGATED_CHILD_EVENTS] = UNDEFINED;
                 }
             },
             _isChildType: function (child) {

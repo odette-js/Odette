@@ -254,7 +254,7 @@ Application(this, 'application', 'dev', function (innerGlobalApp, scopedApp) {
     // global app is the object that will be shared with all other iframes
     var globalApplication = innerGlobalApp.touchTop(global);
     // log it out for you to see
-    // console.log(globalApplication);
+    console.log(scopedApp);
     global.app = scopedApp;
 });
 application.scope('dev', function (app) {
@@ -3105,6 +3105,9 @@ application.scope(function (app) {
                     return box;
                 }
                 args = toArray(arguments);
+                if (!args[_nameOrObjectIndex]) {
+                    return box;
+                }
                 nameOrObjectIndex = _nameOrObjectIndex;
                 handlersIndex = _nameOrObjectIndex;
                 list = args.splice(nameOrObjectIndex);
@@ -3940,32 +3943,38 @@ application.scope(function (app) {
             },
             // ties child events to new child
             _delegateChildEvents: function (model) {
-                var parent = this,
+                var childsEventDirective, parent = this,
                     childEvents = _.result(parent, CHILD + 'Events');
                 if (model && childEvents) {
-                    model[_PARENT_DELEGATED_CHILD_EVENTS] = childEvents;
+                    childsEventDirective = model.directive(EVENTS);
+                    // stash them
+                    childsEventDirective[_PARENT_DELEGATED_CHILD_EVENTS] = childEvents;
                     parent.listenTo(model, childEvents);
                 }
             },
             // ties child events to new child
             _unDelegateChildEvents: function (model) {
-                if (model && model[_PARENT_DELEGATED_CHILD_EVENTS] && this[STOP_LISTENING]) {
-                    this[STOP_LISTENING](model, model[_PARENT_DELEGATED_CHILD_EVENTS]);
+                var childsEventDirective, parent = this;
+                if (model && parent[STOP_LISTENING] && (childsEventDirective = model.checkDirective(EVENTS)) && childsEventDirective[_PARENT_DELEGATED_CHILD_EVENTS]) {
+                    parent[STOP_LISTENING](model, model[_PARENT_DELEGATED_CHILD_EVENTS]);
+                    childsEventDirective[_PARENT_DELEGATED_CHILD_EVENTS] = UNDEFINED;
                 }
             },
             _delegateParentEvents: function (model) {
-                var parent = model[PARENT],
-                    parentEvents = _.result(model, 'parentEvents');
+                var childsEventDirective, parent = model[PARENT],
+                    parentEvents = _.result(model, PARENT + 'Events');
                 if (parent && parentEvents) {
-                    model[_DELEGATED_CHILD_EVENTS] = parentEvents;
+                    childsEventDirective = model.directive(EVENTS);
+                    childsEventDirective[_DELEGATED_CHILD_EVENTS] = parentEvents;
                     model.listenTo(parent, parentEvents);
                 }
             },
             // ties child events to new child
             _unDelegateParentEvents: function (model) {
-                var parent = this;
-                if (model[STOP_LISTENING] && model[_DELEGATED_CHILD_EVENTS]) {
+                var childsEventDirective, parent = this;
+                if (model[STOP_LISTENING] && (childsEventDirective = model.checkDirective(EVENTS)) && childsEventDirective[_DELEGATED_CHILD_EVENTS]) {
                     model[STOP_LISTENING](parent, model[_DELEGATED_CHILD_EVENTS]);
+                    childsEventDirective[_DELEGATED_CHILD_EVENTS] = UNDEFINED;
                 }
             },
             _isChildType: function (child) {
@@ -4247,7 +4256,7 @@ application.scope(function (app) {
         },
         // moduleHandler = ,
         // moduleRunner = ,
-        moduleMethods = extend({}, startableMethods, {
+        moduleMethods = extend({}, factories.Events.constructor.prototype, startableMethods, {
             // idAttribute: 'name',
             module: function (name_, fn) {
                 var modules, attrs, parentIsModule, nametree, parent = this,
@@ -4340,7 +4349,7 @@ application.scope(function (app) {
             }
         }),
         Module = factories.Box.extend('Module', moduleMethods, BOOLEAN_TRUE),
-        appextendresult = app.extend(extend({}, factories.Events.constructor.prototype, moduleMethods, {
+        appextendresult = app.extend(extend({}, moduleMethods, {
             _extraModuleArguments: [],
             /**
              * @func
@@ -4359,8 +4368,8 @@ application.scope(function (app) {
              */
             addModuleArguments: function (arr) {
                 var app = this;
-                app._.duff(arr, function (item) {
-                    app._.add(app[_EXTRA_MODULE_ARGS], item);
+                _.duff(arr, function (item) {
+                    _.add(app[_EXTRA_MODULE_ARGS], item);
                 });
                 return app;
             },
@@ -4372,8 +4381,8 @@ application.scope(function (app) {
              */
             removeModuleArguments: function (arr) {
                 var app = this;
-                app._.duff(arr, function (item) {
-                    app._.remove(app[_EXTRA_MODULE_ARGS], item);
+                _.duff(arr, function (item) {
+                    _.remove(app[_EXTRA_MODULE_ARGS], item);
                 });
                 return app;
             },
@@ -4809,14 +4818,14 @@ application.scope().module('Promise', function (module, app, _, factories) {
                 factories.Box.constructor.call(promise);
                 promise.restart();
                 // cannot have been resolved in any way yet
-                intendedObject(extend({}, result(promise, 'baseStates'), result(promise, 'associativeStates')), NULL, bind(addState, promise));
+                intendedObject(extend({}, result(promise, 'baseStates'), result(promise, 'associativeStates')), NULL, addState, promise);
                 // add passed in success handlers
                 promise.success(arguments);
                 return promise;
             },
             check: function () {
                 var notSuccessful, resolveAs, parent = this,
-                    children = parent.children,
+                    children = parent.directive(CHILDREN),
                     argumentAggregate = [];
                 if (children.length() && !children.find(function (child) {
                     notSuccessful = notSuccessful || child.state() !== SUCCESS;
@@ -4914,17 +4923,17 @@ application.scope().module('Promise', function (module, app, _, factories) {
                 var handler, countLimit, promise = this,
                     arg = promise.get(STASHED_ARGUMENT),
                     handlers = promise.get('stashedHandlers')[name];
-                if (!handlers || !handlers[LENGTH]) {
-                    return promise;
+                if (handlers && handlers[LENGTH]) {
+                    countLimit = handlers[LENGTH];
+                    promise.set(IS_EMPTYING, BOOLEAN_TRUE);
+                    while (handlers[0] && --countLimit >= 0) {
+                        handler = handlers.shift();
+                        // should already be bound
+                        handler(arg);
+                    }
+                    promise.set(IS_EMPTYING, BOOLEAN_FALSE);
                 }
-                countLimit = handlers[LENGTH];
-                promise.set(IS_EMPTYING, BOOLEAN_TRUE);
-                while (handlers[0] && --countLimit >= 0) {
-                    handler = handlers.shift();
-                    // should already be bound
-                    handler(arg);
-                }
-                promise.set(IS_EMPTYING, BOOLEAN_FALSE);
+                promise.dispatchEvent(name);
                 return promise;
             },
             executeHandler: function (name, fn_, needsbinding) {
@@ -7067,9 +7076,9 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 e.capturing = opts.capturing === UNDEFINED ? isCapturing(e) : opts.capturing;
                 return e;
             },
-            getNamespace: function () {
-                return this.capturing + COLON + this.originalType;
-            },
+            // getNamespace: function () {
+            //     return this.capturing + COLON + this.originalType;
+            // },
             preventDefault: function () {
                 var e = this.originalEvent;
                 this.isDefaultPrevented = BOOLEAN_TRUE;
@@ -7105,8 +7114,8 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             })));
         },
         unwrapsOnLoop = function (fn) {
-            return function (manager, idx, list) {
-                return fn(manager.unwrap(), idx, list);
+            return function (manager, index, list) {
+                return fn(manager.unwrap(), index, list);
             };
         },
         dataReconstructor = function (list, fn) {
@@ -7121,17 +7130,17 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             var filter = createDomFilter(filtr);
             return dataReconstructor(items, unwrapsOnLoop(filter));
         },
-        dimFinder = function (element, doc, win) {
+        dimensionFinder = function (element, doc, win) {
             return function (num) {
-                var ret, el = this[INDEX](num);
-                if (isElement(el)) {
-                    ret = clientRect(el)[element];
+                var ret, manager = this[INDEX](num);
+                if (manager.isElement) {
+                    ret = clientRect(manager)[element];
                 } else {
-                    if (isDocument(el) && el[BODY]) {
-                        ret = el[BODY][doc];
+                    if (manager.isDocument && manager[TARGET][BODY]) {
+                        ret = manager[TARGET][BODY][doc];
                     } else {
-                        if (isWindow(el)) {
-                            ret = el[win];
+                        if (manager.isWindow) {
+                            ret = manager[TARGET][win];
                         }
                     }
                 }
@@ -7192,18 +7201,18 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         returnsElementData = function (element) {
             return element && element.isValidDomManager ? element : elementData.ensure(element, DOMM_STRING, DomManager);
         },
-        AttributeManager = Collection.extend('AttributeManager', {}, BOOLEAN_TRUE),
-        makeQueues = function (list, queuedData_) {
-            return AttributeManager(queuedData_ || map(list, returnsElementData));
-        },
-        applyQueueManager = function (list) {},
+        // AttributeManager = Collection.extend('AttributeManager', {}, BOOLEAN_TRUE),
+        // makeQueues = function (list, queuedData_) {
+        //     return AttributeManager(queuedData_ || map(list, returnsElementData));
+        // },
+        // applyQueueManager = function (list) {},
         _makeQueueManager = function () {
-            var queues = makeQueues(this.unwrap(), this._data);
-            console.log(queues);
-            return queues;
+            // var queues = makeQueues(this.unwrap(), this._data);
+            // console.log(queues);
+            // return queues;
         },
         _applyQueueManager = function () {
-            return applyQueues(this.unwrap(), this._data);
+            // return applyQueues(this.unwrap(), this._data);
         },
         loadData = function (data, items) {
             return data || foldl(items || this.unwrap(), returnsElementData, []);
@@ -7434,13 +7443,13 @@ application.scope().module('DOMM', function (module, app, _, factories) {
              * @name DOMM#height
              * @returns {Number} height of the first object, adjusting for the different types of possible objects such as dom element, document or window
              */
-            height: dimFinder(HEIGHT, 'scrollHeight', INNER_HEIGHT),
+            height: dimensionFinder(HEIGHT, 'scrollHeight', INNER_HEIGHT),
             /**
              * @func
              * @name DOMM#width
              * @returns {Number} width of the first object, adjusting for the different types of possible objects such as dom element, document or window
              */
-            width: dimFinder(WIDTH, 'scrollWidth', INNER_WIDTH),
+            width: dimensionFinder(WIDTH, 'scrollWidth', INNER_WIDTH),
             /**
              * @func
              * @name DOMM#getStyle
@@ -7846,6 +7855,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         $ = _.$ = _DOMM(doc),
         templatescripts = $('script[id]').each(function (script) {
             compile(script.unwrap().id, script.html());
+            script.remove();
         });
     window.$ = $;
     app.addModuleArguments([$]);

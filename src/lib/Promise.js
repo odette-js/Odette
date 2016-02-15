@@ -96,14 +96,14 @@ application.scope().module('Promise', function (module, app, _, factories) {
                 factories.Box.constructor.call(promise);
                 promise.restart();
                 // cannot have been resolved in any way yet
-                intendedObject(extend({}, result(promise, 'baseStates'), result(promise, 'associativeStates')), NULL, bind(addState, promise));
+                intendedObject(extend({}, result(promise, 'baseStates'), result(promise, 'associativeStates')), NULL, addState, promise);
                 // add passed in success handlers
                 promise.success(arguments);
                 return promise;
             },
             check: function () {
                 var notSuccessful, resolveAs, parent = this,
-                    children = parent.children,
+                    children = parent.directive(CHILDREN),
                     argumentAggregate = [];
                 if (children.length() && !children.find(function (child) {
                     notSuccessful = notSuccessful || child.state() !== SUCCESS;
@@ -201,17 +201,17 @@ application.scope().module('Promise', function (module, app, _, factories) {
                 var handler, countLimit, promise = this,
                     arg = promise.get(STASHED_ARGUMENT),
                     handlers = promise.get('stashedHandlers')[name];
-                if (!handlers || !handlers[LENGTH]) {
-                    return promise;
+                if (handlers && handlers[LENGTH]) {
+                    countLimit = handlers[LENGTH];
+                    promise.set(IS_EMPTYING, BOOLEAN_TRUE);
+                    while (handlers[0] && --countLimit >= 0) {
+                        handler = handlers.shift();
+                        // should already be bound
+                        handler(arg);
+                    }
+                    promise.set(IS_EMPTYING, BOOLEAN_FALSE);
                 }
-                countLimit = handlers[LENGTH];
-                promise.set(IS_EMPTYING, BOOLEAN_TRUE);
-                while (handlers[0] && --countLimit >= 0) {
-                    handler = handlers.shift();
-                    // should already be bound
-                    handler(arg);
-                }
-                promise.set(IS_EMPTYING, BOOLEAN_FALSE);
+                promise.dispatchEvent(name);
                 return promise;
             },
             executeHandler: function (name, fn_, needsbinding) {

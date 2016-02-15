@@ -42,6 +42,9 @@ application.scope(function (app) {
                     return box;
                 }
                 args = toArray(arguments);
+                if (!args[_nameOrObjectIndex]) {
+                    return box;
+                }
                 nameOrObjectIndex = _nameOrObjectIndex;
                 handlersIndex = _nameOrObjectIndex;
                 list = args.splice(nameOrObjectIndex);

@@ -53,7 +53,7 @@ application.scope(function (app) {
         },
         // moduleHandler = ,
         // moduleRunner = ,
-        moduleMethods = extend({}, startableMethods, {
+        moduleMethods = extend({}, factories.Events.constructor.prototype, startableMethods, {
             // idAttribute: 'name',
             module: function (name_, fn) {
                 var modules, attrs, parentIsModule, nametree, parent = this,
@@ -146,7 +146,7 @@ application.scope(function (app) {
             }
         }),
         Module = factories.Box.extend('Module', moduleMethods, BOOLEAN_TRUE),
-        appextendresult = app.extend(extend({}, factories.Events.constructor.prototype, moduleMethods, {
+        appextendresult = app.extend(extend({}, moduleMethods, {
             _extraModuleArguments: [],
             /**
              * @func
@@ -165,8 +165,8 @@ application.scope(function (app) {
              */
             addModuleArguments: function (arr) {
                 var app = this;
-                app._.duff(arr, function (item) {
-                    app._.add(app[_EXTRA_MODULE_ARGS], item);
+                _.duff(arr, function (item) {
+                    _.add(app[_EXTRA_MODULE_ARGS], item);
                 });
                 return app;
             },
@@ -178,8 +178,8 @@ application.scope(function (app) {
              */
             removeModuleArguments: function (arr) {
                 var app = this;
-                app._.duff(arr, function (item) {
-                    app._.remove(app[_EXTRA_MODULE_ARGS], item);
+                _.duff(arr, function (item) {
+                    _.remove(app[_EXTRA_MODULE_ARGS], item);
                 });
                 return app;
             },

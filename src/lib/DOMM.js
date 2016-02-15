@@ -1787,9 +1787,9 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 e.capturing = opts.capturing === UNDEFINED ? isCapturing(e) : opts.capturing;
                 return e;
             },
-            getNamespace: function () {
-                return this.capturing + COLON + this.originalType;
-            },
+            // getNamespace: function () {
+            //     return this.capturing + COLON + this.originalType;
+            // },
             preventDefault: function () {
                 var e = this.originalEvent;
                 this.isDefaultPrevented = BOOLEAN_TRUE;
@@ -1825,8 +1825,8 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             })));
         },
         unwrapsOnLoop = function (fn) {
-            return function (manager, idx, list) {
-                return fn(manager.unwrap(), idx, list);
+            return function (manager, index, list) {
+                return fn(manager.unwrap(), index, list);
             };
         },
         dataReconstructor = function (list, fn) {
@@ -1841,17 +1841,17 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             var filter = createDomFilter(filtr);
             return dataReconstructor(items, unwrapsOnLoop(filter));
         },
-        dimFinder = function (element, doc, win) {
+        dimensionFinder = function (element, doc, win) {
             return function (num) {
-                var ret, el = this[INDEX](num);
-                if (isElement(el)) {
-                    ret = clientRect(el)[element];
+                var ret, manager = this[INDEX](num);
+                if (manager.isElement) {
+                    ret = clientRect(manager)[element];
                 } else {
-                    if (isDocument(el) && el[BODY]) {
-                        ret = el[BODY][doc];
+                    if (manager.isDocument && manager[TARGET][BODY]) {
+                        ret = manager[TARGET][BODY][doc];
                     } else {
-                        if (isWindow(el)) {
-                            ret = el[win];
+                        if (manager.isWindow) {
+                            ret = manager[TARGET][win];
                         }
                     }
                 }
@@ -1912,18 +1912,18 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         returnsElementData = function (element) {
             return element && element.isValidDomManager ? element : elementData.ensure(element, DOMM_STRING, DomManager);
         },
-        AttributeManager = Collection.extend('AttributeManager', {}, BOOLEAN_TRUE),
-        makeQueues = function (list, queuedData_) {
-            return AttributeManager(queuedData_ || map(list, returnsElementData));
-        },
-        applyQueueManager = function (list) {},
+        // AttributeManager = Collection.extend('AttributeManager', {}, BOOLEAN_TRUE),
+        // makeQueues = function (list, queuedData_) {
+        //     return AttributeManager(queuedData_ || map(list, returnsElementData));
+        // },
+        // applyQueueManager = function (list) {},
         _makeQueueManager = function () {
-            var queues = makeQueues(this.unwrap(), this._data);
-            console.log(queues);
-            return queues;
+            // var queues = makeQueues(this.unwrap(), this._data);
+            // console.log(queues);
+            // return queues;
         },
         _applyQueueManager = function () {
-            return applyQueues(this.unwrap(), this._data);
+            // return applyQueues(this.unwrap(), this._data);
         },
         loadData = function (data, items) {
             return data || foldl(items || this.unwrap(), returnsElementData, []);
@@ -2154,13 +2154,13 @@ application.scope().module('DOMM', function (module, app, _, factories) {
              * @name DOMM#height
              * @returns {Number} height of the first object, adjusting for the different types of possible objects such as dom element, document or window
              */
-            height: dimFinder(HEIGHT, 'scrollHeight', INNER_HEIGHT),
+            height: dimensionFinder(HEIGHT, 'scrollHeight', INNER_HEIGHT),
             /**
              * @func
              * @name DOMM#width
              * @returns {Number} width of the first object, adjusting for the different types of possible objects such as dom element, document or window
              */
-            width: dimFinder(WIDTH, 'scrollWidth', INNER_WIDTH),
+            width: dimensionFinder(WIDTH, 'scrollWidth', INNER_WIDTH),
             /**
              * @func
              * @name DOMM#getStyle
@@ -2566,6 +2566,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         $ = _.$ = _DOMM(doc),
         templatescripts = $('script[id]').each(function (script) {
             compile(script.unwrap().id, script.html());
+            script.remove();
         });
     window.$ = $;
     app.addModuleArguments([$]);
