@@ -1,1 +1,1 @@
-Odette.js is a fully featured set of tools to get your web app up and running, and finished quickly. By decoupling views from models, like backbone, using directives
+Odette.js is a fully featured set of tools to get your web app up and running, and finished quickly. By decoupling views from models, like backbone, using directives like angular. (but in memory instead of the dom)

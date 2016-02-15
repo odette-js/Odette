@@ -1,22 +1,17 @@
-var DISPATCH_EVENT = 'dispatchEvent';
-var _EVENTS = '_events';
-var EVENTS = 'events';
-var HANDLERS = 'handlers';
+var DISPATCH_EVENT = 'dispatchEvent',
+    EVENTS = 'events',
+    STOP_LISTENING = 'stopListening',
+    TALKER_ID = 'talkerId',
+    LISTENING_TO = 'listeningTo',
+    REGISTERED = 'registered',
+    LISTENING_PREFIX = 'l',
+    STATE = 'state',
+    IS_STOPPED = 'isStopped',
+    IMMEDIATE_PROP_IS_STOPPED = 'immediatePropagationIsStopped',
+    HANDLERS = 'handlers';
 application.scope(function (app) {
     var remove = _.remove,
-        Collection = factories.Collection,
-        SortedCollection = factories.SortedCollection,
-        REMOVE_QUEUE = 'removeQueue',
-        LISTENING_TO = 'listeningTo',
-        TALKER_ID = 'talkerId',
-        REGISTERED = 'registered',
-        LISTENING_PREFIX = 'l',
-        STATE = 'state',
-        IS_STOPPED = 'isStopped',
-        STOP_LISTENING = 'stopListening',
-        IMMEDIATE_PROP_IS_STOPPED = 'immediatePropagationIsStopped',
         iterateOverObject = function (box, context, events, handler, iterator, firstArg) {
-            // intendedObject(key, value, function (events, handler) {
             // only accepts a string or a function
             var fn = isString(handler) ? box[handler] : handler,
                 valid = !isFunction(fn) && exception({
@@ -107,11 +102,6 @@ application.scope(function (app) {
                 events.detach(obj);
             });
         },
-        event_incrementer = 1,
-        __FN_ID__ = '__fnid__',
-        returnsId = function () {
-            return this.id;
-        },
         attachEventObject = function (box, name, eventObject) {
             box.directive(EVENTS).attach(name, eventObject);
         },
@@ -144,7 +134,7 @@ application.scope(function (app) {
                 evnt.bubbles = BOOLEAN_FALSE;
                 evnt.dispatchChildren = BOOLEAN_FALSE;
                 evnt.dispatchTree = BOOLEAN_FALSE;
-                evnt.onMethodName = camelCase('on:' + name, COLON);
+                // evnt.onMethodName = camelCase('on:' + name, COLON);
                 evnt.propagationIsStopped = evnt[IMMEDIATE_PROP_IS_STOPPED] = BOOLEAN_FALSE;
                 evnt[ORIGIN] = target;
                 evnt[NAME] = name;
@@ -153,11 +143,7 @@ application.scope(function (app) {
                 evnt.data(data);
                 evnt.isTrusted = BOOLEAN_TRUE;
                 evnt.returnValue = NULL;
-                evnt.namespace = evnt.getNamespace();
                 return evnt;
-            },
-            getNamespace: function () {
-                return this.name;
             },
             isStopped: function () {
                 return this.propagationIsStopped || this.immediatePropagationIsStopped;
@@ -254,6 +240,7 @@ application.scope(function (app) {
             watchOnce: setupWatcher(attachEventObject, 0, 1),
             watchOther: setupWatcher(listenToHandler, 1),
             watchOtherOnce: setupWatcher(listenToHandler, 1, 1),
+            resetEvents: _.directives.parody(EVENTS, 'reset'),
             /**
              * @description attaches an event handler to the events object, and takes it off as soon as it runs once
              * @func
@@ -271,7 +258,6 @@ application.scope(function (app) {
              * @name Box#off
              * @returns {Box} instance
              */
-            resetEvents: _.directives.parody(EVENTS, 'reset'),
             off: function (name_, fn_, context_) {
                 var context, currentObj, box = this,
                     name = name_,
@@ -353,117 +339,5 @@ application.scope(function (app) {
                     return evnt.returnValue;
                 }
             }
-        }, BOOLEAN_TRUE),
-        listeningCounter = 0,
-        attach = function (name, eventObject) {
-            var list, eventsDirective = this,
-                handlers = eventsDirective[HANDLERS],
-                ret = !handlers && exception({
-                    message: 'events directive needs a handler object'
-                });
-            eventObject.id = ++event_incrementer;
-            eventObject.valueOf = returnsId;
-            eventObject.context = eventObject.context || eventObject.origin;
-            eventObject.fn = bind(eventObject.fn || eventObject.handler, eventObject.context);
-            // attach the id to the bound function because that instance is private
-            eventObject.fn[__FN_ID__] = eventObject.id;
-            list = handlers[name] = handlers[name] || SortedCollection(BOOLEAN_TRUE, BOOLEAN_TRUE);
-            // attaching name so list can remove itself from hash
-            list[NAME] = name;
-            // attached so event can remove itself
-            eventObject.list = list;
-            list.add(eventObject);
-        },
-        detach = function (evnt) {
-            var listeningTo, events = this,
-                listening = evnt.listening,
-                list = evnt.list,
-                disabled = evnt.disabled = BOOLEAN_TRUE;
-            if (events[STACK][LENGTH]()) {
-                events[REMOVE_QUEUE].add(evnt);
-                return BOOLEAN_FALSE;
-            } else {
-                list.remove(evnt);
-                // disconnect it from the list above it
-                evnt.list = UNDEFINED;
-                // check to see if it was a listening type
-                if (!listening) {
-                    return BOOLEAN_TRUE;
-                }
-                // if it was then decrement it
-                listening.count--;
-                if (listening.count) {
-                    return BOOLEAN_TRUE;
-                }
-                listeningTo = listening.listeningTo;
-                listeningTo[listening[TALKER_ID]] = UNDEFINED;
-                this.wipe(list);
-                return BOOLEAN_TRUE;
-            }
-        },
-        wipe = function (list) {
-            if (list[LENGTH]()) {
-                return BOOLEAN_FALSE;
-            }
-            this.scrub(list);
-            return BOOLEAN_TRUE;
-        },
-        scrub = function (list) {
-            list.scrubbed = BOOLEAN_TRUE;
-            this[HANDLERS][list[NAME]] = NULL;
-        },
-        reset = function () {
-            return each(this.handlers, this.scrub, this);
-        },
-        queue = function (stack, handler, evnt) {
-            return stack.add(handler);
-        },
-        unQueue = function (stack, handler, evnt) {
-            return stack.pop();
-        },
-        has = function (key) {
-            return this.handlers[key] && this.handlers[key][LENGTH]();
-        },
-        dispatch = function (name, evnt) {
-            var events = this,
-                stack = events[STACK],
-                handlers = events[HANDLERS],
-                list = handlers[name],
-                removeList = events[REMOVE_QUEUE];
-            if (evnt[IMMEDIATE_PROP_IS_STOPPED] || !list || !list[LENGTH]()) {
-                return;
-            }
-            list.find(function (handler) {
-                var cached;
-                if (!handler.disabled && events.queue(stack, handler, evnt)) {
-                    handler.fn(evnt);
-                    cached = evnt[IMMEDIATE_PROP_IS_STOPPED];
-                    events.unQueue(stack, handler, evnt);
-                    return cached;
-                }
-            });
-            if (!stack[LENGTH]() && removeList[LENGTH]()) {
-                removeList.duffRight(events.detach, events);
-                removeList.empty();
-            }
-            evnt.finished();
-        };
-    app.defineDirective(EVENTS, function () {
-        return {
-            listenId: 'l' + (++listeningCounter),
-            handlers: {},
-            listeningTo: {},
-            stack: Collection(),
-            removeQueue: Collection(),
-            attach: attach,
-            detach: detach,
-            has: has,
-            wipe: wipe,
-            scrub: scrub,
-            reset: reset,
-            queue: queue,
-            unQueue: unQueue,
-            dispatch: dispatch
-        };
-    });
+        }, BOOLEAN_TRUE);
 });

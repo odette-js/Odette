@@ -1324,3 +1324,4 @@ function Model(attributes, options) {
 }
 Model[PROTOTYPE] = {};
 factories.Model = constructorWrapper(Model);
+window._ = _;

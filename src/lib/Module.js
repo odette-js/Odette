@@ -3,13 +3,6 @@ application.scope(function (app) {
         factories = _.factories,
         Box = factories.Box,
         Collection = factories.Collection,
-        isFunction = _.isFunction,
-        extend = _.extend,
-        BOOLEAN_TRUE = !0,
-        BOOLEAN_FALSE = !1,
-        PARENT = 'parent',
-        STOP = 'stop',
-        START = 'start',
         _EXTRA_MODULE_ARGS = '_extraModuleArguments',
         startableMethods = {
             start: function (evnt) {
