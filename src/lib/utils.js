@@ -1049,6 +1049,13 @@ var factories = {},
             });
         return cryptoCheck ? sid : 'SF' + sid;
     },
+    intendedApi = function (fn) {
+        return function (one, two) {
+            var context = this;
+            intendedObject(one, two, fn, context);
+            return context;
+        };
+    },
     intendedObject = function (key, value, fn_, ctx) {
         var fn = ctx ? bind(fn_, ctx) : fn_,
             obj = isObject(key) ? key : BOOLEAN_FALSE;

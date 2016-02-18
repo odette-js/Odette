@@ -29,11 +29,6 @@ application.scope().module('playground', function (module, app, _, factories, $)
         },
         elementTriggers: {
             'click @ui.spanner': 'external:event'
-        },
-        events: {
-            'external:event': function (e) {
-                console.log(this);
-            }
         }
     });
     app.addRegion({
@@ -46,8 +41,10 @@ application.scope().module('playground', function (module, app, _, factories, $)
         })
     });
     var middleHighRegion = middleLayer.getRegion('high');
-    middleHighRegion.add(data, SomeParentView);
-    middleLayer.getRegion('tight').add(moarData, SomeParentView);
+    middleHighRegion.Child = SomeParentView;
+    middleHighRegion.add(data);
+    var middleTightRegion = middleLayer.getRegion('tight');
+    middleTightRegion.Child = SomeParentView;
+    middleTightRegion.add(moarData);
     topLayer.add(middleLayer);
-    topLayer.render();
 });

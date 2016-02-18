@@ -14,7 +14,6 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         DELEGATE_COUNT = '__delegateCount',
         REMOVE_QUEUE = 'removeQueue',
         ADD_QUEUE = 'addQueue',
-        CLASSNAME = 'className',
         CLASS__NAME = (CLASS + HYPHEN + NAME),
         FONT_SIZE = 'fontSize',
         DEFAULT_VIEW = 'defaultView',
@@ -121,37 +120,18 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             return template;
         },
         compile = function (id, template_, force) {
-            var matches, tag, attrs, template,
-                templateObject = templates.get('id', id);
+            var templateHandler, matches, tag, attrs, template,
+                templateObject = templates.get(ID, id);
             if (templateObject && !force) {
                 return templateObject;
             }
             template = template_ || $('#' + id).html();
             matches = template.match(/\{\{([\w\s\d]*)\}\}/mgi);
-            templateObject = {
-                id: id,
-                attributes: map(matches || [], function (match) {
-                    return {
-                        match: match,
-                        attr: match.split('{{').join(EMPTY_STRING).split('}}').join(EMPTY_STRING).trim()
-                    };
-                }),
-                render: templateGenerator(template)
-                // render: function (obj) {
-                //     var str = template,
-                //         cloneResult = clone(obj);
-                //     duff(this.attributes, function (match) {
-                //         if (!cloneResult[match.attr]) {
-                //             cloneResult[match.attr] = EMPTY_STRING;
-                //         }
-                //         str = str.replace(match.match, cloneResult[match.attr]);
-                //     });
-                //     return str;
-                // }
-            };
-            templates.push(templateObject);
-            templates.register('id', id, templateObject);
-            return templateObject;
+            templateHandler = templateGenerator(template);
+            templateHandler.id = id;
+            templates.push(templateHandler);
+            templates.register(ID, id, templateHandler);
+            return templateHandler;
         },
         isElement = function (object) {
             return !!(object && isNumber(object[NODE_TYPE]) && object[NODE_TYPE] === object.ELEMENT_NODE);

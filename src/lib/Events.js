@@ -6,7 +6,9 @@ var DISPATCH_EVENT = 'dispatchEvent',
     REGISTERED = 'registered',
     LISTENING_PREFIX = 'l',
     STATE = 'state',
+    ACTIONS = 'actions',
     IS_STOPPED = 'isStopped',
+    PROPAGATION_IS_STOPPED = 'propagationIsStopped',
     IMMEDIATE_PROP_IS_STOPPED = 'immediatePropagationIsStopped',
     HANDLERS = 'handlers';
 application.scope(function (app) {
@@ -128,42 +130,41 @@ application.scope(function (app) {
             return listening;
         },
         DEFAULT_PREVENTED = 'defaultPrevented',
+        SERIALIZED_DATA = '_serializedData',
         ObjectEvent = factories.Directive.extend('ObjectEvent', {
             constructor: function (name, target, data) {
                 var evnt = this;
-                evnt.bubbles = BOOLEAN_FALSE;
-                evnt.dispatchChildren = BOOLEAN_FALSE;
-                evnt.dispatchTree = BOOLEAN_FALSE;
-                // evnt.onMethodName = camelCase('on:' + name, COLON);
-                evnt.propagationIsStopped = evnt[IMMEDIATE_PROP_IS_STOPPED] = BOOLEAN_FALSE;
+                evnt[PROPAGATION_IS_STOPPED] = evnt[IMMEDIATE_PROP_IS_STOPPED] = BOOLEAN_FALSE;
                 evnt[ORIGIN] = target;
                 evnt[NAME] = name;
                 evnt[TYPE] = name.split(COLON)[0];
                 evnt.timeStamp = now();
+                evnt[SERIALIZED_DATA] = {};
                 evnt.data(data);
                 evnt.isTrusted = BOOLEAN_TRUE;
                 evnt.returnValue = NULL;
                 return evnt;
             },
             isStopped: function () {
-                return this.propagationIsStopped || this.immediatePropagationIsStopped;
+                return this[PROPAGATION_IS_STOPPED] || this[IMMEDIATE_PROP_IS_STOPPED];
             },
-            data: function () {
-                return this[DATA];
+            data: function (datum) {
+                return arguments[LENGTH] ? this.set(datum) : this[SERIALIZED_DATA];
             },
             get: function (key) {
-                return this[DATA][key];
+                return this[SERIALIZED_DATA][key];
             },
-            set: function (key, value) {
-                intendedObject(key, value, matchesOneToOne, this[DATA]);
-                return this;
+            set: function (data) {
+                var evnt = this;
+                evnt[SERIALIZED_DATA] = data;
+                return evnt;
             },
             stopImmediatePropagation: function () {
                 this.stopPropagation();
                 this[IMMEDIATE_PROP_IS_STOPPED] = BOOLEAN_TRUE;
             },
             stopPropagation: function () {
-                this.propagationIsStopped = BOOLEAN_TRUE;
+                this[PROPAGATION_IS_STOPPED] = BOOLEAN_TRUE;
             },
             preventDefault: function () {
                 this[DEFAULT_PREVENTED] = BOOLEAN_TRUE;
@@ -173,7 +174,7 @@ application.scope(function (app) {
             },
             action: function (fn) {
                 var evnt = this;
-                evnt.directive('actions').push(fn);
+                evnt.directive(ACTIONS).push(fn);
                 return evnt;
             },
             finished: function () {
@@ -182,7 +183,7 @@ application.scope(function (app) {
                 if (evnt.defaultIsPrevented()) {
                     return;
                 }
-                if ((actions = evnt.checkDirective('actions'))) {
+                if ((actions = evnt.checkDirective(ACTIONS))) {
                     actions.call(evnt);
                 }
             }
@@ -288,7 +289,6 @@ application.scope(function (app) {
             reply: _.directives.parody('messenger', 'reply'),
             when: _.directives.parody('Linguistics', 'when'),
             // hash this out later
-            stopTalking: function () {},
             stopListening: function (target, name, callback) {
                 var ids, targetEventsDirective, stillListening = 0,
                     origin = this,

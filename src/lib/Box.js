@@ -1,7 +1,6 @@
 application.scope(function (app) {
     var Collection = factories.Collection,
         Events = factories.Events,
-        ID = 'id',
         SORT = 'sort',
         ADDED = 'added',
         UNWRAP = 'unwrap',

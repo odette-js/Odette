@@ -1,7 +1,7 @@
 application.scope(function (app) {
     var ITEMS = '_items',
         BY_ID = '_byId',
-        ID = 'id',
+        // ID = 'id',
         eachCall = function (array, method, arg) {
             return duff(array, function (item) {
                 result(item, method, arg);
