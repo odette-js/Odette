@@ -1,5 +1,5 @@
 application.scope().module('Promise', function (module, app, _, factories) {
-    var blank, FAILURE = 'failure',
+    var FAILURE = 'failure',
         SUCCESS = 'success',
         STATE = 'state',
         ALWAYS = 'always',
@@ -22,7 +22,7 @@ application.scope().module('Promise', function (module, app, _, factories) {
         when = function () {
             var promise = factories.Promise();
             promise.add(foldl(flatten(arguments), function (memo, pro) {
-                if (promise._isChildType(pro)) {
+                if (promise.isChildType(pro)) {
                     memo.push(pro);
                 }
                 return memo;
@@ -34,12 +34,12 @@ application.scope().module('Promise', function (module, app, _, factories) {
                 allstates = result(promise, ALL_STATES),
                 collected = [];
             while (!shouldstop) {
-                if (indexOf(collected, finalName) === -1) {
+                if (_.posit(collected, finalName)) {
+                    finalName = BOOLEAN_FALSE;
+                } else {
                     collected.push(finalName);
                     promise.executeHandlers(finalName);
                     finalName = allstates[finalName];
-                } else {
-                    finalName = BOOLEAN_FALSE;
                 }
                 shouldstop = !isString(finalName);
             }
@@ -113,7 +113,7 @@ application.scope().module('Promise', function (module, app, _, factories) {
                     parent.resolveAs(notSuccessful ? FAILURE : SUCCESS, argumentAggregate);
                 }
             },
-            _isChildType: function (promise) {
+            isChildType: function (promise) {
                 return promise[SUCCESS] && promise[FAILURE] && promise[ALWAYS];
             },
             defaults: function () {

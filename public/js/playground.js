@@ -1,4 +1,4 @@
-application.scope().module('playground', function (module, app, _, factories, $) {
+application.scope().module('playground', function (module, app, _, factories) {
     var data = [{
         text: 'there'
     }, {
@@ -19,7 +19,7 @@ application.scope().module('playground', function (module, app, _, factories, $)
     }];
     var SomeParentView = factories.View.extend({
         className: 'some',
-        template: _.compile('basic'),
+        template: $.compile('basic'),
         regions: {
             high: '.region-1',
             tight: '.region-2'

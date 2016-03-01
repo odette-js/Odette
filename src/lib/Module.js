@@ -1,35 +1,42 @@
 application.scope(function (app) {
-    var blank, _ = app._,
+    var _ = app._,
         factories = _.factories,
         Box = factories.Box,
         Collection = factories.Collection,
         _EXTRA_MODULE_ARGS = '_extraModuleArguments',
+        MODULES = 'modules',
         startableMethods = {
             start: function (evnt) {
                 var startable = this;
                 if (!startable.started) {
-                    startable.dispatchEvent('before:' + START, evnt);
                     startable.started = BOOLEAN_TRUE;
-                    startable.dispatchEvent(START, evnt);
+                    startable[DISPATCH_EVENT](START, evnt);
                 }
                 return startable;
             },
             stop: function (evnt) {
                 var startable = this;
                 if (startable.started) {
-                    startable.dispatchEvent('before:' + STOP, evnt);
                     startable.started = BOOLEAN_FALSE;
-                    startable.dispatchEvent(STOP, evnt);
+                    startable[DISPATCH_EVENT](STOP, evnt);
                 }
                 return startable;
             },
-            toggle: function () {
+            toggle: function (evnt) {
                 var startable = this;
                 if (startable.started) {
                     startable[STOP](evnt);
                 } else {
                     startable[START](evnt);
                 }
+                return startable;
+            },
+            restart: function (evnt) {
+                var startable = this;
+                if (startable.started) {
+                    startable[STOP](evnt);
+                }
+                startable[START](evnt);
                 return startable;
             }
         },
@@ -46,22 +53,29 @@ application.scope(function (app) {
         },
         // moduleHandler = ,
         // moduleRunner = ,
-        moduleMethods = extend({}, factories.Events.constructor.prototype, startableMethods, {
+        moduleMethods = extend({}, factories.Events[CONSTRUCTOR][PROTOTYPE], startableMethods, {
             // idAttribute: 'name',
             module: function (name_, fn) {
-                var modules, attrs, parentIsModule, nametree, parent = this,
+                var parentModulesDirective, modules, attrs, parentIsModule, nametree, parent = this,
                     originalParent = parent,
                     name = name_,
                     globalname = name,
                     namespace = name.split(PERIOD),
-                    parentModulesDirective = parent.directive('modules'),
-                    module = parentModulesDirective.get(name_);
-                while (namespace.length > 1) {
-                    parent = parent.module(namespace[0]);
-                    namespace.shift();
+                    module = parent.directive(CHILDREN).get(name_);
+                if (module) {
+                    // hey, i found it. we're done here
+                    parent = module.parent;
+                    namespace = [module.id];
+                } else {
+                    // crap, now i have to make the chain
+                    while (namespace.length > 1) {
+                        parent = parent.module(namespace[0]);
+                        namespace.shift();
+                    }
                 }
+                parentModulesDirective = parent.directive(CHILDREN);
                 name = namespace.join(PERIOD);
-                module = parentModulesDirective.get(name);
+                module = parentModulesDirective.get(ID, name);
                 if (!module) {
                     parentIsModule = _.isInstance(parent, Module);
                     if (parentIsModule) {
@@ -80,8 +94,8 @@ application.scope(function (app) {
                     } else {
                         parent.add(module);
                     }
-                    parentModulesDirective.register(name, module);
-                    app.directive('modules').register(globalname, module);
+                    parentModulesDirective.register(ID, name, module);
+                    app[CHILDREN].register(ID, globalname, module);
                 }
                 if (!module.hasInitialized && isFunction(fn)) {
                     module.hasInitialized = BOOLEAN_TRUE;
@@ -111,8 +125,7 @@ application.scope(function (app) {
                 var module = this;
                 module.application = opts.application;
                 module.handlers = Collection();
-                // module.modules = Collection();
-                Box.constructor.apply(this, arguments);
+                Box[CONSTRUCTOR].apply(this, arguments);
                 return module;
             },
             defaults: function () {
@@ -185,8 +198,11 @@ application.scope(function (app) {
                 return this.baseModuleArguments().concat(this[_EXTRA_MODULE_ARGS]);
             },
             require: function (modulename) {
-                var module = this.module(modulename);
-                return module.getExports();
+                // var module = this.module(modulename);
+                var module = this[CHILDREN].get(ID, modulename) || exception({
+                    message: 'that module does not exist yet'
+                });
+                return module.get('exports');
             }
         }));
     app.defineDirective('modules', function () {

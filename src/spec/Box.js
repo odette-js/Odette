@@ -1,4 +1,4 @@
-application.scope().run(function (app, _, factories, $) {
+application.scope().run(function (app, _, factories) {
     // var factories = _.factories;
     describe('Box', function () {
         var blank, count, box,

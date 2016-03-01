@@ -5,17 +5,12 @@ application.scope(function (app) {
         ADDED = 'added',
         UNWRAP = 'unwrap',
         REMOVED = 'removed',
-        CURRENT = 'current',
         // _COUNTER = '_counter',
         DESTROY = 'destroy',
         BEFORE_DESTROY = BEFORE_COLON + DESTROY,
-        INTERNAL_EVENTS = '_events',
         STOP_LISTENING = 'stopListening',
-        EVENT_REMOVE = '_removeEventList',
         _DELEGATED_CHILD_EVENTS = '_delegatedParentEvents',
         _PARENT_DELEGATED_CHILD_EVENTS = '_parentDelgatedChildEvents',
-        CHANGE_COUNTER = 'counter',
-        PREVIOUS = 'previous',
         /**
          * @class Box
          * @description event and attribute extensor object that creates the Box Constructor and convenience method at _.Box
@@ -32,9 +27,33 @@ application.scope(function (app) {
                 Events[CONSTRUCTOR].call(this, secondary);
                 return model;
             },
+            /**
+             * @description remove attributes from the Box object. Does not completely remove from object with delete, but instead simply sets it to UNDEFINED / undefined
+             * @param {String} attr - property string that is on the attributes object
+             * @returns {Box} instance the method was called on
+             * @func
+             * @name Box#unset
+             */
+            unset: _.directives.parodyCheck(DATA_MANAGER, 'unset'),
+            /**
+             * @description returns attribute passed into
+             * @param {String} attr - property string that is being gotten from the attributes object
+             * @returns {*} value that is present on the attributes object
+             * @func
+             * @name Box#get
+             */
+            get: _.directives.parodyCheck(DATA_MANAGER, 'get'),
+            /**
+             * @func
+             * @param {String} attr - property string that is being gotten from the attributes object
+             * @returns {Boolean} evaluation of whether or not the Box instance has a value at that attribute key
+             * @description checks to see if the current attribute is on the attributes object as anything other an undefined
+             * @name Box#has
+             */
+            has: _.directives.parodyCheck(DATA_MANAGER, 'has'),
             reset: function (data_) {
                 var childModel, children, model = this,
-                    dataDirective = model.directive(DATA),
+                    dataDirective = model.directive(DATA_MANAGER),
                     current = dataDirective[CURRENT],
                     // automatically checks to see if the data is a string
                     passed = parse(data_) || {},
@@ -42,9 +61,9 @@ application.scope(function (app) {
                     newAttributes = extend(result(model, 'defaults', passed), passed),
                     // try to get the id from the attributes
                     idAttributeResult = result(model, 'idAttribute', newAttributes),
-                    discoveredId = model.id || newAttributes[idAttributeResult] || uniqueId(BOOLEAN_FALSE, BOOLEAN_TRUE);
-                // set the id of the object
-                model._setId(discoveredId);
+                    discoveredId = model.id || newAttributes[idAttributeResult] || uniqueId(BOOLEAN_FALSE, BOOLEAN_TRUE),
+                    // set the id of the object
+                    id = model.id = discoveredId === UNDEFINED ? uniqueId(BOOLEAN_FALSE) : discoveredId;
                 // set id and let parent know what your new id is
                 model[DISPATCH_EVENT](BEFORE_COLON + RESET);
                 // setup previous data
@@ -53,30 +72,6 @@ application.scope(function (app) {
                 // let everything know that it is changing
                 model[DISPATCH_EVENT](RESET);
             },
-            /**
-             * @description remove attributes from the Box object. Does not completely remove from object with delete, but instead simply sets it to UNDEFINED / undefined
-             * @param {String} attr - property string that is on the attributes object
-             * @returns {Box} instance the method was called on
-             * @func
-             * @name Box#unset
-             */
-            unset: _.directives.parodyCheck(DATA, 'unset'),
-            /**
-             * @description returns attribute passed into
-             * @param {String} attr - property string that is being gotten from the attributes object
-             * @returns {*} value that is present on the attributes object
-             * @func
-             * @name Box#get
-             */
-            get: _.directives.parodyCheck(DATA, 'get'),
-            /**
-             * @func
-             * @param {String} attr - property string that is being gotten from the attributes object
-             * @returns {Boolean} evaluation of whether or not the Box instance has a value at that attribute key
-             * @description checks to see if the current attribute is on the attributes object as anything other an undefined
-             * @name Box#has
-             */
-            has: _.directives.parodyCheck(DATA, 'has'),
             /**
              * @description collects a splat of arguments and condenses them into a single object. Object is then extended onto the attributes object and any items that are different will be fired as events
              * @param {...*} series - takes a series of key value pairs. can be mixed with objects. All key value pairs will be placed on a new object, which is to be passed into the function below
@@ -99,7 +94,7 @@ application.scope(function (app) {
             set: function (key, value) {
                 var changedList = [],
                     model = this,
-                    dataDirective = model.directive(DATA),
+                    dataDirective = model.directive(DATA_MANAGER),
                     current = dataDirective[CURRENT] = dataDirective[CURRENT] || {},
                     previous = dataDirective[PREVIOUS] = dataDirective[PREVIOUS] || {},
                     compiled = {};
@@ -125,7 +120,7 @@ application.scope(function (app) {
             },
             setDeep: function (where, value) {
                 var former, lastkey, model = this,
-                    dataDirective = model.directive(DATA),
+                    dataDirective = model.directive(DATA_MANAGER),
                     triggers = [],
                     path = toArray(where, PERIOD);
                 if (!dataDirective.setDeep(path, value)) {
@@ -152,10 +147,10 @@ application.scope(function (app) {
                 // does not prevent circular dependencies.
                 // swap this out for something else if you want
                 // to prevent circular dependencies
-                return clone(this.directive(DATA)[CURRENT]);
+                return clone(this.directive(DATA_MANAGER)[CURRENT]);
             },
             current: function () {
-                return clone(this.directive(DATA)[CURRENT]);
+                return clone(this.directive(DATA_MANAGER)[CURRENT]);
             },
             valueOf: function () {
                 return this.id;
@@ -168,15 +163,65 @@ application.scope(function (app) {
              */
             toString: function () {
                 return stringify(this);
-            },
-            _setId: function (id_) {
-                var model = this,
-                    id = id_ === UNDEFINED ? uniqueId(BOOLEAN_FALSE) : id_;
-                model.id = id;
             }
         }, BOOLEAN_TRUE),
         modelMaker = function (attributes, options) {
             return Box(attributes, options);
+        },
+        // registers and actually adds child to hash
+        _addToHash = function (parent, newModel, where) {
+            var children = parent.directive(CHILDREN);
+            // add to collection
+            children.add(newModel);
+            // register with parent
+            children.register(ID, newModel.id, newModel);
+            children.register(newModel.uniqueKey + ID, newModel[newModel.uniqueKey + ID], newModel);
+        },
+        // ties child events to new child
+        _delegateChildEvents = function (parent, model) {
+            var childsEventDirective, childEvents = _.result(parent, CHILD + 'Events');
+            if (model && childEvents) {
+                childsEventDirective = model.directive(EVENTS);
+                // stash them
+                childsEventDirective[_PARENT_DELEGATED_CHILD_EVENTS] = childEvents;
+                parent.listenTo(model, childEvents);
+            }
+        },
+        // ties child events to new child
+        _unDelegateChildEvents = function (parent, model) {
+            var childsEventDirective;
+            if (model && parent[STOP_LISTENING] && (childsEventDirective = model[EVENTS]) && childsEventDirective[_PARENT_DELEGATED_CHILD_EVENTS]) {
+                parent[STOP_LISTENING](model, model[_PARENT_DELEGATED_CHILD_EVENTS]);
+                childsEventDirective[_PARENT_DELEGATED_CHILD_EVENTS] = UNDEFINED;
+            }
+        },
+        _delegateParentEvents = function (parent_, model) {
+            var childsEventDirective, parent = model[PARENT],
+                parentEvents = _.result(model, PARENT + 'Events');
+            if (parent && parentEvents) {
+                childsEventDirective = model.directive(EVENTS);
+                childsEventDirective[_DELEGATED_CHILD_EVENTS] = parentEvents;
+                model.listenTo(parent, parentEvents);
+            }
+        },
+        // ties child events to new child
+        _unDelegateParentEvents = function (parent, model) {
+            var childsEventDirective;
+            if (model[STOP_LISTENING] && (childsEventDirective = model[EVENTS]) && childsEventDirective[_DELEGATED_CHILD_EVENTS]) {
+                model[STOP_LISTENING](parent, model[_DELEGATED_CHILD_EVENTS]);
+                childsEventDirective[_DELEGATED_CHILD_EVENTS] = UNDEFINED;
+            }
+        },
+        _removeFromHash = function (parent, child) {
+            var children = parent.directive(CHILDREN);
+            if (!children || !child) {
+                return;
+            }
+            // remove the child from the children hash
+            children.remove(child);
+            children.unRegister(ID, child.id);
+            // unregister from the child hash keys
+            children.unRegister(child.uniqueKey + ID, child[child.uniqueKey + ID]);
         },
         Box = factories.Container.extend('Box', {
             Child: modelMaker,
@@ -208,53 +253,7 @@ application.scope(function (app) {
                 box.add(newChildren);
                 return box;
             },
-            // registers and actually adds child to hash
-            _addToHash: function (newModel, where) {
-                var parent = this,
-                    children = this.directive(CHILDREN);
-                // add to collection
-                children.add(newModel);
-                // register with parent
-                children.register(ID, newModel.id, newModel);
-                children.register(newModel.uniqueKey + ID, newModel[newModel.uniqueKey + ID], newModel);
-            },
-            // ties child events to new child
-            _delegateChildEvents: function (model) {
-                var childsEventDirective, parent = this,
-                    childEvents = _.result(parent, CHILD + 'Events');
-                if (model && childEvents) {
-                    childsEventDirective = model.directive(EVENTS);
-                    // stash them
-                    childsEventDirective[_PARENT_DELEGATED_CHILD_EVENTS] = childEvents;
-                    parent.listenTo(model, childEvents);
-                }
-            },
-            // ties child events to new child
-            _unDelegateChildEvents: function (model) {
-                var childsEventDirective, parent = this;
-                if (model && parent[STOP_LISTENING] && (childsEventDirective = model.checkDirective(EVENTS)) && childsEventDirective[_PARENT_DELEGATED_CHILD_EVENTS]) {
-                    parent[STOP_LISTENING](model, model[_PARENT_DELEGATED_CHILD_EVENTS]);
-                    childsEventDirective[_PARENT_DELEGATED_CHILD_EVENTS] = UNDEFINED;
-                }
-            },
-            _delegateParentEvents: function (model) {
-                var childsEventDirective, parent = model[PARENT],
-                    parentEvents = _.result(model, PARENT + 'Events');
-                if (parent && parentEvents) {
-                    childsEventDirective = model.directive(EVENTS);
-                    childsEventDirective[_DELEGATED_CHILD_EVENTS] = parentEvents;
-                    model.listenTo(parent, parentEvents);
-                }
-            },
-            // ties child events to new child
-            _unDelegateParentEvents: function (model) {
-                var childsEventDirective, parent = this;
-                if (model[STOP_LISTENING] && (childsEventDirective = model.checkDirective(EVENTS)) && childsEventDirective[_DELEGATED_CHILD_EVENTS]) {
-                    model[STOP_LISTENING](parent, model[_DELEGATED_CHILD_EVENTS]);
-                    childsEventDirective[_DELEGATED_CHILD_EVENTS] = UNDEFINED;
-                }
-            },
-            _isChildType: function (child) {
+            isChildType: function (child) {
                 return isInstance(child, this.Child);
             },
             // this one forcefully adds
@@ -269,10 +268,10 @@ application.scope(function (app) {
                 // explicitly tie to parent
                 model[PARENT] = parent;
                 // attach events from parent
-                parent._addToHash(model);
+                _addToHash(parent, model);
                 // ties boxes together
-                parent._delegateParentEvents(model);
-                parent._delegateChildEvents(model);
+                _delegateParentEvents(parent, model);
+                _delegateChildEvents(parent, model);
                 evt = model[DISPATCH_EVENT] && model[DISPATCH_EVENT](ADDED);
                 // notify that you were added
                 return model;
@@ -288,7 +287,7 @@ application.scope(function (app) {
                     return list[UNWRAP]();
                 }
                 list = list.foldl(function (memo, obj) {
-                    var isChildType = parent._isChildType(obj),
+                    var isChildType = parent.isChildType(obj),
                         // create a new model
                         // call it with new in case they use a constructor
                         newModel = isChildType ? obj : new parent.Child(obj, secondary),
@@ -311,18 +310,6 @@ application.scope(function (app) {
                 }
                 return list;
             },
-            _removeFromHash: function (child) {
-                var parent = this,
-                    children = parent.directive(CHILDREN);
-                if (!children || !child) {
-                    return;
-                }
-                // remove the child from the children hash
-                children.remove(child);
-                parent.directive(CHILDREN).unRegister(ID, child.id);
-                // unregister from the child hash keys
-                parent.directive(CHILDREN).unRegister(child.uniqueKey + ID, child[child.uniqueKey + ID]);
-            },
             _remove: function (model) {
                 // cache the parent
                 var parent = this;
@@ -330,11 +317,11 @@ application.scope(function (app) {
                 model[DISPATCH_EVENT](BEFORE_COLON + REMOVED);
                 // notify the child that the remove pipeline is starting
                 // remove the parent events
-                parent._unDelegateParentEvents(model);
+                _unDelegateParentEvents(parent, model);
                 // have parent remove it's child events
-                parent._unDelegateChildEvents(model);
+                _unDelegateChildEvents(parent, model);
                 // attach events from parent
-                parent._removeFromHash(model);
+                _removeFromHash(parent, model);
                 // void out the parent member tied directly to the model
                 model[PARENT] = UNDEFINED;
                 // let everyone know that you've offically separated
@@ -343,19 +330,19 @@ application.scope(function (app) {
                 return model;
             },
             remove: function (idModel_) {
-                var parent = this,
-                    children = parent.directive(CHILDREN),
+                var models, parent = this,
                     retList = Collection(),
                     args = toArray(arguments).splice(1),
                     idModel = idModel_;
                 if (!isObject(idModel)) {
-                    // it's a string
+                    // it's an id
                     idModel = parent.directive(CHILDREN).get(ID, idModel + EMPTY_STRING);
                 }
                 if (!idModel || !isObject(idModel)) {
                     return retList;
                 }
-                Collection(idModel && idModel.unwrap ? idModel.unwrap() : idModel).duff(function (model) {
+                models = idModel && idModel.unwrap ? idModel.unwrap() : idModel;
+                Collection(models).duff(function (model) {
                     var parent = model[PARENT];
                     parent._remove(model);
                     retList.add(model);
@@ -366,19 +353,6 @@ application.scope(function (app) {
                 return retList;
             },
             /**
-             * @description removes pointers from parent
-             * @func
-             * @name Box#destroy
-             * @returns {Box} instance
-             */
-            _destroy: function () {
-                var box = this,
-                    // removes all parent / parent's child listeners
-                    removeRet = box[PARENT] && box[PARENT].remove(box);
-                // destroys it's children
-                box.resetChildren();
-            },
-            /**
              * @description basic sort function
              * @param {Function|String} comparator - argument to sort children against
              * @returns {Box} instance
@@ -386,18 +360,18 @@ application.scope(function (app) {
              * @name Box#sort
              */
             sort: function (comparator_) {
-                var comparatorString, isReversed, model = this,
+                var compString, isReversed, model = this,
                     children = model.directive(CHILDREN),
                     comparator = comparator_ || result(model, 'comparator');
                 if (isString(comparator)) {
                     isReversed = comparator[0] === '!';
-                    comparatorString = comparator;
+                    compString = comparator;
                     if (isReversed) {
-                        comparatorString = comparator.slice(1);
+                        compString = comparator.slice(1);
                     }
                     comparator = function (a, b) {
-                        var val_, val_A = a.get(comparatorString),
-                            val_B = b.get(comparatorString);
+                        var val_, val_A = a.get(compString),
+                            val_B = b.get(compString);
                         if (isReversed) {
                             val_ = val_B - val_A;
                         } else {
@@ -406,75 +380,14 @@ application.scope(function (app) {
                         return val_;
                     };
                 }
-                model[DISPATCH_EVENT](BEFORE_COLON + SORT, model);
+                // model[DISPATCH_EVENT](BEFORE_COLON + SORT);
                 children[SORT](comparator);
-                model[DISPATCH_EVENT](SORT, model);
+                model[DISPATCH_EVENT](SORT);
                 return model;
             }
-        }, BOOLEAN_TRUE),
-        set = function (key, newValue) {
-            var dataDirective = this,
-                current = dataDirective[CURRENT],
-                oldValue = current[key];
-            if (!isEqual(oldValue, newValue)) {
-                current[key] = newValue;
-                return BOOLEAN_TRUE;
-            }
-            return BOOLEAN_FALSE;
-        },
-        get = function (key) {
-            return this[CURRENT][key];
-        },
-        unset = function (key) {
-            this[CURRENT][key] = UNDEFINED;
-        },
-        reset = function (hash) {
-            this[CURRENT] = hash;
-            // this.counter = 0;
-        },
-        setDeep = function (path, value) {
-            var previous, dataDirective = this,
-                current = dataDirective[CURRENT];
-            duff(path, function (key, index) {
-                var no_more = index === path[LENGTH] - 1;
-                previous = current;
-                current = no_more ? current[key] : isObject(current[key]) ? current[key] : (previous[key] = {});
-            });
-            if (previous && !isEqual(current, value)) {
-                previous[key] = value;
-                return BOOLEAN_TRUE;
-            }
-        },
-        digest = function (model, fn) {
-            var dataDirective = this;
-            dataDirective[CHANGE_COUNTER]++;
-            fn();
-            dataDirective[CHANGE_COUNTER]--;
-            // this event should only ever exist here
-            if (!dataDirective[CHANGE_COUNTER]) {
-                model[DISPATCH_EVENT](CHANGE, dataDirective[PREVIOUS]);
-                dataDirective[PREVIOUS] = {};
-                dataDirective.changing = {};
-            }
-        },
-        has = function (key) {
-            return this.current[key] != NULL;
-        };
-    app.defineDirective('data', function () {
-        return {
-            current: {},
-            changing: {},
-            counter: 0,
-            set: set,
-            get: get,
-            has: has,
-            unset: unset,
-            reset: reset,
-            digest: digest
-        };
-    });
-    app.defineDirective('children', function () {
-        return Collection();
+        }, BOOLEAN_TRUE);
+    app.defineDirective(CHILDREN, function () {
+        return new Collection[CONSTRUCTOR](NULL, BOOLEAN_TRUE);
     });
     modelMaker[CONSTRUCTOR] = Box[CONSTRUCTOR];
 });

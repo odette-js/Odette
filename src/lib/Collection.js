@@ -1,10 +1,15 @@
 application.scope(function (app) {
     var ITEMS = '_items',
         BY_ID = '_byId',
-        // ID = 'id',
+        // ID = ID,
         eachCall = function (array, method, arg) {
             return duff(array, function (item) {
                 result(item, method, arg);
+            });
+        },
+        mapCall = function (array, method, arg) {
+            return map(array, function (item) {
+                return result(item, method, arg);
             });
         },
         eachCallRight = function (array, method, arg) {
@@ -118,17 +123,17 @@ application.scope(function (app) {
             return count(list, runner, ctx, num, list[LENGTH]);
         },
         // array, startIndex, endIndex
-        between = function (fn) {
-            return function (list, startIdx_, endIdx_) {
-                var ret = [],
-                    startIdx = startIdx_ || 0,
-                    endIdx = endIdx_ || list[LENGTH],
-                    findResult = find(list, function (item, idx, list) {
-                        fn(ret, item, idx, list);
-                    }, NULL, endIdx);
-                return ret;
-            };
-        },
+        // between = function (fn) {
+        //     return function (list, startIdx_, endIdx_) {
+        //         var ret = [],
+        //             startIdx = startIdx_ || 0,
+        //             endIdx = endIdx_ || list[LENGTH],
+        //             findResult = find(list, function (item, idx, list) {
+        //                 fn(ret, item, idx, list);
+        //             }, NULL, endIdx);
+        //         return ret;
+        //     };
+        // },
         /**
          * @func
          */
@@ -315,6 +320,7 @@ application.scope(function (app) {
             each: duff,
             duff: duff,
             forEach: duff,
+            // mapCall: mapCall,
             eachCall: eachCall,
             eachRight: duffRight,
             duffRight: duffRight,
@@ -353,11 +359,7 @@ application.scope(function (app) {
                 _[name](ctx.unwrap(), one, ctx, two, three);
                 return ctx;
             };
-        }), wrap(gapSplit('foldr foldl reduce find findLast findWhere findLastWhere'), function (name) {
-            return function (fn, ctx, memo) {
-                return _[name](this.unwrap(), fn, ctx, memo);
-            };
-        }), wrap(gapSplit('add addAt remove removeAt indexOf posit foldr foldl reduce splice'), function (name) {
+        }), wrap(gapSplit('foldr foldl reduce find findLast findWhere findLastWhere add addAt remove removeAt indexOf posit foldr foldl reduce splice mapCall'), function (name) {
             return function (one, two, three) {
                 return _[name](this.unwrap(), one, two, three);
             };
@@ -372,6 +374,7 @@ application.scope(function (app) {
             eachCallWith: eachCallWith,
             filter: filter,
             matches: matches,
+            mapCall: mapCall,
             add: add,
             addAt: addAt,
             concatUnique: concatUnique,
@@ -386,7 +389,7 @@ application.scope(function (app) {
             where: where,
             findWhere: findWhere,
             findLastWhere: findLastWhere,
-            between: between,
+            // between: between,
             posit: posit,
             range: range,
             count: count,
@@ -435,7 +438,7 @@ application.scope(function (app) {
                 return this;
             },
             unwrap: function () {
-                return this.directive('list').items;
+                return this.list.items;
             },
             empty: _.flow(_.directives.parody('list', 'empty'), _.directives.parody('registry', 'reset')),
             swap: function (arr) {
@@ -498,9 +501,11 @@ application.scope(function (app) {
         validIdMessage = {
             message: 'objects in sorted collections must have either a number or string for their valueOf result'
         },
+        REGISTRY = 'registry',
         SortedCollection = Collection.extend('SortedCollection', {
             constructor: function (list_, skip) {
                 var sorted = this;
+                Collection[CONSTRUCTOR].call(sorted);
                 if (list_ && !skip) {
                     sorted.load(isArrayLike(list_) ? list_ : [list_]);
                 }
@@ -532,28 +537,32 @@ application.scope(function (app) {
             },
             load: function (values) {
                 var sm = this;
-                duff(values, sm.add, sm);
+                if (isArray(values)) {
+                    duff(values, sm.add, sm);
+                } else {
+                    sm.add(values);
+                }
                 return sm;
             },
             add: function (object) {
                 var registryDirective, sorted = this,
                     isNotNull = object == NULL && exception(isNullMessage),
                     valueOfResult = object && object.valueOf(),
-                    retrieved = (registryDirective = sorted.checkDirective('registry')) && sorted.get('id', valueOfResult);
+                    retrieved = (registryDirective = sorted[REGISTRY]) && sorted.get(ID, valueOfResult);
                 if (!retrieved) {
                     ret = !sorted.validIDType(valueOfResult) && exception(validIdMessage);
                     sorted.addAt(object, sorted.closest(valueOfResult) + 1);
-                    (registryDirective || sorted.directive('registry')).keep('id', valueOfResult, object);
+                    (registryDirective || sorted.directive(REGISTRY)).keep(ID, valueOfResult, object);
                     return BOOLEAN_TRUE;
                 }
             },
-            remove: function (object) {
+            remove: function (object, index) {
                 var where, sorted = this,
                     isNotNull = object == NULL && exception(isNullMessage),
                     valueOfResult = object && object.valueOf();
-                if (object != NULL && sorted.get('id', valueOfResult) != NULL) {
-                    sorted.removeAt(sorted.indexOf(object));
-                    sorted.unRegister('id', valueOfResult);
+                if (object != NULL && sorted.get(ID, valueOfResult) != NULL) {
+                    sorted.removeAt(index === UNDEFINED ? sorted.indexOf(object) : index);
+                    sorted.unRegister(ID, valueOfResult);
                 }
             },
             pop: function () {
@@ -600,14 +609,14 @@ application.scope(function (app) {
             Child: StringObject,
             add: function (string) {
                 var sm = this,
-                    found = sm.get('id', string);
+                    found = sm.get(ID, string);
                 if (string) {
                     if (found) {
                         found.isValid(BOOLEAN_TRUE);
                     } else {
                         found = sm.Child(string, sm);
                         sm.unwrap().push(found);
-                        sm.register('id', string, found);
+                        sm.register(ID, string, found);
                     }
                 }
                 return found;
@@ -627,7 +636,7 @@ application.scope(function (app) {
             },
             remove: function (string) {
                 var sm = this,
-                    found = sm.get('id', string);
+                    found = sm.get(ID, string);
                 if (string) {
                     if (found) {
                         found.isValid(BOOLEAN_FALSE);
@@ -635,13 +644,20 @@ application.scope(function (app) {
                 }
                 return sm;
             },
-            toggle: function (string) {
-                var sm = this,
-                    found = sm.get('id', string);
+            toggle: function (string, direction) {
+                var wasFound = BOOLEAN_TRUE,
+                    sm = this,
+                    found = sm.get(ID, string);
                 if (!found) {
-                    sm.add(string);
+                    wasFound = BOOLEAN_FALSE;
+                    found = sm.add(string);
+                }
+                if (direction === UNDEFINED) {
+                    if (wasFound) {
+                        found.toggle();
+                    }
                 } else {
-                    found.toggle();
+                    found.toggle(direction);
                 }
             },
             rebuild: function () {
@@ -672,7 +688,7 @@ application.scope(function (app) {
                 }
                 parent.delimiter = delimiter;
                 parent.rebuild();
-                string = parent.unwrap().join(delimiter);
+                string = parent.join(delimiter);
                 parent.current(string);
                 return string;
             },
@@ -689,7 +705,7 @@ application.scope(function (app) {
             ensure: function (value_, splitter) {
                 var sm = this,
                     value = value_,
-                    delimiter = splitter === UNDEFINED ? ' ' : splitter,
+                    delimiter = splitter === UNDEFINED ? SPACE : splitter,
                     isArrayResult = isArray(value),
                     madeString = (isArrayResult ? value.join(delimiter) : value);
                 if (sm.current() === madeString) {
@@ -699,10 +715,14 @@ application.scope(function (app) {
                 sm.current(madeString);
                 return sm;
             },
-            refill: function (array) {
-                var sm = this;
+            refill: function (array_) {
+                var sm = this,
+                    array = array_;
                 sm.empty();
-                sm.load(array);
+                if (array) {
+                    sm.load(array);
+                }
+                sm.increment();
                 return sm;
             }
         }, BOOLEAN_TRUE),

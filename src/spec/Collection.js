@@ -1,4 +1,4 @@
-application.scope().run(function (app, _, factories, $) {
+application.scope().run(function (app, _, factories) {
     describe('Collection', function () {
         var collection, numberCollection, complexCollection, evenNumberList;
         beforeEach(function () {

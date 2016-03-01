@@ -3,17 +3,13 @@ application.scope().module('Associator', function (module, app, _, factories) {
      * @class Associator
      * @augments Model
      */
-    var blank, DATA = 'data',
-        ITEMS = 'items',
-        LENGTH = 'length',
+    var ITEMS = 'items',
         DATASET = DATA + 'set',
         IS_ELEMENT = 'isElement',
-        INDEX_OF = 'indexOf',
-        __ELID__ = '__elid__',
-        BOOLEAN_TRUE = !0,
         extend = _.extend,
         isObject = _.isObject,
         removeAt = _.removeAt,
+        objectToString = {}.toString,
         Associator = factories.Directive.extend('Associator', {
             /**
              * @func
@@ -25,24 +21,29 @@ application.scope().module('Associator', function (module, app, _, factories) {
                 var returnData, idxOf, dataset, n, key, instance = this,
                     canRead = 0,
                     data = {},
-                    current = instance.sameType(obj),
+                    objIsObj = isObject(obj),
+                    current = instance.sameType(obj, objIsObj),
                     els = current[ITEMS] = current[ITEMS] || [],
                     eldata = current[__ELID__] = current[__ELID__] || {},
                     dataArray = current[DATA] = current[DATA] || [];
-                if (obj && current.readData) {
-                    // dataset = obj[DATASET];
-                    key = obj[__ELID__] = obj[__ELID__] || uniqueId('el');
-                    if (key) {
-                        data = eldata[key] = eldata[key] || {};
+                if (objIsObj) {
+                    if (obj && current.readData) {
+                        key = obj[__ELID__] = obj[__ELID__] || uniqueId('el');
+                        if (key) {
+                            data = eldata[key] = eldata[key] || {};
+                        }
+                    } else {
+                        idxOf = current[ITEMS][INDEX_OF](obj);
+                        if (idxOf === UNDEFINED || idxOf === -1) {
+                            idxOf = current[ITEMS][LENGTH];
+                            current[ITEMS].push(obj);
+                            dataArray[idxOf] = data;
+                        }
+                        data = dataArray[idxOf];
                     }
                 } else {
-                    idxOf = current[ITEMS][INDEX_OF](obj);
-                    if (idxOf === blank || idxOf === -1) {
-                        idxOf = current[ITEMS][LENGTH];
-                        current[ITEMS].push(obj);
-                        dataArray[idxOf] = data;
-                    }
-                    data = dataArray[idxOf];
+                    current[__ELID__][obj] = current[__ELID__][obj] || {};
+                    data = current[__ELID__][obj];
                 }
                 data.target = obj;
                 return data;
@@ -61,25 +62,31 @@ application.scope().module('Associator', function (module, app, _, factories) {
                 return data;
             },
             remove: function (el) {
-                var type = this.sameType(el),
-                    idx = _[INDEX_OF](type[ITEMS], el),
-                    ret = removeAt(type[DATA], idx);
-                removeAt(type[ITEMS], idx);
-                return ret;
+                var idx, type = this.sameType(el);
+                if (type.readData) {
+                    idx = el[__ELID__];
+                    delete type[__ELID__][idx];
+                } else {
+                    idx = _[INDEX_OF](type[ITEMS], el);
+                    removeAt(type[DATA], idx);
+                    removeAt(type[ITEMS], idx);
+                }
             },
             /**
              * @func
              * @name Associator#sameType
              * @param {Object} obj - object to find matched types against
              */
-            sameType: function (obj) {
+            sameType: function (obj, isObj_) {
                 var instance = this,
-                    type = _.toString(obj),
+                    isObj = isObj_ === UNDEFINED ? isObject(obj) : isObj_,
+                    type = objectToString.call(obj),
                     current = instance[type] = instance[type] || {},
                     lowerType = type.toLowerCase(),
-                    globalindex = lowerType[INDEX_OF]('global');
+                    globalindex = lowerType[INDEX_OF]('global'),
+                    indexOfWindow = lowerType[INDEX_OF](WINDOW) === -1;
                 // skip reading data
-                if (globalindex === -1 && lowerType[INDEX_OF](WINDOW) === -1) {
+                if (globalindex === -1 && indexOfWindow && isObj) {
                     current.readData = BOOLEAN_TRUE;
                 }
                 return current;
@@ -87,7 +94,6 @@ application.scope().module('Associator', function (module, app, _, factories) {
             ensure: function (el, attr, failure) {
                 var data = this.get(el);
                 data[attr] = data[attr] || failure(el);
-                // data[attr][TARGET] = data[attr][TARGET] || data[TARGET];
                 return data[attr];
             }
         }, BOOLEAN_TRUE);

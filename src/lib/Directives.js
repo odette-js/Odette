@@ -1,26 +1,22 @@
 application.scope(function (app) {
     var _ = app._,
         factories = _.factories,
-        hash = '_directivesHash',
+        // hash = '_directivesHash',
         returnsNull = returns(NULL);
     factories.Model.extend('Directive', {
         directive: function (name) {
-            var that = this,
-                directives = that[hash] = that[hash] || {};
-            return (directives[name] = directives[name] || directiveMod('creation', that, name));
+            var that = this;
+            return (that[name] = that[name] || directiveMod('creation', that, name));
         },
         destroy: function () {
             return this.directivesDestruction();
         },
+        directiveDestruction: function (name) {
+            return directiveMod('destruction', this, name);
+        },
         directivesDestruction: function () {
             var that = this;
-            return (that[hash] || that) && each(that[hash], function (name) {
-                directiveMod('destruction', that, name);
-            }) && that;
-        },
-        checkDirective: function (key) {
-            var hashed = this[hash];
-            return (!!hashed && hashed[key] != NULL) && hashed[key];
+            return (that[hash] || that) && each(that[hash], that.directiveDestruction, that) && that;
         }
     }, BOOLEAN_TRUE);
     var directives = {
@@ -34,12 +30,17 @@ application.scope(function (app) {
             message: 'directives must be registered with both create and destroy functions'
         });
         var destruction = isFunction(destruction_) ? destruction_ : returnsNull;
-        directives.creation[name] = directives.creation[name] || creation;
+        var alreadyCreated = directives.creation[name];
+        directives.creation[name] = alreadyCreated || creation;
         directives.destruction[name] = directives.destruction[name] || destruction;
+        return !alreadyCreated;
     };
     app.extendDirective = function (oldName, newName, handler_, destruction_) {
         var destruction = destruction_ || returnsThird;
         var handler = handler_ || returnsThird;
+        var oldDirective = directives.creation[oldName] || exception({
+            message: 'directives must exist before they can be extended'
+        });
         return app.defineDirective(newName, function (instance, name, third) {
             var directive = directives.creation[oldName](instance, name, third);
             return handler(instance, name, directive);
@@ -52,7 +53,8 @@ application.scope(function (app) {
         return three;
     };
     var directiveMod = function (key, instance, name) {
-        return (instance['directive:' + key + ':' + name] || directives[key][name] || noop)(instance, name);
+        var Handler = (instance['directive:' + key + COLON + name] || directives[key][name] || noop);
+        return new Handler(instance, name);
     };
     var parody = function (directive, method) {
         return function (one, two, three) {
@@ -61,15 +63,16 @@ application.scope(function (app) {
     };
     var iterate = function (directive, method) {
         return function (list) {
-            var dir = this.directive(directive);
+            var instance = this,
+                dir = instance.directive(directive);
             duff(list, dir[method], dir);
-            return this;
+            return instance;
         };
     };
     var parodyCheck = function (directive, method) {
         return function (one, two, three) {
-            var directiveInstance = this.checkDirective(directive);
-            return directiveInstance && directiveInstance[method](one, two, three);
+            var directiveInstance;
+            return (directiveInstance = this[directive]) && directiveInstance[method](one, two, three);
         };
     };
     _.exports({

@@ -15,7 +15,7 @@ var content = ['browserify'],
             }
         });
     },
-    modules = 'beforeSetup setup scopeStart constants utils shims Strings Directives Collection Messenger Events directives/Events directives/Linguistics Box Module Looper Promise Ajax Associator DOMM View Router Buster scopeEnd'.split(' '),
+    modules = 'beforeSetup setup scopeStart constants utils shims Strings Directives Collection Messenger Events directives/Events directives/Data directives/Linguistics Box Module Looper Promise Ajax Associator DOMM directives/Element View Router Buster LocalStorage scopeEnd'.split(' '),
     paths = makePath({
         jsAll: './src/**/*.js',
         jsList: _.map(modules, function (name) {

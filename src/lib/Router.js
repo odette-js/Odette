@@ -1,4 +1,4 @@
-application.scope().module('Router', function (module, app, _, factories, $) {
+application.scope().module('Router', function (module, app, _, factories) {
     var ROUTES = 'routes',
         HISTORY = 'history',
         WATCHING = 'watching',
@@ -13,8 +13,8 @@ application.scope().module('Router', function (module, app, _, factories, $) {
                 router.config(config);
                 return router;
             },
-            parsePath: function (re) {
-                return isString(re) ? this.parseString(re) : re;
+            parsePath: function (regexp) {
+                return isString(regexp) ? this.parseString(regexp) : regexp;
             },
             parseString: function (string) {
                 var router = this;
@@ -46,20 +46,20 @@ application.scope().module('Router', function (module, app, _, factories, $) {
             clearSlashes: function (path) {
                 return path.toString().replace(/\/$/, EMPTY_STRING).replace(/^\//, EMPTY_STRING);
             },
-            route: function (re, handler_, trigger) {
+            route: function (regexp, handler_, trigger) {
                 var router = this;
-                intendedObject(re, handler_, function (re, handler, third) {
-                    var parsedRegExp = router.parsePath(re),
-                        keys = parsedRegExp.exec(re),
+                intendedObject(regexp, handler_, function (regexp, handler, third) {
+                    var parsedRegExp = router.parsePath(regexp),
+                        keys = parsedRegExp.exec(regexp),
                         keyedResult = map(keys.slice(1), function (key) {
                             // take off the (:)
                             return key.slice(1);
                         }),
                         trigger = third === UNDEFINED ? trigger : handler_;
                     router[ROUTES].push({
-                        original: re,
+                        original: regexp,
                         trigger: trigger,
-                        re: parsedRegExp,
+                        regexp: parsedRegExp,
                         keys: keyedResult,
                         handler: handler
                     });
@@ -92,8 +92,8 @@ application.scope().module('Router', function (module, app, _, factories, $) {
                 }
                 fragment = router.current = router.getFragment();
                 duff(router[ROUTES], function (route) {
-                    var variables = route.re.lastIndex = 0,
-                        match = route.re.exec(SLASH + fragment);
+                    var variables = route.regexp.lastIndex = 0,
+                        match = route.regexp.exec(SLASH + fragment);
                     if (!match) {
                         return;
                     }

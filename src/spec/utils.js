@@ -1,4 +1,4 @@
-application.scope().run(function (app, _, $) {
+application.scope().run(function (app, _) {
     var factories = _.factories;
     describe('var _ = app._;', function () {
         var baseString = 'my string is a great string',

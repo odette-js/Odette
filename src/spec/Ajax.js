@@ -1,4 +1,4 @@
-application.scope().run(function (app, _, factories, $) {
+application.scope().run(function (app, _, factories) {
     var BOOLEAN_TRUE = true,
         isObject = _.isObject;
     describe('Ajax', function () {

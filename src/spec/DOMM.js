@@ -1,4 +1,4 @@
-application.scope().run(function (app, _, factories, $) {
+application.scope().run(function (app, _, factories) {
     var elementData = _.associator;
     describe('DOMM', function () {
         var divs, count, $empty = $(),
@@ -14,7 +14,7 @@ application.scope().run(function (app, _, factories, $) {
             },
             create = function () {
                 count = 0;
-                $con.remove(divs);
+                var _divs = divs && divs.remove();
                 divs = $().count(function (item, index) {
                     var div = document.createElement('div');
                     div.className = 'one';
@@ -28,7 +28,7 @@ application.scope().run(function (app, _, factories, $) {
                 $con.append(divs);
                 return divs;
             },
-            $con = _.createElements('div').style({
+            $con = $.createElements('div').style({
                 height: '100%',
                 width: '100%'
             });
@@ -152,7 +152,7 @@ application.scope().run(function (app, _, factories, $) {
                 divs.duff(function (div, idx) {
                     div.unwrap().innerHTML = '<span></span><img/>';
                 });
-                var kids = divs.find('img');
+                var kids = divs.$('img');
                 expect(kids.length()).toEqual(5);
                 kids.duff(function (kid, idx) {
                     expect(kid.unwrap().tagName).toEqual('IMG');
@@ -287,10 +287,10 @@ application.scope().run(function (app, _, factories, $) {
             });
             it('where the duff and forEach function just gives you the element at each index, just like a collection', function () {
                 divs.duff(function (el, idx) {
-                    expect(_.isInstance(el, _.DOMM)).toEqual(false);
+                    expect(_.isInstance(el, _.$)).toEqual(false);
                 });
                 divs.forEach(function (el, idx) {
-                    expect(_.isInstance(el, _.DOMM)).toEqual(false);
+                    expect(_.isInstance(el, _.$)).toEqual(false);
                 });
             });
         });
@@ -391,20 +391,6 @@ application.scope().run(function (app, _, factories, $) {
                     expect(div.unwrap().getAttribute('data-one')).toEqual('one');
                     expect(div.unwrap().getAttribute('data-two')).toEqual('two');
                 });
-                divs.data({
-                    one: {
-                        some: true,
-                        some2: true
-                    },
-                    two: {
-                        to: true,
-                        from: true
-                    }
-                });
-                divs.each(function (div) {
-                    expect(div.data('one')).toEqual('one some some2');
-                    expect(div.data('two')).toEqual('two to from');
-                });
             });
         });
         describe('it can also manipulate elements in other ways', function () {
@@ -430,6 +416,53 @@ application.scope().run(function (app, _, factories, $) {
                     expect(div.prop('align')).toEqual('left');
                 });
             });
+        });
+        describe('can have specialized elements', function () {
+            describe('has lifecycle events', function () {
+                it('like attach', function () {
+                    divs.remove();
+                    divs.on('attach', handler);
+                    expect(count).toEqual(0);
+                    $con.append(divs);
+                    expect(count).toEqual(5);
+                });
+                it('and detach', function () {
+                    divs.once('detach', handler);
+                    expect(count).toEqual(0);
+                    divs.remove();
+                    expect(count).toEqual(5);
+                });
+                it('and attribute change', function () {
+                    divs.once('attributeChange:data-here', handler);
+                    expect(count).toEqual(0);
+                    divs.data('here', 1);
+                    expect(count).toEqual(5);
+                });
+            });
+            describe('there are also special handlers', function () {
+                it('like create', function () {
+                    $.registerElement('test0', {
+                        onCreate: handler
+                    });
+                    expect(count).toEqual(0);
+                    $.createElement('test0');
+                    expect(count).toEqual(1);
+                });
+                it('and destroy', function () {
+                    $.registerElement('test1', {
+                        onDestroy: handler
+                    });
+                    var div = $.createElement('test1');
+                    expect(count).toEqual(0);
+                    div.destroy();
+                    expect(count).toEqual(1);
+                });
+            });
+        });
+        it('tags cannot be created without being registered first', function () {
+            expect(function () {
+                $.createElement('unregistered');
+            }).toThrow();
         });
     });
 });

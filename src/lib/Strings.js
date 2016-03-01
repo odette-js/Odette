@@ -71,6 +71,25 @@ var cacheable = function (fn) {
             return found();
         };
     }()),
+    uniqueId = (function () {
+        var cache = {};
+        return function (prefix, isInt) {
+            var val;
+            if (!prefix) {
+                prefix = EMPTY_STRING;
+            }
+            prefix += EMPTY_STRING;
+            val = cache[prefix];
+            if (!val) {
+                val = cache[prefix] = 0;
+            }
+            cache[prefix]++;
+            if (!isInt) {
+                val = prefix + val;
+            }
+            return val;
+        };
+    }()),
     /**
      * @func
      */
@@ -297,6 +316,7 @@ _.exports({
     // constants
     customUnits: customUnits,
     // cache makers
+    uniqueId: uniqueId,
     cacheable: cacheable,
     categoricallyCacheable: categoricallyCacheable,
     // cacheable

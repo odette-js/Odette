@@ -1,4 +1,4 @@
-application.scope().run(function (app, _, $) {
+application.scope().run(function (app, _) {
     var factories = _.factories;
     describe('var _ = app._;', function () {
         var baseString = 'my string is a great string',
@@ -506,7 +506,7 @@ application.scope().run(function (app, _) {
         });
     });
 });
-application.scope().run(function (app, _, factories, $) {
+application.scope().run(function (app, _, factories) {
     describe('Collection', function () {
         var collection, numberCollection, complexCollection, evenNumberList;
         beforeEach(function () {
@@ -805,7 +805,7 @@ application.scope().run(function (app, _, factories, $) {
         });
     });
 });
-application.scope().run(function (app, _, factories, $) {
+application.scope().run(function (app, _, factories) {
     describe('Events', function () {
         var blank, box,
             Box = factories.Box,
@@ -1129,7 +1129,7 @@ application.scope().run(function (app, _, factories, $) {
     // console.log(collection2);
     // document.body.insertBefore(div, document.body.children[0]);
 });
-application.scope().run(function (app, _, factories, $) {
+application.scope().run(function (app, _, factories) {
     // var factories = _.factories;
     describe('Box', function () {
         var blank, count, box,
@@ -1635,7 +1635,70 @@ application.scope().run(function (app, _, factories, $) {
         });
     });
 });
-application.scope().run(function (app, _, factories, $) {
+application.scope().run(function (app, _, factories) {
+    describe('Modules', function () {
+        var level = app.module('level');
+        var lower = app.module('level.lower');
+        var lowered = app.module('level.lower.lowered');
+        it('can have children', function () {
+            expect(lower.parent === level).toEqual(true);
+            expect(lower === lowered.parent).toEqual(true);
+        });
+        it('can access it\'s children through the exact same api', function () {
+            expect(lower.module('lowered') === lowered).toEqual(true);
+            expect(lower === level.module('lower')).toEqual(true);
+        });
+        it('can be initialized after it is created', function () {
+            var count = 0;
+            app.module('level.lower', function () {
+                count++;
+            });
+            expect(count).toEqual(1);
+        });
+        it('passes itself into it\'s initializing functions', function () {
+            var count = 0;
+            app.module('lower', function (module, app_, _, factories) {
+                count = 1;
+                expect(module).toEqual(app.module('lower'));
+                expect(app_).toEqual(app);
+                expect(_).toEqual(app._);
+                expect(factories).toEqual(_.factories);
+            });
+            expect(count).toEqual(1);
+        });
+        it('can only initialize itself once', function () {
+            var count = 0;
+            app.module('level', function () {
+                count++;
+            });
+            expect(count).toEqual(1);
+            app.module('level', function () {
+                count++;
+            });
+            expect(count).toEqual(1);
+        });
+        it('can have exports (can hold data)', function () {
+            level.exports({
+                one: 1,
+                two: 2
+            });
+            expect(level.get('exports').one).toEqual(1);
+            expect(level.get('exports').two).toEqual(2);
+        });
+        it('which is like giving public data', function () {
+            var mod = app.module('newmodule', function () {
+                this.exports({
+                    here: 'there'
+                });
+            });
+            expect(app.require('newmodule').here).toEqual('there');
+            expect(function () {
+                app.require('somenonexistantmodule');
+            }).toThrow();
+        });
+    });
+});
+application.scope().run(function (app, _, factories) {
     describe('Promise', function () {
         var madeit, promise, handler = function () {
             madeit++;
@@ -1767,7 +1830,7 @@ application.scope().run(function (app, _, factories, $) {
         });
     });
 });
-application.scope().run(function (app, _, factories, $) {
+application.scope().run(function (app, _, factories) {
     var BOOLEAN_TRUE = true,
         isObject = _.isObject;
     describe('Ajax', function () {
@@ -1903,7 +1966,7 @@ application.scope().run(function (app, _, factories, $) {
         });
     });
 });
-application.scope().run(function (app, _, $) {
+application.scope().run(function (app, _) {
     var factories = _.factories;
     var registry = _.associator;
     describe('Registry', function () {
@@ -1936,7 +1999,7 @@ application.scope().run(function (app, _, $) {
         });
     });
 });
-application.scope().run(function (app, _, factories, $) {
+application.scope().run(function (app, _, factories) {
     var elementData = _.associator;
     describe('DOMM', function () {
         var divs, count, $empty = $(),
@@ -1952,7 +2015,7 @@ application.scope().run(function (app, _, factories, $) {
             },
             create = function () {
                 count = 0;
-                $con.remove(divs);
+                var _divs = divs && divs.remove();
                 divs = $().count(function (item, index) {
                     var div = document.createElement('div');
                     div.className = 'one';
@@ -1966,7 +2029,7 @@ application.scope().run(function (app, _, factories, $) {
                 $con.append(divs);
                 return divs;
             },
-            $con = _.createElements('div').style({
+            $con = $.createElements('div').style({
                 height: '100%',
                 width: '100%'
             });
@@ -2090,7 +2153,7 @@ application.scope().run(function (app, _, factories, $) {
                 divs.duff(function (div, idx) {
                     div.unwrap().innerHTML = '<span></span><img/>';
                 });
-                var kids = divs.find('img');
+                var kids = divs.$('img');
                 expect(kids.length()).toEqual(5);
                 kids.duff(function (kid, idx) {
                     expect(kid.unwrap().tagName).toEqual('IMG');
@@ -2225,10 +2288,10 @@ application.scope().run(function (app, _, factories, $) {
             });
             it('where the duff and forEach function just gives you the element at each index, just like a collection', function () {
                 divs.duff(function (el, idx) {
-                    expect(_.isInstance(el, _.DOMM)).toEqual(false);
+                    expect(_.isInstance(el, _.$)).toEqual(false);
                 });
                 divs.forEach(function (el, idx) {
-                    expect(_.isInstance(el, _.DOMM)).toEqual(false);
+                    expect(_.isInstance(el, _.$)).toEqual(false);
                 });
             });
         });
@@ -2329,20 +2392,6 @@ application.scope().run(function (app, _, factories, $) {
                     expect(div.unwrap().getAttribute('data-one')).toEqual('one');
                     expect(div.unwrap().getAttribute('data-two')).toEqual('two');
                 });
-                divs.data({
-                    one: {
-                        some: true,
-                        some2: true
-                    },
-                    two: {
-                        to: true,
-                        from: true
-                    }
-                });
-                divs.each(function (div) {
-                    expect(div.data('one')).toEqual('one some some2');
-                    expect(div.data('two')).toEqual('two to from');
-                });
             });
         });
         describe('it can also manipulate elements in other ways', function () {
@@ -2369,13 +2418,66 @@ application.scope().run(function (app, _, factories, $) {
                 });
             });
         });
+        describe('can have specialized elements', function () {
+            describe('has lifecycle events', function () {
+                it('like attach', function () {
+                    divs.remove();
+                    divs.on('attach', handler);
+                    expect(count).toEqual(0);
+                    $con.append(divs);
+                    expect(count).toEqual(5);
+                });
+                it('and detach', function () {
+                    divs.once('detach', handler);
+                    expect(count).toEqual(0);
+                    divs.remove();
+                    expect(count).toEqual(5);
+                });
+                it('and attribute change', function () {
+                    divs.once('attributeChange:data-here', handler);
+                    expect(count).toEqual(0);
+                    divs.data('here', 1);
+                    expect(count).toEqual(5);
+                });
+            });
+            describe('there are also special handlers', function () {
+                it('like create', function () {
+                    $.registerElement('test0', {
+                        onCreate: handler
+                    });
+                    expect(count).toEqual(0);
+                    $.createElement('test0');
+                    expect(count).toEqual(1);
+                });
+                it('and destroy', function () {
+                    $.registerElement('test1', {
+                        onDestroy: handler
+                    });
+                    var div = $.createElement('test1');
+                    expect(count).toEqual(0);
+                    div.destroy();
+                    expect(count).toEqual(1);
+                });
+            });
+        });
+        it('tags cannot be created without being registered first', function () {
+            expect(function () {
+                $.createElement('unregistered');
+            }).toThrow();
+        });
     });
 });
-application.scope().run(function (app, _, factories, $) {
+application.scope().run(function (app, _, factories) {
     describe('View', function () {
-        var view, complexView, ComplexView = factories.View.extend({
+        var view, complexView, count, ComplexView = factories.View.extend({
             ui: {
                 there: '.here'
+            },
+            elementEvents: {
+                'click @ui.there': 'doThis'
+            },
+            doThis: function () {
+                count++;
             },
             template: function () {
                 return '<span></span><div class="here"></div>';
@@ -2383,6 +2485,7 @@ application.scope().run(function (app, _, factories, $) {
         });
         app.addRegion('main', '.test-div');
         beforeEach(function () {
+            count = 0;
             view = factories.View();
             complexView = ComplexView();
         });
@@ -2414,9 +2517,37 @@ application.scope().run(function (app, _, factories, $) {
             app.getRegion('main').add(complexView);
             expect(complexView.el.unwrap().parentNode).toEqual(null);
         });
+        it('can have extra elements', function () {
+            expect(_.isObject(complexView.ui)).toEqual(true);
+            expect(_.isString(complexView.ui.there)).toEqual(true);
+            complexView.render();
+            expect(_.isInstance(complexView.ui.there, factories.DOMM)).toEqual(true);
+        });
+        it('can also attach events to it\'s element', function () {
+            expect(count).toEqual(0);
+            app.getRegion('main').add(complexView);
+            expect(count).toEqual(0);
+            complexView.el.click();
+            expect(count).toEqual(1);
+            complexView.render();
+            expect(count).toEqual(1);
+            complexView.el.click();
+            expect(count).toEqual(2);
+        });
+        it('as well as it\'s ui elements', function () {
+            expect(count).toEqual(0);
+            app.getRegion('main').add(complexView);
+            expect(count).toEqual(0);
+            complexView.ui.there.click();
+            expect(count).toEqual(1);
+            complexView.render();
+            expect(count).toEqual(1);
+            complexView.ui.there.click();
+            expect(count).toEqual(2);
+        });
     });
 });
-application.scope().run(function (app, _, factories, $) {
+application.scope().run(function (app, _, factories) {
     var $iframe = $('iframe');
     describe('Buster', function () {
         //

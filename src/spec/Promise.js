@@ -1,4 +1,4 @@
-application.scope().run(function (app, _, factories, $) {
+application.scope().run(function (app, _, factories) {
     describe('Promise', function () {
         var madeit, promise, handler = function () {
             madeit++;

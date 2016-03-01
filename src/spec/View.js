@@ -1,8 +1,14 @@
-application.scope().run(function (app, _, factories, $) {
+application.scope().run(function (app, _, factories) {
     describe('View', function () {
-        var view, complexView, ComplexView = factories.View.extend({
+        var view, complexView, count, ComplexView = factories.View.extend({
             ui: {
                 there: '.here'
+            },
+            elementEvents: {
+                'click @ui.there': 'doThis'
+            },
+            doThis: function () {
+                count++;
             },
             template: function () {
                 return '<span></span><div class="here"></div>';
@@ -10,6 +16,7 @@ application.scope().run(function (app, _, factories, $) {
         });
         app.addRegion('main', '.test-div');
         beforeEach(function () {
+            count = 0;
             view = factories.View();
             complexView = ComplexView();
         });
@@ -40,6 +47,34 @@ application.scope().run(function (app, _, factories, $) {
             complexView.filter = false;
             app.getRegion('main').add(complexView);
             expect(complexView.el.unwrap().parentNode).toEqual(null);
+        });
+        it('can have extra elements', function () {
+            expect(_.isObject(complexView.ui)).toEqual(true);
+            expect(_.isString(complexView.ui.there)).toEqual(true);
+            complexView.render();
+            expect(_.isInstance(complexView.ui.there, factories.DOMM)).toEqual(true);
+        });
+        it('can also attach events to it\'s element', function () {
+            expect(count).toEqual(0);
+            app.getRegion('main').add(complexView);
+            expect(count).toEqual(0);
+            complexView.el.click();
+            expect(count).toEqual(1);
+            complexView.render();
+            expect(count).toEqual(1);
+            complexView.el.click();
+            expect(count).toEqual(2);
+        });
+        it('as well as it\'s ui elements', function () {
+            expect(count).toEqual(0);
+            app.getRegion('main').add(complexView);
+            expect(count).toEqual(0);
+            complexView.ui.there.click();
+            expect(count).toEqual(1);
+            complexView.render();
+            expect(count).toEqual(1);
+            complexView.ui.there.click();
+            expect(count).toEqual(2);
         });
     });
 });

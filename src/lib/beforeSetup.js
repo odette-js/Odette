@@ -31,7 +31,6 @@ this.Application = function (global, WHERE, version, fn) {
             try {
                 return fn();
             } catch (e) {
-                console.log(e);
                 return try_ && try_(e);
             } finally {
                 return finally_ && finally_();
@@ -66,18 +65,15 @@ this.Application = function (global, WHERE, version, fn) {
         app.extend(extendor);
         return app;
     };
-    Application[PROTOTYPE].scope = function (name, fn_) {
-        var app = this,
-            fn = name && (isFunction(name) ? name : (isFunction(fn_) ? fn_ : NULL));
-        if (fn) {
-            app[PARENT].scope(app.version, fn);
-        }
-        return app;
+    Application[PROTOTYPE].scope = function (name_, fn_) {
+        var name = name_ && isString(name_) ? name_ : this.version;
+        var fn = name_ && (isFunction(name_) ? name_ : (isFunction(fn_) ? fn_ : NULL));
+        return this[PARENT].scope(name, fn);
     };
     // Application[PROTOTYPE].loadedAgainst = function (win) {};
     // Application[PROTOTYPE].lastLoaded = function () {};
     Application[PROTOTYPE][TOUCH_TOP] = function () {
-        // allows the top part of this script to be swapped out against different globaldows_
+        // allows the top part of this script to be swapped out against different globals_
         return this[PARENT][TOUCH_TOP](global_);
     };
     Application[PROTOTYPE][TOP_ACCESS] = function () {
@@ -96,6 +92,7 @@ this.Application = function (global, WHERE, version, fn) {
                 cachedOrCreated = application.versions[name],
                 newApp = application.versions[name] = cachedOrCreated || new Application(name, application);
             newApp[PARENT] = application;
+            application.currentVersion = name;
             application.upsetDefaultVersion(name);
             if (!cachedOrCreated) {
                 application.versionOrder.push(name);
@@ -128,18 +125,22 @@ this.Application = function (global, WHERE, version, fn) {
             return saved;
         },
         scope: function (name_, fn_) {
-            var scopedApp, app = this,
-                hash = app.versions,
-                name = fn_ ? name_ : app.defaultVersion,
-                fn = fn_ ? fn_ : name_;
-            if (isString(name_)) {
-                app.currentVersion = name_;
+            var name, fn, app = this,
+                hash = app.versions;
+            if (typeof name_ === 'string') {
+                name = name_;
+                fn = fn_;
+            } else {
+                fn = name_;
+                name = app.defaultVersion;
             }
-            app.registerVersion(name);
-            scopedApp = hash[name];
-            return isFunction(fn) ? this.wraptry(function () {
-                fn.call(app, scopedApp);
-            }) || scopedApp : scopedApp;
+            app.currentVersion = name;
+            if (typeof fn === 'function') {
+                this.wraptry(function () {
+                    fn.call(app, hash[name]);
+                });
+            }
+            return hash[name];
         },
         map: function (arra, fn, ctx) {
             var i = 0,

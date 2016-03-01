@@ -1,4 +1,4 @@
-application.scope().run(function (app, _, $) {
+application.scope().run(function (app, _) {
     var factories = _.factories;
     var registry = _.associator;
     describe('Registry', function () {

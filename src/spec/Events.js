@@ -1,4 +1,4 @@
-application.scope().run(function (app, _, factories, $) {
+application.scope().run(function (app, _, factories) {
     describe('Events', function () {
         var blank, box,
             Box = factories.Box,

@@ -1,5 +1,5 @@
 var DISPATCH_EVENT = 'dispatchEvent',
-    EVENTS = 'events',
+    EVENTS = 'eventManager',
     STOP_LISTENING = 'stopListening',
     TALKER_ID = 'talkerId',
     LISTENING_TO = 'listeningTo',
@@ -79,7 +79,7 @@ application.scope(function (app) {
                 }
                 intendedObject(nameOrObject, list[1], function (key_, value_, isObject_) {
                     // only allow one to be watched
-                    var key = key_.split(' ')[0],
+                    var key = key_.split(SPACE)[0],
                         fun_things = original_handler || bind(list[isObject_ ? 1 : 2], context || box),
                         value = isFunction(value_) ? value_ : curriedEquality(key, value_),
                         handler = function (e) {
@@ -96,8 +96,8 @@ application.scope(function (app) {
             };
         },
         seekAndDestroy = function (box, list, handler, context) {
-            var events = box.directive(EVENTS);
-            list.duffRight(function (obj) {
+            var events = box[EVENTS];
+            return events && list.duffRight(function (obj) {
                 if (obj.disabled || (handler && obj.handler !== handler) || (context && obj.context !== context)) {
                     return;
                 }
@@ -132,7 +132,7 @@ application.scope(function (app) {
         DEFAULT_PREVENTED = 'defaultPrevented',
         SERIALIZED_DATA = '_serializedData',
         ObjectEvent = factories.Directive.extend('ObjectEvent', {
-            constructor: function (name, target, data) {
+            constructor: function (data, target, name, options) {
                 var evnt = this;
                 evnt[PROPAGATION_IS_STOPPED] = evnt[IMMEDIATE_PROP_IS_STOPPED] = BOOLEAN_FALSE;
                 evnt[ORIGIN] = target;
@@ -141,8 +141,9 @@ application.scope(function (app) {
                 evnt.timeStamp = now();
                 evnt[SERIALIZED_DATA] = {};
                 evnt.data(data);
-                evnt.isTrusted = BOOLEAN_TRUE;
-                evnt.returnValue = NULL;
+                if (options) {
+                    extend(evnt, options);
+                }
                 return evnt;
             },
             isStopped: function () {
@@ -183,7 +184,7 @@ application.scope(function (app) {
                 if (evnt.defaultIsPrevented()) {
                     return;
                 }
-                if ((actions = evnt.checkDirective(ACTIONS))) {
+                if ((actions = evnt[ACTIONS])) {
                     actions.call(evnt);
                 }
             }
@@ -262,7 +263,7 @@ application.scope(function (app) {
             off: function (name_, fn_, context_) {
                 var context, currentObj, box = this,
                     name = name_,
-                    events = box.checkDirective(EVENTS);
+                    events = box[EVENTS];
                 if (!events) {
                     return;
                 }
@@ -290,12 +291,15 @@ application.scope(function (app) {
             when: _.directives.parody('Linguistics', 'when'),
             // hash this out later
             stopListening: function (target, name, callback) {
-                var ids, targetEventsDirective, stillListening = 0,
+                var listeningTo, notTalking, ids, targetEventsDirective, stillListening = 0,
                     origin = this,
-                    originEventsDirective = origin.checkDirective(EVENTS),
-                    listeningTo = originEventsDirective[LISTENING_TO],
-                    notTalking = (target && !(targetEventsDirective = target.checkDirective(EVENTS)));
-                if (!originEventsDirective || notTalking) {
+                    originEventsDirective = origin[EVENTS];
+                if (!originEventsDirective) {
+                    return origin;
+                }
+                listeningTo = originEventsDirective[LISTENING_TO];
+                notTalking = (target && !(targetEventsDirective = target[EVENTS]));
+                if (notTalking) {
                     return origin;
                 }
                 ids = target ? [targetEventsDirective[TALKER_ID]] : keys(listeningTo);
@@ -320,8 +324,8 @@ application.scope(function (app) {
              * @param {String} name of the event loop to be triggered
              * @returns {Box} object instance the method is being called on
              */
-            createEvent: function (name, data, options) {
-                return ObjectEvent(name, this, data, options);
+            createEvent: function (data, name, options) {
+                return ObjectEvent(data, this, name, options);
             },
             dispatchEvents: function (names) {
                 var box = this;
@@ -330,11 +334,14 @@ application.scope(function (app) {
             dispatchStack: function (name) {
                 return this[DISPATCH_EVENT](name);
             },
+            hasEvents: function (name) {
+                var eventsDirective, evnt = this;
+                return (eventsDirective = evnt[EVENTS]) && eventsDirective.has(name) && eventsDirective;
+            },
             dispatchEvent: function (name, data, options) {
-                var evnt, eventsDirective, box = this,
-                    has = (eventsDirective = box.checkDirective(EVENTS)) && eventsDirective.has(name);
-                if (has) {
-                    evnt = box.createEvent(name, data, options);
+                var evnt, eventsDirective, box = this;
+                if ((eventsDirective = box.hasEvents(name))) {
+                    evnt = box.createEvent(data, name, options);
                     eventsDirective.dispatch(name, evnt);
                     return evnt.returnValue;
                 }

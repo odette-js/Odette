@@ -1,6 +1,7 @@
 var factories = {},
     object = Object,
     fn = Function,
+    FunctionConstructor = fn[CONSTRUCTOR],
     array = Array,
     string = String,
     number = Number,
@@ -176,7 +177,7 @@ var factories = {},
      * @func
      */
     has = function (obj, prop) {
-        var val = !1;
+        var val = BOOLEAN_FALSE;
         if (obj && isFunction(obj.hasOwnProperty)) {
             val = obj.hasOwnProperty(prop);
         }
@@ -189,11 +190,7 @@ var factories = {},
         return instance && instance[CONSTRUCTOR_KEY] && instance[CONSTRUCTOR_KEY][CONSTRUCTOR] || instance[CONSTRUCTOR];
     },
     nativeIsInstance = function (instance, constructor) {
-        var result = BOOLEAN_FALSE;
-        if (isFunction(constructor)) {
-            result = instance instanceof constructor;
-        }
-        return result;
+        return instance instanceof constructor;
     },
     isInstance = function (instance, constructor_) {
         var constructor = constructor_;
@@ -207,10 +204,7 @@ var factories = {},
      */
     splitGen = function (delimiter) {
         return function (list) {
-            if (isString(list)) {
-                list = split(list, delimiter);
-            }
-            return list;
+            return isString(list) ? list.split(delimiter) : list;
         };
     },
     /**
@@ -218,17 +212,17 @@ var factories = {},
      */
     joinGen = function (delimiter) {
         return function (arr) {
-            return join(arr, delimiter);
+            return arr.join(delimiter);
         };
     },
     /**
      * @func
      */
-    gapJoin = joinGen(' '),
+    gapJoin = joinGen(SPACE),
     /**
      * @func
      */
-    gapSplit = splitGen(' '),
+    gapSplit = splitGen(SPACE),
     /**
      * @func
      */
@@ -343,26 +337,6 @@ var factories = {},
     /**
      * @func
      */
-    uniqueId = (function () {
-        var cache = {},
-            global = 0;
-        return function (prefix, isInt) {
-            var val;
-            if (!prefix) {
-                prefix = EMPTY_STRING;
-            }
-            prefix += EMPTY_STRING;
-            val = cache[prefix];
-            if (!val) {
-                val = cache[prefix] = 0;
-            }
-            cache[prefix]++;
-            if (!isInt) {
-                val = prefix + val;
-            }
-            return val;
-        };
-    }()),
     now = function () {
         return +(new Date());
     },
@@ -427,6 +401,17 @@ var factories = {},
         var length = !!collection && collection[LENGTH];
         return isArray(collection) || (isNumber(length) && !isString(collection) && length >= 0 && length <= MAX_ARRAY_INDEX && !isFunction(collection));
     },
+    iterates = function (obj, iterator, context) {
+        var list = keys(obj),
+            iteratee = bind(iterator, context);
+        return {
+            keys: list,
+            handler: function (key, idx, list) {
+                // gives you the key, use that to get the value
+                return iteratee(obj[key], key, obj);
+            }
+        };
+    },
     eachProxy = function (fn) {
         return function (obj_, iteratee_, context_, direction_) {
             var ret, obj = obj_,
@@ -439,15 +424,10 @@ var factories = {},
                 return obj;
             }
             if (!isArrayLike(obj)) {
-                list = keys(obj);
-                if (context) {
-                    iteratee = bind(iterator, context);
-                }
+                ret = iterates(list, iteratee, context);
+                iterator = ret.handler;
+                list = ret.keys;
                 context = NULL;
-                iterator = function (key, idx, list) {
-                    // gives you the key, use that to get the value
-                    return iteratee(obj[key], key, obj);
-                };
             }
             return fn(list, iterator, context, direction);
         };
@@ -495,24 +475,9 @@ var factories = {},
     },
     find = finder(findIndex),
     findLast = finder(findLastIndex),
-    bind = function (fn_, ctx) {
-        var fn = fn_;
-        if (ctx) {
-            fn = fn_.bind(ctx);
-        }
-        return fn;
+    bind = function (func) {
+        return func.bind.apply(func, splice(arguments, 1));
     },
-    // alternative each
-    // duff = function (values, runner_, context, direction_) {
-    //     var idx, direction = direction_ || 1,
-    //         i = values[LENGTH],
-    //         bound = bind(runner_, context);
-    //     while (--i >= 0) {
-    //         idx = ((values[LENGTH] * direction) - (i * direction)) - 1;
-    //         bound(values[idx], idx, values);
-    //     }
-    //     return values;
-    // },
     duff = function (values, runner_, context, direction_) {
         var direction, runner, iterations, val, i, leftover, deltaFn;
         if (!values) {
@@ -637,7 +602,7 @@ var factories = {},
             if (child) {
                 passedParent = child;
             }
-            child = new Function[CONSTRUCTOR]('var parent=arguments[0];return function ' + name + '(){return parent.apply(this,arguments);}')(passedParent);
+            child = new FunctionConstructor('var parent=arguments[0];return function ' + name + '(){return parent.apply(this,arguments);}')(passedParent);
             // factories[name] = child;
         } else {
             child = function () {
@@ -735,7 +700,9 @@ var factories = {},
         }
         var areArrays = className === BRACKET_OBJECT_SPACE + 'Array]';
         if (!areArrays) {
-            if (typeof a != OBJECT || typeof b != OBJECT) return BOOLEAN_FALSE;
+            if (!isObject(a) || !isObject(b)) {
+                return BOOLEAN_FALSE;
+            }
             // Objects with different constructors are not equivalent, but `Object`s or `Array`s
             // from different frames are.
             var aCtor = a[CONSTRUCTOR],
@@ -860,19 +827,51 @@ var factories = {},
         return img;
     },
     parse = function (val_) {
-        var val = val_;
+        var coerced, val = val_;
         if (isString(val)) {
             val = val.trim();
-            if (val[0] === '{' || val[0] === '[') {
+            if ((val[0] === '{' && val[val[LENGTH] - 1] === '}') || (val[0] === '[' && val[val[LENGTH] - 1] === ']')) {
                 wraptry(function () {
                     val = JSON.parse(val);
                 }, console.error);
             } else {
-                // parses the number out if it's a number
-                val = +val === val ? +val : val;
+                if (val === 'true') {
+                    val = BOOLEAN_TRUE;
+                } else {
+                    coerced = +val;
+                    if (coerced === coerced) {
+                        val = coerced;
+                    } else {
+                        if (val === 'false') {
+                            val = BOOLEAN_FALSE;
+                        } else {
+                            if (val === 'null') {
+                                val = NULL;
+                            } else {
+                                if (val === 'undefined') {
+                                    val = UNDEFINED;
+                                } else {
+                                    if (val.slice(0, 8) === 'function') {
+                                        val = new FunctionConstructor('return ' + val)();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
         return val;
+    },
+    evaluate = function (string, context) {
+        var parsed = string;
+        if (isString(parsed)) {
+            if (parsed.slice(0, 8) !== 'function') {
+                parsed = new Function[CONSTRUCTOR]('window', 'global', 'root', 'return ' + parsed);
+            }
+        }
+        parsed = new Function[CONSTRUCTOR]('var document,\nconsole,\nwindow=this;\nreturn ' + parsed + '.call(this, this, this, this);');
+        return parsed.call(context);
     },
     debounce = function (func, wait, immediate) {
         var timeout;
@@ -905,7 +904,7 @@ var factories = {},
         }) && collection;
     },
     arrayLikeToArray = function (arrayLike) {
-        return Array.apply(null, arrayLike);
+        return Array.apply(NULL, arrayLike);
     },
     objectToArray = function (obj) {
         return !obj ? [] : foldl(obj, function (memo, item) {
@@ -1030,7 +1029,7 @@ var factories = {},
         return val;
     },
     uuid = function () {
-        var UNDEFINED, cryptoCheck = 'crypto' in win && 'getRandomValues' in crypto,
+        var cryptoCheck = 'crypto' in win && 'getRandomValues' in crypto,
             sid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
                 var rnd, r, v;
                 if (cryptoCheck) {
@@ -1054,6 +1053,22 @@ var factories = {},
             var context = this;
             intendedObject(one, two, fn, context);
             return context;
+        };
+    },
+    intendedIteration = function (key, value, iterator_, context) {
+        var keysResult, isObjectResult = isObject(key),
+            iterator = bind(iterator_, context);
+        if (isObjectResult) {
+            keysResult = keys(key);
+        }
+        return function (one, two, three, four, five, six) {
+            if (isObjectResult) {
+                duff(keysResult, function (key_) {
+                    iterator(key_, key[key_], one, two, three, four, five, six);
+                });
+            } else {
+                iterator(key, value, one, two, three, four, five, six);
+            }
         };
     },
     intendedObject = function (key, value, fn_, ctx) {
@@ -1181,16 +1196,22 @@ var factories = {},
             }
         }
     }),
+    // make global
     exception = console.exception,
+    // mitigate
     wraptry = function (trythis, errthat, finalfunction) {
+        var returnValue, err = NULL;
         try {
-            return trythis();
+            returnValue = trythis();
         } catch (e) {
-            return errthat && errthat(e);
+            err = e;
+            returnValue = errthat ? errthat(e) : returnValue;
         } finally {
-            return finalfunction && finalfunction();
+            returnValue = finalfunction ? finalfunction(err) : returnValue;
         }
+        return returnValue;
     },
+    // directed toggle
     toggle = function (current, which) {
         if (which === UNDEFINED) {
             return !current;
@@ -1223,6 +1244,7 @@ var factories = {},
         constructorWrapper: constructorWrapper,
         stringifyQuery: stringifyQuery,
         intendedObject: intendedObject,
+        intendedIteration: intendedIteration,
         ensureFunction: ensureFunction,
         parseDecimal: parseDecimal,
         flatten: flatten,
@@ -1238,7 +1260,7 @@ var factories = {},
         stringify: stringify,
         splitGen: splitGen,
         gapSplit: gapSplit,
-        uniqueId: uniqueId,
+        // uniqueId: uniqueId,
         wraptry: wraptry,
         toString: toString,
         throttle: throttle,
@@ -1283,6 +1305,7 @@ var factories = {},
         eachProxy: eachProxy,
         exports: exports,
         allKeys: allKeys,
+        evaluate: evaluate,
         slice: slice,
         parse: parse,
         shift: shift,
@@ -1294,6 +1317,7 @@ var factories = {},
         duff: duff,
         duffRight: duffRight,
         eachRight: eachRight,
+        iterates: iterates,
         sort: sort,
         join: join,
         wrap: wrap,
@@ -1329,6 +1353,10 @@ var factories = {},
 function Model(attributes, options) {
     return this;
 }
-Model[PROTOTYPE] = {};
+Model[PROTOTYPE] = {
+    evaluate: function (handler) {
+        return evaluate(handler, this);
+    }
+};
 factories.Model = constructorWrapper(Model);
 window._ = _;

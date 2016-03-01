@@ -1,5 +1,5 @@
 application.scope().module('Looper', function (module, app, _, factories) {
-    var blank, x = 0,
+    var x = 0,
         lastTime = 0,
         pI = _.pI,
         posit = _.posit,
@@ -112,7 +112,7 @@ application.scope().module('Looper', function (module, app, _, factories) {
                         }
                         combineAdd();
                         duff(fnList, function (fnObj) {
-                            if (posit(removeList, fnObj)) {
+                            if (indexOf(removeList, fnObj) !== -1) {
                                 removeLater.push(fnObj);
                             } else {
                                 if (fnObj.disabled || halted) {

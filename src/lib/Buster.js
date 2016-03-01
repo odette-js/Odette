@@ -1,4 +1,4 @@
-application.scope().module('Buster', function (module, app, _, factories, $) {
+application.scope().module('Buster', function (module, app, _, factories) {
     var isReceiving = 0,
         get = _.get,
         duff = _.duff,
@@ -144,7 +144,7 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
          * @arg {buster}
          */
         postMessage = function (base, buster) {
-            var busterAttrs = buster.directive(DATA),
+            var busterAttrs = buster.directive(DATA_MANAGER),
                 sameSide = busterAttrs.sameSide,
                 parts = buster.parts,
                 message = stringify(base),
@@ -180,7 +180,7 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
              * @private
              */
             toInner: function (buster) {
-                var attrs = buster.directive(DATA),
+                var attrs = buster.directive(DATA_MANAGER),
                     parts = buster.parts;
                 parts.sendWin = buster[PARENT].el.index(0).contentWindow;
                 attrs.referrer = attrs.referrer || reference(parts.doc);
@@ -190,7 +190,7 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
              * @private
              */
             fromInner: function (buster) {
-                var attrs = buster.directive(DATA),
+                var attrs = buster.directive(DATA_MANAGER),
                     parts = buster.parts;
                 parts.sendWin = parts.receiveWin[PARENT];
                 attrs.referrer = attrs.referrer || reference(parts.doc);
@@ -200,7 +200,7 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                  * @private
                  */
                 noAccess: function (buster) {
-                    var url, attrs = buster.directive(DATA),
+                    var url, attrs = buster.directive(DATA_MANAGER),
                         parts = buster.parts,
                         doc = parts.doc,
                         iframe = doc.createElement('iframe'),
@@ -230,7 +230,7 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                         setTimeout(function () {
                             // handle no buster file here
                             var ret, ad = buster[PARENT],
-                                adAttrs = ad.directive(DATA),
+                                adAttrs = ad.directive(DATA_MANAGER),
                                 banner = ad.children.index(1),
                                 panel = ad.children.index(2);
                             if (!ad.busterLoaded) {
@@ -249,7 +249,7 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
                  */
                 topAccess: function (buster) {
                     var commands, newParent = buster.el.index(0),
-                        attrs = buster.directive(DATA);
+                        attrs = buster.directive(DATA_MANAGER);
                     // if preventselfinit is true, then that means that
                     // this is being triggered by the buster file
                     if (!attrs.preventSelfInit) {
@@ -394,7 +394,7 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
             },
             destroy: function () {
                 var buster = this,
-                    attrs = buster.directive(DATA);
+                    attrs = buster.directive(DATA_MANAGER);
                 buster.set('isConnected', BOOLEAN_FALSE);
                 clearTimeout(attrs.__lastMouseMovingTimeout__);
                 _.AF.remove(attrs.elQueryId);
@@ -425,7 +425,7 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
             },
             // belongs on the outside
             _stateCss: function (set0) {
-                var busterAttrs = this.directive(DATA),
+                var busterAttrs = this.directive(DATA_MANAGER),
                     _sizing = busterAttrs._sizing,
                     margin = {
                         transitionProperty: 'all'
@@ -461,7 +461,7 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
              */
             initialize: function (opts, options) {
                 var receiveWin, registered, buster = this,
-                    attrs = buster.directive(DATA);
+                    attrs = buster.directive(DATA_MANAGER);
                 buster[COMPONENTS] = collection();
                 buster.showing = collection();
                 buster.on(BEFORE_RESPONDED, attrs.every);
@@ -541,7 +541,7 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
              */
             // getTargets: function (target) {
             //     var buster = this,
-            //         attrs = buster.directive(DATA),
+            //         attrs = buster.directive(DATA_MANAGER),
             //         parts = buster.parts,
             //         top = parts[TOP],
             //         targets = [],
@@ -638,7 +638,7 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
              */
             run: function (data, currentPoint_) {
                 var packet, format, retVal, responded, onResponse, originalMessage, responseType, methodName, buster = this,
-                    attrs = buster.directive(DATA),
+                    attrs = buster.directive(DATA_MANAGER),
                     currentPoint = attrs.currentPoint = currentPoint_,
                     event = currentPoint,
                     messages = attrs.sent,
@@ -690,7 +690,7 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
              * @name Buster#defaultMessage
              */
             defaultMessage: function () {
-                var attrs = this.directive(DATA);
+                var attrs = this.directive(DATA_MANAGER);
                 return {
                     from: attrs.id,
                     postTo: attrs.postTo,
@@ -707,7 +707,7 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
              */
             // shouldUpdate: function (args) {
             //     var ret, buster = this,
-            //         attrs = buster.directive(DATA),
+            //         attrs = buster.directive(DATA_MANAGER),
             //         lastUpdate = attrs.lastRespondUpdate,
             //         lastFrameRect = attrs.lastFrameRect,
             //         top = buster.parts[TOP] || {},
@@ -737,7 +737,7 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
              */
             respond: function (data, extendObj) {
                 var lastRespondUpdate, message, buster = this,
-                    attrs = buster.directive(DATA),
+                    attrs = buster.directive(DATA_MANAGER),
                     sameSide = attrs.sameSide,
                     base = {};
                 if (!extendObj || !_.isObject(extendObj)) {
@@ -776,7 +776,7 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
              * @name Buster#getFrameRect
              */
             // getFrameRect: function () {
-            //     var clientRect = this.directive(DATA).lastFrameRect = this.el.clientRect();
+            //     var clientRect = this.directive(DATA_MANAGER).lastFrameRect = this.el.clientRect();
             //     return clientRect;
             // },
             /**
@@ -785,7 +785,7 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
              * @name Buster#getParentRect
              */
             // getParentRect: function () {
-            //     var parentRect = this.directive(DATA).lastParentRect = this.el[PARENT]().clientRect();
+            //     var parentRect = this.directive(DATA_MANAGER).lastParentRect = this.el[PARENT]().clientRect();
             //     return parentRect;
             // },
             // updateTopData: function () {
@@ -862,7 +862,7 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
              * @name Buster#positionInDocument
              */
             // positionInDocument: function () {
-            //     var attrs = this.directive(DATA),
+            //     var attrs = this.directive(DATA_MANAGER),
             //         wrapperInfo = attrs.wrapperInfo,
             //         contentRect = attrs.lastParentRect,
             //         pos = attrs.lastPosInDoc = {
@@ -930,7 +930,7 @@ application.scope().module('Buster', function (module, app, _, factories, $) {
              */
             begin: function () {
                 var buster = this,
-                    attrs = buster.directive(DATA),
+                    attrs = buster.directive(DATA_MANAGER),
                     message = buster.send('initialize', {
                         referrer: attrs.publisher
                     });
