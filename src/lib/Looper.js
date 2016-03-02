@@ -1,5 +1,7 @@
-application.scope().module('Looper', function (module, app, _, factories) {
-    var x = 0,
+application.scope(function (app) {
+    var _ = app._,
+        factories = _.factories,
+        x = 0,
         lastTime = 0,
         pI = _.pI,
         posit = _.posit,

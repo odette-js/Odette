@@ -1,5 +1,7 @@
-application.scope().module('Promise', function (module, app, _, factories) {
-    var FAILURE = 'failure',
+application.scope(function (app) {
+    var _ = app._,
+        factories = _.factories,
+        FAILURE = 'failure',
         SUCCESS = 'success',
         STATE = 'state',
         ALWAYS = 'always',
@@ -75,8 +77,10 @@ application.scope().module('Promise', function (module, app, _, factories) {
                 return resulting;
             };
         },
-        Promise = factories.Box.extend('Promise', {
+        Promise = _.Promise = factories.Box.extend('Promise', {
             addState: addState,
+            isFulfilled: stateChecker(SUCCESS),
+            isRejected: stateChecker(FAILURE),
             childEvents: {
                 always: 'check'
             },
@@ -150,8 +154,6 @@ application.scope().module('Promise', function (module, app, _, factories) {
                 });
                 return results;
             },
-            isFulfilled: stateChecker(SUCCESS),
-            isRejected: stateChecker(FAILURE),
             resolved: function () {
                 // allows resolved to be defined in a different way
                 return this.get('resolved');

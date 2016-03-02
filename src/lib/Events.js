@@ -339,8 +339,9 @@ application.scope(function (app) {
                 return (eventsDirective = evnt[EVENTS]) && eventsDirective.has(name) && eventsDirective;
             },
             dispatchEvent: function (name, data, options) {
-                var evnt, eventsDirective, box = this;
-                if ((eventsDirective = box.hasEvents(name))) {
+                var evnt, box = this,
+                    eventsDirective = box.hasEvents(name);
+                if (eventsDirective && !box.eventManager.running[name]) {
                     evnt = box.createEvent(data, name, options);
                     eventsDirective.dispatch(name, evnt);
                     return evnt.returnValue;

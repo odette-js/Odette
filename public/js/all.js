@@ -2481,18 +2481,6 @@ application.scope(function (app) {
         countFrom = function (list, runner, ctx, num) {
             return count(list, runner, ctx, num, list[LENGTH]);
         },
-        // array, startIndex, endIndex
-        // between = function (fn) {
-        //     return function (list, startIdx_, endIdx_) {
-        //         var ret = [],
-        //             startIdx = startIdx_ || 0,
-        //             endIdx = endIdx_ || list[LENGTH],
-        //             findResult = find(list, function (item, idx, list) {
-        //                 fn(ret, item, idx, list);
-        //             }, NULL, endIdx);
-        //         return ret;
-        //     };
-        // },
         /**
          * @func
          */
@@ -2515,36 +2503,6 @@ application.scope(function (app) {
             found = ~~maxIndex;
             return found;
         },
-        // closest = function (list, target) {
-        //     var match, path, diff, possible, i = 0,
-        //         previousAbs = Infinity,
-        //         // trying to avoid running through 20 matchs
-        //         // when i'm already at the exact one
-        //         valuesLen = list[LENGTH];
-        //     if (valuesLen === 1) {
-        //         match = list[0];
-        //     }
-        //     if (indexOf(list, target) !== -1) {
-        //         match = target;
-        //     }
-        //     if (!match) {
-        //         // try doing this later with no sorting
-        //         for (i = valuesLen - 1;
-        //             (i >= 0 && !match); i--) {
-        //             path = list[i];
-        //             diff = Math.abs(target - path);
-        //             if (diff < previousAbs) {
-        //                 possible = path;
-        //                 previousAbs = diff;
-        //             }
-        //         }
-        //         match = possible;
-        //     }
-        //     if (!match) {
-        //         match = target;
-        //     }
-        //     return match;
-        // },
         /**
          * @func
          */
@@ -2576,9 +2534,9 @@ application.scope(function (app) {
             }, []);
         },
         cycle = function (arr, num_) {
-            var num, piece, len = arr[LENGTH];
-            if (isNumber(len)) {
-                num = num_ % len;
+            var num, piece, length = arr[LENGTH];
+            if (isNumber(length)) {
+                num = num_ % length;
                 piece = arr.splice(num);
                 arr.unshift.apply(arr, piece);
             }
@@ -2679,7 +2637,6 @@ application.scope(function (app) {
             each: duff,
             duff: duff,
             forEach: duff,
-            // mapCall: mapCall,
             eachCall: eachCall,
             eachRight: duffRight,
             duffRight: duffRight,
@@ -2748,7 +2705,6 @@ application.scope(function (app) {
             where: where,
             findWhere: findWhere,
             findLastWhere: findLastWhere,
-            // between: between,
             posit: posit,
             range: range,
             count: count,
@@ -2772,6 +2728,7 @@ application.scope(function (app) {
                 return fun(directive, categoryHash, category, key, thing, passedCategory);
             };
         },
+        REGISTRY = 'registry',
         Collection = factories.Directive.extend('Collection', extend({
             range: recreateSelf(range),
             concat: recreateSelf(function () {
@@ -2799,7 +2756,7 @@ application.scope(function (app) {
             unwrap: function () {
                 return this.list.items;
             },
-            empty: _.flow(_.directives.parody('list', 'empty'), _.directives.parody('registry', 'reset')),
+            empty: _.flow(_.directives.parody('list', 'empty'), _.directives.parody(REGISTRY, 'reset')),
             swap: function (arr) {
                 this.directive('list').items = arr || [];
             },
@@ -2849,10 +2806,10 @@ application.scope(function (app) {
                 collection.swap(arr);
                 return collection;
             },
-            get: _.directives.parody('registry', 'get'),
-            register: _.directives.parody('registry', 'keep'),
-            unRegister: _.directives.parody('registry', 'drop'),
-            swapRegister: _.directives.parody('registry', 'swap')
+            get: _.directives.parody(REGISTRY, 'get'),
+            register: _.directives.parody(REGISTRY, 'keep'),
+            unRegister: _.directives.parody(REGISTRY, 'drop'),
+            swapRegister: _.directives.parody(REGISTRY, 'swap')
         }, wrappedCollectionMethods), BOOLEAN_TRUE),
         isNullMessage = {
             message: 'object must not be null or undefined'
@@ -2860,7 +2817,6 @@ application.scope(function (app) {
         validIdMessage = {
             message: 'objects in sorted collections must have either a number or string for their valueOf result'
         },
-        REGISTRY = 'registry',
         SortedCollection = Collection.extend('SortedCollection', {
             constructor: function (list_, skip) {
                 var sorted = this;
@@ -3035,7 +2991,7 @@ application.scope(function (app) {
                         }
                     });
                 parent.swap(validResult.list);
-                parent.directive('registry').reset(validResult.registry);
+                parent.directive(REGISTRY).reset(validResult.registry);
             },
             generate: function (delimiter_) {
                 var validResult, string = EMPTY_STRING,
@@ -3124,7 +3080,7 @@ application.scope(function (app) {
         this.register = registry || {};
         this.count = 0;
     };
-    app.defineDirective('registry', function () {
+    app.defineDirective(REGISTRY, function () {
         return {
             register: {},
             count: 0,
@@ -3495,8 +3451,9 @@ application.scope(function (app) {
                 return (eventsDirective = evnt[EVENTS]) && eventsDirective.has(name) && eventsDirective;
             },
             dispatchEvent: function (name, data, options) {
-                var evnt, eventsDirective, box = this;
-                if ((eventsDirective = box.hasEvents(name))) {
+                var evnt, box = this,
+                    eventsDirective = box.hasEvents(name);
+                if (eventsDirective && !box.eventManager.running[name]) {
                     evnt = box.createEvent(data, name, options);
                     eventsDirective.dispatch(name, evnt);
                     return evnt.returnValue;
@@ -3522,6 +3479,7 @@ application.scope(function (app) {
                 eventsDirective.listenId = 'l' + (++listeningCounter);
                 eventsDirective.handlers = {};
                 eventsDirective.listeningTo = {};
+                eventsDirective.running = {};
                 eventsDirective.stack = Collection(BOOLEAN_TRUE, BOOLEAN_TRUE);
                 eventsDirective.removeQueue = Collection(BOOLEAN_TRUE, BOOLEAN_TRUE);
                 return eventsDirective;
@@ -3581,7 +3539,7 @@ application.scope(function (app) {
             },
             scrub: function (list) {
                 list.scrubbed = BOOLEAN_TRUE;
-                this[HANDLERS][list[NAME]] = NULL;
+                delete this[HANDLERS][list[NAME]];
             },
             reset: function () {
                 return each(this.handlers, this.scrub, this);
@@ -3600,10 +3558,13 @@ application.scope(function (app) {
                     stack = events[STACK],
                     handlers = events[HANDLERS],
                     list = handlers[name],
-                    removeList = events[REMOVE_QUEUE];
+                    removeList = events[REMOVE_QUEUE],
+                    running = events.running,
+                    cached = running[name];
                 if (evnt[IMMEDIATE_PROP_IS_STOPPED] || !list || !list[LENGTH]()) {
                     return;
                 }
+                running[name] = BOOLEAN_TRUE;
                 list.find(function (handler) {
                     var cached;
                     if (!handler.disabled && events.queue(stack, handler, evnt)) {
@@ -3616,6 +3577,11 @@ application.scope(function (app) {
                 if (!stack[LENGTH]() && removeList[LENGTH]()) {
                     removeList.duffRight(events.detach, events);
                     removeList.empty();
+                }
+                if (cached === UNDEFINED) {
+                    delete running[name];
+                } else {
+                    running[name] = cached;
                 }
                 evnt.finished();
                 return evnt.returnValue;
@@ -4276,533 +4242,7 @@ application.scope(function (app) {
 application.scope(function (app) {
     var _ = app._,
         factories = _.factories,
-        Box = factories.Box,
-        Collection = factories.Collection,
-        _EXTRA_MODULE_ARGS = '_extraModuleArguments',
-        MODULES = 'modules',
-        startableMethods = {
-            start: function (evnt) {
-                var startable = this;
-                if (!startable.started) {
-                    startable.started = BOOLEAN_TRUE;
-                    startable[DISPATCH_EVENT](START, evnt);
-                }
-                return startable;
-            },
-            stop: function (evnt) {
-                var startable = this;
-                if (startable.started) {
-                    startable.started = BOOLEAN_FALSE;
-                    startable[DISPATCH_EVENT](STOP, evnt);
-                }
-                return startable;
-            },
-            toggle: function (evnt) {
-                var startable = this;
-                if (startable.started) {
-                    startable[STOP](evnt);
-                } else {
-                    startable[START](evnt);
-                }
-                return startable;
-            },
-            restart: function (evnt) {
-                var startable = this;
-                if (startable.started) {
-                    startable[STOP](evnt);
-                }
-                startable[START](evnt);
-                return startable;
-            }
-        },
-        Startable = factories.Box.extend('Startable', startableMethods, BOOLEAN_TRUE),
-        doStart = function (e) {
-            if (this.get('startWithParent')) {
-                this[START](e);
-            }
-        },
-        doStop = function (e) {
-            if (this.get('stopWithParent')) {
-                this[STOP](e);
-            }
-        },
-        // moduleHandler = ,
-        // moduleRunner = ,
-        moduleMethods = extend({}, factories.Events[CONSTRUCTOR][PROTOTYPE], startableMethods, {
-            // idAttribute: 'name',
-            module: function (name_, fn) {
-                var parentModulesDirective, modules, attrs, parentIsModule, nametree, parent = this,
-                    originalParent = parent,
-                    name = name_,
-                    globalname = name,
-                    namespace = name.split(PERIOD),
-                    module = parent.directive(CHILDREN).get(name_);
-                if (module) {
-                    // hey, i found it. we're done here
-                    parent = module.parent;
-                    namespace = [module.id];
-                } else {
-                    // crap, now i have to make the chain
-                    while (namespace.length > 1) {
-                        parent = parent.module(namespace[0]);
-                        namespace.shift();
-                    }
-                }
-                parentModulesDirective = parent.directive(CHILDREN);
-                name = namespace.join(PERIOD);
-                module = parentModulesDirective.get(ID, name);
-                if (!module) {
-                    parentIsModule = _.isInstance(parent, Module);
-                    if (parentIsModule) {
-                        namespace.unshift(globalname);
-                    }
-                    namespace = namespace.join(PERIOD);
-                    module = Module({
-                        id: name,
-                        globalname: namespace
-                    }, {
-                        application: app,
-                        parent: parent
-                    });
-                    if (module.topLevel()) {
-                        parentModulesDirective.add(module);
-                    } else {
-                        parent.add(module);
-                    }
-                    parentModulesDirective.register(ID, name, module);
-                    app[CHILDREN].register(ID, globalname, module);
-                }
-                if (!module.hasInitialized && isFunction(fn)) {
-                    module.hasInitialized = BOOLEAN_TRUE;
-                    module.handler(fn);
-                }
-                return module;
-            },
-            run: function (fn) {
-                var module = this;
-                fn.apply(module, module.createArguments());
-                return module;
-            },
-            parentEvents: function () {
-                return {
-                    start: doStart,
-                    stop: doStop
-                };
-            },
-            exports: function (obj) {
-                extend(BOOLEAN_TRUE, this.get('exports'), obj);
-                return this;
-            },
-            createArguments: function () {
-                return [this].concat(this.application.createArguments());
-            },
-            constructor: function (attrs, opts) {
-                var module = this;
-                module.application = opts.application;
-                module.handlers = Collection();
-                Box[CONSTRUCTOR].apply(this, arguments);
-                return module;
-            },
-            defaults: function () {
-                return {
-                    startWithParent: BOOLEAN_TRUE,
-                    stopWithParent: BOOLEAN_TRUE,
-                    exports: {}
-                };
-            },
-            topLevel: function () {
-                return this.application === this[PARENT];
-            },
-            childOptions: function () {
-                return {
-                    application: this.application,
-                    parent: this
-                };
-            },
-            handler: function (fn) {
-                var module = this;
-                module.handlers.push(fn);
-                module.run(fn);
-                return module;
-            }
-        }),
-        Module = factories.Box.extend('Module', moduleMethods, BOOLEAN_TRUE),
-        appextendresult = app.extend(extend({}, moduleMethods, {
-            _extraModuleArguments: [],
-            /**
-             * @func
-             * @name Specless#baseModuleArguments
-             * @returns {Array} list of base arguments to apply to submodules
-             */
-            baseModuleArguments: function () {
-                var app = this;
-                return [app, app._, app._ && app._.factories];
-            },
-            /**
-             * @func
-             * @name Specless#addModuleArguments
-             * @param {Array} arr - list of arguments that will be added to the extraModule args list
-             * @returns {Specless} instance
-             */
-            addModuleArguments: function (arr) {
-                var app = this;
-                _.duff(arr, function (item) {
-                    _.add(app[_EXTRA_MODULE_ARGS], item);
-                });
-                return app;
-            },
-            /**
-             * @func
-             * @name Specless#removeModuleArguments
-             * @param {Array} arr - list of objects or functions that will be removed from the extraModuleArgs
-             * @returns {Specless} instance
-             */
-            removeModuleArguments: function (arr) {
-                var app = this;
-                _.duff(arr, function (item) {
-                    _.remove(app[_EXTRA_MODULE_ARGS], item);
-                });
-                return app;
-            },
-            /**
-             * @func
-             * @name Specless#createArguments
-             * @returns {Object[]}
-             */
-            createArguments: function () {
-                return this.baseModuleArguments().concat(this[_EXTRA_MODULE_ARGS]);
-            },
-            require: function (modulename) {
-                // var module = this.module(modulename);
-                var module = this[CHILDREN].get(ID, modulename) || exception({
-                    message: 'that module does not exist yet'
-                });
-                return module.get('exports');
-            }
-        }));
-    app.defineDirective('modules', function () {
-        return Collection();
-    });
-});
-application.scope().module('Looper', function (module, app, _, factories) {
-    var x = 0,
-        lastTime = 0,
-        pI = _.pI,
-        posit = _.posit,
-        nowish = _.now,
-        gapSplit = _.gapSplit,
-        vendors = gapSplit('ms moz webkit o'),
-        REQUEST_ANIMATION_FRAME = 'requestAnimationFrame',
-        CANCEL_ANIMATION_FRAME = 'cancelAnimationFrame',
-        allLoopers = [],
-        runningLoopers = [],
-        eachCall = _.eachCall,
-        time = _.time,
-        remove = _.remove,
-        running = BOOLEAN_FALSE,
-        setup = function () {
-            running = BOOLEAN_TRUE;
-            win[REQUEST_ANIMATION_FRAME](function (time) {
-                eachCall(runningLoopers, 'run', time);
-                teardown();
-            });
-        },
-        teardown = function () {
-            duffRight(runningLoopers, function (looper, idx) {
-                if (looper.halted() || looper.stopped() || looper.destroyed() || !looper.length()) {
-                    looper.stop();
-                    runningLoopers.splice(idx, 1);
-                }
-            });
-            running = BOOLEAN_FALSE;
-            if (runningLoopers[LENGTH]) {
-                setup();
-            }
-        },
-        add = function (looper) {
-            allLoopers.push(looper);
-        },
-        start = function (looper) {
-            if (!posit(runningLoopers, looper)) {
-                runningLoopers.push(looper);
-            }
-            if (!running) {
-                setup();
-            }
-        },
-        shim = (function () {
-            for (; x < vendors[LENGTH] && !win[REQUEST_ANIMATION_FRAME]; ++x) {
-                win[REQUEST_ANIMATION_FRAME] = win[vendors[x] + 'RequestAnimationFrame'];
-                win[CANCEL_ANIMATION_FRAME] = win[vendors[x] + _.upCase(CANCEL_ANIMATION_FRAME)] || win[vendors[x] + 'CancelRequestAnimationFrame'];
-            }
-            if (!win[REQUEST_ANIMATION_FRAME]) {
-                win[REQUEST_ANIMATION_FRAME] = function (callback) {
-                    var currTime = new Date().getTime(),
-                        timeToCall = Math.max(0, 16 - (currTime - lastTime)),
-                        id = win.setTimeout(function () {
-                            callback(currTime + timeToCall);
-                        }, timeToCall);
-                    lastTime = currTime + timeToCall;
-                    return id;
-                };
-            }
-            if (!win[CANCEL_ANIMATION_FRAME]) {
-                win[CANCEL_ANIMATION_FRAME] = function (id) {
-                    win.clearTimeout(id);
-                };
-            }
-        }()),
-        Looper = factories.Directive.extend('Looper', {
-            constructor: function (_runner) {
-                var fns, stopped = BOOLEAN_TRUE,
-                    halted = BOOLEAN_FALSE,
-                    destroyed = BOOLEAN_FALSE,
-                    running = BOOLEAN_FALSE,
-                    looper = this,
-                    counter = 0,
-                    fnList = [],
-                    addList = [],
-                    removeList = [],
-                    combineAdd = function () {
-                        if (addList[LENGTH]) {
-                            fnList = fnList.concat(addList);
-                            addList = [];
-                        }
-                    };
-                // keeps things private
-                extend(looper, {
-                    length: function () {
-                        return fnList[LENGTH];
-                    },
-                    destroy: function () {
-                        destroyed = BOOLEAN_TRUE;
-                        // remove(allLoopers, this);
-                        return this.halt();
-                    },
-                    destroyed: function () {
-                        return destroyed;
-                    },
-                    running: function () {
-                        // actual object that is currently being run
-                        return !!running;
-                    },
-                    started: function () {
-                        return !stopped;
-                    },
-                    run: function () {
-                        var tween = this,
-                            removeLater = [],
-                            _nowish = nowish();
-                        if (halted || stopped) {
-                            return;
-                        }
-                        combineAdd();
-                        duff(fnList, function (fnObj) {
-                            if (indexOf(removeList, fnObj) !== -1) {
-                                removeLater.push(fnObj);
-                            } else {
-                                if (fnObj.disabled || halted) {
-                                    return;
-                                }
-                                running = fnObj;
-                                wraptry(function () {
-                                    fnObj.fn(_nowish);
-                                });
-                            }
-                        });
-                        running = BOOLEAN_FALSE;
-                        combineAdd();
-                        duff(removeList.concat(removeLater), function (item) {
-                            remove(fnList, item);
-                        });
-                        removeList = [];
-                    },
-                    remove: function (id) {
-                        var fnObj, i = 0,
-                            ret = BOOLEAN_FALSE;
-                        if (!arguments[LENGTH]) {
-                            if (running) {
-                                removeList.push(running);
-                                return BOOLEAN_TRUE;
-                            }
-                        }
-                        if (isNumber(id)) {
-                            for (; i < fnList[LENGTH] && !ret; i++) {
-                                fnObj = fnList[i];
-                                if (fnObj.id === id) {
-                                    if (!posit(removeList, fnObj)) {
-                                        removeList.push(fnObj);
-                                        ret = BOOLEAN_TRUE;
-                                    }
-                                }
-                            }
-                        }
-                        return !!ret;
-                    },
-                    stop: function () {
-                        stopped = BOOLEAN_TRUE;
-                        return this;
-                    },
-                    start: function () {
-                        var looper = this;
-                        stopped = BOOLEAN_FALSE;
-                        halted = BOOLEAN_FALSE;
-                        return looper;
-                    },
-                    halt: function () {
-                        halted = BOOLEAN_TRUE;
-                        return this.stop();
-                    },
-                    halted: function () {
-                        return halted;
-                    },
-                    stopped: function () {
-                        return stopped;
-                    },
-                    reset: function () {
-                        fnList = [];
-                        removeList = [];
-                        addList = [];
-                        return this;
-                    },
-                    add: function (fn) {
-                        var obj, id = counter,
-                            tween = this;
-                        if (!isFunction(fn)) {
-                            return;
-                        }
-                        if (!fnList[LENGTH]) {
-                            tween.start();
-                        }
-                        start(tween);
-                        obj = {
-                            fn: tween.bind(fn),
-                            id: id,
-                            disabled: BOOLEAN_FALSE,
-                            bound: tween
-                        };
-                        if (tween.running()) {
-                            addList.push(obj);
-                        } else {
-                            fnList.push(obj);
-                        }
-                        counter++;
-                        return id;
-                    }
-                });
-                add(looper);
-                return looper;
-            },
-            bind: function (fn) {
-                return bind(fn, this);
-            },
-            once: function (fn) {
-                return this.count(1, fn);
-            },
-            count: function (timey, fn_) {
-                var fn, count = 0,
-                    times = pI(timey) || 1;
-                if (!fn_ && isFunction(times)) {
-                    fn_ = timey;
-                    times = 1;
-                }
-                if (!isFunction(fn_)) {
-                    return;
-                }
-                fn = this.bind(fn_);
-                if (times < 1 || !isNumber(times)) {
-                    times = 1;
-                }
-                return this.add(function (ms) {
-                    var last = 1;
-                    count++;
-                    if (count >= times) {
-                        this.remove();
-                        last = 0;
-                    }
-                    fn(ms, !last, count);
-                });
-            },
-            tween: function (time__, fn_) {
-                var fn, added = nowish(),
-                    time_ = _.time(time__);
-                if (!time_) {
-                    time_ = 0;
-                }
-                if (!isFunction(fn_)) {
-                    return;
-                }
-                fn = this.bind(fn_);
-                return this.interval(0, function (ms) {
-                    var tween = 1,
-                        diff = ms - added;
-                    if (diff >= time_) {
-                        tween = 0;
-                        this.remove();
-                    }
-                    fn(ms, Math.min(1, (diff / time_)), !tween);
-                });
-            },
-            time: function (time_, fn_) {
-                var fn;
-                if (!isFunction(fn_)) {
-                    return this;
-                }
-                fn = this.bind(fn_);
-                return this.interval(time(time_), function (ms) {
-                    this.remove();
-                    fn(ms);
-                });
-            },
-            frameRate: function (time__, fn_, min) {
-                var fn, tween = this,
-                    minimum = Math.min(min || 0.8, 0.8),
-                    expectedFrameRate = 30 * minimum,
-                    lastDate = 1,
-                    lastSkip = nowish(),
-                    time_ = time__ || 125;
-                if (!isFunction(fn_)) {
-                    return tween;
-                }
-                fn = this.bind(fn_);
-                return tween.add(function (ms) {
-                    var frameRate = 1000 / (ms - lastDate);
-                    if (frameRate > 40) {
-                        expectedFrameRate = 60 * minimum;
-                    }
-                    if (frameRate < expectedFrameRate) {
-                        lastSkip = ms;
-                    }
-                    if (ms - lastSkip > time_) {
-                        this.remove();
-                        fn(ms);
-                    }
-                    lastDate = ms;
-                });
-            },
-            interval: function (time, fn_) {
-                var fn, last = nowish();
-                if (!isFunction(fn_)) {
-                    return;
-                }
-                if (!time) {
-                    time = 0;
-                }
-                fn = this.bind(fn_);
-                return this.add(function (ms) {
-                    if (ms - time >= last) {
-                        last = ms;
-                        fn(ms);
-                    }
-                });
-            }
-        }, BOOLEAN_TRUE);
-    _.exports({
-        AF: Looper()
-    });
-});
-application.scope().module('Promise', function (module, app, _, factories) {
-    var FAILURE = 'failure',
+        FAILURE = 'failure',
         SUCCESS = 'success',
         STATE = 'state',
         ALWAYS = 'always',
@@ -4878,8 +4318,10 @@ application.scope().module('Promise', function (module, app, _, factories) {
                 return resulting;
             };
         },
-        Promise = factories.Box.extend('Promise', {
+        Promise = _.Promise = factories.Box.extend('Promise', {
             addState: addState,
+            isFulfilled: stateChecker(SUCCESS),
+            isRejected: stateChecker(FAILURE),
             childEvents: {
                 always: 'check'
             },
@@ -4953,8 +4395,6 @@ application.scope().module('Promise', function (module, app, _, factories) {
                 });
                 return results;
             },
-            isFulfilled: stateChecker(SUCCESS),
-            isRejected: stateChecker(FAILURE),
             resolved: function () {
                 // allows resolved to be defined in a different way
                 return this.get('resolved');
@@ -5045,238 +4485,14 @@ application.scope().module('Promise', function (module, app, _, factories) {
         when: when
     });
 });
-application.scope().module('Ajax', function (module, app, _, factories) {
-    var gapSplit = _.gapSplit,
-        duff = _.duff,
-        each = _.each,
-        unCamelCase = _.unCamelCase,
-        posit = _.posit,
-        result = _.result,
-        wraptry = _.wraptry,
-        BOOLEAN_TRUE = !0,
-        BOOLEAN_FALSE = !1,
-        STATUS = 'status',
-        FAILURE = 'failure',
-        SUCCESS = 'success',
-        READY_STATE = 'readyState',
-        XDomainRequest = win.XDomainRequest,
-        isObject = _.isObject,
-        isArray = _.isArray,
-        stringify = _.stringify,
-        parse = _.parse,
-        extend = _.extend,
-        stringifyQuery = _.stringifyQuery,
-        GET = 'GET',
-        validTypes = gapSplit(GET + ' POST PUT DELETE'),
-        baseEvents = gapSplit('progress timeout abort error'),
-        /**
-         * @description helper function to attach a bunch of event listeners to the request object as well as help them trigger the appropriate events on the Ajax object itself
-         * @private
-         * @arg {Ajax} instance to listen to
-         * @arg {Xhr} instance to place event handlers to trigger events on the Ajax instance
-         * @arg {string} event name
-         */
-        attachBaseListeners = function (ajax) {
-            var prog = 0,
-                req = ajax.requestObject;
-            duff(baseEvents, function (evnt) {
-                if (evnt === 'progress') {
-                    req['on' + evnt] = function (e) {
-                        prog++;
-                        ajax.executeHandlers(evnt, {
-                            percent: (e.loaded / e.total) || (prog / (prog + 1)),
-                            counter: prog
-                        });
-                    };
-                } else {
-                    req['on' + evnt] = function (e) {
-                        ajax.resolveAs(evnt);
-                    };
-                }
-            });
-        },
-        sendthething = function (xhrReq, args) {
-            return function () {
-                wraptry(function () {
-                    xhrReq.send.apply(xhrReq, args);
-                }, function (e) {
-                    // handle an xhr req send error here
-                    factories.reportError('xhr', e + EMPTY_STRING);
-                });
-            };
-        },
-        alterurlHandler = function () {
-            var ajax = this,
-                xhrReq = ajax.requestObject,
-                type = ajax.get('type'),
-                url = ajax.getUrl(),
-                args = [],
-                data = ajax.get('data');
-            if (!url) {
-                return;
-            }
-            ajax.attachResponseHandler();
-            xhrReq.open(type, url, ajax.get('async'));
-            if (data) {
-                args.push(stringify(data));
-            }
-            ajax.setHeaders(ajax.get('headers'));
-            attachBaseListeners(ajax);
-            // have to wrap in set timeout for ie
-            setTimeout(sendthething(xhrReq, args));
-        },
-        /**
-         * @class Ajax
-         * @alias factories.Ajax
-         * @augments Box
-         * @augments Model
-         * @classdesc XHR object wrapper Triggers events based on xhr state changes and abstracts many anomalies that have to do with IE
-         */
-        Ajax = factories.Promise.extend('Ajax', {
-            /**
-             * @func
-             * @name Ajax#constructor
-             * @param {string} str - url to get from
-             * @returns {Ajax} new ajax object
-             */
-            constructor: function (str, secondary) {
-                var promise, url, thingToDo, typeThing, type, xhrReq, ajax = this,
-                    method = 'onreadystatechange';
-                // Add a cache buster to the url
-                // ajax.async = BOOLEAN_TRUE;
-                xhrReq = new XMLHttpRequest();
-                // covers ie9
-                if (!_.isUndefined(XDomainRequest)) {
-                    xhrReq = new XDomainRequest();
-                    method = 'onload';
-                }
-                if (!_.isObject(str)) {
-                    str = str || EMPTY_STRING;
-                    type = GET;
-                    typeThing = str.toUpperCase();
-                    if (posit(validTypes, typeThing)) {
-                        type = typeThing;
-                    } else {
-                        url = str;
-                    }
-                    str = {
-                        url: url || EMPTY_STRING,
-                        type: type
-                    };
-                }
-                str.async = BOOLEAN_TRUE;
-                str.type = (str.type || GET).toUpperCase();
-                str.method = method;
-                factories.Promise.constructor.apply(ajax);
-                ajax.on('change:url', alterurlHandler);
-                extend(ajax, secondary);
-                ajax.requestObject = xhrReq;
-                ajax.set(str);
-                return ajax;
-            },
-            status: function (code, handler) {
-                return this.handle(STATUS + ':' + code, handler);
-            },
-            setHeaders: function (headers) {
-                var ajax = this,
-                    xhrReq = ajax.requestObject;
-                each(headers, function (val, key) {
-                    xhrReq.setRequestHeader(unCamelCase(key), val);
-                });
-                return ajax;
-            },
-            /**
-             * @description specialized function to stringify url if it is an object
-             * @returns {string} returns the completed string that will be fetched / posted / put / or deleted against
-             * @name Ajax#getUrl
-             */
-            getUrl: function () {
-                var url = this.get('url');
-                if (isObject(url) && !isArray(url)) {
-                    url = stringifyQuery(url);
-                }
-                return url;
-            },
-            /**
-             * @description makes public the ability to attach a response handler if one has not already been attached. We recommend not passing a function in and instead just listening to the various events that the xhr object will trigger directly, or indirectly on the ajax object
-             * @param {function} [fn=handler] - pass in a function to have a custom onload, onreadystatechange handler
-             * @returns {ajax}
-             * @name Ajax#attachResponseHandler
-             */
-            auxilaryStates: function () {
-                return {
-                    'status:200': SUCCESS,
-                    'status:202': SUCCESS,
-                    'status:205': SUCCESS,
-                    'status:302': SUCCESS,
-                    'status:304': SUCCESS,
-                    'status:400': FAILURE,
-                    'status:401': FAILURE,
-                    'status:403': FAILURE,
-                    'status:404': FAILURE,
-                    'status:405': FAILURE,
-                    'status:406': FAILURE,
-                    'status:500': FAILURE,
-                    'status:502': FAILURE,
-                    'status:505': FAILURE,
-                    'status:511': FAILURE,
-                    timeout: FAILURE,
-                    abort: FAILURE
-                };
-            },
-            parse: function (rawData) {
-                return parse(rawData);
-            },
-            attachResponseHandler: function () {
-                var ajax = this,
-                    xhrReqObj = ajax.requestObject,
-                    hasFinished = BOOLEAN_FALSE,
-                    method = ajax.get('method'),
-                    handler = function (evnt) {
-                        var status, doIt, allStates, rawData, readystate, xhrReqObj = this;
-                        if (!xhrReqObj || hasFinished) {
-                            return;
-                        }
-                        status = xhrReqObj[STATUS];
-                        readystate = xhrReqObj[READY_STATE];
-                        rawData = xhrReqObj.responseText;
-                        ajax.currentEvent = evnt;
-                        ajax.set('readystate', readystate);
-                        if (method === 'onload' || (method === 'onreadystatechange' && readystate === 4)) {
-                            ajax.set(STATUS, status);
-                            allStates = result(ajax, 'allStates');
-                            if (allStates[STATUS + ':' + xhrReqObj[STATUS]] === SUCCESS) {
-                                rawData = result(ajax, 'parse', rawData);
-                            }
-                            rawData = parse(rawData);
-                            hasFinished = BOOLEAN_TRUE;
-                            ajax.resolveAs(STATUS + ':' + xhrReqObj[STATUS], rawData);
-                        }
-                    };
-                if (!xhrReqObj[method]) {
-                    xhrReqObj[method] = handler;
-                }
-                return ajax;
-            }
-        }, BOOLEAN_TRUE);
-    _.exports(_.foldl(validTypes, function (memo, key_) {
-        var key = key_;
-        key = key.toLowerCase();
-        memo[key] = function (url) {
-            return Ajax({
-                type: key_,
-                url: url
-            });
-        };
-        return memo;
-    }, {}));
-});
-application.scope().module('Associator', function (module, app, _, factories) {
+application.scope(function (app) {
     /**
      * @class Associator
      * @augments Model
      */
-    var ITEMS = 'items',
+    var _ = app._,
+        factories = _.factories,
+        ITEMS = 'items',
         DATASET = DATA + 'set',
         IS_ELEMENT = 'isElement',
         extend = _.extend,
@@ -5374,10 +4590,12 @@ application.scope().module('Associator', function (module, app, _, factories) {
         associator: Associator()
     });
 });
-application.scope().module('DOMM', function (module, app, _, factories) {
-    var posit = _.posit,
+application.scope(function (app) {
+    var _ = app._,
+        factories = _.factories,
+        posit = _.posit,
         Collection = factories.Collection,
-        elementData = _.associator,
+        elementData = factories.Associator(),
         DOMM_STRING = 'DOMM',
         NODE_TYPE = 'nodeType',
         LOCAL_NAME = 'localName',
@@ -5615,28 +4833,28 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             }
             return stringManager;
         },
-        trackedAttributeInterface = function (el, key, val, isProp, manager) {
-            // set or remove if not undefined
-            // undefined fills in the gap by returning some value, which is never undefined
-            var isArrayResult, cameledKey = camelCase(key),
-                el_interface = isProp ? propertyApi : attributeApi,
-                stringManager = !isProp && (manager || returnsElementData(el)).get(cameledKey),
-                readAttribute = el_interface.read(el, key);
-            if (!isProp && isString(readAttribute)) {
-                stringManager.ensure(readAttribute);
-            }
-            if (val == NULL) {
-                return readAttribute;
-            }
-            if (!val && val !== 0) {
-                el_interface.remove(el, key);
-            } else {
-                el_interface.write(el, key, isProp ? val : addRemoveAttributes(val, stringManager).generate(SPACE));
-            }
-            if (manager.isCustom && readAttribute !== el_interface.read(el, key)) {
-                manager.dispatchEvent('change:' + key);
-            }
-        },
+        // trackedAttributeInterface = function (el, key, val, isProp, manager) {
+        //     // set or remove if not undefined
+        //     // undefined fills in the gap by returning some value, which is never undefined
+        //     var isArrayResult, cameledKey = camelCase(key),
+        //         el_interface = isProp ? propertyApi : attributeApi,
+        //         stringManager = !isProp && (manager || returnsElementData(el)).get(cameledKey),
+        //         readAttribute = el_interface.read(el, key);
+        //     if (!isProp && isString(readAttribute)) {
+        //         stringManager.ensure(readAttribute);
+        //     }
+        //     if (val == NULL) {
+        //         return readAttribute;
+        //     }
+        //     if (!val && val !== 0) {
+        //         el_interface.remove(el, key);
+        //     } else {
+        //         el_interface.write(el, key, isProp ? val : addRemoveAttributes(val, stringManager).generate(SPACE));
+        //     }
+        //     if (manager.isCustom && readAttribute !== el_interface.read(el, key)) {
+        //         manager.dispatchEvent('change:' + key);
+        //     }
+        // },
         DO_NOT_TRUST = BOOLEAN_FALSE,
         cannotTrust = function (fn) {
             return function () {
@@ -5723,56 +4941,56 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         },
         ensureManager = function (manager, attribute, currentValue) {
             var _attributeManager = manager.get(attribute);
-            return _attributeManager.ensure(currentValue === BOOLEAN_TRUE ? '' : currentValue, SPACE);
+            return _attributeManager.ensure(currentValue === BOOLEAN_TRUE ? EMPTY_STRING : currentValue, SPACE);
         },
-        queueAttributes = function (attribute, first_, second_, api, merge, after) {
-            var first = gapSplit(first_),
-                second = gapSplit(second_);
-            return function (manager) {
-                var el = manager.unwrap();
-                var result = merge(ensureManager(manager, attribute, api.read(el, attribute)), first, second);
-                return after && api[after] && api[after](el, attribute, result.generate(SPACE));
-            };
-        },
-        DOMQueueAttributes = function (list, attribute, first_, second_, api, merge, after) {
-            duff(list, queueAttributes(attribute, first_, second_, api, merge, after));
-        },
-        ManagerQueueAttributes = function (manager, attribute, first_, second_, api, merge, after) {
-            queueAttributes(attribute, first_, second_, api, merge, after)(manager);
-        },
-        globalQueueAttributes = function (merge, multipleOrNot) {
-            return function (attribute, api, insides) {
-                return function (list, first, second, attribute_, insides_) {
-                    var inside = insides_ === UNDEFINED ? insides : insides_;
-                    return multipleOrNot(list, attribute_ || attribute, first, second, api, merge, inside);
-                };
-            };
-        },
-        _addAttributeValues = function (attributeManager, add) {
-            duff(add, attributeManager.add, attributeManager);
-            return attributeManager;
-        },
-        _removeAttributeValues = function (attributeManager, remove) {
-            duff(remove, attributeManager.remove, attributeManager);
-            return attributeManager;
-        },
-        _toggleAttributeValues = function (attributeManager, togglers) {
-            duff(togglers, attributeManager.toggle, attributeManager);
-            return attributeManager;
-        },
-        _changeAttributeValues = function (attributeManager, remove, add) {
-            return _addAttributeValues(_removeAttributeValues(attributeManager, remove), add);
-        },
-        _booleanAttributeValues = function (attributeManager, addremove, follows) {
-            // rework this
-            return (addremove ? _addAttributeValues : _removeAttributeValues)(attributeManager, follows);
-        },
-        // global attribute manager handlers
-        addAttributeValues = globalQueueAttributes(_addAttributeValues, DOMQueueAttributes),
-        removeAttributeValues = globalQueueAttributes(_removeAttributeValues, DOMQueueAttributes),
-        toggleAttributeValues = globalQueueAttributes(_toggleAttributeValues, DOMQueueAttributes),
-        changeAttributeValues = globalQueueAttributes(_changeAttributeValues, DOMQueueAttributes),
-        booleanAttributeValues = globalQueueAttributes(_booleanAttributeValues, DOMQueueAttributes),
+        // queueAttributes = function (attribute, first_, second_, api, merge, after) {
+        //     var first = gapSplit(first_),
+        //         second = gapSplit(second_);
+        //     return function (manager) {
+        //         var el = manager.unwrap();
+        //         var result = merge(ensureManager(manager, attribute, api.read(el, attribute)), first, second);
+        //         return after && api[after] && api[after](el, attribute, result.generate(SPACE));
+        //     };
+        // },
+        // DOMQueueAttributes = function (list, attribute, first_, second_, api, merge, after) {
+        //     duff(list, queueAttributes(attribute, first_, second_, api, merge, after));
+        // },
+        // ManagerQueueAttributes = function (manager, attribute, first_, second_, api, merge, after) {
+        //     queueAttributes(attribute, first_, second_, api, merge, after)(manager);
+        // },
+        // globalQueueAttributes = function (merge, multipleOrNot) {
+        //     return function (attribute, api, insides) {
+        //         return function (list, first, second, attribute_, insides_) {
+        //             var inside = insides_ === UNDEFINED ? insides : insides_;
+        //             return multipleOrNot(list, attribute_ || attribute, first, second, api, merge, inside);
+        //         };
+        //     };
+        // },
+        // _addAttributeValues = function (attributeManager, add) {
+        //     duff(add, attributeManager.add, attributeManager);
+        //     return attributeManager;
+        // },
+        // _removeAttributeValues = function (attributeManager, remove) {
+        //     duff(remove, attributeManager.remove, attributeManager);
+        //     return attributeManager;
+        // },
+        // _toggleAttributeValues = function (attributeManager, togglers) {
+        //     duff(togglers, attributeManager.toggle, attributeManager);
+        //     return attributeManager;
+        // },
+        // _changeAttributeValues = function (attributeManager, remove, add) {
+        //     return _addAttributeValues(_removeAttributeValues(attributeManager, remove), add);
+        // },
+        // _booleanAttributeValues = function (attributeManager, addremove, follows) {
+        //     // rework this
+        //     return (addremove ? _addAttributeValues : _removeAttributeValues)(attributeManager, follows);
+        // },
+        // // global attribute manager handlers
+        // addAttributeValues = globalQueueAttributes(_addAttributeValues, DOMQueueAttributes),
+        // removeAttributeValues = globalQueueAttributes(_removeAttributeValues, DOMQueueAttributes),
+        // toggleAttributeValues = globalQueueAttributes(_toggleAttributeValues, DOMQueueAttributes),
+        // changeAttributeValues = globalQueueAttributes(_changeAttributeValues, DOMQueueAttributes),
+        // booleanAttributeValues = globalQueueAttributes(_booleanAttributeValues, DOMQueueAttributes),
         // scoped to class
         // classNameApi = {
         //     read: getClassName,
@@ -6257,7 +5475,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 parent = createElement(DIV, returnsElementData(element.ownerDocument));
                 parent[APPEND_CHILD](element);
             }
-            return !!posit(Sizzle(selector, parent), element);
+            return !!posit(sizzle(selector, parent), element);
         },
         createDocumentFragment = function (nulled, context) {
             return context[TARGET].createDocumentFragment();
@@ -6339,9 +5557,9 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             }
             return key;
         },
-        dataAttributeManipulator = function (el, _key, val, isProp, data) {
-            return trackedAttributeInterface(el, makeDataKey(_key), val, isProp, data);
-        },
+        // dataAttributeManipulator = function (el, _key, val, isProp, data) {
+        //     return trackedAttributeInterface(el, makeDataKey(_key), val, isProp, data);
+        // },
         styleAttributeManipulator = function (manager, key, value) {
             var element = manager[TARGET];
             if (manager.isElement) {
@@ -6364,14 +5582,11 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             return val;
         },
         styleAttributeMeat = function (manager, key, value, list, hash, handler, isProperty) {
-            var j, prefixes, cameledKey = camelCase(key),
+            var finalProp, j, prefixes, cameledKey = camelCase(key),
                 element = manager.unwrap();
             list.push(cameledKey);
             if (value != NULL) {
-                prefixes = [EMPTY_STRING];
-                if (prefixedStyles[cameledKey]) {
-                    prefixes = prefixedStyles[cameledKey].concat(prefixes);
-                }
+                prefixes = [EMPTY_STRING] || prefixedStyles[cameledKey];
                 for (j = 0; j < prefixes[LENGTH]; j++) {
                     finalProp = camelCase(prefixes[j] + cameledKey);
                     handler(manager, finalProp, modifyFinalStyle(finalProp, value));
@@ -6380,19 +5595,19 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 hash[key] = getComputed(firstEl)[cameledKey];
             }
         },
-        domAttributeMeat = function (manager, key, value, list, hash, handler, isProperty) {
-            var unCameledKey = unCamelCase(key),
-                element = manager.unwrap();
-            if (unCameledKey === CLASS__NAME) {
-                isProperty = isString(element[CLASSNAME]);
-                unCameledKey = discernClassProperty(isProperty);
-            }
-            value = handler(element, unCameledKey, value, isProperty, manager);
-            list.push(key);
-            if (value !== UNDEFINED) {
-                hash[key] = value;
-            }
-        },
+        // domAttributeMeat = function (manager, key, value, list, hash, handler, isProperty) {
+        //     var unCameledKey = unCamelCase(key),
+        //         element = manager.unwrap();
+        //     if (unCameledKey === CLASS__NAME) {
+        //         isProperty = isString(element[CLASSNAME]);
+        //         unCameledKey = discernClassProperty(isProperty);
+        //     }
+        //     value = handler(element, unCameledKey, value, isProperty, manager);
+        //     list.push(key);
+        //     if (value !== UNDEFINED) {
+        //         hash[key] = value;
+        //     }
+        // },
         DomManagerRunsInstances = function (handler, key, value, list, hash, diffHandler, isProperty) {
             return function (manager) {
                 return handler(manager, key, value, list, hash, diffHandler, isProperty);
@@ -6419,10 +5634,6 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 };
             };
         },
-        dataManipulator = domAttributeManipulator(domAttributeMeat, dataAttributeManipulator),
-        attrManipulator = domAttributeManipulator(domAttributeMeat, trackedAttributeInterface),
-        propManipulator = domAttributeManipulator(domAttributeMeat, trackedAttributeInterface, BOOLEAN_TRUE),
-        styleManipulator = domAttributeManipulator(styleAttributeMeat, styleAttributeManipulator),
         attachPrevious = function (fn) {
             return function () {
                 var prev = this,
@@ -6681,7 +5892,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 }
             } else {
                 el[attribute] = value || EMPTY_STRING;
-                duff(Sizzle(CUSTOM_ATTRIBUTE, el), returnsElementData);
+                duff(sizzle(CUSTOM_ATTRIBUTE, el), returnsElementData);
             }
         },
         innardManipulator = function (attribute, queryForCreation) {
@@ -6759,11 +5970,12 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         },
         dispatchDetached = dispatchDomEvent('detach', BOOLEAN_FALSE),
         dispatchAttached = dispatchDomEvent('attach', BOOLEAN_TRUE),
-        applyStyle = function (manager, key, value) {
-            var element = manager[TARGET];
+        applyStyle = function (key, value, manager) {
+            var cached, element = manager[TARGET];
             if (manager.isElement && element[STYLE][key] !== value) {
-                element[STYLE][key] = value;
-                return BOOLEAN_TRUE;
+                cached = attributeApi.read(element, STYLE);
+                element[STYLE][key] = convertStyleValue(key, value);
+                return attributeApi.read(element, STYLE) !== cached;
             }
             return BOOLEAN_FALSE;
         },
@@ -6820,6 +6032,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                     }
                     return returnValue;
                 }
+                attributeManager.api = api;
                 intendedObject(second_, third_, function (second, third) {
                     var currentMerge = merge || (third === BOOLEAN_TRUE ? 'add' : (third === BOOLEAN_FALSE ? 'remove' : 'toggle'));
                     attributeValuesHash[currentMerge](attributeManager, gapSplit(second), third, read);
@@ -6869,7 +6082,6 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         changeValue = unmarkChange(domAttributeManipulatorExtended(queueAttributeValues, 'change', attributeApi)),
         getValue = domAttributeManipulatorExtended(queueAttributeValues, 'get', attributeApi),
         hasValue = domAttributeManipulatorExtended(hasAttributeValue, 'has', attributeApi),
-        getsAndSets = function (first, second, NULL, api, handler, keyprocess) {},
         getSetter = function (proc, givenApi, keyprocess) {
             return function (understandsContext) {
                 return function (first, second_, api_) {
@@ -6895,9 +6107,6 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         attrApi = getSetter(queueAttributeValues, attributeApi, unCamelCase),
         dataApi = getSetter(queueAttributeValues, attributeApi, makeDataKey),
         propApi = getSetter(queueAttributeValues, propertyApi, unCamelCase),
-        managerFirst = function (handler, context) {
-            return handler(context);
-        },
         managerIterates = function (handler, context) {
             handler(context);
             return context;
@@ -6935,13 +6144,13 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             }
         },
         markElement = function (manager) {
-            var isIframe, el = manager[TARGET];
-            if ((manager.isElement = isElement(el))) {
-                isIframe = manager.isIframe = tag(el, 'iframe');
-                markCustom(manager);
-                if (isIframe) {
-                    manager.isFriendly = testIframe(el);
+            var isIframe, element = manager[TARGET];
+            if ((manager.isElement = isElement(element))) {
+                manager.tagName = tag(element);
+                if ((manager.isIframe = manager.tagName === IFRAME)) {
+                    manager.isFriendly = testIframe(element);
                 }
+                markCustom(manager);
             }
         },
         test = function (manager) {
@@ -6954,6 +6163,9 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         },
         registeredElementName = function (name, manager) {
             return ELEMENT + HYPHEN + manager.documentId + HYPHEN + name;
+        },
+        sizzle = function (str, ctx) {
+            return (ctx || doc_).querySelectorAll(str);
         },
         DOMM_SETUP = factories.DOMM_SETUP = function (doc_) {
             var wrapped, manager = returnsElementData(doc_),
@@ -6982,6 +6194,9 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                     return handler(one, manager);
                 };
             }), {
+                sizzle: function (str) {
+                    return sizzle(str, doc_);
+                },
                 scoped: scoped,
                 documentId: manager.documentId,
                 manager: manager,
@@ -7053,7 +6268,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             return scoped;
         },
         classApi = makeValueTarget('class', 'className', propertyApi),
-        DomManager = factories.Events.extend('DomManager', _.extend(classApi, {
+        DomManager = factories.Events.extend('DomManager', extend(classApi, {
             constructor: function (el) {
                 var owner, manager = this;
                 manager[TARGET] = el;
@@ -7095,7 +6310,8 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             children: function (eq, globalmemo) {
                 var filter = createDomFilter(eq);
                 var manager = this;
-                var result = foldl(collectChildren(manager.unwrap()), function (memo, child, idx, children) {
+                var children = collectChildren(manager.unwrap());
+                var result = foldl(children, function (memo, child, idx, children) {
                     if (filter(child, idx, children)) {
                         memo.push(returnsElementData(child));
                     }
@@ -7132,8 +6348,12 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 return manager;
             },
             applyStyle: function (key, value) {
-                return applyStyle(this, key, value);
+                return applyStyle(key, value, this);
             },
+            style: function (key, value) {
+                return intendedObject(key, value, this.applyStyle, this);
+            },
+            css: function () {},
             getStyle: function (eq) {
                 var returnValue = {},
                     manager = this,
@@ -7142,9 +6362,6 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                     returnValue = getComputed(first, manager.context);
                 }
                 return returnValue;
-            },
-            style: function (key, value) {
-                return intendedObject(key, value, this.applyStyle, this);
             },
             remove: function (fragment) {
                 var el, parent, manager = this,
@@ -7172,11 +6389,11 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 // destroy events
                 manager.resetEvents();
                 // remove from global hash
-                _.associator.remove(manager[TARGET]);
+                elementData.remove(manager[TARGET]);
             },
             $: function (selector) {
                 var target = this[TARGET];
-                return $(Sizzle(selector, target), target);
+                return $(sizzle(selector, target), target);
             },
             createEvent: function (original, type, opts) {
                 return DomEvent(original, {
@@ -7545,7 +6762,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 };
             return duff(this.unwrap(), function (el) {
                 if (passedString) {
-                    duff(Sizzle(str, el.unwrap()), push);
+                    duff(sizzle(str, el.unwrap()), push);
                 } else {
                     push(el);
                 }
@@ -7569,15 +6786,12 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         loadData = function (data, items) {
             return data || foldl(items || this.unwrap(), returnsElementData, []);
         },
-        Sizzle = function (str, ctx) {
-            return (ctx || doc).querySelectorAll(str);
-        },
         exportResult = _.exports({
             covers: covers,
             center: center,
             closer: closer,
             distance: distance,
-            Sizzle: Sizzle,
+            // sizzle: sizzle,
             escape: escape,
             unescape: unescape,
             // css: css,
@@ -7630,6 +6844,19 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 return element && element[property];
             };
         },
+        styleManipulator = function (one, two) {
+            var manager, styles;
+            if (isString(one) && two === UNDEFINED) {
+                return (manager = this.index(0)) && (styles = manager.getStyle()) && (prefix = _.find(prefixes[camelCase(one)], function (prefix) {
+                    return styles[prefix + unCameled] !== UNDEFINED;
+                })) && styles[prefix + unCameled];
+            } else {
+                if (this.length()) {
+                    this.duff(unmarkChange(intendedIteration(one, two, applyStyle)));
+                }
+                return this;
+            }
+        },
         DOMM = factories[DOMM_STRING] = factories.Collection.extend(DOMM_STRING, extend(makeValueTarget('class', 'className', propertyApi, BOOLEAN_TRUE), {
             /**
              * @func
@@ -7652,7 +6879,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                             if (str[0] === '<') {
                                 els = makeTree(str, documentContext);
                             } else {
-                                els = map(Sizzle(str, unwrapped), returnsElementData);
+                                els = map(sizzle(str, unwrapped), returnsElementData);
                             }
                         } else {
                             els = str;
@@ -7762,16 +6989,9 @@ application.scope().module('DOMM', function (module, app, _, factories) {
              * @param {...*} splat of objects and key value pairs that create a single object to be applied to the element
              * @returns {DOMM} instance
              */
-            css: styleManipulator(DOMproducesKeyValues),
-            // css: function (key, value) {
-            //     var dom = this,
-            //         ret = duff(dom.unwrap(), css(key, value));
-            //     if (ret == NULL) {
-            //         ret = dom;
-            //     }
-            //     return ret;
-            // },
-            // style: applyToEach('style'),
+            // css: styleManipulator(DOMproducesKeyValues),
+            css: styleManipulator,
+            style: styleManipulator,
             /**
              * @func
              * @name DOMM#allDom
@@ -7934,7 +7154,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                     element = manager && manager.unwrap() || NULL,
                     parent = first.index(),
                     parentEl = parent && parent.unwrap(),
-                    fragmentChildren = Sizzle(CUSTOM_ATTRIBUTE, frag),
+                    fragmentChildren = sizzle(CUSTOM_ATTRIBUTE, frag),
                     returnValue = parentEl && parentEl.insertBefore(frag, element),
                     notify = isAttached(parentEl) && each(fragmentChildren, dispatchAttached);
                 return returnValue;
@@ -8132,12 +7352,779 @@ application.scope().module('DOMM', function (module, app, _, factories) {
     $.collectTemplates();
     // register all custom elements...
     // everything that's created after this should go through the DomManager to be marked appropriately
-    duff(Sizzle(CUSTOM_ATTRIBUTE, win.document), returnsElementData);
+    duff($.sizzle(CUSTOM_ATTRIBUTE), returnsElementData);
     // add $ to module madness
     // app.addModuleArguments([$]);
     // define a hash for attribute caching
     app.defineDirective('attributes', function () {
         return {};
+    });
+});
+application.scope(function (app) {
+    var _ = app._,
+        factories = _.factories,
+        x = 0,
+        lastTime = 0,
+        pI = _.pI,
+        posit = _.posit,
+        nowish = _.now,
+        gapSplit = _.gapSplit,
+        vendors = gapSplit('ms moz webkit o'),
+        REQUEST_ANIMATION_FRAME = 'requestAnimationFrame',
+        CANCEL_ANIMATION_FRAME = 'cancelAnimationFrame',
+        allLoopers = [],
+        runningLoopers = [],
+        eachCall = _.eachCall,
+        time = _.time,
+        remove = _.remove,
+        running = BOOLEAN_FALSE,
+        setup = function () {
+            running = BOOLEAN_TRUE;
+            win[REQUEST_ANIMATION_FRAME](function (time) {
+                eachCall(runningLoopers, 'run', time);
+                teardown();
+            });
+        },
+        teardown = function () {
+            duffRight(runningLoopers, function (looper, idx) {
+                if (looper.halted() || looper.stopped() || looper.destroyed() || !looper.length()) {
+                    looper.stop();
+                    runningLoopers.splice(idx, 1);
+                }
+            });
+            running = BOOLEAN_FALSE;
+            if (runningLoopers[LENGTH]) {
+                setup();
+            }
+        },
+        add = function (looper) {
+            allLoopers.push(looper);
+        },
+        start = function (looper) {
+            if (!posit(runningLoopers, looper)) {
+                runningLoopers.push(looper);
+            }
+            if (!running) {
+                setup();
+            }
+        },
+        shim = (function () {
+            for (; x < vendors[LENGTH] && !win[REQUEST_ANIMATION_FRAME]; ++x) {
+                win[REQUEST_ANIMATION_FRAME] = win[vendors[x] + 'RequestAnimationFrame'];
+                win[CANCEL_ANIMATION_FRAME] = win[vendors[x] + _.upCase(CANCEL_ANIMATION_FRAME)] || win[vendors[x] + 'CancelRequestAnimationFrame'];
+            }
+            if (!win[REQUEST_ANIMATION_FRAME]) {
+                win[REQUEST_ANIMATION_FRAME] = function (callback) {
+                    var currTime = new Date().getTime(),
+                        timeToCall = Math.max(0, 16 - (currTime - lastTime)),
+                        id = win.setTimeout(function () {
+                            callback(currTime + timeToCall);
+                        }, timeToCall);
+                    lastTime = currTime + timeToCall;
+                    return id;
+                };
+            }
+            if (!win[CANCEL_ANIMATION_FRAME]) {
+                win[CANCEL_ANIMATION_FRAME] = function (id) {
+                    win.clearTimeout(id);
+                };
+            }
+        }()),
+        Looper = factories.Directive.extend('Looper', {
+            constructor: function (_runner) {
+                var fns, stopped = BOOLEAN_TRUE,
+                    halted = BOOLEAN_FALSE,
+                    destroyed = BOOLEAN_FALSE,
+                    running = BOOLEAN_FALSE,
+                    looper = this,
+                    counter = 0,
+                    fnList = [],
+                    addList = [],
+                    removeList = [],
+                    combineAdd = function () {
+                        if (addList[LENGTH]) {
+                            fnList = fnList.concat(addList);
+                            addList = [];
+                        }
+                    };
+                // keeps things private
+                extend(looper, {
+                    length: function () {
+                        return fnList[LENGTH];
+                    },
+                    destroy: function () {
+                        destroyed = BOOLEAN_TRUE;
+                        // remove(allLoopers, this);
+                        return this.halt();
+                    },
+                    destroyed: function () {
+                        return destroyed;
+                    },
+                    running: function () {
+                        // actual object that is currently being run
+                        return !!running;
+                    },
+                    started: function () {
+                        return !stopped;
+                    },
+                    run: function () {
+                        var tween = this,
+                            removeLater = [],
+                            _nowish = nowish();
+                        if (halted || stopped) {
+                            return;
+                        }
+                        combineAdd();
+                        duff(fnList, function (fnObj) {
+                            if (indexOf(removeList, fnObj) !== -1) {
+                                removeLater.push(fnObj);
+                            } else {
+                                if (fnObj.disabled || halted) {
+                                    return;
+                                }
+                                running = fnObj;
+                                wraptry(function () {
+                                    fnObj.fn(_nowish);
+                                });
+                            }
+                        });
+                        running = BOOLEAN_FALSE;
+                        combineAdd();
+                        duff(removeList.concat(removeLater), function (item) {
+                            remove(fnList, item);
+                        });
+                        removeList = [];
+                    },
+                    remove: function (id) {
+                        var fnObj, i = 0,
+                            ret = BOOLEAN_FALSE;
+                        if (!arguments[LENGTH]) {
+                            if (running) {
+                                removeList.push(running);
+                                return BOOLEAN_TRUE;
+                            }
+                        }
+                        if (isNumber(id)) {
+                            for (; i < fnList[LENGTH] && !ret; i++) {
+                                fnObj = fnList[i];
+                                if (fnObj.id === id) {
+                                    if (!posit(removeList, fnObj)) {
+                                        removeList.push(fnObj);
+                                        ret = BOOLEAN_TRUE;
+                                    }
+                                }
+                            }
+                        }
+                        return !!ret;
+                    },
+                    stop: function () {
+                        stopped = BOOLEAN_TRUE;
+                        return this;
+                    },
+                    start: function () {
+                        var looper = this;
+                        stopped = BOOLEAN_FALSE;
+                        halted = BOOLEAN_FALSE;
+                        return looper;
+                    },
+                    halt: function () {
+                        halted = BOOLEAN_TRUE;
+                        return this.stop();
+                    },
+                    halted: function () {
+                        return halted;
+                    },
+                    stopped: function () {
+                        return stopped;
+                    },
+                    reset: function () {
+                        fnList = [];
+                        removeList = [];
+                        addList = [];
+                        return this;
+                    },
+                    add: function (fn) {
+                        var obj, id = counter,
+                            tween = this;
+                        if (!isFunction(fn)) {
+                            return;
+                        }
+                        if (!fnList[LENGTH]) {
+                            tween.start();
+                        }
+                        start(tween);
+                        obj = {
+                            fn: tween.bind(fn),
+                            id: id,
+                            disabled: BOOLEAN_FALSE,
+                            bound: tween
+                        };
+                        if (tween.running()) {
+                            addList.push(obj);
+                        } else {
+                            fnList.push(obj);
+                        }
+                        counter++;
+                        return id;
+                    }
+                });
+                add(looper);
+                return looper;
+            },
+            bind: function (fn) {
+                return bind(fn, this);
+            },
+            once: function (fn) {
+                return this.count(1, fn);
+            },
+            count: function (timey, fn_) {
+                var fn, count = 0,
+                    times = pI(timey) || 1;
+                if (!fn_ && isFunction(times)) {
+                    fn_ = timey;
+                    times = 1;
+                }
+                if (!isFunction(fn_)) {
+                    return;
+                }
+                fn = this.bind(fn_);
+                if (times < 1 || !isNumber(times)) {
+                    times = 1;
+                }
+                return this.add(function (ms) {
+                    var last = 1;
+                    count++;
+                    if (count >= times) {
+                        this.remove();
+                        last = 0;
+                    }
+                    fn(ms, !last, count);
+                });
+            },
+            tween: function (time__, fn_) {
+                var fn, added = nowish(),
+                    time_ = _.time(time__);
+                if (!time_) {
+                    time_ = 0;
+                }
+                if (!isFunction(fn_)) {
+                    return;
+                }
+                fn = this.bind(fn_);
+                return this.interval(0, function (ms) {
+                    var tween = 1,
+                        diff = ms - added;
+                    if (diff >= time_) {
+                        tween = 0;
+                        this.remove();
+                    }
+                    fn(ms, Math.min(1, (diff / time_)), !tween);
+                });
+            },
+            time: function (time_, fn_) {
+                var fn;
+                if (!isFunction(fn_)) {
+                    return this;
+                }
+                fn = this.bind(fn_);
+                return this.interval(time(time_), function (ms) {
+                    this.remove();
+                    fn(ms);
+                });
+            },
+            frameRate: function (time__, fn_, min) {
+                var fn, tween = this,
+                    minimum = Math.min(min || 0.8, 0.8),
+                    expectedFrameRate = 30 * minimum,
+                    lastDate = 1,
+                    lastSkip = nowish(),
+                    time_ = time__ || 125;
+                if (!isFunction(fn_)) {
+                    return tween;
+                }
+                fn = this.bind(fn_);
+                return tween.add(function (ms) {
+                    var frameRate = 1000 / (ms - lastDate);
+                    if (frameRate > 40) {
+                        expectedFrameRate = 60 * minimum;
+                    }
+                    if (frameRate < expectedFrameRate) {
+                        lastSkip = ms;
+                    }
+                    if (ms - lastSkip > time_) {
+                        this.remove();
+                        fn(ms);
+                    }
+                    lastDate = ms;
+                });
+            },
+            interval: function (time, fn_) {
+                var fn, last = nowish();
+                if (!isFunction(fn_)) {
+                    return;
+                }
+                if (!time) {
+                    time = 0;
+                }
+                fn = this.bind(fn_);
+                return this.add(function (ms) {
+                    if (ms - time >= last) {
+                        last = ms;
+                        fn(ms);
+                    }
+                });
+            }
+        }, BOOLEAN_TRUE);
+    _.exports({
+        AF: Looper()
+    });
+});
+application.scope(function (app) {
+    var _ = app._,
+        factories = _.factories,
+        gapSplit = _.gapSplit,
+        duff = _.duff,
+        each = _.each,
+        unCamelCase = _.unCamelCase,
+        posit = _.posit,
+        result = _.result,
+        wraptry = _.wraptry,
+        BOOLEAN_TRUE = !0,
+        BOOLEAN_FALSE = !1,
+        STATUS = 'status',
+        FAILURE = 'failure',
+        SUCCESS = 'success',
+        READY_STATE = 'readyState',
+        XDomainRequest = win.XDomainRequest,
+        isObject = _.isObject,
+        isArray = _.isArray,
+        stringify = _.stringify,
+        parse = _.parse,
+        extend = _.extend,
+        stringifyQuery = _.stringifyQuery,
+        GET = 'GET',
+        validTypes = gapSplit(GET + ' POST PUT DELETE'),
+        baseEvents = gapSplit('progress timeout abort error'),
+        /**
+         * @description helper function to attach a bunch of event listeners to the request object as well as help them trigger the appropriate events on the Ajax object itself
+         * @private
+         * @arg {Ajax} instance to listen to
+         * @arg {Xhr} instance to place event handlers to trigger events on the Ajax instance
+         * @arg {string} event name
+         */
+        attachBaseListeners = function (ajax) {
+            var prog = 0,
+                req = ajax.requestObject;
+            duff(baseEvents, function (evnt) {
+                if (evnt === 'progress') {
+                    req['on' + evnt] = function (e) {
+                        prog++;
+                        ajax.executeHandlers(evnt, {
+                            percent: (e.loaded / e.total) || (prog / (prog + 1)),
+                            counter: prog
+                        });
+                    };
+                } else {
+                    req['on' + evnt] = function (e) {
+                        ajax.resolveAs(evnt);
+                    };
+                }
+            });
+        },
+        sendthething = function (xhrReq, args) {
+            return function () {
+                wraptry(function () {
+                    xhrReq.send.apply(xhrReq, args);
+                }, function (e) {
+                    // handle an xhr req send error here
+                    factories.reportError('xhr', e + EMPTY_STRING);
+                });
+            };
+        },
+        alterurlHandler = function () {
+            var ajax = this,
+                xhrReq = ajax.requestObject,
+                type = ajax.get('type'),
+                url = ajax.getUrl(),
+                args = [],
+                data = ajax.get('data');
+            if (!url) {
+                return;
+            }
+            ajax.attachResponseHandler();
+            xhrReq.open(type, url, ajax.get('async'));
+            if (data) {
+                args.push(stringify(data));
+            }
+            ajax.setHeaders(ajax.get('headers'));
+            attachBaseListeners(ajax);
+            // have to wrap in set timeout for ie
+            setTimeout(sendthething(xhrReq, args));
+        },
+        /**
+         * @class Ajax
+         * @alias factories.Ajax
+         * @augments Box
+         * @augments Model
+         * @classdesc XHR object wrapper Triggers events based on xhr state changes and abstracts many anomalies that have to do with IE
+         */
+        Ajax = factories.Promise.extend('Ajax', {
+            /**
+             * @func
+             * @name Ajax#constructor
+             * @param {string} str - url to get from
+             * @returns {Ajax} new ajax object
+             */
+            constructor: function (str, secondary) {
+                var promise, url, thingToDo, typeThing, type, xhrReq, ajax = this,
+                    method = 'onreadystatechange';
+                // Add a cache buster to the url
+                // ajax.async = BOOLEAN_TRUE;
+                xhrReq = new XMLHttpRequest();
+                // covers ie9
+                if (!_.isUndefined(XDomainRequest)) {
+                    xhrReq = new XDomainRequest();
+                    method = 'onload';
+                }
+                if (!_.isObject(str)) {
+                    str = str || EMPTY_STRING;
+                    type = GET;
+                    typeThing = str.toUpperCase();
+                    if (posit(validTypes, typeThing)) {
+                        type = typeThing;
+                    } else {
+                        url = str;
+                    }
+                    str = {
+                        url: url || EMPTY_STRING,
+                        type: type
+                    };
+                }
+                str.async = BOOLEAN_TRUE;
+                str.type = (str.type || GET).toUpperCase();
+                str.method = method;
+                factories.Promise.constructor.apply(ajax);
+                ajax.on('change:url', alterurlHandler);
+                extend(ajax, secondary);
+                ajax.requestObject = xhrReq;
+                ajax.set(str);
+                return ajax;
+            },
+            status: function (code, handler) {
+                return this.handle(STATUS + ':' + code, handler);
+            },
+            setHeaders: function (headers) {
+                var ajax = this,
+                    xhrReq = ajax.requestObject;
+                each(headers, function (val, key) {
+                    xhrReq.setRequestHeader(unCamelCase(key), val);
+                });
+                return ajax;
+            },
+            /**
+             * @description specialized function to stringify url if it is an object
+             * @returns {string} returns the completed string that will be fetched / posted / put / or deleted against
+             * @name Ajax#getUrl
+             */
+            getUrl: function () {
+                var url = this.get('url');
+                if (isObject(url) && !isArray(url)) {
+                    url = stringifyQuery(url);
+                }
+                return url;
+            },
+            /**
+             * @description makes public the ability to attach a response handler if one has not already been attached. We recommend not passing a function in and instead just listening to the various events that the xhr object will trigger directly, or indirectly on the ajax object
+             * @param {function} [fn=handler] - pass in a function to have a custom onload, onreadystatechange handler
+             * @returns {ajax}
+             * @name Ajax#attachResponseHandler
+             */
+            auxilaryStates: function () {
+                return {
+                    'status:200': SUCCESS,
+                    'status:202': SUCCESS,
+                    'status:205': SUCCESS,
+                    'status:302': SUCCESS,
+                    'status:304': SUCCESS,
+                    'status:400': FAILURE,
+                    'status:401': FAILURE,
+                    'status:403': FAILURE,
+                    'status:404': FAILURE,
+                    'status:405': FAILURE,
+                    'status:406': FAILURE,
+                    'status:500': FAILURE,
+                    'status:502': FAILURE,
+                    'status:505': FAILURE,
+                    'status:511': FAILURE,
+                    timeout: FAILURE,
+                    abort: FAILURE
+                };
+            },
+            parse: function (rawData) {
+                return parse(rawData);
+            },
+            attachResponseHandler: function () {
+                var ajax = this,
+                    xhrReqObj = ajax.requestObject,
+                    hasFinished = BOOLEAN_FALSE,
+                    method = ajax.get('method'),
+                    handler = function (evnt) {
+                        var status, doIt, allStates, rawData, readystate, xhrReqObj = this;
+                        if (!xhrReqObj || hasFinished) {
+                            return;
+                        }
+                        status = xhrReqObj[STATUS];
+                        readystate = xhrReqObj[READY_STATE];
+                        rawData = xhrReqObj.responseText;
+                        ajax.currentEvent = evnt;
+                        ajax.set('readystate', readystate);
+                        if (method === 'onload' || (method === 'onreadystatechange' && readystate === 4)) {
+                            ajax.set(STATUS, status);
+                            allStates = result(ajax, 'allStates');
+                            if (allStates[STATUS + ':' + xhrReqObj[STATUS]] === SUCCESS) {
+                                rawData = result(ajax, 'parse', rawData);
+                            }
+                            rawData = parse(rawData);
+                            hasFinished = BOOLEAN_TRUE;
+                            ajax.resolveAs(STATUS + ':' + xhrReqObj[STATUS], rawData);
+                        }
+                    };
+                if (!xhrReqObj[method]) {
+                    xhrReqObj[method] = handler;
+                }
+                return ajax;
+            }
+        }, BOOLEAN_TRUE);
+    _.exports(_.foldl(validTypes, function (memo, key_) {
+        var key = key_;
+        key = key.toLowerCase();
+        memo[key] = function (url) {
+            return Ajax({
+                type: key_,
+                url: url
+            });
+        };
+        return memo;
+    }, {}));
+});
+application.scope(function (app) {
+    var _ = app._,
+        factories = _.factories,
+        Box = factories.Box,
+        Collection = factories.Collection,
+        _EXTRA_MODULE_ARGS = '_extraModuleArguments',
+        MODULES = 'modules',
+        startableMethods = {
+            start: function (evnt) {
+                var startable = this;
+                if (!startable.started) {
+                    startable.started = BOOLEAN_TRUE;
+                    startable[DISPATCH_EVENT](START, evnt);
+                }
+                return startable;
+            },
+            stop: function (evnt) {
+                var startable = this;
+                if (startable.started) {
+                    startable.started = BOOLEAN_FALSE;
+                    startable[DISPATCH_EVENT](STOP, evnt);
+                }
+                return startable;
+            },
+            toggle: function (evnt) {
+                var startable = this;
+                if (startable.started) {
+                    startable[STOP](evnt);
+                } else {
+                    startable[START](evnt);
+                }
+                return startable;
+            },
+            restart: function (evnt) {
+                var startable = this;
+                if (startable.started) {
+                    startable[STOP](evnt);
+                }
+                startable[START](evnt);
+                return startable;
+            }
+        },
+        Startable = factories.Box.extend('Startable', startableMethods, BOOLEAN_TRUE),
+        doStart = function (e) {
+            if (this.get('startWithParent')) {
+                this[START](e);
+            }
+        },
+        doStop = function (e) {
+            if (this.get('stopWithParent')) {
+                this[STOP](e);
+            }
+        },
+        moduleMethods = extend({}, factories.Events[CONSTRUCTOR][PROTOTYPE], startableMethods, {
+            module: function (name_, fn) {
+                var parentModulesDirective, modules, attrs, parentIsModule, nametree, parent = this,
+                    originalParent = parent,
+                    name = name_,
+                    globalname = name,
+                    namespace = name.split(PERIOD),
+                    module = parent.directive(CHILDREN).get(name_);
+                if (module) {
+                    // hey, i found it. we're done here
+                    parent = module.parent;
+                    if (!fn) {
+                        return module;
+                    }
+                    namespace = [module.id];
+                } else {
+                    // crap, now i have to make the chain
+                    while (namespace.length > 1) {
+                        parent = parent.module(namespace[0]);
+                        namespace.shift();
+                    }
+                }
+                parentModulesDirective = parent.directive(CHILDREN);
+                name = namespace.join(PERIOD);
+                module = parentModulesDirective.get(ID, name);
+                if (!module) {
+                    parentIsModule = _.isInstance(parent, Module);
+                    if (parentIsModule) {
+                        namespace.unshift(globalname);
+                    }
+                    namespace = namespace.join(PERIOD);
+                    module = Module({
+                        id: name,
+                        globalname: namespace
+                    }, {
+                        application: app,
+                        parent: parent
+                    });
+                    if (module.topLevel()) {
+                        parentModulesDirective.add(module);
+                    } else {
+                        parent.add(module);
+                    }
+                    parentModulesDirective.register(ID, name, module);
+                    app[CHILDREN].register(ID, globalname, module);
+                }
+                if (!module.hasInitialized && isFunction(fn)) {
+                    module.hasInitialized = BOOLEAN_TRUE;
+                    module.handler(fn);
+                }
+                return module;
+            },
+            run: function (fn) {
+                var module = this;
+                fn.apply(module, module.createArguments());
+                return module;
+            },
+            parentEvents: function () {
+                return {
+                    start: doStart,
+                    stop: doStop
+                };
+            },
+            exports: function (obj) {
+                extend(BOOLEAN_TRUE, this.get('exports'), obj);
+                return this;
+            },
+            createArguments: function () {
+                return [this].concat(this.application.createArguments());
+            },
+            constructor: function (attrs, opts) {
+                var module = this;
+                module.application = opts.application;
+                module.handlers = Collection();
+                Box[CONSTRUCTOR].apply(this, arguments);
+                return module;
+            },
+            defaults: function () {
+                return {
+                    startWithParent: BOOLEAN_TRUE,
+                    stopWithParent: BOOLEAN_TRUE,
+                    exports: {}
+                };
+            },
+            topLevel: function () {
+                return this.application === this[PARENT];
+            },
+            childOptions: function () {
+                return {
+                    application: this.application,
+                    parent: this
+                };
+            },
+            handler: function (fn) {
+                var module = this;
+                module.handlers.push(fn);
+                module.run(fn);
+                return module;
+            }
+        }),
+        domPromise = _.Promise(),
+        returned = $(function () {
+            domPromise.resolve();
+        }),
+        Module = factories.Box.extend('Module', moduleMethods, BOOLEAN_TRUE),
+        appextendresult = app.extend(extend({}, moduleMethods, {
+            _startPromise: _.when(domPromise),
+            _extraModuleArguments: [],
+            dependency: function (promise) {
+                this._startPromise.add(promise);
+                return this;
+            },
+            /**
+             * @func
+             * @name Specless#baseModuleArguments
+             * @returns {Array} list of base arguments to apply to submodules
+             */
+            baseModuleArguments: function () {
+                var app = this,
+                    _ = app._;
+                return [app, _, _ && _.factories];
+            },
+            /**
+             * @func
+             * @name Specless#addModuleArguments
+             * @param {Array} arr - list of arguments that will be added to the extraModule args list
+             * @returns {Specless} instance
+             */
+            addModuleArguments: function (arr) {
+                var app = this;
+                duff(arr, function (item) {
+                    _.add(app[_EXTRA_MODULE_ARGS], item);
+                });
+                return app;
+            },
+            /**
+             * @func
+             * @name Specless#removeModuleArguments
+             * @param {Array} arr - list of objects or functions that will be removed from the extraModuleArgs
+             * @returns {Specless} instance
+             */
+            removeModuleArguments: function (arr) {
+                var app = this;
+                duff(arr, function (item) {
+                    _.remove(app[_EXTRA_MODULE_ARGS], item);
+                });
+                return app;
+            },
+            /**
+             * @func
+             * @name Specless#createArguments
+             * @returns {Object[]}
+             */
+            createArguments: function () {
+                return this.baseModuleArguments().concat(this[_EXTRA_MODULE_ARGS]);
+            },
+            require: function (modulename) {
+                var module = this[CHILDREN].get(ID, modulename) || exception({
+                    message: 'that module does not exist yet'
+                });
+                return module.get('exports');
+            }
+        }));
+    app.defineDirective('modules', function () {
+        return Collection();
     });
 });
 application.scope().module('Element', function (module, app, _, factories) {

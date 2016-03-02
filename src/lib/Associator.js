@@ -1,9 +1,11 @@
-application.scope().module('Associator', function (module, app, _, factories) {
+application.scope(function (app) {
     /**
      * @class Associator
      * @augments Model
      */
-    var ITEMS = 'items',
+    var _ = app._,
+        factories = _.factories,
+        ITEMS = 'items',
         DATASET = DATA + 'set',
         IS_ELEMENT = 'isElement',
         extend = _.extend,

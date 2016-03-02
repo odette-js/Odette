@@ -51,10 +51,7 @@ application.scope(function (app) {
                 this[STOP](e);
             }
         },
-        // moduleHandler = ,
-        // moduleRunner = ,
         moduleMethods = extend({}, factories.Events[CONSTRUCTOR][PROTOTYPE], startableMethods, {
-            // idAttribute: 'name',
             module: function (name_, fn) {
                 var parentModulesDirective, modules, attrs, parentIsModule, nametree, parent = this,
                     originalParent = parent,
@@ -65,6 +62,9 @@ application.scope(function (app) {
                 if (module) {
                     // hey, i found it. we're done here
                     parent = module.parent;
+                    if (!fn) {
+                        return module;
+                    }
                     namespace = [module.id];
                 } else {
                     // crap, now i have to make the chain
@@ -151,17 +151,27 @@ application.scope(function (app) {
                 return module;
             }
         }),
+        domPromise = _.Promise(),
+        returned = $(function () {
+            domPromise.resolve();
+        }),
         Module = factories.Box.extend('Module', moduleMethods, BOOLEAN_TRUE),
         appextendresult = app.extend(extend({}, moduleMethods, {
+            _startPromise: _.when(domPromise),
             _extraModuleArguments: [],
+            dependency: function (promise) {
+                this._startPromise.add(promise);
+                return this;
+            },
             /**
              * @func
              * @name Specless#baseModuleArguments
              * @returns {Array} list of base arguments to apply to submodules
              */
             baseModuleArguments: function () {
-                var app = this;
-                return [app, app._, app._ && app._.factories];
+                var app = this,
+                    _ = app._;
+                return [app, _, _ && _.factories];
             },
             /**
              * @func
@@ -171,7 +181,7 @@ application.scope(function (app) {
              */
             addModuleArguments: function (arr) {
                 var app = this;
-                _.duff(arr, function (item) {
+                duff(arr, function (item) {
                     _.add(app[_EXTRA_MODULE_ARGS], item);
                 });
                 return app;
@@ -184,7 +194,7 @@ application.scope(function (app) {
              */
             removeModuleArguments: function (arr) {
                 var app = this;
-                _.duff(arr, function (item) {
+                duff(arr, function (item) {
                     _.remove(app[_EXTRA_MODULE_ARGS], item);
                 });
                 return app;
@@ -198,7 +208,6 @@ application.scope(function (app) {
                 return this.baseModuleArguments().concat(this[_EXTRA_MODULE_ARGS]);
             },
             require: function (modulename) {
-                // var module = this.module(modulename);
                 var module = this[CHILDREN].get(ID, modulename) || exception({
                     message: 'that module does not exist yet'
                 });

@@ -16,6 +16,7 @@ application.scope(function (app) {
                 eventsDirective.listenId = 'l' + (++listeningCounter);
                 eventsDirective.handlers = {};
                 eventsDirective.listeningTo = {};
+                eventsDirective.running = {};
                 eventsDirective.stack = Collection(BOOLEAN_TRUE, BOOLEAN_TRUE);
                 eventsDirective.removeQueue = Collection(BOOLEAN_TRUE, BOOLEAN_TRUE);
                 return eventsDirective;
@@ -75,7 +76,7 @@ application.scope(function (app) {
             },
             scrub: function (list) {
                 list.scrubbed = BOOLEAN_TRUE;
-                this[HANDLERS][list[NAME]] = NULL;
+                delete this[HANDLERS][list[NAME]];
             },
             reset: function () {
                 return each(this.handlers, this.scrub, this);
@@ -94,10 +95,13 @@ application.scope(function (app) {
                     stack = events[STACK],
                     handlers = events[HANDLERS],
                     list = handlers[name],
-                    removeList = events[REMOVE_QUEUE];
+                    removeList = events[REMOVE_QUEUE],
+                    running = events.running,
+                    cached = running[name];
                 if (evnt[IMMEDIATE_PROP_IS_STOPPED] || !list || !list[LENGTH]()) {
                     return;
                 }
+                running[name] = BOOLEAN_TRUE;
                 list.find(function (handler) {
                     var cached;
                     if (!handler.disabled && events.queue(stack, handler, evnt)) {
@@ -110,6 +114,11 @@ application.scope(function (app) {
                 if (!stack[LENGTH]() && removeList[LENGTH]()) {
                     removeList.duffRight(events.detach, events);
                     removeList.empty();
+                }
+                if (cached === UNDEFINED) {
+                    delete running[name];
+                } else {
+                    running[name] = cached;
                 }
                 evnt.finished();
                 return evnt.returnValue;

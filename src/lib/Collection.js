@@ -122,18 +122,6 @@ application.scope(function (app) {
         countFrom = function (list, runner, ctx, num) {
             return count(list, runner, ctx, num, list[LENGTH]);
         },
-        // array, startIndex, endIndex
-        // between = function (fn) {
-        //     return function (list, startIdx_, endIdx_) {
-        //         var ret = [],
-        //             startIdx = startIdx_ || 0,
-        //             endIdx = endIdx_ || list[LENGTH],
-        //             findResult = find(list, function (item, idx, list) {
-        //                 fn(ret, item, idx, list);
-        //             }, NULL, endIdx);
-        //         return ret;
-        //     };
-        // },
         /**
          * @func
          */
@@ -156,36 +144,6 @@ application.scope(function (app) {
             found = ~~maxIndex;
             return found;
         },
-        // closest = function (list, target) {
-        //     var match, path, diff, possible, i = 0,
-        //         previousAbs = Infinity,
-        //         // trying to avoid running through 20 matchs
-        //         // when i'm already at the exact one
-        //         valuesLen = list[LENGTH];
-        //     if (valuesLen === 1) {
-        //         match = list[0];
-        //     }
-        //     if (indexOf(list, target) !== -1) {
-        //         match = target;
-        //     }
-        //     if (!match) {
-        //         // try doing this later with no sorting
-        //         for (i = valuesLen - 1;
-        //             (i >= 0 && !match); i--) {
-        //             path = list[i];
-        //             diff = Math.abs(target - path);
-        //             if (diff < previousAbs) {
-        //                 possible = path;
-        //                 previousAbs = diff;
-        //             }
-        //         }
-        //         match = possible;
-        //     }
-        //     if (!match) {
-        //         match = target;
-        //     }
-        //     return match;
-        // },
         /**
          * @func
          */
@@ -217,9 +175,9 @@ application.scope(function (app) {
             }, []);
         },
         cycle = function (arr, num_) {
-            var num, piece, len = arr[LENGTH];
-            if (isNumber(len)) {
-                num = num_ % len;
+            var num, piece, length = arr[LENGTH];
+            if (isNumber(length)) {
+                num = num_ % length;
                 piece = arr.splice(num);
                 arr.unshift.apply(arr, piece);
             }
@@ -320,7 +278,6 @@ application.scope(function (app) {
             each: duff,
             duff: duff,
             forEach: duff,
-            // mapCall: mapCall,
             eachCall: eachCall,
             eachRight: duffRight,
             duffRight: duffRight,
@@ -389,7 +346,6 @@ application.scope(function (app) {
             where: where,
             findWhere: findWhere,
             findLastWhere: findLastWhere,
-            // between: between,
             posit: posit,
             range: range,
             count: count,
@@ -413,6 +369,7 @@ application.scope(function (app) {
                 return fun(directive, categoryHash, category, key, thing, passedCategory);
             };
         },
+        REGISTRY = 'registry',
         Collection = factories.Directive.extend('Collection', extend({
             range: recreateSelf(range),
             concat: recreateSelf(function () {
@@ -440,7 +397,7 @@ application.scope(function (app) {
             unwrap: function () {
                 return this.list.items;
             },
-            empty: _.flow(_.directives.parody('list', 'empty'), _.directives.parody('registry', 'reset')),
+            empty: _.flow(_.directives.parody('list', 'empty'), _.directives.parody(REGISTRY, 'reset')),
             swap: function (arr) {
                 this.directive('list').items = arr || [];
             },
@@ -490,10 +447,10 @@ application.scope(function (app) {
                 collection.swap(arr);
                 return collection;
             },
-            get: _.directives.parody('registry', 'get'),
-            register: _.directives.parody('registry', 'keep'),
-            unRegister: _.directives.parody('registry', 'drop'),
-            swapRegister: _.directives.parody('registry', 'swap')
+            get: _.directives.parody(REGISTRY, 'get'),
+            register: _.directives.parody(REGISTRY, 'keep'),
+            unRegister: _.directives.parody(REGISTRY, 'drop'),
+            swapRegister: _.directives.parody(REGISTRY, 'swap')
         }, wrappedCollectionMethods), BOOLEAN_TRUE),
         isNullMessage = {
             message: 'object must not be null or undefined'
@@ -501,7 +458,6 @@ application.scope(function (app) {
         validIdMessage = {
             message: 'objects in sorted collections must have either a number or string for their valueOf result'
         },
-        REGISTRY = 'registry',
         SortedCollection = Collection.extend('SortedCollection', {
             constructor: function (list_, skip) {
                 var sorted = this;
@@ -676,7 +632,7 @@ application.scope(function (app) {
                         }
                     });
                 parent.swap(validResult.list);
-                parent.directive('registry').reset(validResult.registry);
+                parent.directive(REGISTRY).reset(validResult.registry);
             },
             generate: function (delimiter_) {
                 var validResult, string = EMPTY_STRING,
@@ -765,7 +721,7 @@ application.scope(function (app) {
         this.register = registry || {};
         this.count = 0;
     };
-    app.defineDirective('registry', function () {
+    app.defineDirective(REGISTRY, function () {
         return {
             register: {},
             count: 0,

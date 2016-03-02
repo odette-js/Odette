@@ -1,5 +1,7 @@
-application.scope().module('Ajax', function (module, app, _, factories) {
-    var gapSplit = _.gapSplit,
+application.scope(function (app) {
+    var _ = app._,
+        factories = _.factories,
+        gapSplit = _.gapSplit,
         duff = _.duff,
         each = _.each,
         unCamelCase = _.unCamelCase,

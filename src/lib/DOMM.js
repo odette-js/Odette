@@ -1,7 +1,9 @@
-application.scope().module('DOMM', function (module, app, _, factories) {
-    var posit = _.posit,
+application.scope(function (app) {
+    var _ = app._,
+        factories = _.factories,
+        posit = _.posit,
         Collection = factories.Collection,
-        elementData = _.associator,
+        elementData = factories.Associator(),
         DOMM_STRING = 'DOMM',
         NODE_TYPE = 'nodeType',
         LOCAL_NAME = 'localName',
@@ -239,28 +241,28 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             }
             return stringManager;
         },
-        trackedAttributeInterface = function (el, key, val, isProp, manager) {
-            // set or remove if not undefined
-            // undefined fills in the gap by returning some value, which is never undefined
-            var isArrayResult, cameledKey = camelCase(key),
-                el_interface = isProp ? propertyApi : attributeApi,
-                stringManager = !isProp && (manager || returnsElementData(el)).get(cameledKey),
-                readAttribute = el_interface.read(el, key);
-            if (!isProp && isString(readAttribute)) {
-                stringManager.ensure(readAttribute);
-            }
-            if (val == NULL) {
-                return readAttribute;
-            }
-            if (!val && val !== 0) {
-                el_interface.remove(el, key);
-            } else {
-                el_interface.write(el, key, isProp ? val : addRemoveAttributes(val, stringManager).generate(SPACE));
-            }
-            if (manager.isCustom && readAttribute !== el_interface.read(el, key)) {
-                manager.dispatchEvent('change:' + key);
-            }
-        },
+        // trackedAttributeInterface = function (el, key, val, isProp, manager) {
+        //     // set or remove if not undefined
+        //     // undefined fills in the gap by returning some value, which is never undefined
+        //     var isArrayResult, cameledKey = camelCase(key),
+        //         el_interface = isProp ? propertyApi : attributeApi,
+        //         stringManager = !isProp && (manager || returnsElementData(el)).get(cameledKey),
+        //         readAttribute = el_interface.read(el, key);
+        //     if (!isProp && isString(readAttribute)) {
+        //         stringManager.ensure(readAttribute);
+        //     }
+        //     if (val == NULL) {
+        //         return readAttribute;
+        //     }
+        //     if (!val && val !== 0) {
+        //         el_interface.remove(el, key);
+        //     } else {
+        //         el_interface.write(el, key, isProp ? val : addRemoveAttributes(val, stringManager).generate(SPACE));
+        //     }
+        //     if (manager.isCustom && readAttribute !== el_interface.read(el, key)) {
+        //         manager.dispatchEvent('change:' + key);
+        //     }
+        // },
         DO_NOT_TRUST = BOOLEAN_FALSE,
         cannotTrust = function (fn) {
             return function () {
@@ -347,56 +349,56 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         },
         ensureManager = function (manager, attribute, currentValue) {
             var _attributeManager = manager.get(attribute);
-            return _attributeManager.ensure(currentValue === BOOLEAN_TRUE ? '' : currentValue, SPACE);
+            return _attributeManager.ensure(currentValue === BOOLEAN_TRUE ? EMPTY_STRING : currentValue, SPACE);
         },
-        queueAttributes = function (attribute, first_, second_, api, merge, after) {
-            var first = gapSplit(first_),
-                second = gapSplit(second_);
-            return function (manager) {
-                var el = manager.unwrap();
-                var result = merge(ensureManager(manager, attribute, api.read(el, attribute)), first, second);
-                return after && api[after] && api[after](el, attribute, result.generate(SPACE));
-            };
-        },
-        DOMQueueAttributes = function (list, attribute, first_, second_, api, merge, after) {
-            duff(list, queueAttributes(attribute, first_, second_, api, merge, after));
-        },
-        ManagerQueueAttributes = function (manager, attribute, first_, second_, api, merge, after) {
-            queueAttributes(attribute, first_, second_, api, merge, after)(manager);
-        },
-        globalQueueAttributes = function (merge, multipleOrNot) {
-            return function (attribute, api, insides) {
-                return function (list, first, second, attribute_, insides_) {
-                    var inside = insides_ === UNDEFINED ? insides : insides_;
-                    return multipleOrNot(list, attribute_ || attribute, first, second, api, merge, inside);
-                };
-            };
-        },
-        _addAttributeValues = function (attributeManager, add) {
-            duff(add, attributeManager.add, attributeManager);
-            return attributeManager;
-        },
-        _removeAttributeValues = function (attributeManager, remove) {
-            duff(remove, attributeManager.remove, attributeManager);
-            return attributeManager;
-        },
-        _toggleAttributeValues = function (attributeManager, togglers) {
-            duff(togglers, attributeManager.toggle, attributeManager);
-            return attributeManager;
-        },
-        _changeAttributeValues = function (attributeManager, remove, add) {
-            return _addAttributeValues(_removeAttributeValues(attributeManager, remove), add);
-        },
-        _booleanAttributeValues = function (attributeManager, addremove, follows) {
-            // rework this
-            return (addremove ? _addAttributeValues : _removeAttributeValues)(attributeManager, follows);
-        },
-        // global attribute manager handlers
-        addAttributeValues = globalQueueAttributes(_addAttributeValues, DOMQueueAttributes),
-        removeAttributeValues = globalQueueAttributes(_removeAttributeValues, DOMQueueAttributes),
-        toggleAttributeValues = globalQueueAttributes(_toggleAttributeValues, DOMQueueAttributes),
-        changeAttributeValues = globalQueueAttributes(_changeAttributeValues, DOMQueueAttributes),
-        booleanAttributeValues = globalQueueAttributes(_booleanAttributeValues, DOMQueueAttributes),
+        // queueAttributes = function (attribute, first_, second_, api, merge, after) {
+        //     var first = gapSplit(first_),
+        //         second = gapSplit(second_);
+        //     return function (manager) {
+        //         var el = manager.unwrap();
+        //         var result = merge(ensureManager(manager, attribute, api.read(el, attribute)), first, second);
+        //         return after && api[after] && api[after](el, attribute, result.generate(SPACE));
+        //     };
+        // },
+        // DOMQueueAttributes = function (list, attribute, first_, second_, api, merge, after) {
+        //     duff(list, queueAttributes(attribute, first_, second_, api, merge, after));
+        // },
+        // ManagerQueueAttributes = function (manager, attribute, first_, second_, api, merge, after) {
+        //     queueAttributes(attribute, first_, second_, api, merge, after)(manager);
+        // },
+        // globalQueueAttributes = function (merge, multipleOrNot) {
+        //     return function (attribute, api, insides) {
+        //         return function (list, first, second, attribute_, insides_) {
+        //             var inside = insides_ === UNDEFINED ? insides : insides_;
+        //             return multipleOrNot(list, attribute_ || attribute, first, second, api, merge, inside);
+        //         };
+        //     };
+        // },
+        // _addAttributeValues = function (attributeManager, add) {
+        //     duff(add, attributeManager.add, attributeManager);
+        //     return attributeManager;
+        // },
+        // _removeAttributeValues = function (attributeManager, remove) {
+        //     duff(remove, attributeManager.remove, attributeManager);
+        //     return attributeManager;
+        // },
+        // _toggleAttributeValues = function (attributeManager, togglers) {
+        //     duff(togglers, attributeManager.toggle, attributeManager);
+        //     return attributeManager;
+        // },
+        // _changeAttributeValues = function (attributeManager, remove, add) {
+        //     return _addAttributeValues(_removeAttributeValues(attributeManager, remove), add);
+        // },
+        // _booleanAttributeValues = function (attributeManager, addremove, follows) {
+        //     // rework this
+        //     return (addremove ? _addAttributeValues : _removeAttributeValues)(attributeManager, follows);
+        // },
+        // // global attribute manager handlers
+        // addAttributeValues = globalQueueAttributes(_addAttributeValues, DOMQueueAttributes),
+        // removeAttributeValues = globalQueueAttributes(_removeAttributeValues, DOMQueueAttributes),
+        // toggleAttributeValues = globalQueueAttributes(_toggleAttributeValues, DOMQueueAttributes),
+        // changeAttributeValues = globalQueueAttributes(_changeAttributeValues, DOMQueueAttributes),
+        // booleanAttributeValues = globalQueueAttributes(_booleanAttributeValues, DOMQueueAttributes),
         // scoped to class
         // classNameApi = {
         //     read: getClassName,
@@ -881,7 +883,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 parent = createElement(DIV, returnsElementData(element.ownerDocument));
                 parent[APPEND_CHILD](element);
             }
-            return !!posit(Sizzle(selector, parent), element);
+            return !!posit(sizzle(selector, parent), element);
         },
         createDocumentFragment = function (nulled, context) {
             return context[TARGET].createDocumentFragment();
@@ -963,9 +965,9 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             }
             return key;
         },
-        dataAttributeManipulator = function (el, _key, val, isProp, data) {
-            return trackedAttributeInterface(el, makeDataKey(_key), val, isProp, data);
-        },
+        // dataAttributeManipulator = function (el, _key, val, isProp, data) {
+        //     return trackedAttributeInterface(el, makeDataKey(_key), val, isProp, data);
+        // },
         styleAttributeManipulator = function (manager, key, value) {
             var element = manager[TARGET];
             if (manager.isElement) {
@@ -988,14 +990,11 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             return val;
         },
         styleAttributeMeat = function (manager, key, value, list, hash, handler, isProperty) {
-            var j, prefixes, cameledKey = camelCase(key),
+            var finalProp, j, prefixes, cameledKey = camelCase(key),
                 element = manager.unwrap();
             list.push(cameledKey);
             if (value != NULL) {
-                prefixes = [EMPTY_STRING];
-                if (prefixedStyles[cameledKey]) {
-                    prefixes = prefixedStyles[cameledKey].concat(prefixes);
-                }
+                prefixes = [EMPTY_STRING] || prefixedStyles[cameledKey];
                 for (j = 0; j < prefixes[LENGTH]; j++) {
                     finalProp = camelCase(prefixes[j] + cameledKey);
                     handler(manager, finalProp, modifyFinalStyle(finalProp, value));
@@ -1004,19 +1003,19 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 hash[key] = getComputed(firstEl)[cameledKey];
             }
         },
-        domAttributeMeat = function (manager, key, value, list, hash, handler, isProperty) {
-            var unCameledKey = unCamelCase(key),
-                element = manager.unwrap();
-            if (unCameledKey === CLASS__NAME) {
-                isProperty = isString(element[CLASSNAME]);
-                unCameledKey = discernClassProperty(isProperty);
-            }
-            value = handler(element, unCameledKey, value, isProperty, manager);
-            list.push(key);
-            if (value !== UNDEFINED) {
-                hash[key] = value;
-            }
-        },
+        // domAttributeMeat = function (manager, key, value, list, hash, handler, isProperty) {
+        //     var unCameledKey = unCamelCase(key),
+        //         element = manager.unwrap();
+        //     if (unCameledKey === CLASS__NAME) {
+        //         isProperty = isString(element[CLASSNAME]);
+        //         unCameledKey = discernClassProperty(isProperty);
+        //     }
+        //     value = handler(element, unCameledKey, value, isProperty, manager);
+        //     list.push(key);
+        //     if (value !== UNDEFINED) {
+        //         hash[key] = value;
+        //     }
+        // },
         DomManagerRunsInstances = function (handler, key, value, list, hash, diffHandler, isProperty) {
             return function (manager) {
                 return handler(manager, key, value, list, hash, diffHandler, isProperty);
@@ -1043,10 +1042,6 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 };
             };
         },
-        dataManipulator = domAttributeManipulator(domAttributeMeat, dataAttributeManipulator),
-        attrManipulator = domAttributeManipulator(domAttributeMeat, trackedAttributeInterface),
-        propManipulator = domAttributeManipulator(domAttributeMeat, trackedAttributeInterface, BOOLEAN_TRUE),
-        styleManipulator = domAttributeManipulator(styleAttributeMeat, styleAttributeManipulator),
         attachPrevious = function (fn) {
             return function () {
                 var prev = this,
@@ -1305,7 +1300,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 }
             } else {
                 el[attribute] = value || EMPTY_STRING;
-                duff(Sizzle(CUSTOM_ATTRIBUTE, el), returnsElementData);
+                duff(sizzle(CUSTOM_ATTRIBUTE, el), returnsElementData);
             }
         },
         innardManipulator = function (attribute, queryForCreation) {
@@ -1383,11 +1378,12 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         },
         dispatchDetached = dispatchDomEvent('detach', BOOLEAN_FALSE),
         dispatchAttached = dispatchDomEvent('attach', BOOLEAN_TRUE),
-        applyStyle = function (manager, key, value) {
-            var element = manager[TARGET];
+        applyStyle = function (key, value, manager) {
+            var cached, element = manager[TARGET];
             if (manager.isElement && element[STYLE][key] !== value) {
-                element[STYLE][key] = value;
-                return BOOLEAN_TRUE;
+                cached = attributeApi.read(element, STYLE);
+                element[STYLE][key] = convertStyleValue(key, value);
+                return attributeApi.read(element, STYLE) !== cached;
             }
             return BOOLEAN_FALSE;
         },
@@ -1444,6 +1440,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                     }
                     return returnValue;
                 }
+                attributeManager.api = api;
                 intendedObject(second_, third_, function (second, third) {
                     var currentMerge = merge || (third === BOOLEAN_TRUE ? 'add' : (third === BOOLEAN_FALSE ? 'remove' : 'toggle'));
                     attributeValuesHash[currentMerge](attributeManager, gapSplit(second), third, read);
@@ -1493,7 +1490,6 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         changeValue = unmarkChange(domAttributeManipulatorExtended(queueAttributeValues, 'change', attributeApi)),
         getValue = domAttributeManipulatorExtended(queueAttributeValues, 'get', attributeApi),
         hasValue = domAttributeManipulatorExtended(hasAttributeValue, 'has', attributeApi),
-        getsAndSets = function (first, second, NULL, api, handler, keyprocess) {},
         getSetter = function (proc, givenApi, keyprocess) {
             return function (understandsContext) {
                 return function (first, second_, api_) {
@@ -1519,9 +1515,6 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         attrApi = getSetter(queueAttributeValues, attributeApi, unCamelCase),
         dataApi = getSetter(queueAttributeValues, attributeApi, makeDataKey),
         propApi = getSetter(queueAttributeValues, propertyApi, unCamelCase),
-        managerFirst = function (handler, context) {
-            return handler(context);
-        },
         managerIterates = function (handler, context) {
             handler(context);
             return context;
@@ -1559,13 +1552,13 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             }
         },
         markElement = function (manager) {
-            var isIframe, el = manager[TARGET];
-            if ((manager.isElement = isElement(el))) {
-                isIframe = manager.isIframe = tag(el, 'iframe');
-                markCustom(manager);
-                if (isIframe) {
-                    manager.isFriendly = testIframe(el);
+            var isIframe, element = manager[TARGET];
+            if ((manager.isElement = isElement(element))) {
+                manager.tagName = tag(element);
+                if ((manager.isIframe = manager.tagName === IFRAME)) {
+                    manager.isFriendly = testIframe(element);
                 }
+                markCustom(manager);
             }
         },
         test = function (manager) {
@@ -1578,6 +1571,9 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         },
         registeredElementName = function (name, manager) {
             return ELEMENT + HYPHEN + manager.documentId + HYPHEN + name;
+        },
+        sizzle = function (str, ctx) {
+            return (ctx || doc_).querySelectorAll(str);
         },
         DOMM_SETUP = factories.DOMM_SETUP = function (doc_) {
             var wrapped, manager = returnsElementData(doc_),
@@ -1606,6 +1602,9 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                     return handler(one, manager);
                 };
             }), {
+                sizzle: function (str) {
+                    return sizzle(str, doc_);
+                },
                 scoped: scoped,
                 documentId: manager.documentId,
                 manager: manager,
@@ -1677,7 +1676,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             return scoped;
         },
         classApi = makeValueTarget('class', 'className', propertyApi),
-        DomManager = factories.Events.extend('DomManager', _.extend(classApi, {
+        DomManager = factories.Events.extend('DomManager', extend(classApi, {
             constructor: function (el) {
                 var owner, manager = this;
                 manager[TARGET] = el;
@@ -1719,7 +1718,8 @@ application.scope().module('DOMM', function (module, app, _, factories) {
             children: function (eq, globalmemo) {
                 var filter = createDomFilter(eq);
                 var manager = this;
-                var result = foldl(collectChildren(manager.unwrap()), function (memo, child, idx, children) {
+                var children = collectChildren(manager.unwrap());
+                var result = foldl(children, function (memo, child, idx, children) {
                     if (filter(child, idx, children)) {
                         memo.push(returnsElementData(child));
                     }
@@ -1756,8 +1756,12 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 return manager;
             },
             applyStyle: function (key, value) {
-                return applyStyle(this, key, value);
+                return applyStyle(key, value, this);
             },
+            style: function (key, value) {
+                return intendedObject(key, value, this.applyStyle, this);
+            },
+            css: function () {},
             getStyle: function (eq) {
                 var returnValue = {},
                     manager = this,
@@ -1766,9 +1770,6 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                     returnValue = getComputed(first, manager.context);
                 }
                 return returnValue;
-            },
-            style: function (key, value) {
-                return intendedObject(key, value, this.applyStyle, this);
             },
             remove: function (fragment) {
                 var el, parent, manager = this,
@@ -1796,11 +1797,11 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 // destroy events
                 manager.resetEvents();
                 // remove from global hash
-                _.associator.remove(manager[TARGET]);
+                elementData.remove(manager[TARGET]);
             },
             $: function (selector) {
                 var target = this[TARGET];
-                return $(Sizzle(selector, target), target);
+                return $(sizzle(selector, target), target);
             },
             createEvent: function (original, type, opts) {
                 return DomEvent(original, {
@@ -2169,7 +2170,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 };
             return duff(this.unwrap(), function (el) {
                 if (passedString) {
-                    duff(Sizzle(str, el.unwrap()), push);
+                    duff(sizzle(str, el.unwrap()), push);
                 } else {
                     push(el);
                 }
@@ -2193,15 +2194,12 @@ application.scope().module('DOMM', function (module, app, _, factories) {
         loadData = function (data, items) {
             return data || foldl(items || this.unwrap(), returnsElementData, []);
         },
-        Sizzle = function (str, ctx) {
-            return (ctx || doc).querySelectorAll(str);
-        },
         exportResult = _.exports({
             covers: covers,
             center: center,
             closer: closer,
             distance: distance,
-            Sizzle: Sizzle,
+            // sizzle: sizzle,
             escape: escape,
             unescape: unescape,
             // css: css,
@@ -2254,6 +2252,19 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                 return element && element[property];
             };
         },
+        styleManipulator = function (one, two) {
+            var manager, styles;
+            if (isString(one) && two === UNDEFINED) {
+                return (manager = this.index(0)) && (styles = manager.getStyle()) && (prefix = _.find(prefixes[camelCase(one)], function (prefix) {
+                    return styles[prefix + unCameled] !== UNDEFINED;
+                })) && styles[prefix + unCameled];
+            } else {
+                if (this.length()) {
+                    this.duff(unmarkChange(intendedIteration(one, two, applyStyle)));
+                }
+                return this;
+            }
+        },
         DOMM = factories[DOMM_STRING] = factories.Collection.extend(DOMM_STRING, extend(makeValueTarget('class', 'className', propertyApi, BOOLEAN_TRUE), {
             /**
              * @func
@@ -2276,7 +2287,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                             if (str[0] === '<') {
                                 els = makeTree(str, documentContext);
                             } else {
-                                els = map(Sizzle(str, unwrapped), returnsElementData);
+                                els = map(sizzle(str, unwrapped), returnsElementData);
                             }
                         } else {
                             els = str;
@@ -2386,16 +2397,9 @@ application.scope().module('DOMM', function (module, app, _, factories) {
              * @param {...*} splat of objects and key value pairs that create a single object to be applied to the element
              * @returns {DOMM} instance
              */
-            css: styleManipulator(DOMproducesKeyValues),
-            // css: function (key, value) {
-            //     var dom = this,
-            //         ret = duff(dom.unwrap(), css(key, value));
-            //     if (ret == NULL) {
-            //         ret = dom;
-            //     }
-            //     return ret;
-            // },
-            // style: applyToEach('style'),
+            // css: styleManipulator(DOMproducesKeyValues),
+            css: styleManipulator,
+            style: styleManipulator,
             /**
              * @func
              * @name DOMM#allDom
@@ -2558,7 +2562,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
                     element = manager && manager.unwrap() || NULL,
                     parent = first.index(),
                     parentEl = parent && parent.unwrap(),
-                    fragmentChildren = Sizzle(CUSTOM_ATTRIBUTE, frag),
+                    fragmentChildren = sizzle(CUSTOM_ATTRIBUTE, frag),
                     returnValue = parentEl && parentEl.insertBefore(frag, element),
                     notify = isAttached(parentEl) && each(fragmentChildren, dispatchAttached);
                 return returnValue;
@@ -2756,7 +2760,7 @@ application.scope().module('DOMM', function (module, app, _, factories) {
     $.collectTemplates();
     // register all custom elements...
     // everything that's created after this should go through the DomManager to be marked appropriately
-    duff(Sizzle(CUSTOM_ATTRIBUTE, win.document), returnsElementData);
+    duff($.sizzle(CUSTOM_ATTRIBUTE), returnsElementData);
     // add $ to module madness
     // app.addModuleArguments([$]);
     // define a hash for attribute caching
