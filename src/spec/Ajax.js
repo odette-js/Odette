@@ -59,6 +59,20 @@ application.scope().run(function (app, _, factories) {
                 });
             });
             describe('status codes (more than the ones listed here)', function () {
+                it('200', function (done) {
+                    var handlerCounter = 0;
+                    factories.Ajax('/gibberish/200').handle('status:200', function () {
+                        handlerCounter++;
+                    }).success(function () {
+                        handlerCounter++;
+                    }).failure(function () {
+                        handlerCounter--;
+                    }).always(function () {
+                        handlerCounter++;
+                        expect(handlerCounter).toEqual(3);
+                        done();
+                    });
+                });
                 it('404', function (done) {
                     var handlerCounter = 0;
                     factories.Ajax('/gibberish/404').handle('status:404', function () {

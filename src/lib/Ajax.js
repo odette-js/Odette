@@ -1,4 +1,4 @@
-application.scope(function (app) {
+app.scope(function (app) {
     var _ = app._,
         factories = _.factories,
         gapSplit = _.gapSplit,
@@ -50,13 +50,12 @@ application.scope(function (app) {
                 }
             });
         },
-        sendthething = function (xhrReq, args) {
+        sendthething = function (xhrReq, args, ajax) {
             return function () {
                 wraptry(function () {
                     xhrReq.send.apply(xhrReq, args);
                 }, function (e) {
-                    // handle an xhr req send error here
-                    factories.reportError('xhr', e + EMPTY_STRING);
+                    ajax.resolveAs('error', e, e.message);
                 });
             };
         },
@@ -78,12 +77,12 @@ application.scope(function (app) {
             ajax.setHeaders(ajax.get('headers'));
             attachBaseListeners(ajax);
             // have to wrap in set timeout for ie
-            setTimeout(sendthething(xhrReq, args));
+            setTimeout(sendthething(xhrReq, args, ajax));
         },
         /**
          * @class Ajax
          * @alias factories.Ajax
-         * @augments Box
+         * @augments Model
          * @augments Model
          * @classdesc XHR object wrapper Triggers events based on xhr state changes and abstracts many anomalies that have to do with IE
          */

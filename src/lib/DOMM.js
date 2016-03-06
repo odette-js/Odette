@@ -1,10 +1,22 @@
-application.scope(function (app) {
+app.scope(function (app) {
     var _ = app._,
         factories = _.factories,
         posit = _.posit,
         Collection = factories.Collection,
-        elementData = factories.Associator(),
-        DOMM_STRING = 'DOMM',
+        globalAssociator = factories.Associator(),
+        ensure = function (el, owner) {
+            var data;
+            if (owner === BOOLEAN_TRUE) {
+                data = globalAssociator.get(el);
+            } else {
+                data = owner.data.get(el);
+            }
+            if (!data[DOM_MANAGER_STRING]) {
+                data[DOM_MANAGER_STRING] = DomManager(el, data, owner);
+            }
+            return data[DOM_MANAGER_STRING];
+        },
+        DOM_MANAGER_STRING = 'DomManager',
         NODE_TYPE = 'nodeType',
         LOCAL_NAME = 'localName',
         APPEND_CHILD = 'appendChild',
@@ -161,6 +173,7 @@ application.scope(function (app) {
         rkeyEvent = /^key/,
         rmouseEvent = /^(?:mouse|pointer|contextmenu)|click/,
         rfocusMorph = /^(?:focusinfocus|focusoutblur)$/,
+        motionMorph = /^device/,
         rforceEvent = /^webkitmouseforce/,
         hasWebP = (function () {
             var countdown = 4,
@@ -246,7 +259,7 @@ application.scope(function (app) {
         //     // undefined fills in the gap by returning some value, which is never undefined
         //     var isArrayResult, cameledKey = camelCase(key),
         //         el_interface = isProp ? propertyApi : attributeApi,
-        //         stringManager = !isProp && (manager || returnsElementData(el)).get(cameledKey),
+        //         stringManager = !isProp && (manager || returnsManager(el)).get(cameledKey),
         //         readAttribute = el_interface.read(el, key);
         //     if (!isProp && isString(readAttribute)) {
         //         stringManager.ensure(readAttribute);
@@ -276,7 +289,7 @@ application.scope(function (app) {
         makeEachTrigger = function (attr, api) {
             var whichever = api || attr;
             return cannotTrust(function (manager) {
-                var el = manager.unwrap();
+                var el = manager.element();
                 if (ALL_EVENTS_HASH[whichever] && isFunction(el[whichever])) {
                     el[whichever]();
                 } else {
@@ -844,7 +857,7 @@ application.scope(function (app) {
          * @func
          */
         createElement = function (str, manager) {
-            var newManager, element = manager && manager[TARGET],
+            var newManager, element = manager && manager.element(),
                 registeredElements = manager && manager.registeredElements,
                 foundElement = registeredElements && registeredElements[str],
                 elementName = foundElement === BOOLEAN_TRUE ? str : foundElement,
@@ -856,7 +869,7 @@ application.scope(function (app) {
                 // registeredElements
                 attributeApi.write(newElement, CUSTOM_KEY, str);
             }
-            return returnsElementData(newElement);
+            return manager.returnsManager(newElement);
         },
         makeTree = function (str, manager) {
             var div = createElement(DIV, manager);
@@ -880,13 +893,13 @@ application.scope(function (app) {
             // fall back to performing a selector:
             parent = element[PARENT_NODE];
             if (!parent) {
-                parent = createElement(DIV, returnsElementData(element.ownerDocument));
+                parent = createElement(DIV, ensure(element.ownerDocument, BOOLEAN_TRUE));
                 parent[APPEND_CHILD](element);
             }
-            return !!posit(sizzle(selector, parent), element);
+            return !!posit(query(selector, parent), element);
         },
         createDocumentFragment = function (nulled, context) {
-            return context[TARGET].createDocumentFragment();
+            return context.element().createDocumentFragment();
         },
         /**
          * @private
@@ -896,7 +909,7 @@ application.scope(function (app) {
             return DOMM(foldl(gapSplit(tagName), function (memo, name) {
                 memo.push(createElement(name, context));
                 return memo;
-            }, []));
+            }, []), NULL, NULL, NULL, context);
         },
         fragment = function (els_, context) {
             var frag, els = els_;
@@ -911,14 +924,14 @@ application.scope(function (app) {
                 }
                 frag = context.createDocumentFragment();
                 duff(els, function (manager_) {
-                    var parentNode, manager = returnsElementData(manager_),
-                        el = manager.unwrap();
+                    var parentNode, manager = context.returnsManager(manager_),
+                        el = manager.element();
                     if (!isElement(el) || isFragment(el)) {
                         return;
                     }
                     parentNode = el[PARENT_NODE];
                     if (parentNode && !isFragment(parentNode)) {
-                        dispatchDetached(el);
+                        dispatchDetached([el], context);
                     }
                     frag[APPEND_CHILD](el);
                 });
@@ -938,7 +951,7 @@ application.scope(function (app) {
                     list = domm.unwrap(),
                     idxChange = _idxChange || idxChange_;
                 if (idxChange) {
-                    duff(list, function (idx_, el) {
+                    duff(list, function (el) {
                         var parent = el[PARENT_NODE],
                             idx = (indexOf(parent.children, el) + idxChange),
                             item = parent.children[idx];
@@ -969,7 +982,7 @@ application.scope(function (app) {
         //     return trackedAttributeInterface(el, makeDataKey(_key), val, isProp, data);
         // },
         styleAttributeManipulator = function (manager, key, value) {
-            var element = manager[TARGET];
+            var element = manager.element();
             if (manager.isElement) {
                 if (value === BOOLEAN_TRUE) {
                     return element[STYLE][key];
@@ -991,7 +1004,7 @@ application.scope(function (app) {
         },
         styleAttributeMeat = function (manager, key, value, list, hash, handler, isProperty) {
             var finalProp, j, prefixes, cameledKey = camelCase(key),
-                element = manager.unwrap();
+                element = manager.element();
             list.push(cameledKey);
             if (value != NULL) {
                 prefixes = [EMPTY_STRING] || prefixedStyles[cameledKey];
@@ -1048,7 +1061,7 @@ application.scope(function (app) {
                     // ensures it's still a dom object
                     result = fn.apply(this, arguments),
                     // don't know if we went up or down, so use null as context
-                    obj = new DOMM[CONSTRUCTOR](result, NULL, BOOLEAN_TRUE);
+                    obj = new DOMM[CONSTRUCTOR](result, NULL, BOOLEAN_TRUE, NULL, prev.context.owner);
                 obj._previous = prev;
                 return obj;
             };
@@ -1103,6 +1116,7 @@ application.scope(function (app) {
                     fn(nm, namespace, selector, fun, captures);
                 });
             }
+            return this;
         },
         expandEventListenerArguments = function (fn) {
             return function () {
@@ -1114,12 +1128,13 @@ application.scope(function (app) {
                     if (isString(args[0])) {
                         selector = args.shift();
                     }
-                    each(nameOrObject, function (key, handler) {
+                    each(nameOrObject, function (handler, key) {
                         createSelector(domm, [key, selector, handler].concat(args), fn);
                     });
+                    return domm;
                 } else {
                     args.unshift(nameOrObject);
-                    createSelector(domm, args, fn);
+                    return createSelector(domm, args, fn);
                 }
             };
         },
@@ -1162,7 +1177,11 @@ application.scope(function (app) {
             deviceorientation: 'deviceorientation mozOrientation',
             fullscreenalter: 'webkitfullscreenchange mozfullscreenchange fullscreenchange MSFullscreenChange',
             hover: 'mouseenter mouseleave',
-            forcetouch: 'webkitmouseforcewillbegin webkitmouseforcedown webkitmouseforceup webkitmouseforcechanged'
+            forcewillbegin: 'mouseforcewillbegin webkitmouseforcewillbegin',
+            forcechange: 'mouseforcechange webkitmouseforcechange',
+            forcedown: 'mouseforcedown webkitmouseforcedown',
+            forceup: 'mouseforceup webkitmouseforceup',
+            force: 'mouseforcewillbegin webkitmouseforcewillbegin mouseforcechange webkitmouseforcechange mouseforcedown webkitmouseforcedown mouseforceup webkitmouseforceup'
         }, gapSplit),
         distilledEventName = foldl(_eventExpander, function (memo, arr, key) {
             duff(arr, function (item) {
@@ -1194,10 +1213,10 @@ application.scope(function (app) {
             return isFunction(handler) ? _removeEventListener(manager, name, namespace, selector, handler, capture) : manager;
         }),
         _addEventListener = function (manager, types, namespace, selector, fn_, capture) {
-            var handleObj, eventHandler, el = manager.unwrap(),
+            var handleObj, eventHandler, el = manager.element(),
                 events = manager.directive(EVENTS),
                 elementHandlers = events.elementHandlers = events.elementHandlers || {},
-                fn = bind(fn_, el),
+                fn = bind(fn_, manager),
                 wasCustom = manager.isCustom;
             duff(gapSplit(types), eventExpander(function (name, passedName) {
                 var foundDuplicate, handlerKey = capture + COLON + name,
@@ -1205,8 +1224,16 @@ application.scope(function (app) {
                     mainHandler = elementHandlers[handlerKey];
                 if (!mainHandler) {
                     eventHandler = function (e) {
-                        return eventDispatcher(manager, e.type, e, isCapturing(e));
+                        return eventDispatcher(manager, e.type, e, capture);
                     };
+                    if (el.addEventListener) {
+                        el.addEventListener(name, eventHandler, capture);
+                    } else {
+                        if (capture) {
+                            return;
+                        }
+                        el.attachEvent(name, eventHandler);
+                    }
                     mainHandler = elementHandlers[handlerKey] = {
                         fn: eventHandler,
                         __delegateCount: 0,
@@ -1214,13 +1241,9 @@ application.scope(function (app) {
                         currentEvent: NULL,
                         capturing: capture
                     };
-                    el.addEventListener(name, eventHandler, capture);
                 }
                 foundDuplicate = handlers.find(function (obj) {
-                    // remove any duplicates
-                    if (fn_ === obj.handler && obj.namespace === namespace && selector === obj.selector) {
-                        return BOOLEAN_TRUE;
-                    }
+                    return fn_ === obj.handler && obj.namespace === namespace && selector === obj.selector;
                 });
                 if (foundDuplicate) {
                     return;
@@ -1244,6 +1267,7 @@ application.scope(function (app) {
             }));
             if (!wasCustom && manager.customListeners) {
                 markCustom(manager, BOOLEAN_TRUE);
+                manager.isAttached = isAttached(manager.element(), manager.owner);
             }
             return manager;
         },
@@ -1261,46 +1285,48 @@ application.scope(function (app) {
             return this.id;
         },
         appendChild = function (el) {
-            var manager = returnsElementData(el),
-                cachedRemoving = manager.isRemoving || BOOLEAN_FALSE;
-            if (!cachedRemoving) {
-                manager.isRemoving = BOOLEAN_TRUE;
-                this.unwrap()[APPEND_CHILD](manager.unwrap());
-                manager.isRemoving = cachedRemoving;
-            }
+            return this.insertAt(el, NULL);
         },
         attributeParody = function (method) {
             return function (one, two) {
-                return attributeApi[method](this.unwrap(), one, two);
+                return attributeApi[method](this.element(), one, two);
             };
         },
         getInnard = function (attribute, manager) {
-            var win, doc, el = manager[TARGET],
+            var win, doc, el = manager.element(),
                 returnValue = EMPTY_STRING;
-            if (manager.isIframe && manager.isFriendly) {
-                win = el.contentWindow;
-                if (win) {
-                    doc = win[DOCUMENT];
-                    returnValue = doc.body ? doc.body[PARENT_NODE].outerHTML : EMPTY_STRING;
+            if (manager.isIframe) {
+                if (manager.isAccessable) {
+                    win = el.contentWindow;
+                    if (win) {
+                        doc = win[DOCUMENT];
+                        returnValue = doc.body ? doc.body[PARENT_NODE].outerHTML : EMPTY_STRING;
+                    }
                 }
             } else {
-                returnValue = manager[TARGET][attribute];
+                if (manager.isElement) {
+                    returnValue = el[attribute];
+                }
             }
             return returnValue;
         },
         setInnard = function (attribute, manager, value, queryForCreation) {
-            var win, doc, el = manager[TARGET];
-            if (manager.isIframe && manager.isFriendly) {
-                win = el.contentWindow;
-                if (win) {
-                    doc = win[DOCUMENT];
-                    doc.open();
-                    doc.write(value);
-                    doc.close();
+            var win, doc, el = manager.element();
+            if (manager.isIframe) {
+                if (manager.isAccessable) {
+                    win = el.contentWindow;
+                    if (win) {
+                        doc = win[DOCUMENT];
+                        doc.open();
+                        doc.write(value);
+                        doc.close();
+                    }
                 }
             } else {
-                el[attribute] = value || EMPTY_STRING;
-                duff(sizzle(CUSTOM_ATTRIBUTE, el), returnsElementData);
+                if (manager.isElement) {
+                    el[attribute] = value || EMPTY_STRING;
+                    duff(query(CUSTOM_ATTRIBUTE, el), manager.owner.returnsManager, manager.owner);
+                }
             }
         },
         innardManipulator = function (attribute, queryForCreation) {
@@ -1315,23 +1341,27 @@ application.scope(function (app) {
                 return returnValue;
             };
         },
-        testIframe = function (el) {
-            var returnValue = BOOLEAN_FALSE;
-            return wraptry(function () {
-                var ret = el.contentWindow.document;
-                return BOOLEAN_TRUE;
-            }, function (e) {
-                return BOOLEAN_FALSE;
-            });
-            // don't use finally handler here
+        /**
+         * @func
+         */
+        testIframe = function (manager) {
+            var contentWindow, contentWindowManager, element = manager.element();
+            manager.isIframe = manager.tagName === IFRAME;
+            if (!manager.isIframe) {
+                return;
+            }
+            contentWindow = element.contentWindow;
+            manager.windowReady = !!contentWindow;
+            if (manager.windowReady) {
+                contentWindowManager = manager.owner.returnsManager(contentWindow);
+                contentWindowManager.iframe = manager;
+                markGlobal(contentWindowManager);
+            }
         },
         eventDispatcher = function (manager, name, e, capturing_) {
             var capturing = !!capturing_,
                 fullName = capturing + COLON + name;
-            if (!manager.hasEvents(fullName)) {
-                return manager;
-            }
-            return factories.Events[CONSTRUCTOR][PROTOTYPE][DISPATCH_EVENT].call(manager, fullName, validateEvent(e, manager.target, name), capturing);
+            return factories.Events[CONSTRUCTOR][PROTOTYPE][DISPATCH_EVENT].call(manager, fullName, validateEvent(e, manager.element(), name), capturing);
         },
         directAttributes = {
             id: BOOLEAN_FALSE,
@@ -1347,11 +1377,14 @@ application.scope(function (app) {
         directEvents = gapSplit('blur focus focusin focusout load resize scroll unload click dblclick mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave change select submit keydown keypress keyup error contextmenu'),
         // collected here so DOMM can do what it wants
         allDirectMethods = directEvents.concat(_.keys(videoDirectEvents), _.keys(directAttributes)),
-        isAttached = function (element_) {
-            var parent, potential, manager = returnsElementData(element_),
+        isAttached = function (element_, owner) {
+            var parent, potential, manager = owner.returnsManager(element_),
                 element = manager.element();
             if (manager[IS_ATTACHED]) {
                 return manager[IS_ATTACHED];
+            }
+            if (manager.isWindow) {
+                return BOOLEAN_TRUE;
             }
             while (!parent && element[PARENT_NODE]) {
                 potential = element[PARENT_NODE];
@@ -1362,7 +1395,7 @@ application.scope(function (app) {
                     return BOOLEAN_TRUE;
                 }
                 if (potential[__ELID__]) {
-                    manager[IS_ATTACHED] = isAttached(potential);
+                    manager[IS_ATTACHED] = isAttached(potential, owner);
                     return manager[IS_ATTACHED];
                 }
                 element = potential;
@@ -1370,16 +1403,24 @@ application.scope(function (app) {
             return BOOLEAN_FALSE;
         },
         dispatchDomEvent = function (evnt, mark) {
-            return function (element) {
-                var manager = returnsElementData(element);
-                manager.isAttached = mark;
-                return manager.isElement && manager.customListeners && manager[DISPATCH_EVENT](evnt);
+            return function (list, owner) {
+                var managers = [];
+                // mark all managers first
+                duff(list, function (element) {
+                    var manager = owner.returnsManager(element);
+                    var original = manager.isAttached;
+                    manager.isAttached = mark;
+                    if (mark !== original && manager.isElement && manager.customListeners) {
+                        managers.push(manager);
+                    }
+                });
+                _.eachCall(managers, DISPATCH_EVENT, evnt);
             };
         },
         dispatchDetached = dispatchDomEvent('detach', BOOLEAN_FALSE),
         dispatchAttached = dispatchDomEvent('attach', BOOLEAN_TRUE),
         applyStyle = function (key, value, manager) {
-            var cached, element = manager[TARGET];
+            var cached, element = manager.element();
             if (manager.isElement && element[STYLE][key] !== value) {
                 cached = attributeApi.read(element, STYLE);
                 element[STYLE][key] = convertStyleValue(key, value);
@@ -1430,7 +1471,7 @@ application.scope(function (app) {
                 withClass = unCamelCased === CLASSNAME || unCamelCased === CLASS__NAME,
                 trigger = (withClass ? (api = propertyApi) && (unCamelCased = CLASSNAME) && CLASSNAME : passedTrigger_) || unCamelCased;
             return function (manager, idx) {
-                var generated, el = manager.unwrap(),
+                var generated, el = manager.element(),
                     read = api.read(el, unCamelCased),
                     returnValue = manager,
                     attributeManager = ensureManager(manager, unCamelCased, read);
@@ -1473,7 +1514,7 @@ application.scope(function (app) {
         hasAttributeValue = function (property, values_, third, api) {
             var values = gapSplit(values_);
             return function (manager) {
-                var el = manager.unwrap(),
+                var el = manager.element(),
                     attributeManager = manager.get(property),
                     read = api.read(el, property);
                 attributeManager.ensure(read, SPACE);
@@ -1500,7 +1541,7 @@ application.scope(function (app) {
                         usingApi = givenApi || api;
                     if (firstIsString && second === UNDEFINED) {
                         context = context.index(0);
-                        return usingApi.read(context[TARGET], keyprocess(first));
+                        return usingApi.read(context.element(), keyprocess(first));
                     } else {
                         reverseCache = {};
                         context.each(unmarkChange(intendedIteration(first, second, function (first, second, manager, idx) {
@@ -1515,22 +1556,18 @@ application.scope(function (app) {
         attrApi = getSetter(queueAttributeValues, attributeApi, unCamelCase),
         dataApi = getSetter(queueAttributeValues, attributeApi, makeDataKey),
         propApi = getSetter(queueAttributeValues, propertyApi, unCamelCase),
-        managerIterates = function (handler, context) {
-            handler(context);
-            return context;
-        },
         domFirst = function (handler, context) {
             var first = context.index(0);
-            return first && handler(first);
+            return first && handler(first, 0);
         },
         domIterates = function (handler, context) {
-            context.duff(handler);
+            context.each(handler);
             return context;
         },
-        managerUnderstandsContextFind = function (fn, context) {
-            return !fn(context);
+        returnsFirst = function (fn, context) {
+            return fn(context.index(), 0);
         },
-        domUnderstandsContextFind = function (fn, context) {
+        domContextFind = function (fn, context) {
             return !context.find(fn);
         },
         makeValueTarget = function (target, passed_, api, domHappy) {
@@ -1544,51 +1581,87 @@ application.scope(function (app) {
             }, {});
         },
         markCustom = function (manager, forceCustom) {
-            var isCustomValue = readAttribute(manager[TARGET], CUSTOM_KEY),
+            var isCustomValue = readAttribute(manager.element(), CUSTOM_KEY),
                 isCustom = manager.isCustom = forceCustom || !!isCustomValue;
-            (isCustom ? writeAttribute : removeAttribute)(manager[TARGET], CUSTOM_KEY, isCustomValue || BOOLEAN_TRUE);
+            (isCustom ? writeAttribute : removeAttribute)(manager.element(), CUSTOM_KEY, isCustomValue || BOOLEAN_TRUE);
             if (isCustomValue) {
                 manager.registeredAs = isCustomValue;
             }
         },
         markElement = function (manager) {
-            var isIframe, element = manager[TARGET];
+            var element;
+            manager.isElement = BOOLEAN_FALSE;
+            manager.isIframe = BOOLEAN_FALSE;
+            manager.tagName = BOOLEAN_FALSE;
+            if (manager.isWindow) {
+                // manager.windowReady = BOOLEAN_TRUE;
+                return;
+            }
+            element = manager.element();
             if ((manager.isElement = isElement(element))) {
                 manager.tagName = tag(element);
-                if ((manager.isIframe = manager.tagName === IFRAME)) {
-                    manager.isFriendly = testIframe(element);
-                }
+                testIframe(manager);
                 markCustom(manager);
             }
         },
-        test = function (manager) {
-            var el = manager[TARGET];
+        markGlobal = function (manager) {
+            var element = manager.element();
+            manager.isWindow = isWindow(element);
+            if (!manager.isWindow || !manager.owner) {
+                return;
+            }
+            manager.isAccessable = !!wraptry(function () {
+                return element[DOCUMENT];
+            });
+            manager.isTop = !!(window && element === window.top);
+            manager.setAddress();
+            if (!manager.isAccessable) {
+                return;
+            }
+            if (manager.isTop) {
+                // tests do not fail on top window
+                return;
+            }
+            // more accessable tests
+            manager.isAccessable = manager.sameOrigin();
+        },
+        test = function (manager, owner) {
+            var el = manager.element();
+            markGlobal(manager);
             markElement(manager);
+            manager.isDocument = BOOLEAN_FALSE;
+            manager.isFragment = BOOLEAN_FALSE;
+            manager[IS_ATTACHED] = BOOLEAN_TRUE;
+            if (manager.isWindow) {
+                return;
+            }
             manager.isDocument = isDocument(el);
-            manager.isWindow = isWindow(el);
             manager.isFragment = isFragment(el);
-            manager[IS_ATTACHED] = isAttached(manager);
+            if (manager.isDocument || manager.isFragment) {
+                return;
+            }
+            manager[IS_ATTACHED] = isAttached(manager, owner);
         },
         registeredElementName = function (name, manager) {
             return ELEMENT + HYPHEN + manager.documentId + HYPHEN + name;
         },
-        sizzle = function (str, ctx) {
-            return (ctx || doc_).querySelectorAll(str);
+        query = function (str, ctx) {
+            return toArray((ctx || doc_).querySelectorAll(str));
         },
         DOMM_SETUP = factories.DOMM_SETUP = function (doc_) {
-            var wrapped, manager = returnsElementData(doc_),
-                registeredElements = clone(validTagsNamesHash),
-                setup = function (e) {
-                    manager.DOMContentLoadedEvent = e;
-                    manager.isReady = BOOLEAN_TRUE;
-                },
-                scoped = function (sel, ctx) {
-                    var context = ctx || manager;
-                    return DOMM(sel, context, UNDEFINED, manager === context, manager);
-                };
+            var registeredElements, setup, query, wrapped, manager = returnsManager(doc_, BOOLEAN_TRUE);
             if (manager.documentId) {
-                return manager.scoped;
+                return manager.query;
             }
+            registeredElements = clone(validTagsNamesHash);
+            setup = function (e) {
+                manager.DOMContentLoadedEvent = e;
+                manager.isReady = BOOLEAN_TRUE;
+            };
+            query = function (sel, ctx) {
+                var context = ctx || manager;
+                return DOMM(sel, context, BOOLEAN_FALSE, manager === context, manager);
+            };
             manager.documentId = uniqueId('doc');
             wrapped = extend(wrap({
                 makeTree: makeTree,
@@ -1596,16 +1669,15 @@ application.scope(function (app) {
                 createElements: createElements,
                 createDocumentFragment: createDocumentFragment,
                 registeredElementName: registeredElementName,
-                fragment: fragment
+                fragment: fragment,
+                query: query,
+                returnsManager: returnsManager
             }, function (handler) {
                 return function (one) {
                     return handler(one, manager);
                 };
             }), {
-                sizzle: function (str) {
-                    return sizzle(str, doc_);
-                },
-                scoped: scoped,
+                data: factories.Associator(),
                 documentId: manager.documentId,
                 manager: manager,
                 constructor: DOMM[CONSTRUCTOR],
@@ -1619,8 +1691,8 @@ application.scope(function (app) {
                     return compile(id, string, manager);
                 },
                 collectTemplates: function () {
-                    scoped('script[id]').each(function (script) {
-                        compile(script.unwrap().id, script.html(), manager);
+                    query('script[id]').each(function (script) {
+                        compile(script.element().id, script.html(), manager);
                         script.remove();
                     });
                 },
@@ -1664,35 +1736,256 @@ application.scope(function (app) {
                 }
             });
             extend(manager, wrapped);
-            extend(scoped, wrapped);
+            extend(query, wrapped);
             if (manager.isReady === UNDEFINED) {
                 manager.isReady = BOOLEAN_FALSE;
-                if (manager[TARGET].readyState === 'complete') {
+                if (manager.element().readyState === 'complete') {
                     setup({});
                 } else {
                     manager.on('DOMContentLoaded', setup);
                 }
             }
-            return scoped;
+            return query;
         },
+        styleManipulator = function (one, two) {
+            var manager, styles;
+            if (isString(one) && two === UNDEFINED) {
+                return (manager = this.index(0)) && (styles = manager.getStyle()) && (prefix = _.find(prefixes[camelCase(one)], function (prefix) {
+                    return styles[prefix + unCameled] !== UNDEFINED;
+                })) && styles[prefix + unCameled];
+            } else {
+                if (this.length()) {
+                    this.each(unmarkChange(intendedIteration(one, two, applyStyle)));
+                }
+                return this;
+            }
+        },
+        getValueCurried = getValue(returnsFirst),
+        setValueCurried = setValue(domIterates),
         classApi = makeValueTarget('class', 'className', propertyApi),
-        DomManager = factories.Events.extend('DomManager', extend(classApi, {
-            constructor: function (el) {
-                var owner, manager = this;
+        manager_query = function (selector) {
+            var target = this.element();
+            return $(query(selector, target), target);
+        },
+        isAppendable = function (els) {
+            return isElement(els) || isFragment(els) || els.isValidDomManager;
+        },
+        iframeChangeHandler = function () {
+            testIframe(this);
+        },
+        DomManager = factories.Events.extend(DOM_MANAGER_STRING, extend(classApi, {
+            constructor: function (el, hash, owner_) {
+                var owner = owner_,
+                    manager = this;
                 manager[TARGET] = el;
-                test(manager);
+                test(manager, owner);
                 if (manager.isElement || manager.isFragment) {
-                    owner = returnsElementData(el.ownerDocument);
+                    hash[DOM_MANAGER_STRING] = manager;
+                    owner = ensure(el.ownerDocument, BOOLEAN_TRUE);
                 } else {
                     if (manager.isDocument) {
                         owner = manager;
                     } else {
-                        owner = returnsElementData(el.document);
+                        hash[DOM_MANAGER_STRING] = manager;
                     }
                 }
-                manager.owner = owner;
+                manager.owner = owner || BOOLEAN_FALSE;
+                if (manager.isIframe) {
+                    manager.on('attributeChange:src detach attach', iframeChangeHandler);
+                }
+                if (manager.isWindow) {
+                    markGlobal(manager);
+                }
                 manager.registerAs(manager.registeredAs);
                 return manager;
+            },
+            sameOrigin: function () {
+                var parsedReference;
+                var element = this.element();
+                var windo = this.owner.window();
+                return windo === this || this.isAccessable && !(parsedReference = reference(element.location.href)) && parsedReference === reference(windo.element().location.href);
+            },
+            $: manager_query,
+            query: manager_query,
+            getValue: getValueCurried,
+            setValue: setValueCurried,
+            hasValue: hasValue(domContextFind),
+            addValue: addValue(domIterates),
+            removeValue: removeValue(domIterates),
+            toggleValue: toggleValue(domIterates),
+            changeValue: changeValue(domIterates),
+            on: addEventListener,
+            addEventListener: addEventListener,
+            once: addEventListenerOnce,
+            off: removeEventListener,
+            removeEventListener: removeEventListener,
+            isValidDomManager: BOOLEAN_TRUE,
+            appendChild: appendChild,
+            append: appendChild,
+            getAttribute: getValueCurried,
+            setAttribute: setValueCurried,
+            removeAttribute: attributeParody('remove'),
+            attr: attrApi(domIterates),
+            data: dataApi(domIterates),
+            prop: propApi(domIterates),
+            html: innardManipulator(INNER_HTML, BOOLEAN_TRUE),
+            text: innardManipulator(INNER_TEXT),
+            style: styleManipulator,
+            css: styleManipulator,
+            parent: (function () {
+                var finder = function (manager, fn, original) {
+                        var parentElement, rets, found, parentManager = manager,
+                            next = original;
+                        while (parentManager && parentManager.element() && !found) {
+                            parentElement = parentManager.element();
+                            rets = fn(parentManager, original, next);
+                            parentManager = rets[0] && parentManager.owner.returnsManager(rets[0]);
+                            found = rets[1];
+                            next = rets[2];
+                        }
+                        return parentManager;
+                    },
+                    number = function (parent, original, next) {
+                        next -= 1;
+                        if (next < 0 || !isFinite(next) || isNaN(next)) {
+                            next = 0;
+                        }
+                        return [parent, !next, next];
+                    },
+                    string = function (parent, original, next) {
+                        return [parent, matches(parent, original)];
+                    },
+                    speshal = {
+                        document: function (parent_, original, next) {
+                            if (parent_.isDocument) {
+                                return [parent_, BOOLEAN_TRUE];
+                            } else {
+                                if (parent_.isElement || parent_.isFragment) {
+                                    return [parent.element()[PARENT_NODE], BOOLEAN_FALSE];
+                                } else {
+                                    return [parent.owner.element(), BOOLEAN_TRUE];
+                                }
+                            }
+                        },
+                        window: function (parent_, original, next) {
+                            var element = parent_.element();
+                            var parent = element[DEFAULT_VIEW] || element[PARENT_NODE];
+                            return [element, isWindow(element)];
+                        },
+                        iframe: function (parent_, original, next) {
+                            var found, element, parent = parent_;
+                            if (parent.isWindow) {
+                                if (parent.isTop) {
+                                    return [NULL, BOOLEAN_TRUE];
+                                } else {
+                                    if (parent.iframe) {
+                                        return [parent.iframe, BOOLEAN_TRUE];
+                                    } else {
+                                        found = wraptry(function () {
+                                            var element = win.frameElement;
+                                            if (element) {
+                                                return BOOLEAN_TRUE;
+                                            }
+                                            return BOOLEAN_FALSE;
+                                        }, function () {
+                                            return BOOLEAN_FALSE;
+                                        });
+                                    }
+                                }
+                            } else {
+                                element = parent.element();
+                                element = element[DEFAULT_VIEW] || element[PARENT_NODE];
+                            }
+                            return [element, found];
+                        }
+                    };
+                return function (original) {
+                    var iterator, manager = this,
+                        data = [],
+                        doDefault = BOOLEAN_FALSE;
+                    if (isNumber(original)) {
+                        iterator = number;
+                    } else {
+                        if (isString(original)) {
+                            iterator = speshal[original] || string;
+                        } else {
+                            doDefault = original ? BOOLEAN_TRUE : doDefault;
+                        }
+                    }
+                    if (doDefault) {
+                        return finder(manager, function (el) {
+                            return [el, original(el)];
+                        });
+                    } else {
+                        if (!iterator) {
+                            iterator = number;
+                            original = 1;
+                        }
+                        return finder(manager, iterator, original);
+                    }
+                };
+            }()),
+            setAddress: function (address) {
+                var manager = this;
+                address = manager.address = address || manager.address || uuid();
+                return address;
+            },
+            emit: function (message, referrer_, handler) {
+                var windo = this.window(),
+                    element = windo.element();
+                if (windo.isAccessable) {
+                    handler({
+                        data: message,
+                        srcElement: element,
+                        timeStamp: _.now()
+                    });
+                } else {
+                    wraptry(function () {
+                        if (!referrer_) {
+                            throw new Error('missing referrer: ' + windo.address);
+                        }
+                        element.postMessage(message, referrer_);
+                    }, console.error);
+                }
+            },
+            insertAt: function (els, index) {
+                var manager = this,
+                    owner = manager.owner,
+                    // normalize into a fragment
+                    fragmentManager = isAppendable(els) ? owner.returnsManager(els) : DOMM(els).fragment(),
+                    fragment = fragmentManager.element(),
+                    children = index == NULL ? NULL : manager.children(),
+                    child = children && children.index(index) || NULL,
+                    element = child && child.element() || NULL,
+                    managerElement = manager && manager.element(),
+                    fragmentChildren = (fragmentManager.isElement && fragmentManager.customListeners ? [fragment] : []).concat(query(CUSTOM_ATTRIBUTE, fragment)),
+                    detachNotify = dispatchDetached(fragmentChildren, owner),
+                    returnValue = managerElement && managerElement.insertBefore(fragment, element),
+                    notify = isAttached(managerElement, owner) && dispatchAttached(fragmentChildren, owner);
+                return returnValue;
+            },
+            window: function () {
+                var manager = this;
+                if (manager.isWindow) {
+                    // yay we're here!
+                    return manager;
+                }
+                if (manager.isDocument) {
+                    // it's a document, so return the manager relative to the inside
+                    return manager.returnsManager(manager.element().defaultView);
+                }
+                if (manager.isIframe) {
+                    // it's an iframe, so return the manager relative to the outside
+                    return manager.owner.returnsManager(manager.element().contentWindow);
+                }
+                // it's an element so go up
+                return manager.owner.window();
+            },
+            element: function () {
+                return this[TARGET];
+            },
+            length: function () {
+                return 1;
             },
             registerAs: function () {
                 var newName, oldName, manager = this,
@@ -1705,44 +1998,24 @@ application.scope(function (app) {
                     manager.directive(newName);
                 }
             },
-            getValue: getValue(managerIterates),
-            setValue: setValue(managerIterates),
-            hasValue: hasValue(managerUnderstandsContextFind),
-            addValue: addValue(managerIterates),
-            removeValue: removeValue(managerIterates),
-            toggleValue: toggleValue(managerIterates),
-            changeValue: changeValue(managerIterates),
             wrap: function (list) {
-                return this.owner.scoped(list || this);
+                return this.owner.query(list || this);
+            },
+            collectChildren: function () {
+                return collectChildren(this.element());
             },
             children: function (eq, globalmemo) {
-                var filter = createDomFilter(eq);
-                var manager = this;
-                var children = collectChildren(manager.unwrap());
-                var result = foldl(children, function (memo, child, idx, children) {
-                    if (filter(child, idx, children)) {
-                        memo.push(returnsElementData(child));
-                    }
-                    return memo;
-                }, globalmemo || []);
+                var filter = createDomFilter(eq),
+                    manager = this,
+                    children = manager.collectChildren(),
+                    result = foldl(children, function (memo, child, idx, children) {
+                        if (filter(child, idx, children)) {
+                            memo.push(manager.owner.returnsManager(child));
+                        }
+                        return memo;
+                    }, globalmemo || []);
                 return globalmemo ? result : manager.wrap(result);
             },
-            on: addEventListener,
-            addEventListener: addEventListener,
-            once: addEventListenerOnce,
-            off: removeEventListener,
-            removeEventListener: removeEventListener,
-            isValidDomManager: BOOLEAN_TRUE,
-            appendChild: appendChild,
-            append: appendChild,
-            getAttribute: attributeParody('read'),
-            setAttribute: attributeParody('write'),
-            removeAttribute: attributeParody('remove'),
-            attr: attrApi(managerIterates),
-            data: dataApi(managerIterates),
-            prop: propApi(managerIterates),
-            html: innardManipulator(INNER_HTML, BOOLEAN_TRUE),
-            text: innardManipulator(INNER_TEXT),
             hide: function () {
                 return this.applyStyle('display', 'none');
             },
@@ -1756,16 +2029,13 @@ application.scope(function (app) {
                 return manager;
             },
             applyStyle: function (key, value) {
-                return applyStyle(key, value, this);
+                applyStyle(key, value, this);
+                return this;
             },
-            style: function (key, value) {
-                return intendedObject(key, value, this.applyStyle, this);
-            },
-            css: function () {},
             getStyle: function (eq) {
                 var returnValue = {},
                     manager = this,
-                    first = manager[TARGET];
+                    first = manager.element();
                 if (first && manager.isElement) {
                     returnValue = getComputed(first, manager.context);
                 }
@@ -1774,14 +2044,14 @@ application.scope(function (app) {
             remove: function (fragment) {
                 var el, parent, manager = this,
                     cachedRemoving = manager.isRemoving || BOOLEAN_FALSE;
-                if (!cachedRemoving && (el = manager.unwrap()) && (parent = el[PARENT_NODE])) {
+                if (!cachedRemoving && (el = manager.element()) && (parent = el[PARENT_NODE])) {
                     manager.isRemoving = BOOLEAN_TRUE;
                     if (fragment) {
                         fragment.appendChild(el);
                     } else {
                         parent.removeChild(el);
                     }
-                    dispatchDetached(el);
+                    dispatchDetached([el], manager.owner);
                     manager.isRemoving = cachedRemoving;
                 }
                 return manager;
@@ -1797,11 +2067,8 @@ application.scope(function (app) {
                 // destroy events
                 manager.resetEvents();
                 // remove from global hash
-                elementData.remove(manager[TARGET]);
-            },
-            $: function (selector) {
-                var target = this[TARGET];
-                return $(sizzle(selector, target), target);
+                manager.owner.data.remove(manager.element());
+                return manager;
             },
             createEvent: function (original, type, opts) {
                 return DomEvent(original, {
@@ -1810,12 +2077,6 @@ application.scope(function (app) {
                     capturing: toBoolean(type.split(COLON)[0]),
                     arg2: opts
                 });
-            },
-            unwrap: function () {
-                return this[TARGET];
-            },
-            element: function () {
-                return this[TARGET];
             },
             index: function () {
                 return this;
@@ -1838,7 +2099,7 @@ application.scope(function (app) {
             queueHandler: function (evnt, handler, list) {
                 var selectorsMatch, ctx, domManager = this,
                     originalTarget = evnt.currentTarget,
-                    el = domManager[TARGET],
+                    el = domManager.element(),
                     mainHandler = handler.mainHandler;
                 domManager.stashed = originalTarget;
                 if (mainHandler.currentEvent) {
@@ -1864,7 +2125,7 @@ application.scope(function (app) {
                 return BOOLEAN_TRUE;
             },
             tag: function (str) {
-                return tag(this[TARGET], str);
+                return tag(this.element(), str);
             },
             rect: function () {
                 return clientRect(this.element());
@@ -1886,7 +2147,7 @@ application.scope(function (app) {
             },
             toJSON: function () {
                 var children, obj, manager = this,
-                    node = manager.unwrap();
+                    node = manager.element();
                 if (!canBeProcessed(node)) {
                     return node;
                 }
@@ -1920,7 +2181,7 @@ application.scope(function (app) {
                 if (string !== UNDEFINED) {
                     return manager.attr(attr, string);
                 }
-                return manager[TARGET][attr];
+                return manager.element()[attr];
             };
         }), wrap(videoDirectEvents, triggerEventWrapperManager), wrap(directEvents, function (attr) {
             return triggerEventWrapperManager(attr);
@@ -1958,15 +2219,13 @@ application.scope(function (app) {
             }
             obj.disabled = BOOLEAN_TRUE;
         },
-        _removeEventListener = function (el, name, namespace, selector, handler, capture_) {
-            var data = elementData.ensure(el, DOMM_STRING, DomManager),
-                capture = !!capture_,
-                directive = data.directive(EVENTS),
+        _removeEventListener = function (manager, name, namespace, selector, handler, capture_) {
+            var capture = !!capture_,
+                directive = manager.directive(EVENTS),
                 removeFromList = function (list, name) {
                     return list && list.duffRight(function (obj) {
                         if ((!name || name === obj[NAME]) && (!handler || obj.handler === handler) && (!namespace || obj.namespace === namespace) && (!selector || obj.selector === selector)) {
                             removeEventQueue(obj);
-                            // directive.detach(obj);
                         }
                     });
                 };
@@ -1977,6 +2236,7 @@ application.scope(function (app) {
          * @augments Model
          * @augments Collection
          */
+        IS_TRUSTED = 'isTrusted',
         fixHooks = {
             // Includes some event props shared by KeyEvent and MouseEvent
             props: gapSplit("data altKey bubbles cancelable ctrlKey currentTarget eventPhase metaKey relatedTarget shiftKey target timeStamp view which"),
@@ -1996,8 +2256,14 @@ application.scope(function (app) {
             forceHooks: {
                 props: [],
                 filter: function (evnt, original) {
-                    evnt.value = (original.webkitForce / 3) || original;
+                    evnt.value = ((original.force || original.webkitForce) / 3) || 0;
                     return evnt;
+                }
+            },
+            motionHooks: {
+                props: [],
+                filter: function () {
+                    this.watchingMotion = BOOLEAN_TRUE;
                 }
             },
             mouseHooks: {
@@ -2027,59 +2293,101 @@ application.scope(function (app) {
                     return evnt;
                 }
             },
-            make: function (evnt, originalEvent, data) {
-                var doc, target, val, i, prop, copy, type = originalEvent.type,
-                    // Create a writable copy of the event object and normalize some properties
-                    fixHook = fixHooks.fixedHooks[type];
-                if (!fixHook) {
-                    fixHooks.fixedHooks[type] = fixHook = rmouseEvent.test(type) ? this.mouseHooks : rkeyEvent.test(type) ? this.keyHooks : rforceEvent.test(type) ? this.forceHooks : {};
-                }
-                copy = fixHook.props ? this.props.concat(fixHook.props) : this.props;
-                i = copy[LENGTH];
-                while (i--) {
-                    prop = copy[i];
-                    val = originalEvent[prop];
-                    if (val != NULL) {
-                        evnt[prop] = val;
+            make: (function () {
+                var cached = {};
+                return function (evnt, originalEvent, data) {
+                    var acc, acc_, doc, target, val, i, prop, copy, type = originalEvent.type,
+                        // Create a writable copy of the event object and normalize some properties
+                        fixHook = fixHooks.fixedHooks[type];
+                    if (!fixHook) {
+                        fixHooks.fixedHooks[type] = fixHook = rmouseEvent.test(type) ? this.mouseHooks : rkeyEvent.test(type) ? this.keyHooks : rforceEvent.test(type) ? this.forceHooks : motionMorph.test(type) ? this.motionHooks : {};
+                        // rfocusMorph
+                        // motionMorph
                     }
-                }
-                evnt.originalType = originalEvent.type;
-                // Support: Cordova 2.5 (WebKit) (#13255)
-                // All events should have a target; Cordova deviceready doesn't
-                // ie also does not have a target... so use current target
-                target = evnt.target || (evnt.view ? evnt.view.event.currentTarget : event && event.currentTarget) || evnt.delegateTarget;
-                if (!target) {
-                    target = evnt.target = doc;
-                }
-                // Support: Safari 6.0+, Chrome<28
-                // Target should not be a text node (#504, #13143)
-                if (target[NODE_TYPE] === 3) {
-                    evnt.target = target[PARENT_NODE];
-                }
-                if (isFunction(fixHook.filter)) {
-                    fixHook.filter(evnt, originalEvent);
-                }
-                evnt.type = distilledEventName[originalEvent.type] || originalEvent.type;
-                evnt.data = originalEvent.data || data || EMPTY_STRING;
-                evnt.isImmediatePropagationStopped = evnt.isPropagationStopped = evnt.isDefaultPrevented = BOOLEAN_FALSE;
-                // special
-                if (evnt.type === 'fullscreenchange') {
-                    doc = evnt.target;
-                    if (isWindow(doc)) {
-                        doc = doc[DOCUMENT];
-                    } else {
-                        while (doc && !isDocument(doc) && doc[PARENT_NODE]) {
-                            doc = doc[PARENT_NODE];
+                    copy = fixHook.props ? this.props.concat(fixHook.props) : this.props;
+                    i = copy[LENGTH];
+                    while (i--) {
+                        prop = copy[i];
+                        val = originalEvent[prop];
+                        if (val != NULL) {
+                            evnt[prop] = val;
                         }
                     }
-                    evnt.fullscreenDocument = doc;
-                    if (isDocument(doc)) {
-                        evnt.isFullScreen = (doc.fullScreen || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.fullscreenElement) ? BOOLEAN_TRUE : BOOLEAN_FALSE;
+                    evnt.originalType = originalEvent.type;
+                    // Support: Cordova 2.5 (WebKit) (#13255)
+                    // All events should have a target; Cordova deviceready doesn't
+                    // ie also does not have a target... so use current target
+                    target = evnt.target || (evnt.view ? evnt.view.event.currentTarget : event && event.currentTarget) || evnt.delegateTarget;
+                    if (!target) {
+                        target = evnt.target = doc;
                     }
-                }
-                evnt.isTrusted = _.has(originalEvent, 'isTrusted') ? originalEvent.isTrusted : !DO_NOT_TRUST;
-                return evnt;
-            }
+                    // Support: Safari 6.0+, Chrome<28
+                    // Target should not be a text node (#504, #13143)
+                    if (target[NODE_TYPE] === 3) {
+                        evnt.target = target[PARENT_NODE];
+                    }
+                    if (isFunction(fixHook.filter)) {
+                        fixHook.filter(evnt, originalEvent);
+                    }
+                    evnt.type = distilledEventName[originalEvent.type] || originalEvent.type;
+                    evnt.set(originalEvent.data || data || EMPTY_STRING);
+                    evnt.isImmediatePropagationStopped = evnt.isPropagationStopped = evnt.isDefaultPrevented = BOOLEAN_FALSE;
+                    // special
+                    if (evnt.type === 'fullscreenchange') {
+                        doc = evnt.target;
+                        if (isWindow(doc)) {
+                            doc = doc[DOCUMENT];
+                        } else {
+                            while (doc && !isDocument(doc) && doc[PARENT_NODE]) {
+                                doc = doc[PARENT_NODE];
+                            }
+                        }
+                        evnt.fullscreenDocument = doc;
+                        if (isDocument(doc)) {
+                            evnt.isFullScreen = (doc.fullScreen || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.fullscreenElement) ? BOOLEAN_TRUE : BOOLEAN_FALSE;
+                        }
+                    }
+                    evnt[IS_TRUSTED] = _.has(originalEvent, IS_TRUSTED) ? originalEvent[IS_TRUSTED] : !DO_NOT_TRUST;
+                    if (this.watchingMotion) {
+                        acc = original.acceleration;
+                        if (!acc) {
+                            acc_ = original.accelerationIncludingGravity;
+                            acc = {
+                                x: acc_.x - 9.81,
+                                y: acc_.y - 9.81,
+                                z: acc_.z - 9.81
+                            };
+                        }
+                        if (acc) {
+                            cached.x = acc.x;
+                            cached.y = acc.y;
+                            cached.z = acc.z;
+                            cached.interval = original.interval;
+                            cached.rotationRate = original.rotationRate;
+                        }
+                        if (cached.x != NULL) {
+                            evnt.motionX = cached.x;
+                            evnt.motionY = cached.y;
+                            evnt.motionZ = cached.z;
+                            evnt.interval = cached.interval;
+                            evnt.rotationRate = cached.rotationRate;
+                        }
+                        if (original.alpha != NULL) {
+                            cached.alpha = original.alpha;
+                            cached.beta = original.beta;
+                            cached.gamma = original.gamma;
+                            cached.absolute = original.absolute;
+                        }
+                        if (cached.alpha != NULL) {
+                            evnt.alpha = cached.alpha;
+                            evnt.beta = cached.beta;
+                            evnt.gamma = cached.gamma;
+                            evnt.absolute = cached.absolute;
+                        }
+                    }
+                    return evnt;
+                };
+            }())
         },
         DomEvent = factories.ObjectEvent.extend('DomEvent', {
             constructor: function (evnt, opts) {
@@ -2130,7 +2438,7 @@ application.scope(function (app) {
         },
         unwrapsOnLoop = function (fn) {
             return function (manager, index, list) {
-                return fn(manager.unwrap(), index, list);
+                return fn(manager.element(), index, list);
             };
         },
         dataReconstructor = function (list, fn) {
@@ -2151,11 +2459,11 @@ application.scope(function (app) {
                 if (manager.isElement) {
                     ret = clientRect(manager)[element];
                 } else {
-                    if (manager.isDocument && manager[TARGET][BODY]) {
-                        ret = manager[TARGET][BODY][doc];
+                    if (manager.isDocument && manager.element()[BODY]) {
+                        ret = manager.element()[BODY][doc];
                     } else {
                         if (manager.isWindow) {
-                            ret = manager[TARGET][win];
+                            ret = manager.element()[win];
                         }
                     }
                 }
@@ -2165,19 +2473,20 @@ application.scope(function (app) {
         dommFind = attachPrevious(function (str) {
             var passedString = isString(str),
                 matchers = [],
+                domm = this,
                 push = function (el) {
-                    matchers.push(returnsElementData(el));
+                    matchers.push(domm.context.owner.returnsManager(el));
                 };
-            return duff(this.unwrap(), function (el) {
+            return duff(domm.unwrap(), function (manager) {
                 if (passedString) {
-                    duff(sizzle(str, el.unwrap()), push);
+                    duff(query(str, manager.element()), push);
                 } else {
-                    push(el);
+                    push(manager);
                 }
             }) && matchers;
         }),
         canBeProcessed = function (item) {
-            return isElement(item) || isWindow(item) || isDocument(item) || isFragment(item);
+            return isWindow(item) || isElement(item) || isDocument(item) || isFragment(item);
         },
         collectChildren = function (element) {
             return element.children || element.childNodes;
@@ -2188,18 +2497,15 @@ application.scope(function (app) {
         prependChildDOMM = function (els, clone) {
             return this.insertAt(els, 0, clone);
         },
-        returnsElementData = function (element) {
-            return element && element.isValidDomManager ? element : elementData.ensure(element, DOMM_STRING, DomManager);
-        },
-        loadData = function (data, items) {
-            return data || foldl(items || this.unwrap(), returnsElementData, []);
+        returnsManager = function (element, owner) {
+            return element && !isWindow(element) && element.isValidDomManager ? element : ensure(element, owner);
         },
         exportResult = _.exports({
             covers: covers,
             center: center,
             closer: closer,
             distance: distance,
-            // sizzle: sizzle,
+            // query: query,
             escape: escape,
             unescape: unescape,
             // css: css,
@@ -2231,12 +2537,12 @@ application.scope(function (app) {
         },
         applyToEach = function (method) {
             return function (one, two, three, four, five) {
-                return this.duff(function (manager) {
+                return this.each(function (manager) {
                     manager[method](one, two, three, four, five);
                 });
             };
         },
-        allEachMethods = gapSplit('show hide style remove applyStyle on off once addEventListener removeEventListener dispatchEvent').concat(allDirectMethods),
+        allEachMethods = gapSplit('show hide style remove on off once addEventListener removeEventListener dispatchEvent').concat(allDirectMethods),
         firstMethods = gapSplit('tag element rect box flow'),
         applyToFirst = function (method) {
             var shouldBeContext = method !== 'tag';
@@ -2252,20 +2558,7 @@ application.scope(function (app) {
                 return element && element[property];
             };
         },
-        styleManipulator = function (one, two) {
-            var manager, styles;
-            if (isString(one) && two === UNDEFINED) {
-                return (manager = this.index(0)) && (styles = manager.getStyle()) && (prefix = _.find(prefixes[camelCase(one)], function (prefix) {
-                    return styles[prefix + unCameled] !== UNDEFINED;
-                })) && styles[prefix + unCameled];
-            } else {
-                if (this.length()) {
-                    this.duff(unmarkChange(intendedIteration(one, two, applyStyle)));
-                }
-                return this;
-            }
-        },
-        DOMM = factories[DOMM_STRING] = factories.Collection.extend(DOMM_STRING, extend(makeValueTarget('class', 'className', propertyApi, BOOLEAN_TRUE), {
+        DOMM = factories.Collection.extend('DOMM', extend(makeValueTarget('class', 'className', propertyApi, BOOLEAN_TRUE), {
             /**
              * @func
              * @name DOMM#constructor
@@ -2275,8 +2568,8 @@ application.scope(function (app) {
             constructor: function (str, ctx, isValid, validContext, documentContext) {
                 var isArrayResult, els = str,
                     dom = this,
-                    context = dom.context = validContext ? ctx.index(0) : returnsElementData(ctx || win[DOCUMENT]),
-                    unwrapped = context.unwrap();
+                    context = dom.context = validContext ? ctx.index(0) : documentContext, // returnsManager(ctx || win[DOCUMENT], documentContext),
+                    unwrapped = context.element();
                 if (isFunction(str)) {
                     if (isDocument(unwrapped)) {
                         return setupDomContentLoaded(str, unwrapped);
@@ -2287,7 +2580,7 @@ application.scope(function (app) {
                             if (str[0] === '<') {
                                 els = makeTree(str, documentContext);
                             } else {
-                                els = map(sizzle(str, unwrapped), returnsElementData);
+                                els = map(query(str, unwrapped), documentContext.returnsManager, documentContext);
                             }
                         } else {
                             els = str;
@@ -2295,9 +2588,9 @@ application.scope(function (app) {
                                 els = [els];
                             } else {
                                 if (canBeProcessed(els)) {
-                                    els = [returnsElementData(els)];
+                                    els = [documentContext.returnsManager(els)];
                                 } else {
-                                    els = els && map(els, returnsElementData);
+                                    els = els && map(els, documentContext.returnsManager, documentContext);
                                 }
                             }
                         }
@@ -2307,20 +2600,19 @@ application.scope(function (app) {
                 return dom;
             },
             setValue: setValue(domIterates),
-            hasValue: hasValue(domUnderstandsContextFind),
+            hasValue: hasValue(domContextFind),
             addValue: addValue(domIterates),
             removeValue: removeValue(domIterates),
             toggleValue: toggleValue(domIterates),
             changeValue: changeValue(domIterates),
-            loadData: loadData,
             push: function (el) {
-                this.unwrap().push(returnsElementData(el));
+                this.unwrap().push(this.context.owner.returnsManager(el));
             },
             elements: function () {
                 // to array of DOMManagers
                 return map(this.unwrap(), function (manager) {
                     // to element
-                    return manager.unwrap();
+                    return manager.element();
                 });
             },
             /**
@@ -2335,9 +2627,9 @@ application.scope(function (app) {
              * @description asks if the first or specified index of the object is a document type object
              * @returns {Boolean}
              */
-            fragment: attachPrevious(function (els) {
-                return [returnsElementData(fragment(els || this.unwrap(), this.context))];
-            }),
+            fragment: function (els) {
+                return this.context.returnsManager(fragment(els || this.unwrap(), this.context));
+            },
             /**
              * @func
              * @name DOMM#filter
@@ -2350,7 +2642,7 @@ application.scope(function (app) {
             /**
              * @func
              * @name DOMM#find
-             * @param {String} str - string to use sizzle to find against
+             * @param {String} str - string to use query to find against
              * @returns {DOMM} matching elements
              */
             // find: dommFind,
@@ -2553,20 +2845,32 @@ application.scope(function (app) {
              * @name DOMM#insertAt
              * @returns {DOMM} instance
              */
-            insertAt: function (els, index, clone) {
-                var lastChildIndex, dom = this,
-                    frag = DOMM(els).fragment().element(),
-                    first = dom.eq(0),
-                    children = index == NULL ? NULL : first.children(),
-                    manager = children && children.index() || NULL,
-                    element = manager && manager.unwrap() || NULL,
-                    parent = first.index(),
-                    parentEl = parent && parent.unwrap(),
-                    fragmentChildren = sizzle(CUSTOM_ATTRIBUTE, frag),
-                    returnValue = parentEl && parentEl.insertBefore(frag, element),
-                    notify = isAttached(parentEl) && each(fragmentChildren, dispatchAttached);
-                return returnValue;
+            insertAt: function (els_, index, clone) {
+                var manager = this,
+                    owner = manager.context,
+                    els = isAppendable(els_) ? this.context.returnsManager(els_) : owner.query(els_).fragment();
+                return this.each(function (manager) {
+                    var elements = els;
+                    if (clone) {
+                        elements = elements.clone();
+                    }
+                    manager.insertAt(elements, index);
+                });
             },
+            // insertAt: function (els, index, clone) {
+            //     var lastChildIndex, dom = this,
+            //         frag = DOMM(els).fragment().element(),
+            //         first = dom.eq(0),
+            //         children = index == NULL ? NULL : first.children(),
+            //         manager = children && children.index() || NULL,
+            //         element = manager && manager.element() || NULL,
+            //         parent = first.index(),
+            //         parentEl = parent && parent.element(),
+            //         fragmentChildren = query(CUSTOM_ATTRIBUTE, frag),
+            //         returnValue = parentEl && parentEl.insertBefore(frag, element),
+            //         notify = isAttached(parentEl) && each(fragmentChildren, dispatchAttached);
+            //     return returnValue;
+            // },
             /**
              * @func
              * @name DOMM#parent
@@ -2578,10 +2882,10 @@ application.scope(function (app) {
                         return function (el) {
                             var rets, found, parent = el,
                                 next = original;
-                            while (parent && parent.unwrap() && !found) {
-                                parent = parent.unwrap();
+                            while (parent && parent.element() && !found) {
+                                parent = parent.element();
                                 rets = fn(parent[PARENT_NODE] || parent[DEFAULT_VIEW], original, next);
-                                parent = returnsElementData(rets[0]);
+                                parent = this.context.owner.returnsManager(rets[0]);
                                 found = rets[1];
                                 next = rets[2];
                             }
@@ -2638,7 +2942,7 @@ application.scope(function (app) {
                         }
                     }
                     if (doDefault) {
-                        this.duff(finder(collect, function (el) {
+                        this.each(finder(collect, function (el) {
                             return [el, original(el)];
                         }));
                     } else {
@@ -2646,7 +2950,7 @@ application.scope(function (app) {
                             iterator = number;
                             original = 1;
                         }
-                        this.duff(finder(collect, iterator, original));
+                        this.each(finder(collect, iterator, original));
                     }
                     return collect.unwrap();
                 });
@@ -2755,12 +3059,15 @@ application.scope(function (app) {
                 return JSON.stringify(this);
             }
         }, wrap(allEachMethods, applyToEach), wrap(firstMethods, applyToFirst), wrap(readMethods, applyToTarget)), BOOLEAN_TRUE),
-        $ = win.$ = _.$ = DOMM_SETUP(doc);
+        $ = win.$ = DOMM_SETUP(doc);
+    app.undefine(function (windo) {
+        windo.$ = DOMM_SETUP(windo[DOCUMENT]);
+    });
     // collect all templates with an id
     $.collectTemplates();
     // register all custom elements...
     // everything that's created after this should go through the DomManager to be marked appropriately
-    duff($.sizzle(CUSTOM_ATTRIBUTE), returnsElementData);
+    duff($.query(CUSTOM_ATTRIBUTE), returnsManager);
     // add $ to module madness
     // app.addModuleArguments([$]);
     // define a hash for attribute caching

@@ -16,13 +16,14 @@ application.scope().run(function (app, _, factories) {
                 count = 0;
                 var _divs = divs && divs.remove();
                 divs = $().count(function (item, index) {
-                    var div = document.createElement('div');
-                    div.className = 'one';
+                    var div = $.createElement('div');
+                    var className = 'one';
                     if (index % 2) {
-                        div.className += ' two';
+                        className += ' two';
                     } else {
-                        div.className += ' not';
+                        className += ' not';
                     }
+                    div.addClass(className);
                     this.push(div);
                 }, 0, 5);
                 $con.append(divs);
@@ -44,7 +45,7 @@ application.scope().run(function (app, _, factories) {
         });
         it('can show and hide elements', function () {
             expect(divs.hide().map(function (manager) {
-                var el = manager.unwrap();
+                var el = manager.element();
                 if (el.style.display === 'none') {
                     return '';
                 } else {
@@ -52,7 +53,7 @@ application.scope().run(function (app, _, factories) {
                 }
             }).join('')).toEqual('');
             expect(divs.show().map(function (manager) {
-                var el = manager.unwrap();
+                var el = manager.element();
                 if (el.style.display === 'block') {
                     return '';
                 } else {
@@ -119,16 +120,16 @@ application.scope().run(function (app, _, factories) {
                 expect(newDivs.length()).toEqual(3);
             });
             it('can also get the first', function () {
-                expect(divs.first().unwrap()).toEqual(divs.element(0));
+                expect(divs.first().element()).toEqual(divs.element(0));
             });
             it('and the last element in the list', function () {
-                expect(divs.last().unwrap()).toEqual(divs.element(divs.length() - 1));
+                expect(divs.last().element()).toEqual(divs.element(divs.length() - 1));
             });
         });
         describe('it can find it\'s children', function () {
             it('by calling the children method', function () {
                 divs.duff(function (manager, idx) {
-                    var div = manager.unwrap();
+                    var div = manager.element();
                     var span1 = document.createElement('span');
                     var span2 = document.createElement('span');
                     span1.className = 'span-' + idx;
@@ -139,7 +140,7 @@ application.scope().run(function (app, _, factories) {
                 var kids = divs.children();
                 expect(kids.length()).toEqual(10);
                 kids.duff(function (kid, idx) {
-                    expect(kid.unwrap().localName).toEqual('span');
+                    expect(kid.element().localName).toEqual('span');
                 });
                 kids = divs.children(1);
                 expect(kids.length()).toEqual(5);
@@ -150,12 +151,12 @@ application.scope().run(function (app, _, factories) {
             });
             it('by querying the dom elements', function () {
                 divs.duff(function (div, idx) {
-                    div.unwrap().innerHTML = '<span></span><img/>';
+                    div.element().innerHTML = '<span></span><img/>';
                 });
                 var kids = divs.$('img');
                 expect(kids.length()).toEqual(5);
                 kids.duff(function (kid, idx) {
-                    expect(kid.unwrap().tagName).toEqual('IMG');
+                    expect(kid.element().tagName).toEqual('IMG');
                 });
             });
         });
@@ -282,15 +283,15 @@ application.scope().run(function (app, _, factories) {
                 divs.each(function (el, idx) {
                     expect(_.isInstance(el, factories.DOMM)).toEqual(false);
                     expect(factories.DomManager.isInstance(el)).toEqual(true);
-                    expect(divs.element(idx) === el.unwrap());
+                    expect(divs.element(idx) === el.element());
                 });
             });
             it('where the duff and forEach function just gives you the element at each index, just like a collection', function () {
                 divs.duff(function (el, idx) {
-                    expect(_.isInstance(el, _.$)).toEqual(false);
+                    expect(_.isInstance(el, $)).toEqual(false);
                 });
                 divs.forEach(function (el, idx) {
-                    expect(_.isInstance(el, _.$)).toEqual(false);
+                    expect(_.isInstance(el, $)).toEqual(false);
                 });
             });
         });
@@ -352,16 +353,16 @@ application.scope().run(function (app, _, factories) {
         describe('there is also a data attributes interface', function () {
             it('where you can add', function () {
                 divs.duff(function (div, idx) {
-                    expect(div.unwrap().getAttribute('data-one')).toEqual(null);
-                    expect(div.unwrap().getAttribute('data-two')).toEqual(null);
+                    expect(div.element().getAttribute('data-one')).toEqual(null);
+                    expect(div.element().getAttribute('data-two')).toEqual(null);
                 });
                 divs.data({
                     one: 'one',
                     two: 'two'
                 });
                 divs.duff(function (div, idx) {
-                    expect(div.unwrap().getAttribute('data-one')).toEqual('one');
-                    expect(div.unwrap().getAttribute('data-two')).toEqual('two');
+                    expect(div.element().getAttribute('data-one')).toEqual('one');
+                    expect(div.element().getAttribute('data-two')).toEqual('two');
                 });
             });
             it('remove', function () {
@@ -370,16 +371,16 @@ application.scope().run(function (app, _, factories) {
                     two: 'two'
                 });
                 divs.duff(function (div, idx) {
-                    expect(div.unwrap().getAttribute('data-one')).toEqual('one');
-                    expect(div.unwrap().getAttribute('data-two')).toEqual('two');
+                    expect(div.element().getAttribute('data-one')).toEqual('one');
+                    expect(div.element().getAttribute('data-two')).toEqual('two');
                 });
                 divs.data({
                     one: false,
                     two: false
                 });
                 divs.duff(function (div, idx) {
-                    expect(div.unwrap().getAttribute('data-one')).toEqual(null);
-                    expect(div.unwrap().getAttribute('data-two')).toEqual(null);
+                    expect(div.element().getAttribute('data-one')).toEqual(null);
+                    expect(div.element().getAttribute('data-two')).toEqual(null);
                 });
             });
             it('and update data attributes', function () {
@@ -388,15 +389,15 @@ application.scope().run(function (app, _, factories) {
                     two: 'two'
                 });
                 divs.duff(function (div) {
-                    expect(div.unwrap().getAttribute('data-one')).toEqual('one');
-                    expect(div.unwrap().getAttribute('data-two')).toEqual('two');
+                    expect(div.element().getAttribute('data-one')).toEqual('one');
+                    expect(div.element().getAttribute('data-two')).toEqual('two');
                 });
             });
         });
         describe('it can also manipulate elements in other ways', function () {
             it('like by manipulating their attributes', function () {
                 divs.duff(function (div) {
-                    expect(div.unwrap().getAttribute('tabindex')).toEqual(null);
+                    expect(div.element().getAttribute('tabindex')).toEqual(null);
                 });
                 divs.attr({
                     tabindex: -1
@@ -407,7 +408,7 @@ application.scope().run(function (app, _, factories) {
             });
             it('or by manipulating their properties', function () {
                 divs.duff(function (div, idx) {
-                    expect(div.unwrap().align).toEqual('');
+                    expect(div.element().align).toEqual('');
                 });
                 divs.prop({
                     align: 'left'

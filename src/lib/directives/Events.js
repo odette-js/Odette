@@ -1,4 +1,4 @@
-application.scope(function (app) {
+app.scope(function (app) {
     var _ = app._,
         factories = _.factories,
         __FN_ID__ = '__fnid__',
@@ -21,6 +21,7 @@ application.scope(function (app) {
                 eventsDirective.removeQueue = Collection(BOOLEAN_TRUE, BOOLEAN_TRUE);
                 return eventsDirective;
             },
+            destroy: function () {},
             attach: function (name, eventObject) {
                 var list, eventsDirective = this,
                     handlers = eventsDirective[HANDLERS],
@@ -91,26 +92,28 @@ application.scope(function (app) {
                 return this.handlers[key] && this.handlers[key][LENGTH]();
             },
             dispatch: function (name, evnt) {
-                var events = this,
+                var handler, listLength, i = 0,
+                    events = this,
                     stack = events[STACK],
                     handlers = events[HANDLERS],
                     list = handlers[name],
                     removeList = events[REMOVE_QUEUE],
                     running = events.running,
                     cached = running[name];
-                if (evnt[IMMEDIATE_PROP_IS_STOPPED] || !list || !list[LENGTH]()) {
+                if (cached || evnt[IMMEDIATE_PROP_IS_STOPPED] || !list || !list[LENGTH]()) {
                     return;
                 }
                 running[name] = BOOLEAN_TRUE;
-                list.find(function (handler) {
-                    var cached;
+                list = list.unwrap();
+                listLength = list[LENGTH];
+                for (; i < listLength && !cached; i++) {
+                    handler = list[i];
                     if (!handler.disabled && events.queue(stack, handler, evnt)) {
                         handler.fn(evnt);
-                        cached = evnt[IMMEDIATE_PROP_IS_STOPPED];
+                        cached = !!evnt[IMMEDIATE_PROP_IS_STOPPED];
                         events.unQueue(stack, handler, evnt);
-                        return cached;
                     }
-                });
+                }
                 if (!stack[LENGTH]() && removeList[LENGTH]()) {
                     removeList.duffRight(events.detach, events);
                     removeList.empty();

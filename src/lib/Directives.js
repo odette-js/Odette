@@ -1,22 +1,15 @@
-application.scope(function (app) {
+app.scope(function (app) {
     var _ = app._,
         factories = _.factories,
         // hash = '_directivesHash',
         returnsNull = returns(NULL);
-    factories.Model.extend('Directive', {
+    factories.Extendable.extend('Directive', {
         directive: function (name) {
             var that = this;
             return (that[name] = that[name] || directiveMod('creation', that, name));
         },
-        destroy: function () {
-            return this.directivesDestruction();
-        },
         directiveDestruction: function (name) {
             return directiveMod('destruction', this, name);
-        },
-        directivesDestruction: function () {
-            var that = this;
-            return (that[hash] || that) && each(that[hash], that.directiveDestruction, that) && that;
         }
     }, BOOLEAN_TRUE);
     var directives = {

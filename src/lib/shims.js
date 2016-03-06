@@ -1,4 +1,4 @@
-application.scope(function (app) {
+app.scope(function (app) {
     app.shims = function (win) {
         var fn = function () {
             var win = this,

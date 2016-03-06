@@ -1,4 +1,4 @@
-application.scope(function (app) {
+app.scope(function (app) {
     /**
      * @class Associator
      * @augments Model
@@ -92,14 +92,9 @@ application.scope(function (app) {
                     current.readData = BOOLEAN_TRUE;
                 }
                 return current;
-            },
-            ensure: function (el, attr, failure) {
-                var data = this.get(el);
-                data[attr] = data[attr] || failure(el);
-                return data[attr];
             }
         }, BOOLEAN_TRUE);
-    _.exports({
-        associator: Associator()
-    });
+    // _.exports({
+    //     associator: Associator()
+    // });
 });

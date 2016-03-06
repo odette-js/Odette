@@ -1,4 +1,4 @@
-application.scope(function (app) {
+app.scope(function (app) {
     var ITEMS = '_items',
         BY_ID = '_byId',
         // ID = ID,
@@ -16,12 +16,6 @@ application.scope(function (app) {
             return duff(array, function (item) {
                 result(item, method, arg);
             }, NULL, -1);
-        },
-        eachCallWith = function (array, method, args_) {
-            var args = args_ || [];
-            return duff(array, function (item) {
-                item[method].apply(item, args);
-            });
         },
         /**
          * @func
@@ -310,7 +304,7 @@ application.scope(function (app) {
                 this.unwrap()[name]();
                 return this;
             };
-        })), wrap(gapSplit('count countTo countFrom merge eachCallWith'), function (name) {
+        })), wrap(gapSplit('count countTo countFrom merge'), function (name) {
             return function (one, two, three) {
                 var ctx = this;
                 _[name](ctx.unwrap(), one, ctx, two, three);
@@ -328,7 +322,6 @@ application.scope(function (app) {
         ret = _.exports({
             eachCall: eachCall,
             eachCallRight: eachCallRight,
-            eachCallWith: eachCallWith,
             filter: filter,
             matches: matches,
             mapCall: mapCall,
@@ -370,6 +363,7 @@ application.scope(function (app) {
             };
         },
         REGISTRY = 'registry',
+        directives = _.directives,
         Collection = factories.Directive.extend('Collection', extend({
             range: recreateSelf(range),
             concat: recreateSelf(function () {
@@ -397,7 +391,7 @@ application.scope(function (app) {
             unwrap: function () {
                 return this.list.items;
             },
-            empty: _.flow(_.directives.parody('list', 'empty'), _.directives.parody(REGISTRY, 'reset')),
+            empty: _.flow(directives.parody('list', 'empty'), directives.parody(REGISTRY, 'reset')),
             swap: function (arr) {
                 this.directive('list').items = arr || [];
             },
@@ -429,8 +423,8 @@ application.scope(function (app) {
              * @description adds models to the children array
              * @param {Object|Object[]} objs - object or array of objects to be passed through the model factory and pushed onto the children array
              * @param {Object} [secondary] - secondary hash that is common among all of the objects being created. The parent property is automatically overwritten as the object that the add method was called on
-             * @returns {Object|Box} the object that was just created, or the object that the method was called on
-             * @name Box#add
+             * @returns {Object|Model} the object that was just created, or the object that the method was called on
+             * @name Model#add
              * @func
              */
             constructor: function (arr) {
@@ -447,10 +441,10 @@ application.scope(function (app) {
                 collection.swap(arr);
                 return collection;
             },
-            get: _.directives.parody(REGISTRY, 'get'),
-            register: _.directives.parody(REGISTRY, 'keep'),
-            unRegister: _.directives.parody(REGISTRY, 'drop'),
-            swapRegister: _.directives.parody(REGISTRY, 'swap')
+            get: directives.parody(REGISTRY, 'get'),
+            register: directives.parody(REGISTRY, 'keep'),
+            unRegister: directives.parody(REGISTRY, 'drop'),
+            swapRegister: directives.parody(REGISTRY, 'swap')
         }, wrappedCollectionMethods), BOOLEAN_TRUE),
         isNullMessage = {
             message: 'object must not be null or undefined'
@@ -528,7 +522,7 @@ application.scope(function (app) {
                 return this.remove(this.first());
             }
         }, BOOLEAN_TRUE),
-        StringObject = factories.Model.extend('StringObject', {
+        StringObject = factories.Extendable.extend('StringObject', {
             constructor: function (value, parent) {
                 var string = this;
                 string.value = value;
@@ -707,6 +701,12 @@ application.scope(function (app) {
     keep = function (category, id, value) {
         var register = this.register,
             cat = register[category] = register[category] || {};
+        if (value === UNDEFINED) {
+            this.count--;
+        }
+        if (cat[id] === UNDEFINED) {
+            this.count++;
+        }
         cat[id] = value;
     },
     drop = function (category, id) {
@@ -718,8 +718,10 @@ application.scope(function (app) {
         return cached;
     },
     reset = function (registry) {
+        var cached = this.register;
         this.register = registry || {};
         this.count = 0;
+        return cached;
     };
     app.defineDirective(REGISTRY, function () {
         return {

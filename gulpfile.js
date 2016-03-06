@@ -15,14 +15,25 @@ var content = ['browserify'],
             }
         });
     },
-    modules = 'beforeSetup setup scopeStart constants utils shims Strings Directives Collection Messenger Events directives/Events directives/Data directives/Linguistics Box Promise Associator DOMM Looper Ajax Module directives/Element View Router Buster LocalStorage scopeEnd'.split(' '),
+    modules = 'beforeSetup setup scopeStart constants utils shims Strings Directives Collection Messenger Events Box directives/Events directives/Data directives/Linguistics Promise Associator Ajax Module DOMM Looper Buster directives/Element View scopeEnd'.split(' '),
+    extraModules = 'Socket Router LocalStorage'.split(' '),
+    framedModules = 'index'.split(' '),
     paths = makePath({
         jsAll: './src/**/*.js',
         jsList: _.map(modules, function (name) {
             return './src/lib/' + name + '.js';
         }),
+        jsExtra: _.map(extraModules, function (name) {
+            return './src/extras/' + name + '.js';
+        }),
         jsTestList: _.map(modules, function (name) {
             return './src/spec/' + name + '.js';
+        }),
+        jsExtraTest: _.map(extraModules, function (name) {
+            return './src/spec/' + name + '.js';
+        }),
+        jsFramed: _.map(framedModules, function (name) {
+            return './src/framed/' + name + '.js';
         }),
         jspublic: './public/js/',
         serverIndex: './index.js',
@@ -30,6 +41,8 @@ var content = ['browserify'],
     });
 paths.jsTestOutput = 'spec.js';
 paths.jsOutput = 'all.js';
+paths.jsExtraOutput = 'extra.js';
+paths.jsFramedOutput = 'framed.js';
 gulpTasker(allTasks, [require('./settings'), paths]);
 gulp.task('build', content);
 gulp.task('dev', devTasks);

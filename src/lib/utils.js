@@ -373,7 +373,7 @@ var factories = {},
                 if (deep) {
                     if (isObject(obj2[key])) {
                         if (!isObject(obj1[key])) {
-                            obj1[key] = returnDismorphicBase(obj2[key]);
+                            obj1[key] = returnDysmorphicBase(obj2[key]);
                         }
                         merge(obj1[key], obj2[key], deep);
                     } else {
@@ -603,13 +603,9 @@ var factories = {},
                 passedParent = child;
             }
             child = new FunctionConstructor('var parent=arguments[0];return function ' + name + '(){return parent.apply(this,arguments);}')(passedParent);
-            // factories[name] = child;
         } else {
-            child = function () {
-                return parent.apply(this, arguments);
-            };
+            child = child || parent;
         }
-        // extend(child, parent);
         child[EXTEND] = constructorExtend;
         var Surrogate = function () {
             this[CONSTRUCTOR] = child;
@@ -893,11 +889,11 @@ var factories = {},
             return timeout;
         };
     },
-    returnDismorphicBase = function (obj) {
+    returnDysmorphicBase = function (obj) {
         return isArrayLike(obj) ? [] : {};
     },
     map = function (objs, iteratee, context) {
-        var collection = returnDismorphicBase(objs),
+        var collection = returnDysmorphicBase(objs),
             bound = bind(iteratee, context);
         return !objs ? collection : each(objs, function (item, index) {
             collection[index] = bound(item, index, objs);
@@ -1010,7 +1006,7 @@ var factories = {},
             }
             base += query.join('&');
             if (obj.hash) {
-                obj.hash = _.stringify(obj.hash);
+                obj.hash = isObject(obj.hash) ? encodeURI(stringify(obj.hash)) : hash;
                 base += ('#' + obj.hash);
             }
         } else {
@@ -1084,20 +1080,6 @@ var factories = {},
         return function (value, key, third) {
             iteratorFn(key, value, third);
         };
-    },
-    /**
-     * @func
-     */
-    reference = function (str) {
-        var match;
-        if (!isString(str)) {
-            str = str.referrer;
-        }
-        match = str.match(/^https?:\/\/.*?\//);
-        if (match) {
-            match = match[0];
-        }
-        return match || EMPTY_STRING;
     },
     /**
      * @func
@@ -1248,7 +1230,6 @@ var factories = {},
         ensureFunction: ensureFunction,
         parseDecimal: parseDecimal,
         flatten: flatten,
-        reference: reference,
         isArrayLike: isArrayLike,
         isInstance: isInstance,
         hasEnumBug: hasEnumBug,
@@ -1348,15 +1329,9 @@ var factories = {},
         })
     };
 /**
- * @class Model
+ * @class Extendable
  */
-function Model(attributes, options) {
+function Extendable(attributes, options) {
     return this;
 }
-Model[PROTOTYPE] = {
-    evaluate: function (handler) {
-        return evaluate(handler, this);
-    }
-};
-factories.Model = constructorWrapper(Model);
-window._ = _;
+factories.Extendable = constructorWrapper(Extendable);

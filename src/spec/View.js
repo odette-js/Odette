@@ -20,6 +20,10 @@ application.scope().run(function (app, _, factories) {
             view = factories.View();
             complexView = ComplexView();
         });
+        afterEach(function () {
+            view.destroy();
+            complexView.destroy();
+        });
         it('is an object', function () {
             expect(_.isObject(view)).toEqual(true);
             expect(_.isInstance(view, factories.View)).toEqual(true);
@@ -38,15 +42,15 @@ application.scope().run(function (app, _, factories) {
             expect(complexView.el.html()).not.toEqual('');
         });
         it('can be attached to a region', function () {
-            expect(complexView.el.unwrap().parentNode).toEqual(null);
+            expect(complexView.el.element().parentNode).toEqual(null);
             app.getRegion('main').add(complexView);
-            expect(complexView.el.unwrap().parentNode).not.toEqual(null);
+            expect(complexView.el.element().parentNode).not.toEqual(null);
         });
         it('can be filtered', function () {
-            expect(complexView.el.unwrap().parentNode).toEqual(null);
+            expect(complexView.el.element().parentNode).toEqual(null);
             complexView.filter = false;
             app.getRegion('main').add(complexView);
-            expect(complexView.el.unwrap().parentNode).toEqual(null);
+            expect(complexView.el.element().parentNode).toEqual(null);
         });
         it('can have extra elements', function () {
             expect(_.isObject(complexView.ui)).toEqual(true);

@@ -1,5 +1,8 @@
 application.scope().module('Router', function (module, app, _, factories) {
-    var ROUTES = 'routes',
+    var EMPTY_STRING = '',
+        NULL = null,
+        SLASH = '/',
+        ROUTES = 'routes',
         HISTORY = 'history',
         WATCHING = 'watching',
         SUPPORTS_PUSH = 'supportsPush',
@@ -18,7 +21,7 @@ application.scope().module('Router', function (module, app, _, factories) {
             },
             parseString: function (string) {
                 var router = this;
-                return new RegExp('^\/' + router.clearSlashes(map(string.split(SLASH), function (string) {
+                return new RegExp('^\/' + router.clearSlashes(_.map(string.split(SLASH), function (string) {
                     return string && string.replace(/\:(.*)/g, function (item) {
                         return '(.*)';
                     });
@@ -51,7 +54,7 @@ application.scope().module('Router', function (module, app, _, factories) {
                 intendedObject(regexp, handler_, function (regexp, handler, third) {
                     var parsedRegExp = router.parsePath(regexp),
                         keys = parsedRegExp.exec(regexp),
-                        keyedResult = map(keys.slice(1), function (key) {
+                        keyedResult = _.map(keys.slice(1), function (key) {
                             // take off the (:)
                             return key.slice(1);
                         }),
@@ -71,7 +74,7 @@ application.scope().module('Router', function (module, app, _, factories) {
             },
             remove: function (param) {
                 var router = this;
-                duffRev(router[ROUTES], function (r) {
+                _.duffRev(router[ROUTES], function (r) {
                     if (r.handler === param || r.original === param.toString()) {
                         router[ROUTES].splice(i, 1);
                     }
@@ -91,27 +94,27 @@ application.scope().module('Router', function (module, app, _, factories) {
                     return router;
                 }
                 fragment = router.current = router.getFragment();
-                duff(router[ROUTES], function (route) {
+                _.duff(router[ROUTES], function (route) {
                     var variables = route.regexp.lastIndex = 0,
                         match = route.regexp.exec(SLASH + fragment);
                     if (!match) {
                         return;
                     }
                     match.shift();
-                    variables = foldl(match, function (memo, item, index) {
+                    variables = _.foldl(match, function (memo, item, index) {
                         memo[route.keys[index]] = item;
                         return memo;
                     }, {});
                     route.handler.call(router, variables);
-                    variables = router.trigger && router[DISPATCH_EVENT](router.trigger, variables);
+                    variables = router.trigger && router.dispatchEvent(router.trigger, variables);
                 });
-                router[DISPATCH_EVENT]('updatestate');
+                router.dispatchEvent('updatestate');
                 return router;
             },
             start: function () {
                 var ret, router = this,
                     current = router.getFragment(),
-                    boundCheck = router._boundCheck = router._boundCheck || bind(router.check, router);
+                    boundCheck = router._boundCheck = router._boundCheck || _.bind(router.check, router);
                 router.stop();
                 if (router[SUPPORTS_PUSH]) {
                     $(router[WATCHING]).on(watchingEvents, boundCheck);
@@ -125,7 +128,7 @@ application.scope().module('Router', function (module, app, _, factories) {
                 if (router[SUPPORTS_PUSH]) {
                     $(router[WATCHING]).off(watchingEvents, router.boundCheck);
                 } else {
-                    ret = isNumber(router.interval) ? clearInterval(router.interval) : BOOLEAN_FALSE;
+                    ret = isNumber(router.interval) ? clearInterval(router.interval) : false;
                 }
                 return router;
             },
@@ -135,10 +138,10 @@ application.scope().module('Router', function (module, app, _, factories) {
                 if (router.mode === HISTORY) {
                     history.pushState(NULL, NULL, router.root + router.clearSlashes(path));
                 } else {
-                    router[WATCHING].location.href = router[WATCHING].location.href.replace(/#(.*)$/, EMPTY_STRING) + HASHTAG + path;
+                    router[WATCHING].location.href = router[WATCHING].location.href.replace(/#(.*)$/, EMPTY_STRING) + '#' + path;
                 }
                 return router;
             }
-        }, BOOLEAN_TRUE),
+        }, true),
         router = app.router = Router(window).navigate(SLASH).start();
 });

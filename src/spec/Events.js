@@ -1,7 +1,7 @@
 application.scope().run(function (app, _, factories) {
     describe('Events', function () {
         var blank, box,
-            Box = factories.Box,
+            Model = factories.Model,
             handler = function () {
                 count++;
             },
@@ -20,7 +20,7 @@ application.scope().run(function (app, _, factories) {
             };
         beforeEach(function () {
             count = 0;
-            box = Box({
+            box = Model({
                 zero: 0,
                 one: 1,
                 two: 2,
@@ -33,7 +33,7 @@ application.scope().run(function (app, _, factories) {
                 nine: 9
             });
         });
-        describe('Boxes can have events', function () {
+        describe('Modeles can have events', function () {
             var box2;
             describe('and can create events for itself', function () {
                 it('either one at a time', function () {
@@ -85,10 +85,10 @@ application.scope().run(function (app, _, factories) {
                 });
             });
         });
-        describe('Boxes can also listen to other, similar objects', function () {
+        describe('Modeles can also listen to other, similar objects', function () {
             var box2;
             beforeEach(function () {
-                box2 = Box();
+                box2 = Model();
             });
             describe('by using the listenTo method', function () {
                 it('either one at a time', function () {
@@ -307,7 +307,7 @@ application.scope().run(function (app, _, factories) {
             });
         });
     });
-    // var box = factories.Box();
+    // var box = factories.Model();
     // var collection = [];
     // var collection2 = [];
     // _.count(collection, function (item, index, list) {
@@ -315,7 +315,7 @@ application.scope().run(function (app, _, factories) {
     // }, null, 0, 100000);
     // var timestamp = _.now();
     // _.duff(collection, function (item) {
-    //     collection2.push(factories.Box());
+    //     collection2.push(factories.Model());
     // });
     // var div = document.createElement('div');
     // div.innerHTML = _.now() - timestamp;

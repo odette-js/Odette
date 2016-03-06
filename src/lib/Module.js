@@ -1,7 +1,7 @@
-application.scope(function (app) {
+app.scope(function (app) {
     var _ = app._,
         factories = _.factories,
-        Box = factories.Box,
+        Model = factories.Model,
         Collection = factories.Collection,
         _EXTRA_MODULE_ARGS = '_extraModuleArguments',
         MODULES = 'modules',
@@ -40,7 +40,7 @@ application.scope(function (app) {
                 return startable;
             }
         },
-        Startable = factories.Box.extend('Startable', startableMethods, BOOLEAN_TRUE),
+        Startable = factories.Model.extend('Startable', startableMethods, BOOLEAN_TRUE),
         doStart = function (e) {
             if (this.get('startWithParent')) {
                 this[START](e);
@@ -125,7 +125,7 @@ application.scope(function (app) {
                 var module = this;
                 module.application = opts.application;
                 module.handlers = Collection();
-                Box[CONSTRUCTOR].apply(this, arguments);
+                Model[CONSTRUCTOR].apply(this, arguments);
                 return module;
             },
             defaults: function () {
@@ -151,18 +151,10 @@ application.scope(function (app) {
                 return module;
             }
         }),
-        domPromise = _.Promise(),
-        returned = $(function () {
-            domPromise.resolve();
-        }),
-        Module = factories.Box.extend('Module', moduleMethods, BOOLEAN_TRUE),
+        Module = factories.Model.extend('Module', moduleMethods, BOOLEAN_TRUE),
         appextendresult = app.extend(extend({}, moduleMethods, {
-            _startPromise: _.when(domPromise),
+            // _startPromise: _.when(domPromise),
             _extraModuleArguments: [],
-            dependency: function (promise) {
-                this._startPromise.add(promise);
-                return this;
-            },
             /**
              * @func
              * @name Specless#baseModuleArguments

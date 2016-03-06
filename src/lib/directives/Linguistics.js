@@ -1,4 +1,4 @@
-application.scope(function (app) {
+app.scope(function (app) {
     var _ = app._,
         factories = _.factories,
         Collection = factories.Collection,
@@ -9,6 +9,7 @@ application.scope(function (app) {
         FAILURES = 'failures',
         COUNTER = 'counter',
         GROUP_INDEX = 'groupIndex',
+        LINGUISTICS = 'Linguistics',
         curriedEquivalence = function (value) {
             return function (current) {
                 return isEqual(current, value);
@@ -51,20 +52,27 @@ application.scope(function (app) {
                 fn: negative_bound
             };
         },
-        Linguistics = factories.Events.extend('Linguistics', {
+        Linguistics = factories.Events.extend(LINGUISTICS, {
             then: push(SUCCESS),
             always: push(EVERY),
             otherwise: push(FAILURES),
+            is: addValue(),
+            isnt: isNot,
+            isNot: isNot,
+            isGreaterThan: addValue(BOOLEAN_FALSE, curriedGreaterThan),
+            isLessThan: addValue(BOOLEAN_FALSE, curriedLessThan),
+            isNotGreaterThan: addValue(BOOLEAN_TRUE, curriedGreaterThan),
+            isNotLessThan: addValue(BOOLEAN_TRUE, curriedLessThan),
             constructor: function (origin) {
                 var sequencer = this;
                 sequencer.origin = origin;
                 sequencer[COUNTER] = 0;
                 sequencer[GROUP_INDEX] = -1;
                 sequencer[REGISTERED] = {};
-                sequencer.logic = Collection();
-                sequencer[SUCCESS] = Collection();
-                sequencer[FAILURES] = Collection();
-                sequencer[EVERY] = Collection();
+                sequencer.logic = new Collection[CONSTRUCTOR]();
+                sequencer[SUCCESS] = new Collection[CONSTRUCTOR]();
+                sequencer[FAILURES] = new Collection[CONSTRUCTOR]();
+                sequencer[EVERY] = new Collection[CONSTRUCTOR]();
                 sequencer.group();
                 sequencer.listenTo(sequencer.origin, {
                     change: sequencer.apply,
@@ -73,9 +81,9 @@ application.scope(function (app) {
                 return this;
             },
             when: function (key) {
-                this[CURRENT] = key;
-                this.and(key);
-                return this;
+                return this[PARENT] ? this[PARENT].when(key) : exception({
+                    message: 'this sequencer has been destroyed'
+                });
             },
             and: function (key) {
                 var sequencer = this;
@@ -93,7 +101,7 @@ application.scope(function (app) {
                 ++sequencer[GROUP_INDEX];
                 sequencer.logic.push({
                     index: sequencer[GROUP_INDEX],
-                    list: Collection()
+                    list: new Collection[CONSTRUCTOR]()
                 });
                 return sequencer;
             },
@@ -116,13 +124,6 @@ application.scope(function (app) {
                     this[STOP_LISTENING](this.origin, CHANGE_COLON + target, sequencer.increment);
                 }
             },
-            is: addValue(),
-            isnt: isNot,
-            isNot: isNot,
-            isGreaterThan: addValue(BOOLEAN_FALSE, curriedGreaterThan),
-            isLessThan: addValue(BOOLEAN_FALSE, curriedLessThan),
-            isNotGreaterThan: addValue(BOOLEAN_TRUE, curriedGreaterThan),
-            isNotLessThan: addValue(BOOLEAN_TRUE, curriedLessThan),
             value: function (value, defaultFn) {
                 return isFunction(value) ? value : defaultFn(value);
             },
@@ -171,12 +172,11 @@ application.scope(function (app) {
                 return sequencer;
             }
         }, BOOLEAN_TRUE),
-        LinguisticsManager = Collection.extend('LinguisticsManager', {
+        LinguisticsManager = factories.Model.extend(LINGUISTICS + 'Manager', {
             when: function (key) {
-                var listDirective = this.directive('children');
                 var newish = new Linguistics[CONSTRUCTOR](this.target);
-                listDirective.push(newish);
-                return newish.when(key);
+                this.add(newish);
+                return newish.and(key);
             },
             constructor: function (target) {
                 // save it for later
@@ -184,7 +184,5 @@ application.scope(function (app) {
                 return this;
             }
         }, BOOLEAN_TRUE);
-    app.defineDirective('Linguistics', function (target) {
-        return new LinguisticsManager[CONSTRUCTOR](target);
-    });
+    app.defineDirective(LINGUISTICS, LinguisticsManager[CONSTRUCTOR]);
 });

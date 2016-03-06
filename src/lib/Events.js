@@ -11,7 +11,7 @@ var DISPATCH_EVENT = 'dispatchEvent',
     PROPAGATION_IS_STOPPED = 'propagationIsStopped',
     IMMEDIATE_PROP_IS_STOPPED = 'immediatePropagationIsStopped',
     HANDLERS = 'handlers';
-application.scope(function (app) {
+app.scope(function (app) {
     var remove = _.remove,
         iterateOverObject = function (box, context, events, handler, iterator, firstArg) {
             // only accepts a string or a function
@@ -157,7 +157,7 @@ application.scope(function (app) {
             },
             set: function (data) {
                 var evnt = this;
-                evnt[SERIALIZED_DATA] = data;
+                evnt[SERIALIZED_DATA] = isObject(data) ? data : {};
                 return evnt;
             },
             stopImmediatePropagation: function () {
@@ -213,18 +213,31 @@ application.scope(function (app) {
         secretOffIterator = function (box, name, obj) {
             seekAndDestroy(box, !name || box.directive(EVENTS)[HANDLERS][name], obj.handler, obj.context);
         },
+        directives = _.directives,
         Events = factories.Directive.extend('Events', {
             /**
-             * @description attach event handlers to the Box event loop
+             * @description attach event handlers to the Model event loop
              * @func
-             * @name Box#on
+             * @name Model#on
              * @param {String} str - event name to listen to
              * @param {Function|String} fn - event handler or string corresponding to handler on prototype to use for handler
              * @param {Object} context - context that the handler will run in
-             * @returns {Box} instance
+             * @returns {Model} instance
              */
             uniqueKey: 'c',
             initialize: noop,
+            on: flattenMatrix(attachEventObject, 0),
+            once: flattenMatrix(onceHandler, 0),
+            listenTo: flattenMatrix(listenToHandler, 1),
+            listenToOnce: flattenMatrix(listenToOnceHandler, 1),
+            watch: setupWatcher(attachEventObject, 0),
+            watchOnce: setupWatcher(attachEventObject, 0, 1),
+            watchOther: setupWatcher(listenToHandler, 1),
+            watchOtherOnce: setupWatcher(listenToHandler, 1, 1),
+            resetEvents: directives.parody(EVENTS, 'reset'),
+            request: directives.parody('messenger', 'request'),
+            reply: directives.parody('messenger', 'reply'),
+            when: directives.parody('Linguistics', 'when'),
             constructor: function (opts) {
                 var model = this;
                 extend(model, opts);
@@ -234,31 +247,25 @@ application.scope(function (app) {
                 model.initialize(opts);
                 return model;
             },
-            on: flattenMatrix(attachEventObject, 0),
-            once: flattenMatrix(onceHandler, 0),
-            listenTo: flattenMatrix(listenToHandler, 1),
-            listenToOnce: flattenMatrix(listenToOnceHandler, 1),
-            watch: setupWatcher(attachEventObject, 0),
-            watchOnce: setupWatcher(attachEventObject, 0, 1),
-            watchOther: setupWatcher(listenToHandler, 1),
-            watchOtherOnce: setupWatcher(listenToHandler, 1, 1),
-            resetEvents: _.directives.parody(EVENTS, 'reset'),
+            destroy: function () {
+                this[STOP_LISTENING]();
+            },
             /**
              * @description attaches an event handler to the events object, and takes it off as soon as it runs once
              * @func
-             * @name Box#once
+             * @name Model#once
              * @param {String} string - event name that will be triggered
              * @param {Function} fn - event handler that will run only once
              * @param {Object} context - context that will be applied to the handler
-             * @returns {Box} instance
+             * @returns {Model} instance
              */
             /**
              * @description remove event objects from the _events object
              * @param {String|Function} type - event type or handler. If a match is found, then the event object is removed
              * @param {Function} handler - event handler to be matched and removed
              * @func
-             * @name Box#off
-             * @returns {Box} instance
+             * @name Model#off
+             * @returns {Model} instance
              */
             off: function (name_, fn_, context_) {
                 var context, currentObj, box = this,
@@ -286,9 +293,6 @@ application.scope(function (app) {
                 }
                 return box;
             },
-            request: _.directives.parody('messenger', 'request'),
-            reply: _.directives.parody('messenger', 'reply'),
-            when: _.directives.parody('Linguistics', 'when'),
             // hash this out later
             stopListening: function (target, name, callback) {
                 var listeningTo, notTalking, ids, targetEventsDirective, stillListening = 0,
@@ -320,9 +324,9 @@ application.scope(function (app) {
             /**
              * @description triggers a event loop
              * @func
-             * @name Box#fire
+             * @name Model#fire
              * @param {String} name of the event loop to be triggered
-             * @returns {Box} object instance the method is being called on
+             * @returns {Model} object instance the method is being called on
              */
             createEvent: function (data, name, options) {
                 return ObjectEvent(data, this, name, options);
@@ -334,14 +338,10 @@ application.scope(function (app) {
             dispatchStack: function (name) {
                 return this[DISPATCH_EVENT](name);
             },
-            hasEvents: function (name) {
-                var eventsDirective, evnt = this;
-                return (eventsDirective = evnt[EVENTS]) && eventsDirective.has(name) && eventsDirective;
-            },
             dispatchEvent: function (name, data, options) {
-                var evnt, box = this,
-                    eventsDirective = box.hasEvents(name);
-                if (eventsDirective && !box.eventManager.running[name]) {
+                var eventsDirective, evnt, box = this;
+                eventsDirective = (eventsDirective = box[EVENTS]) && eventsDirective.has(name) && box[EVENTS];
+                if (eventsDirective && !eventsDirective.running[name]) {
                     evnt = box.createEvent(data, name, options);
                     eventsDirective.dispatch(name, evnt);
                     return evnt.returnValue;

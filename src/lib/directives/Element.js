@@ -1,5 +1,7 @@
-application.scope().module('Element', function (module, app, _, factories) {
-    var basicViewTrigger = function (name, e) {
+app.scope(function (app) {
+    var _ = app._,
+        factories = _.factories,
+        basicViewTrigger = function (name, e) {
             return this[DISPATCH_EVENT](name, e);
         },
         makeDelegateEventKeys = function (cid, bindings, key, namespace_) {

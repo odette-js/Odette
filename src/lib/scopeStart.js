@@ -1,2 +1,2 @@
-application.scope('dev', function (app) {
+application.definition('dev', window, function (app) {
         'use strict';

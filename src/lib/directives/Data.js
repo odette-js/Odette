@@ -1,21 +1,24 @@
-application.scope(function (app) {
+app.scope(function (app) {
     var _ = app._,
+        periodSplit = splitGen(PERIOD),
         factories = _.factories,
         CHANGE_COUNTER = 'counter',
+        CHANGING = 'changing',
         DataDirective = factories.Directive.extend('DataDirective', {
             constructor: function () {
                 var dataDirective = this;
-                dataDirective.current = {};
-                dataDirective.changing = {};
-                dataDirective.counter = 0;
+                dataDirective[CURRENT] = {};
+                dataDirective.previous = {};
+                dataDirective[CHANGING] = {};
+                dataDirective[CHANGE_COUNTER] = 0;
                 return dataDirective;
             },
             set: function (key, newValue) {
                 var dataDirective = this,
-                    current = dataDirective[CURRENT],
-                    oldValue = current[key];
-                if (!isEqual(oldValue, newValue)) {
-                    current[key] = newValue;
+                    current = dataDirective[CURRENT];
+                if (!isEqual(current[key], newValue)) {
+                    dataDirective.previous[key] = current[key];
+                    dataDirective[CURRENT][key] = newValue;
                     return BOOLEAN_TRUE;
                 }
                 return BOOLEAN_FALSE;
@@ -24,16 +27,17 @@ application.scope(function (app) {
                 return this[CURRENT][key];
             },
             unset: function (key) {
-                return delete this[CURRENT][key];
+                var current = this[CURRENT];
+                var previous = current[key];
+                return (delete current[key]) && previous !== UNDEFINED;
             },
             reset: function (hash) {
                 this[CURRENT] = hash;
-                // this.counter = 0;
             },
             setDeep: function (path, value) {
                 var previous, dataDirective = this,
                     current = dataDirective[CURRENT];
-                duff(path, function (key, index) {
+                duff(periodSplit(path), function (key, index, path) {
                     var no_more = index === path[LENGTH] - 1;
                     previous = current;
                     current = no_more ? current[key] : isObject(current[key]) ? current[key] : (previous[key] = {});
@@ -50,18 +54,28 @@ application.scope(function (app) {
                 dataDirective[CHANGE_COUNTER]--;
                 // this event should only ever exist here
                 if (!dataDirective[CHANGE_COUNTER]) {
-                    model[DISPATCH_EVENT](CHANGE, dataDirective[PREVIOUS]);
-                    dataDirective[PREVIOUS] = {};
-                    dataDirective.changing = {};
+                    model[DISPATCH_EVENT](CHANGE, dataDirective[CHANGING]);
+                    dataDirective[CHANGING] = {};
+                    dataDirective.previous = {};
                 }
             },
-            getDeep: function () {},
+            getDeep: function (key) {
+                var lastkey, previous, dataDirective = this,
+                    current = dataDirective[CURRENT];
+                return duff(periodSplit(key), function (key, index, path) {
+                    var no_more = index === path[LENGTH];
+                    lastkey = key;
+                    if (!no_more) {
+                        current = isObject(current[key]) ? current[key] : {};
+                    }
+                }) && isString(lastkey) && current[lastkey];
+            },
             has: function (key) {
-                return this.current[key] != NULL;
+                return this[CURRENT][key] != NULL;
             },
             each: function (fn) {
-                return _.each(this[CURRENT], fn, this);
+                return each(this[CURRENT], fn, this);
             }
         }, BOOLEAN_TRUE);
-    app.defineDirective(DATA_MANAGER, DataDirective[CONSTRUCTOR]);
+    app.defineDirective(DATA, DataDirective[CONSTRUCTOR]);
 });

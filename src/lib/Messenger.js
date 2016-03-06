@@ -1,12 +1,18 @@
-application.scope(function (app) {
+app.scope(function (app) {
     var request = function (key, arg) {
-            return result(this.hash, key, arg);
+            return this.hash[key] && this.hash[key](arg);
         },
-        reply = function (key, fn) {
+        returns = function (affection) {
+            return function () {
+                return affection;
+            };
+        },
+        reply = function (key, handler) {
             var hash = this.hash;
-            intendedObject(key, fn, function (key, handler) {
-                hash[key] = bind(isFunction(handler) ? handler : returns(handler), {});
+            intendedObject(key, handler, function (key, handler) {
+                hash[key] = bind(isFunction(handler) ? handler : returns(handler), NULL);
             });
+            return this;
         };
     app.defineDirective('messenger', function () {
         return {

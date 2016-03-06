@@ -1,7 +1,6 @@
 this.Application = function (global, WHERE, version, fn) {
     'use strict';
-    var UNDEFINED, topmostDoc, MAKE_SCRIPT = 'makeScript',
-        LENGTH = 'length',
+    var UNDEFINED, topmostDoc, LENGTH = 'length',
         PARENT = 'parent',
         PROTOTYPE = 'prototype',
         TOUCH_TOP = 'touchTop',
@@ -41,10 +40,11 @@ this.Application = function (global, WHERE, version, fn) {
         this.version = name;
         this.scoped = BOOLEAN_TRUE;
         this.global = BOOLEAN_FALSE;
-        this.loadedUnder = [];
+        this.missedDefinitions = [];
         return this;
     }
     Application[PROTOTYPE].wraptry = wraptry;
+    Application[PROTOTYPE].now = now;
     Application[PROTOTYPE].extend = function (obj) {
         var n, app = this;
         for (n in obj) {
@@ -53,6 +53,10 @@ this.Application = function (global, WHERE, version, fn) {
             }
         }
         return app;
+    };
+    Application[PROTOTYPE].undefine = function (handler) {
+        this.missedDefinitions.push(handler);
+        return this;
     };
     Application[PROTOTYPE].parody = function (list) {
         var app = this,
@@ -98,6 +102,19 @@ this.Application = function (global, WHERE, version, fn) {
                 application.versionOrder.push(name);
             }
             return newApp;
+        },
+        definition: function (version, windo, handler) {
+            var application = this,
+                app = application.registerVersion(version);
+            if (app.isDefined) {
+                application.map(app.missedDefinitions, function (handler) {
+                    handler.call(app, windo);
+                });
+            } else {
+                app.isDefined = BOOLEAN_TRUE;
+                handler.call(app, app);
+            }
+            return app;
         },
         upsetDefaultVersion: function (version) {
             var application = this;
@@ -156,23 +173,22 @@ this.Application = function (global, WHERE, version, fn) {
             var application = this,
                 expects = expects_ || 3,
                 method = application[name] = application[name] || function () {
-                    var version, i = 1,
+                    var i = 0,
                         args = arguments,
                         args_ = args,
-                        argLen = args[LENGTH];
+                        argLen = args[LENGTH],
+                        version = args[0];
                     // expects is equivalent to what it would be if the version was passed in
                     if (argLen < expects) {
-                        version = application.defaultVersion;
+                        version = application.currentVersion;
                     } else {
                         args_ = [];
-                        version = args[1];
                         for (; i < args[LENGTH]; i++) {
                             args_.push(args[i]);
                         }
+                        version = args_.shift();
                     }
-                    application.map(application.versionOrder, function (version) {
-                        application.applyTo(version, name, args_);
-                    });
+                    application.applyTo(version, name, args_);
                 };
             return application;
         },
@@ -189,28 +205,6 @@ this.Application = function (global, WHERE, version, fn) {
                 currentScript = d.currentScript,
                 lastScript = allScripts[allScripts[LENGTH] - 1];
             return currentScript || lastScript;
-        },
-        loadScript: function (url, callback, docu_) {
-            var scriptTag, application = this,
-                // allow top doc to be overwritten
-                docu = docu_ || topmostDoc || doc;
-            scriptTag = application[MAKE_SCRIPT](url, callback);
-            docu.head.appendChild(scriptTag);
-            return application;
-        },
-        makeScript: function (src, onload, docu_, preventappend) {
-            var docu = docu_ || topmostDoc || doc,
-                script = docu.createElement('script'),
-                type = script.type = 'text/javascript';
-            if (!src) {
-                return script;
-            }
-            if (onload) {
-                script.onload = onload;
-            }
-            // src applied last for ie
-            script.src = src;
-            return script;
         },
         touchTop: function (global_) {
             // assume you have top access

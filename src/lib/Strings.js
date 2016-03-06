@@ -1,4 +1,4 @@
-// application.scope(function (app) {
+// app.scope(function (app) {
 var cacheable = function (fn) {
         var cache = {};
         return function (input) {
@@ -196,34 +196,107 @@ var cacheable = function (fn) {
         return list[index || 0] === item;
     },
     startsWith = itemIs,
-    parseURL = function (url) {
-        var firstSlash, hostSplit, originNoProtocol, search = EMPTY_STRING,
+    parseSearch = function (search) {
+        var parms, temp, items, val, converted, i = 0,
+            dcUriComp = win.decodeURIComponent;
+        if (!search) {
+            search = win[LOCATION].search;
+        }
+        items = search.slice(1).split("&");
+        parms = {};
+        for (; i < items[LENGTH]; i++) {
+            temp = items[i].split("=");
+            if (temp[0]) {
+                if (temp[LENGTH] < 2) {
+                    temp[PUSH]("");
+                }
+                val = temp[1];
+                val = dcUriComp(val);
+                if (val[0] === "'" || val[0] === '"') {
+                    val = val.slice(1, val[LENGTH] - 1);
+                }
+                if (val === BOOLEAN_TRUE + '') {
+                    val = BOOLEAN_TRUE;
+                }
+                if (val === BOOLEAN_FALSE + '') {
+                    val = BOOLEAN_FALSE;
+                }
+                if (isString(val)) {
+                    converted = +val;
+                    if (converted == val && converted + '' === val) {
+                        val = converted;
+                    }
+                }
+                parms[dcUriComp(temp[0])] = val;
+            }
+        }
+        return parms;
+    },
+    urlToString = function (object) {
+        object.toString = function () {
+            return object.href;
+        };
+        object.replace = function (newlocation) {
+            var newparsed = parseUrl(newlocation);
+            newparsed.previous = object;
+            return newparsed;
+        };
+        return object;
+    },
+    reference = cacheable(function (str) {
+        var match;
+        if (str) {
+            if (!isString(str)) {
+                str = str.referrer;
+            }
+            if (isString(str)) {
+                // gives it a chance to match
+                str += SLASH;
+                match = str.match(/^http?:\/\/.*?\//);
+                if (match) {
+                    match = match[0].slice(0, match[0][LENGTH] - 1);
+                }
+            }
+        }
+        return match || EMPTY_STRING;
+    }),
+    protocols = [HTTP, HTTPS, 'file', 'about', 'javascript'],
+    extraslashes = {
+        'http:': BOOLEAN_TRUE,
+        'https:': BOOLEAN_TRUE
+    },
+    parseUrl = function (url__, startPath_, windo_) {
+        var garbage, href, origin, hostnameSplit, questionable, firstSlash, object, startPath, hostSplit, originNoProtocol, windo = windo_ || window,
+            url = url__ || EMPTY_STRING,
+            search = EMPTY_STRING,
             hash = EMPTY_STRING,
             host = EMPTY_STRING,
             pathname = EMPTY_STRING,
-            protocol = EMPTY_STRING,
             port = EMPTY_STRING,
             hostname = EMPTY_STRING,
-            origin = url,
             searchIdx = indexOf(url, '?') + 1,
             searchObject = {},
-            protocols = [HTTP, HTTPS, 'file', 'about'],
             protocolLength = protocols[LENGTH],
-            doubleSlash = SLASH + SLASH;
+            doubleSlash = SLASH + SLASH,
+            protocolSplit = url.split(COLON),
+            globalProtocol = windo.location.protocol,
+            protocol_ = (protocolSplit[LENGTH] - 1) && (questionable = protocolSplit.shift()),
+            protocol = ((protocol_ && find(protocols, function (question) {
+                return question === questionable;
+            }) || globalProtocol.slice(0, globalProtocol[LENGTH] - 1))) + COLON;
         if (searchIdx) {
             search = url.slice(searchIdx - 1);
-            origin = origin.split(search).join(EMPTY_STRING);
             hash = parseHash(search);
-            search = search.split(hash).join(EMPTY_STRING);
-            searchObject = app.parseSearch(search);
         } else {
             hash = parseHash(url);
-            origin = origin.split(hash).join(EMPTY_STRING);
+        }
+        if (searchIdx) {
+            search = search.split(hash).join(EMPTY_STRING);
+            searchObject = parseSearch(search);
+            url = url.slice(0, searchIdx - 1);
         }
         if (url[0] === SLASH && url[1] === SLASH) {
             protocol = win.location.protocol;
-            url = protocol + url;
-            origin = protocol + origin;
         } else {
             while (protocolLength-- && !protocol) {
                 if (url.slice(0, protocols[protocolLength][LENGTH]) === protocols[protocolLength]) {
@@ -233,33 +306,55 @@ var cacheable = function (fn) {
             if (!protocol) {
                 protocol = HTTP;
             }
-            protocol += COLON;
-            if (origin.slice(0, protocol[LENGTH]) + doubleSlash !== protocol + doubleSlash) {
-                url = protocol + doubleSlash + url;
-                origin = protocol + doubleSlash + origin;
-            }
         }
-        originNoProtocol = origin.split(protocol + doubleSlash).join(EMPTY_STRING);
-        firstSlash = indexOf(originNoProtocol, SLASH) + 1;
-        pathname = originNoProtocol.slice(firstSlash - 1);
-        host = originNoProtocol.slice(0, firstSlash - 1);
-        origin = origin.split(pathname).join(EMPTY_STRING);
-        hostSplit = host.split(COLON);
-        hostname = hostSplit.shift();
-        port = hostSplit.join(COLON);
-        return {
+        // passed a protocol
+        protocolSplit = url.split(COLON);
+        if (protocolSplit[LENGTH] - 1) {
+            // protocolSplit
+            questionable = protocolSplit.shift();
+            hostSplit = protocolSplit.join(COLON).split(SLASH);
+            while (!host) {
+                host = hostSplit.shift();
+            }
+            hostnameSplit = host.split(COLON);
+            hostname = hostnameSplit.shift();
+            port = hostnameSplit[LENGTH] ? hostnameSplit[0] : EMPTY_STRING;
+            garbage = protocolSplit.shift();
+            url = protocolSplit.join(COLON).slice(host[LENGTH]);
+        } else {
+            host = windo.location.host;
+            port = windo.location.port;
+            hostname = windo.location.hostname;
+        }
+        startPath = windo.location.pathname.slice(1);
+        if (url[0] === SLASH && url[1] !== SLASH) {
+            url = url.slice(1);
+            startPath = EMPTY_STRING;
+        }
+        if (url[0] === PERIOD) {
+            url = url.slice(2);
+        }
+        pathname = SLASH + startPath + url;
+        origin = protocol + (extraslashes[protocol] ? SLASH + SLASH : EMPTY_STRING) + hostname + (port ? COLON + port : EMPTY_STRING);
+        href = origin + pathname + (search || EMPTY_STRING) + (hash || EMPTY_STRING);
+        return urlToString({
+            passed: url__,
             port: port,
             hostname: hostname,
             pathname: pathname,
-            search: search,
+            search: search.slice(1),
             host: host,
-            hash: hash,
-            href: url,
-            protocol: protocol,
+            hash: hash.slice(1),
+            href: href,
+            protocol: protocol.slice(0, protocol[LENGTH] - 1),
+            friendlyProtocol: !extraslashes[protocol],
             origin: origin,
             searchObject: searchObject
-        };
+        });
     },
+    // recursivelyReplace = function (newlocation) {
+    //     return parseUrl(newlocation);
+    // },
     SIXTY = 60,
     SEVEN = 7,
     THIRTY = 30,
@@ -291,7 +386,7 @@ var cacheable = function (fn) {
         };
         return memo;
     }, {}),
-    time = cacheable(function (number_) {
+    forward_time = cacheable(function (number_) {
         var number = number_ + EMPTY_STRING,
             time = 0;
         if (isString(number)) {
@@ -311,7 +406,13 @@ var cacheable = function (fn) {
             }
         });
         return time;
-    });
+    }),
+    absolute_time = function (input) {
+        // calculate time string relative to now
+    },
+    time = function (input) {
+        return forward_time(input) || (input && absolute_time(input));
+    };
 _.exports({
     // constants
     customUnits: customUnits,
@@ -329,12 +430,14 @@ _.exports({
     spinalCase: unCamelCase,
     camelCase: camelCase,
     snakeCase: snakeCase,
+    reference: reference,
     string: string,
     units: units,
     baseUnitList: baseUnitList,
     isHttp: isHttp,
     parseHash: parseHash,
-    parseURL: parseURL,
+    parseUrl: parseUrl,
+    parseSearch: parseSearch,
     parseObject: parseObject,
     time: time,
     startsWith: startsWith,

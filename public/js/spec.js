@@ -191,11 +191,11 @@ application.scope().run(function (app, _) {
             });
             it('_.isInstance', function () {
                 var obj = {},
-                    newBox = factories.Box();
+                    newModel = factories.Model();
                 expect(_.isInstance(obj, Object)).toEqual(true);
-                expect(_.isInstance(newBox, factories.Box)).toEqual(true);
-                expect(_.isInstance(newBox, factories.Box)).toEqual(true);
-                expect(_.isInstance(newBox, factories.Collection)).toEqual(false);
+                expect(_.isInstance(newModel, factories.Model)).toEqual(true);
+                expect(_.isInstance(newModel, factories.Model)).toEqual(true);
+                expect(_.isInstance(newModel, factories.Collection)).toEqual(false);
             });
             it('_.negate', function () {
                 var falsey = _.negate(function () {
@@ -468,9 +468,9 @@ application.scope().run(function (app, _) {
                 })).toEqual('//google.com?some=where&und=efined&blank=undefined&under=statement&one=1&has=false&nully=null&even=%7B%22moar%22%3A%22things%22%7D');
             });
             it('_.protoProp', function () {
-                var box = factories.Box();
+                var box = factories.Model();
                 box.idAttribute = 'something';
-                expect(_.protoProp(box, 'idAttribute')).toEqual(factories.Box.constructor.prototype.idAttribute);
+                expect(_.protoProp(box, 'idAttribute')).toEqual(factories.Model.constructor.prototype.idAttribute);
             });
             it('_.roundFloat', function () {
                 expect(_.roundFloat(1.5489909, 3)).toEqual(1.548);
@@ -512,15 +512,15 @@ application.scope().run(function (app, _, factories) {
         beforeEach(function () {
             collection = factories.Collection();
             numberCollection = factories.Collection([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
-            complexCollection = factories.Collection([factories.Box(), factories.Box({
+            complexCollection = factories.Collection([factories.Model(), factories.Model({
                 one: 1,
                 two: 2,
                 three: 3
             })]);
             evenNumberList = [0, 2, 4, 6, 8];
         });
-        it('extends from factories.Model', function () {
-            expect(_.isInstance(collection, factories.Model)).toEqual(true);
+        it('extends from factories.Extendable', function () {
+            expect(_.isInstance(collection, factories.Extendable)).toEqual(true);
         });
         it('extends from factories.Collection', function () {
             expect(_.isInstance(collection, factories.Collection)).toEqual(true);
@@ -769,7 +769,7 @@ application.scope().run(function (app, _, factories) {
         beforeEach(function () {
             collection = SortedCollection();
             numberCollection = SortedCollection([4, 5, 3, 7, 8, 6, 2, 0, 1, 9]);
-            complexCollection = SortedCollection([factories.Box(), factories.Box({
+            complexCollection = SortedCollection([factories.Model(), factories.Model({
                 one: 1,
                 two: 2,
                 three: 3
@@ -808,7 +808,7 @@ application.scope().run(function (app, _, factories) {
 application.scope().run(function (app, _, factories) {
     describe('Events', function () {
         var blank, box,
-            Box = factories.Box,
+            Model = factories.Model,
             handler = function () {
                 count++;
             },
@@ -827,7 +827,7 @@ application.scope().run(function (app, _, factories) {
             };
         beforeEach(function () {
             count = 0;
-            box = Box({
+            box = Model({
                 zero: 0,
                 one: 1,
                 two: 2,
@@ -840,7 +840,7 @@ application.scope().run(function (app, _, factories) {
                 nine: 9
             });
         });
-        describe('Boxes can have events', function () {
+        describe('Modeles can have events', function () {
             var box2;
             describe('and can create events for itself', function () {
                 it('either one at a time', function () {
@@ -892,10 +892,10 @@ application.scope().run(function (app, _, factories) {
                 });
             });
         });
-        describe('Boxes can also listen to other, similar objects', function () {
+        describe('Modeles can also listen to other, similar objects', function () {
             var box2;
             beforeEach(function () {
-                box2 = Box();
+                box2 = Model();
             });
             describe('by using the listenTo method', function () {
                 it('either one at a time', function () {
@@ -1114,7 +1114,7 @@ application.scope().run(function (app, _, factories) {
             });
         });
     });
-    // var box = factories.Box();
+    // var box = factories.Model();
     // var collection = [];
     // var collection2 = [];
     // _.count(collection, function (item, index, list) {
@@ -1122,7 +1122,7 @@ application.scope().run(function (app, _, factories) {
     // }, null, 0, 100000);
     // var timestamp = _.now();
     // _.duff(collection, function (item) {
-    //     collection2.push(factories.Box());
+    //     collection2.push(factories.Model());
     // });
     // var div = document.createElement('div');
     // div.innerHTML = _.now() - timestamp;
@@ -1131,9 +1131,9 @@ application.scope().run(function (app, _, factories) {
 });
 application.scope().run(function (app, _, factories) {
     // var factories = _.factories;
-    describe('Box', function () {
+    describe('Model', function () {
         var blank, count, box,
-            Box = factories.Box,
+            Model = factories.Model,
             handler = function () {
                 return !0;
             },
@@ -1155,7 +1155,7 @@ application.scope().run(function (app, _, factories) {
             };
         beforeEach(function () {
             count = 0;
-            box = Box({
+            box = Model({
                 zero: 0,
                 one: 1,
                 two: 2,
@@ -1168,19 +1168,16 @@ application.scope().run(function (app, _, factories) {
                 nine: 9
             });
         });
-        it('extends from factories.Model', function () {
-            expect(factories.Model.isInstance(box)).toEqual(true);
+        it('extends from factories.Extendable', function () {
+            expect(factories.Extendable.isInstance(box)).toEqual(true);
         });
-        it('and from factories.Container', function () {
-            expect(factories.Container.isInstance(box)).toEqual(true);
-        });
-        describe('Boxes are always created with...', function () {
-            var box2 = Box();
+        describe('Modeles are always created with...', function () {
+            var box2 = Model();
             it('a unique id', function () {
                 expect(_.has(box2, 'id')).toEqual(true);
             });
             it('even if there is not one given', function () {
-                var box3 = Box({
+                var box3 = Model({
                     id: 5
                 });
                 expect(box2.id !== void 0).toEqual(true);
@@ -1202,10 +1199,10 @@ application.scope().run(function (app, _, factories) {
             // });
         });
         describe('you can set properties on the box you\'re handling with the set method', function () {
-            var box = Box(),
+            var box = Model(),
                 attrs = box.directive('data');
             beforeEach(function () {
-                box = Box({
+                box = Model({
                     zero: 0,
                     one: 1,
                     two: 2,
@@ -1237,7 +1234,7 @@ application.scope().run(function (app, _, factories) {
                 expect(box.get('one')).toEqual(2);
             });
             it('and you can remove properties by using the unset method', function () {
-                var box = Box();
+                var box = Model();
                 expect(box.get('one')).toEqual(void 0);
                 box.set({
                     one: 1
@@ -1263,11 +1260,11 @@ application.scope().run(function (app, _, factories) {
                     count++;
                 };
             beforeEach(function () {
-                box2 = Box();
+                box2 = Model();
                 count = 0;
             });
         });
-        describe('Boxes also trigger a variety of events any time the set method changes the attributes object', function () {
+        describe('Modeles also trigger a variety of events any time the set method changes the attributes object', function () {
             var fired;
             beforeEach(function () {
                 fired = 0;
@@ -1313,7 +1310,7 @@ application.scope().run(function (app, _, factories) {
                 expect(fired).toEqual(3);
             });
         });
-        describe('but beyond events and simple hashes, Boxes are able to manage themselves fairly well', function () {
+        describe('but beyond events and simple hashes, Modeles are able to manage themselves fairly well', function () {
             it('they can get properties from the attributes object with the get method', function () {
                 expect(box.get('one')).toEqual(1);
             });
@@ -1327,12 +1324,12 @@ application.scope().run(function (app, _, factories) {
             });
             it('they can clone children into an array', function () {
                 var clone;
-                box.add([factories.Box(), factories.Box()]);
+                box.add([factories.Model(), factories.Model()]);
                 clone = box.directive('children').toJSON();
                 expect(clone).toEqual([{}, {}]);
             });
             it('they can stringify themselves', function () {
-                box = factories.Box({
+                box = factories.Model({
                     some: 'thing'
                 });
                 expect(box.toString()).toEqual(JSON.stringify({
@@ -1340,12 +1337,12 @@ application.scope().run(function (app, _, factories) {
                 }));
             });
             it('they can stringify their children', function () {
-                box = factories.Box();
+                box = factories.Model();
                 box.add(data.children);
                 expect(box.directive('children').toString()).toEqual(JSON.stringify(data.children));
             });
         });
-        describe('Boxes can register other objects against a key hash as well', function () {
+        describe('Modeles can register other objects against a key hash as well', function () {
             it('it can register', function () {
                 var data = {
                     myObj: 1
@@ -1383,12 +1380,12 @@ application.scope().run(function (app, _, factories) {
                 expect(box.directive('children').length()).toEqual(3);
             });
             it('you can also remove them one at a time', function () {
-                box = factories.Box();
+                box = factories.Model();
                 box.add(data.children);
                 expect(box.directive('children').length()).toEqual(2);
             });
             it('or many at the same time', function () {
-                box = factories.Box();
+                box = factories.Model();
                 var children = box.directive('children');
                 expect(children.length()).toEqual(0);
                 box.add([{
@@ -1407,7 +1404,7 @@ application.scope().run(function (app, _, factories) {
         });
         describe('they can', function () {
             it('destroy themselves', function () {
-                box = factories.Box();
+                box = factories.Model();
                 box.add([{
                     one: 1
                 }, {
@@ -1469,7 +1466,7 @@ application.scope().run(function (app, _, factories) {
             });
             it('set up events on their parents', function () {
                 var count = 0;
-                Box.constructor.prototype.parentEvents = {
+                Model.constructor.prototype.parentEvents = {
                     beep: function () {
                         count++;
                     }
@@ -1477,7 +1474,7 @@ application.scope().run(function (app, _, factories) {
                 box.add([{}, {}, {}, {}]);
                 box.dispatchEvent('beep');
                 expect(count).toEqual(4);
-                delete Box.constructor.prototype.parentEvents;
+                delete Model.constructor.prototype.parentEvents;
             });
         });
         describe('boxes can "destroy" themselves', function () {
@@ -1501,7 +1498,7 @@ application.scope().run(function (app, _, factories) {
                 expect(count).toEqual(3);
             });
             it('conversely, if the box has listening objects, it will remove it\'s handlers from other objects', function () {
-                var box2 = factories.Box();
+                var box2 = factories.Model();
                 box.listenTo(box2, {
                     event1: counter,
                     event2: counter
@@ -1587,7 +1584,7 @@ application.scope().run(function (app, _, factories) {
             });
             it('and listeners on other objects with the watchOther api', function () {
                 var count = 0;
-                var box2 = factories.Box();
+                var box2 = factories.Model();
                 box.watchOther(box2, 'there', function (e) {
                     count++;
                     return e.target === box && this !== box;
@@ -1606,7 +1603,7 @@ application.scope().run(function (app, _, factories) {
             });
             it('and listeners on other objects with the watchOther api', function () {
                 var count = 0;
-                var box2 = factories.Box();
+                var box2 = factories.Model();
                 box.watchOtherOnce(box2, 'there', 'there', function (e) {
                     count++;
                 });
@@ -1618,7 +1615,7 @@ application.scope().run(function (app, _, factories) {
             });
             it('the once handler will only take itself off when it succeeds', function () {
                 var count = 0;
-                var box2 = factories.Box();
+                var box2 = factories.Model();
                 box.watchOtherOnce(box2, 'there', 'there', function (e) {
                     count++;
                 });
@@ -1748,7 +1745,7 @@ application.scope().run(function (app, _, factories) {
             });
         });
         describe('creates a tree of dependencies', function () {
-            it('always is a nonstring', function () {
+            it('always is a nonstring (so it terminates)', function () {
                 var allstates = promise.allStates();
                 expect(!_.isString(allstates.always)).toEqual(true);
             });
@@ -1760,16 +1757,15 @@ application.scope().run(function (app, _, factories) {
                 var allstates = promise.allStates();
                 expect(allstates.failure).toEqual('always');
             });
-            it('error is set to always', function () {
+            it('error is set to failure', function () {
                 var allstates = promise.allStates();
-                expect(allstates.error).toEqual('always');
+                expect(allstates.error).toEqual('failure');
             });
         });
     });
 });
-application.scope().run(function (app, _) {
-    var factories = _.factories;
-    var registry = _.associator;
+application.scope().run(function (app, _, factories) {
+    var registry = factories.Associator();
     describe('Registry', function () {
         beforeEach(function () {});
         it('is made by the specless object', function () {
@@ -1778,9 +1774,6 @@ application.scope().run(function (app, _) {
         it('is not a collection', function () {
             expect(_.isInstance(registry, factories.Collection)).toEqual(false);
         });
-        // it('can get any object\'s data', function () {
-        //     expect(_.has(registry.get(window), 'dataset')).toEqual(true);
-        // });
         it('can save data against pointers', function () {
             registry.set(window, {
                 some: 'data'
@@ -1797,474 +1790,6 @@ application.scope().run(function (app, _) {
                 two: 2
             });
             expect(_.keys(registry.sameType(two).__elid__).length).toEqual(2);
-        });
-    });
-});
-application.scope().run(function (app, _, factories) {
-    var elementData = _.associator;
-    describe('DOMM', function () {
-        var divs, count, $empty = $(),
-            $win = $(window),
-            $doc = $(document),
-            $body = $(document.body),
-            handler = function () {
-                // return true;
-                count++;
-            },
-            handler2 = function () {
-                return false;
-            },
-            create = function () {
-                count = 0;
-                var _divs = divs && divs.remove();
-                divs = $().count(function (item, index) {
-                    var div = document.createElement('div');
-                    div.className = 'one';
-                    if (index % 2) {
-                        div.className += ' two';
-                    } else {
-                        div.className += ' not';
-                    }
-                    this.push(div);
-                }, 0, 5);
-                $con.append(divs);
-                return divs;
-            },
-            $con = $.createElements('div').style({
-                height: '100%',
-                width: '100%'
-            });
-        $(document.body).append($con);
-        beforeEach(create);
-        it('is essentially a collection', function () {
-            expect(_.isInstance($empty, factories.DOMM)).toEqual(true);
-            expect(_.isInstance($empty, factories.Collection)).toEqual(true);
-        });
-        it('it knows it\'s own client rect', function () {
-            var div = divs.eq(0);
-            expect(div.rect()).toEqual(_.extend({}, div.element().getBoundingClientRect()));
-        });
-        it('can show and hide elements', function () {
-            expect(divs.hide().map(function (manager) {
-                var el = manager.unwrap();
-                if (el.style.display === 'none') {
-                    return '';
-                } else {
-                    return el.style.display;
-                }
-            }).join('')).toEqual('');
-            expect(divs.show().map(function (manager) {
-                var el = manager.unwrap();
-                if (el.style.display === 'block') {
-                    return '';
-                } else {
-                    return el.style.display;
-                }
-            }).join('')).toEqual('');
-        });
-        it('can attach dom elements', function () {
-            var div = divs.eq();
-            div.append(divs.element(1));
-            expect(div.children().element()).toEqual(divs.element(1));
-        });
-        it('can remove dom elements', function () {
-            var div = divs.eq();
-            div.append(divs.element(1));
-            expect(div.children().element()).toEqual(divs.element(1));
-            div.children().remove();
-            expect(div.children().length()).toEqual(0);
-        });
-        describe('except it has some methods that are highly pertinant to DOM manipulation... ergo: DOMM', function () {
-            it('can check if its items are windows', function () {
-                expect($win.isWindow()).toEqual(true);
-                expect($doc.isWindow()).toEqual(false);
-                expect($body.isWindow()).toEqual(false);
-            });
-            it('can check if its items are documents', function () {
-                expect($win.isDocument()).toEqual(false);
-                expect($doc.isDocument()).toEqual(true);
-                expect($body.isDocument()).toEqual(false);
-            });
-            it('can check if its items are actually elements', function () {
-                expect($win.allElements()).toEqual(false);
-                expect($doc.allElements()).toEqual(false);
-                expect($body.allElements()).toEqual(true);
-                expect($('a').allElements()).toEqual(true);
-            });
-            it('can check if its items are document fragments', function () {
-                var frag = document.createDocumentFragment();
-                frag.appendChild(document.createElement('div'));
-                expect($win.isFragment()).toEqual(false);
-                expect($doc.isFragment()).toEqual(false);
-                expect($body.isFragment()).toEqual(false);
-                expect($('a').isFragment()).toEqual(false);
-                expect($(frag).isFragment()).toEqual(true);
-            });
-        });
-        describe('it can filter itself', function () {
-            it('by query string matching', function () {
-                var newDivs = divs.filter('.two');
-                expect(newDivs.length()).toEqual(2);
-            });
-            it('by filtering against a function', function () {
-                var newDivs = divs.filter(function (item, idx) {
-                    return ((idx % 3) - 1) === 0;
-                });
-                expect(newDivs.length()).toEqual(2);
-                expect(newDivs.get()).toEqual(divs.get(1));
-                expect(newDivs.get(1)).toEqual(divs.get(4));
-            });
-            it('by passing in an object', function () {
-                var newDivs = divs.filter({
-                    className: 'one not'
-                });
-                expect(newDivs.length()).toEqual(3);
-            });
-            it('can also get the first', function () {
-                expect(divs.first().unwrap()).toEqual(divs.element(0));
-            });
-            it('and the last element in the list', function () {
-                expect(divs.last().unwrap()).toEqual(divs.element(divs.length() - 1));
-            });
-        });
-        describe('it can find it\'s children', function () {
-            it('by calling the children method', function () {
-                divs.duff(function (manager, idx) {
-                    var div = manager.unwrap();
-                    var span1 = document.createElement('span');
-                    var span2 = document.createElement('span');
-                    span1.className = 'span-' + idx;
-                    span2.className = 'span-' + (idx * 2);
-                    div.appendChild(span1);
-                    div.appendChild(span2);
-                });
-                var kids = divs.children();
-                expect(kids.length()).toEqual(10);
-                kids.duff(function (kid, idx) {
-                    expect(kid.unwrap().localName).toEqual('span');
-                });
-                kids = divs.children(1);
-                expect(kids.length()).toEqual(5);
-                kids = divs.children('.span-2');
-                expect(kids.unwrap()).toEqual(divs.children().filter('.span-2').unwrap());
-                expect(kids.length()).toEqual(2);
-                expect(kids.element() === kids.element(1)).toEqual(false);
-            });
-            it('by querying the dom elements', function () {
-                divs.duff(function (div, idx) {
-                    div.unwrap().innerHTML = '<span></span><img/>';
-                });
-                var kids = divs.$('img');
-                expect(kids.length()).toEqual(5);
-                kids.duff(function (kid, idx) {
-                    expect(kid.unwrap().tagName).toEqual('IMG');
-                });
-            });
-        });
-        describe('it can also find it\'s parents', function () {
-            it('either by counting up', function () {
-                var $start = $('.results .failures'),
-                    $end = $('.jasmine_html-reporter'),
-                    end = $start.parent(2);
-                expect(end.element()).toEqual($end.element());
-            });
-            it('or by finding via selector', function () {
-                var $start = $('.results .failures'),
-                    $end = $('.jasmine_html-reporter'),
-                    end = $start.parent('.jasmine_html-reporter');
-                expect(end.element()).toEqual($end.element());
-            });
-            it('or by passing a function', function () {
-                var $start = $('.results .failures'),
-                    end = $start.parent(function (el) {
-                        return el.tagName === 'BODY';
-                    });
-                expect(end.element()).toEqual(document.body);
-            });
-            describe('or by passing a keyword', function () {
-                it('like document', function () {
-                    var $start = $('.results .failures'),
-                        end = $start.parent('document');
-                    expect(end.element()).toEqual(document);
-                });
-                it('or window', function () {
-                    var $start = $('.results .failures'),
-                        end = $start.parent('window');
-                    expect(end.element()).toEqual(window);
-                });
-            });
-        });
-        describe('all of this traversing can be undone', function () {
-            it('with the end method', function () {
-                var $start = $('.results .failures');
-                var $next = $start.parent();
-                $next = $next.children();
-                $next = $next.end();
-                expect($next === $start).toEqual(true);
-            });
-        });
-        describe('the domm is also special because it abstracts event listeners for you', function () {
-            describe('can add handlers', function () {
-                it('one at a time', function () {
-                    divs.on('click', handler);
-                    expect(count).toEqual(0);
-                    divs.click();
-                    expect(count).toEqual(5);
-                });
-                it('many at a time', function () {
-                    divs.on('click mouseover mouseout', handler);
-                    expect(count).toEqual(0);
-                    divs.dispatchEvent('click');
-                    divs.dispatchEvent('mouseover');
-                    divs.dispatchEvent('mouseout');
-                    expect(count).toEqual(15);
-                });
-            });
-        });
-        describe('the domm is also special because it abstracts event listeners for you', function () {
-            describe('can add handlers', function () {
-                it('one at a time', function () {
-                    divs.on('click', handler);
-                    expect(count).toEqual(0);
-                    divs.dispatchEvent('click');
-                    expect(count).toEqual(5);
-                });
-                it('many at a time', function () {
-                    divs.on('click mouseover mouseout', handler);
-                    expect(count).toEqual(0);
-                    divs.dispatchEvent('click');
-                    divs.dispatchEvent('mouseover');
-                    divs.dispatchEvent('mouseout');
-                    expect(count).toEqual(15);
-                });
-            });
-            describe('also capture handlers', function () {
-                it('one at a time', function () {
-                    divs.on('_click', handler);
-                    expect(count).toEqual(0);
-                    divs.dispatchEvent('click', {}, true);
-                    expect(count).toEqual(5);
-                });
-                it('many at a time', function () {
-                    divs.on('_click _mouseover _mouseout', handler);
-                    expect(count).toEqual(0);
-                    divs.dispatchEvent('click', {}, true);
-                    divs.dispatchEvent('mouseover', {}, true);
-                    divs.dispatchEvent('mouseout', {}, true);
-                    expect(count).toEqual(15);
-                });
-            });
-            it('will only add a method to the queue once. if a duplicate is passed in, it will be ignored (just like the browser implementation)', function () {
-                divs.on('click', handler).on('click', handler);
-                expect(count).toEqual(0);
-                divs.dispatchEvent('click');
-                expect(count).toEqual(5);
-                divs.dispatchEvent('click');
-                expect(count).toEqual(10);
-            });
-            it('once wrappers can also be used with the once method and they can be added the same way as once', function () {
-                divs.once('click', handler);
-                expect(count).toEqual(0);
-                divs.dispatchEvent('click');
-                expect(count).toEqual(5);
-                divs.dispatchEvent('click');
-                expect(count).toEqual(5);
-            });
-            it('be careful with the once function because they can be added multiple times to the queue, since they use a proxy function, like the one available at _.once', function () {
-                divs.once('click', handler);
-                expect(count).toEqual(0);
-                divs.dispatchEvent('click');
-                expect(count).toEqual(5);
-                divs.dispatchEvent('click');
-                expect(count).toEqual(5);
-            });
-        });
-        describe('the each function is special because', function () {
-            it('it wraps each element in a DOMM object before passing it through your iterator', function () {
-                divs.each(function (el, idx) {
-                    expect(_.isInstance(el, factories.DOMM)).toEqual(false);
-                    expect(factories.DomManager.isInstance(el)).toEqual(true);
-                    expect(divs.element(idx) === el.unwrap());
-                });
-            });
-            it('where the duff and forEach function just gives you the element at each index, just like a collection', function () {
-                divs.duff(function (el, idx) {
-                    expect(_.isInstance(el, _.$)).toEqual(false);
-                });
-                divs.forEach(function (el, idx) {
-                    expect(_.isInstance(el, _.$)).toEqual(false);
-                });
-            });
-        });
-        describe('adding and removing classes is done by string checking instead of the classList to invoke only one reflow', function () {
-            it('you can use addClass', function () {
-                divs.each(function (div, idx) {
-                    expect(div.hasClass('three')).toEqual(false);
-                });
-                divs.addClass('three');
-                divs.each(function (div, idx) {
-                    expect(div.hasClass('three')).toEqual(true);
-                });
-            });
-            it('you can use removeClass', function () {
-                divs.each(function (div, idx) {
-                    expect(div.hasClass('three')).toEqual(false);
-                });
-                expect(divs.hasClass('three')).toEqual(false);
-                divs.addClass('three');
-                expect(divs.hasClass('three')).toEqual(true);
-            });
-            it('you can use hasClass to check if all of the elements has a particular class', function () {
-                expect(divs.hasClass('two')).toEqual(false);
-                expect(divs.hasClass('one')).toEqual(true);
-            });
-            it('you can use toggleClass swap classes depending on whether or not they exist on each element', function () {
-                divs.each(function (div, idx) {
-                    expect(div.hasClass('one')).toEqual(true);
-                });
-                divs.toggleClass('one');
-                divs.each(function (div, idx) {
-                    expect(div.hasClass('one')).toEqual(false);
-                });
-            });
-            it('it will also do this for individual elements', function () {
-                var list = [],
-                    unique = [];
-                divs.each(function (div, idx) {
-                    var res = div.hasClass('two');
-                    list.push(res);
-                    _.add(unique, res);
-                });
-                divs.toggleClass('two');
-                divs.each(function (div, idx) {
-                    expect(div.hasClass('two')).toEqual(!list[idx]);
-                });
-                expect(unique.length > 1).toEqual(true);
-            });
-            it('you can also use changeClass as a shorthand of removeClass and addClass', function () {
-                divs.changeClass('one not two', 'three');
-                divs.each(function (div, idx) {
-                    expect(div.hasClass('one')).toEqual(false);
-                    expect(div.hasClass('two')).toEqual(false);
-                    expect(div.hasClass('not')).toEqual(false);
-                    expect(div.hasClass('three')).toEqual(true);
-                });
-            });
-        });
-        describe('there is also a data attributes interface', function () {
-            it('where you can add', function () {
-                divs.duff(function (div, idx) {
-                    expect(div.unwrap().getAttribute('data-one')).toEqual(null);
-                    expect(div.unwrap().getAttribute('data-two')).toEqual(null);
-                });
-                divs.data({
-                    one: 'one',
-                    two: 'two'
-                });
-                divs.duff(function (div, idx) {
-                    expect(div.unwrap().getAttribute('data-one')).toEqual('one');
-                    expect(div.unwrap().getAttribute('data-two')).toEqual('two');
-                });
-            });
-            it('remove', function () {
-                divs.data({
-                    one: 'one',
-                    two: 'two'
-                });
-                divs.duff(function (div, idx) {
-                    expect(div.unwrap().getAttribute('data-one')).toEqual('one');
-                    expect(div.unwrap().getAttribute('data-two')).toEqual('two');
-                });
-                divs.data({
-                    one: false,
-                    two: false
-                });
-                divs.duff(function (div, idx) {
-                    expect(div.unwrap().getAttribute('data-one')).toEqual(null);
-                    expect(div.unwrap().getAttribute('data-two')).toEqual(null);
-                });
-            });
-            it('and update data attributes', function () {
-                divs.data({
-                    one: 'one',
-                    two: 'two'
-                });
-                divs.duff(function (div) {
-                    expect(div.unwrap().getAttribute('data-one')).toEqual('one');
-                    expect(div.unwrap().getAttribute('data-two')).toEqual('two');
-                });
-            });
-        });
-        describe('it can also manipulate elements in other ways', function () {
-            it('like by manipulating their attributes', function () {
-                divs.duff(function (div) {
-                    expect(div.unwrap().getAttribute('tabindex')).toEqual(null);
-                });
-                divs.attr({
-                    tabindex: -1
-                });
-                divs.each(function (div, idx) {
-                    expect(div.attr('tabindex')).toEqual(-1);
-                });
-            });
-            it('or by manipulating their properties', function () {
-                divs.duff(function (div, idx) {
-                    expect(div.unwrap().align).toEqual('');
-                });
-                divs.prop({
-                    align: 'left'
-                });
-                divs.each(function (div, idx) {
-                    expect(div.prop('align')).toEqual('left');
-                });
-            });
-        });
-        describe('can have specialized elements', function () {
-            describe('has lifecycle events', function () {
-                it('like attach', function () {
-                    divs.remove();
-                    divs.on('attach', handler);
-                    expect(count).toEqual(0);
-                    $con.append(divs);
-                    expect(count).toEqual(5);
-                });
-                it('and detach', function () {
-                    divs.once('detach', handler);
-                    expect(count).toEqual(0);
-                    divs.remove();
-                    expect(count).toEqual(5);
-                });
-                it('and attribute change', function () {
-                    divs.once('attributeChange:data-here', handler);
-                    expect(count).toEqual(0);
-                    divs.data('here', 1);
-                    expect(count).toEqual(5);
-                });
-            });
-            describe('there are also special handlers', function () {
-                it('like create', function () {
-                    $.registerElement('test0', {
-                        onCreate: handler
-                    });
-                    expect(count).toEqual(0);
-                    $.createElement('test0');
-                    expect(count).toEqual(1);
-                });
-                it('and destroy', function () {
-                    $.registerElement('test1', {
-                        onDestroy: handler
-                    });
-                    var div = $.createElement('test1');
-                    expect(count).toEqual(0);
-                    div.destroy();
-                    expect(count).toEqual(1);
-                });
-            });
-        });
-        it('tags cannot be created without being registered first', function () {
-            expect(function () {
-                $.createElement('unregistered');
-            }).toThrow();
         });
     });
 });
@@ -2329,6 +1854,20 @@ application.scope().run(function (app, _, factories) {
                 });
             });
             describe('status codes (more than the ones listed here)', function () {
+                it('200', function (done) {
+                    var handlerCounter = 0;
+                    factories.Ajax('/gibberish/200').handle('status:200', function () {
+                        handlerCounter++;
+                    }).success(function () {
+                        handlerCounter++;
+                    }).failure(function () {
+                        handlerCounter--;
+                    }).always(function () {
+                        handlerCounter++;
+                        expect(handlerCounter).toEqual(3);
+                        done();
+                    });
+                });
                 it('404', function (done) {
                     var handlerCounter = 0;
                     factories.Ajax('/gibberish/404').handle('status:404', function () {
@@ -2468,6 +2007,512 @@ application.scope().run(function (app, _, factories) {
     });
 });
 application.scope().run(function (app, _, factories) {
+    var elementData = _.associator;
+    describe('DOMM', function () {
+        var divs, count, $empty = $(),
+            $win = $(window),
+            $doc = $(document),
+            $body = $(document.body),
+            handler = function () {
+                // return true;
+                count++;
+            },
+            handler2 = function () {
+                return false;
+            },
+            create = function () {
+                count = 0;
+                var _divs = divs && divs.remove();
+                divs = $().count(function (item, index) {
+                    var div = $.createElement('div');
+                    var className = 'one';
+                    if (index % 2) {
+                        className += ' two';
+                    } else {
+                        className += ' not';
+                    }
+                    div.addClass(className);
+                    this.push(div);
+                }, 0, 5);
+                $con.append(divs);
+                return divs;
+            },
+            $con = $.createElements('div').style({
+                height: '100%',
+                width: '100%'
+            });
+        $(document.body).append($con);
+        beforeEach(create);
+        it('is essentially a collection', function () {
+            expect(_.isInstance($empty, factories.DOMM)).toEqual(true);
+            expect(_.isInstance($empty, factories.Collection)).toEqual(true);
+        });
+        it('it knows it\'s own client rect', function () {
+            var div = divs.eq(0);
+            expect(div.rect()).toEqual(_.extend({}, div.element().getBoundingClientRect()));
+        });
+        it('can show and hide elements', function () {
+            expect(divs.hide().map(function (manager) {
+                var el = manager.element();
+                if (el.style.display === 'none') {
+                    return '';
+                } else {
+                    return el.style.display;
+                }
+            }).join('')).toEqual('');
+            expect(divs.show().map(function (manager) {
+                var el = manager.element();
+                if (el.style.display === 'block') {
+                    return '';
+                } else {
+                    return el.style.display;
+                }
+            }).join('')).toEqual('');
+        });
+        it('can attach dom elements', function () {
+            var div = divs.eq();
+            div.append(divs.element(1));
+            expect(div.children().element()).toEqual(divs.element(1));
+        });
+        it('can remove dom elements', function () {
+            var div = divs.eq();
+            div.append(divs.element(1));
+            expect(div.children().element()).toEqual(divs.element(1));
+            div.children().remove();
+            expect(div.children().length()).toEqual(0);
+        });
+        describe('except it has some methods that are highly pertinant to DOM manipulation... ergo: DOMM', function () {
+            it('can check if its items are windows', function () {
+                expect($win.isWindow()).toEqual(true);
+                expect($doc.isWindow()).toEqual(false);
+                expect($body.isWindow()).toEqual(false);
+            });
+            it('can check if its items are documents', function () {
+                expect($win.isDocument()).toEqual(false);
+                expect($doc.isDocument()).toEqual(true);
+                expect($body.isDocument()).toEqual(false);
+            });
+            it('can check if its items are actually elements', function () {
+                expect($win.allElements()).toEqual(false);
+                expect($doc.allElements()).toEqual(false);
+                expect($body.allElements()).toEqual(true);
+                expect($('a').allElements()).toEqual(true);
+            });
+            it('can check if its items are document fragments', function () {
+                var frag = document.createDocumentFragment();
+                frag.appendChild(document.createElement('div'));
+                expect($win.isFragment()).toEqual(false);
+                expect($doc.isFragment()).toEqual(false);
+                expect($body.isFragment()).toEqual(false);
+                expect($('a').isFragment()).toEqual(false);
+                expect($(frag).isFragment()).toEqual(true);
+            });
+        });
+        describe('it can filter itself', function () {
+            it('by query string matching', function () {
+                var newDivs = divs.filter('.two');
+                expect(newDivs.length()).toEqual(2);
+            });
+            it('by filtering against a function', function () {
+                var newDivs = divs.filter(function (item, idx) {
+                    return ((idx % 3) - 1) === 0;
+                });
+                expect(newDivs.length()).toEqual(2);
+                expect(newDivs.get()).toEqual(divs.get(1));
+                expect(newDivs.get(1)).toEqual(divs.get(4));
+            });
+            it('by passing in an object', function () {
+                var newDivs = divs.filter({
+                    className: 'one not'
+                });
+                expect(newDivs.length()).toEqual(3);
+            });
+            it('can also get the first', function () {
+                expect(divs.first().element()).toEqual(divs.element(0));
+            });
+            it('and the last element in the list', function () {
+                expect(divs.last().element()).toEqual(divs.element(divs.length() - 1));
+            });
+        });
+        describe('it can find it\'s children', function () {
+            it('by calling the children method', function () {
+                divs.duff(function (manager, idx) {
+                    var div = manager.element();
+                    var span1 = document.createElement('span');
+                    var span2 = document.createElement('span');
+                    span1.className = 'span-' + idx;
+                    span2.className = 'span-' + (idx * 2);
+                    div.appendChild(span1);
+                    div.appendChild(span2);
+                });
+                var kids = divs.children();
+                expect(kids.length()).toEqual(10);
+                kids.duff(function (kid, idx) {
+                    expect(kid.element().localName).toEqual('span');
+                });
+                kids = divs.children(1);
+                expect(kids.length()).toEqual(5);
+                kids = divs.children('.span-2');
+                expect(kids.unwrap()).toEqual(divs.children().filter('.span-2').unwrap());
+                expect(kids.length()).toEqual(2);
+                expect(kids.element() === kids.element(1)).toEqual(false);
+            });
+            it('by querying the dom elements', function () {
+                divs.duff(function (div, idx) {
+                    div.element().innerHTML = '<span></span><img/>';
+                });
+                var kids = divs.$('img');
+                expect(kids.length()).toEqual(5);
+                kids.duff(function (kid, idx) {
+                    expect(kid.element().tagName).toEqual('IMG');
+                });
+            });
+        });
+        describe('it can also find it\'s parents', function () {
+            it('either by counting up', function () {
+                var $start = $('.results .failures'),
+                    $end = $('.jasmine_html-reporter'),
+                    end = $start.parent(2);
+                expect(end.element()).toEqual($end.element());
+            });
+            it('or by finding via selector', function () {
+                var $start = $('.results .failures'),
+                    $end = $('.jasmine_html-reporter'),
+                    end = $start.parent('.jasmine_html-reporter');
+                expect(end.element()).toEqual($end.element());
+            });
+            it('or by passing a function', function () {
+                var $start = $('.results .failures'),
+                    end = $start.parent(function (el) {
+                        return el.tagName === 'BODY';
+                    });
+                expect(end.element()).toEqual(document.body);
+            });
+            describe('or by passing a keyword', function () {
+                it('like document', function () {
+                    var $start = $('.results .failures'),
+                        end = $start.parent('document');
+                    expect(end.element()).toEqual(document);
+                });
+                it('or window', function () {
+                    var $start = $('.results .failures'),
+                        end = $start.parent('window');
+                    expect(end.element()).toEqual(window);
+                });
+            });
+        });
+        describe('all of this traversing can be undone', function () {
+            it('with the end method', function () {
+                var $start = $('.results .failures');
+                var $next = $start.parent();
+                $next = $next.children();
+                $next = $next.end();
+                expect($next === $start).toEqual(true);
+            });
+        });
+        describe('the domm is also special because it abstracts event listeners for you', function () {
+            describe('can add handlers', function () {
+                it('one at a time', function () {
+                    divs.on('click', handler);
+                    expect(count).toEqual(0);
+                    divs.click();
+                    expect(count).toEqual(5);
+                });
+                it('many at a time', function () {
+                    divs.on('click mouseover mouseout', handler);
+                    expect(count).toEqual(0);
+                    divs.dispatchEvent('click');
+                    divs.dispatchEvent('mouseover');
+                    divs.dispatchEvent('mouseout');
+                    expect(count).toEqual(15);
+                });
+            });
+        });
+        describe('the domm is also special because it abstracts event listeners for you', function () {
+            describe('can add handlers', function () {
+                it('one at a time', function () {
+                    divs.on('click', handler);
+                    expect(count).toEqual(0);
+                    divs.dispatchEvent('click');
+                    expect(count).toEqual(5);
+                });
+                it('many at a time', function () {
+                    divs.on('click mouseover mouseout', handler);
+                    expect(count).toEqual(0);
+                    divs.dispatchEvent('click');
+                    divs.dispatchEvent('mouseover');
+                    divs.dispatchEvent('mouseout');
+                    expect(count).toEqual(15);
+                });
+            });
+            describe('also capture handlers', function () {
+                it('one at a time', function () {
+                    divs.on('_click', handler);
+                    expect(count).toEqual(0);
+                    divs.dispatchEvent('click', {}, true);
+                    expect(count).toEqual(5);
+                });
+                it('many at a time', function () {
+                    divs.on('_click _mouseover _mouseout', handler);
+                    expect(count).toEqual(0);
+                    divs.dispatchEvent('click', {}, true);
+                    divs.dispatchEvent('mouseover', {}, true);
+                    divs.dispatchEvent('mouseout', {}, true);
+                    expect(count).toEqual(15);
+                });
+            });
+            it('will only add a method to the queue once. if a duplicate is passed in, it will be ignored (just like the browser implementation)', function () {
+                divs.on('click', handler).on('click', handler);
+                expect(count).toEqual(0);
+                divs.dispatchEvent('click');
+                expect(count).toEqual(5);
+                divs.dispatchEvent('click');
+                expect(count).toEqual(10);
+            });
+            it('once wrappers can also be used with the once method and they can be added the same way as once', function () {
+                divs.once('click', handler);
+                expect(count).toEqual(0);
+                divs.dispatchEvent('click');
+                expect(count).toEqual(5);
+                divs.dispatchEvent('click');
+                expect(count).toEqual(5);
+            });
+            it('be careful with the once function because they can be added multiple times to the queue, since they use a proxy function, like the one available at _.once', function () {
+                divs.once('click', handler);
+                expect(count).toEqual(0);
+                divs.dispatchEvent('click');
+                expect(count).toEqual(5);
+                divs.dispatchEvent('click');
+                expect(count).toEqual(5);
+            });
+        });
+        describe('the each function is special because', function () {
+            it('it wraps each element in a DOMM object before passing it through your iterator', function () {
+                divs.each(function (el, idx) {
+                    expect(_.isInstance(el, factories.DOMM)).toEqual(false);
+                    expect(factories.DomManager.isInstance(el)).toEqual(true);
+                    expect(divs.element(idx) === el.element());
+                });
+            });
+            it('where the duff and forEach function just gives you the element at each index, just like a collection', function () {
+                divs.duff(function (el, idx) {
+                    expect(_.isInstance(el, $)).toEqual(false);
+                });
+                divs.forEach(function (el, idx) {
+                    expect(_.isInstance(el, $)).toEqual(false);
+                });
+            });
+        });
+        describe('adding and removing classes is done by string checking instead of the classList to invoke only one reflow', function () {
+            it('you can use addClass', function () {
+                divs.each(function (div, idx) {
+                    expect(div.hasClass('three')).toEqual(false);
+                });
+                divs.addClass('three');
+                divs.each(function (div, idx) {
+                    expect(div.hasClass('three')).toEqual(true);
+                });
+            });
+            it('you can use removeClass', function () {
+                divs.each(function (div, idx) {
+                    expect(div.hasClass('three')).toEqual(false);
+                });
+                expect(divs.hasClass('three')).toEqual(false);
+                divs.addClass('three');
+                expect(divs.hasClass('three')).toEqual(true);
+            });
+            it('you can use hasClass to check if all of the elements has a particular class', function () {
+                expect(divs.hasClass('two')).toEqual(false);
+                expect(divs.hasClass('one')).toEqual(true);
+            });
+            it('you can use toggleClass swap classes depending on whether or not they exist on each element', function () {
+                divs.each(function (div, idx) {
+                    expect(div.hasClass('one')).toEqual(true);
+                });
+                divs.toggleClass('one');
+                divs.each(function (div, idx) {
+                    expect(div.hasClass('one')).toEqual(false);
+                });
+            });
+            it('it will also do this for individual elements', function () {
+                var list = [],
+                    unique = [];
+                divs.each(function (div, idx) {
+                    var res = div.hasClass('two');
+                    list.push(res);
+                    _.add(unique, res);
+                });
+                divs.toggleClass('two');
+                divs.each(function (div, idx) {
+                    expect(div.hasClass('two')).toEqual(!list[idx]);
+                });
+                expect(unique.length > 1).toEqual(true);
+            });
+            it('you can also use changeClass as a shorthand of removeClass and addClass', function () {
+                divs.changeClass('one not two', 'three');
+                divs.each(function (div, idx) {
+                    expect(div.hasClass('one')).toEqual(false);
+                    expect(div.hasClass('two')).toEqual(false);
+                    expect(div.hasClass('not')).toEqual(false);
+                    expect(div.hasClass('three')).toEqual(true);
+                });
+            });
+        });
+        describe('there is also a data attributes interface', function () {
+            it('where you can add', function () {
+                divs.duff(function (div, idx) {
+                    expect(div.element().getAttribute('data-one')).toEqual(null);
+                    expect(div.element().getAttribute('data-two')).toEqual(null);
+                });
+                divs.data({
+                    one: 'one',
+                    two: 'two'
+                });
+                divs.duff(function (div, idx) {
+                    expect(div.element().getAttribute('data-one')).toEqual('one');
+                    expect(div.element().getAttribute('data-two')).toEqual('two');
+                });
+            });
+            it('remove', function () {
+                divs.data({
+                    one: 'one',
+                    two: 'two'
+                });
+                divs.duff(function (div, idx) {
+                    expect(div.element().getAttribute('data-one')).toEqual('one');
+                    expect(div.element().getAttribute('data-two')).toEqual('two');
+                });
+                divs.data({
+                    one: false,
+                    two: false
+                });
+                divs.duff(function (div, idx) {
+                    expect(div.element().getAttribute('data-one')).toEqual(null);
+                    expect(div.element().getAttribute('data-two')).toEqual(null);
+                });
+            });
+            it('and update data attributes', function () {
+                divs.data({
+                    one: 'one',
+                    two: 'two'
+                });
+                divs.duff(function (div) {
+                    expect(div.element().getAttribute('data-one')).toEqual('one');
+                    expect(div.element().getAttribute('data-two')).toEqual('two');
+                });
+            });
+        });
+        describe('it can also manipulate elements in other ways', function () {
+            it('like by manipulating their attributes', function () {
+                divs.duff(function (div) {
+                    expect(div.element().getAttribute('tabindex')).toEqual(null);
+                });
+                divs.attr({
+                    tabindex: -1
+                });
+                divs.each(function (div, idx) {
+                    expect(div.attr('tabindex')).toEqual(-1);
+                });
+            });
+            it('or by manipulating their properties', function () {
+                divs.duff(function (div, idx) {
+                    expect(div.element().align).toEqual('');
+                });
+                divs.prop({
+                    align: 'left'
+                });
+                divs.each(function (div, idx) {
+                    expect(div.prop('align')).toEqual('left');
+                });
+            });
+        });
+        describe('can have specialized elements', function () {
+            describe('has lifecycle events', function () {
+                it('like attach', function () {
+                    divs.remove();
+                    divs.on('attach', handler);
+                    expect(count).toEqual(0);
+                    $con.append(divs);
+                    expect(count).toEqual(5);
+                });
+                it('and detach', function () {
+                    divs.once('detach', handler);
+                    expect(count).toEqual(0);
+                    divs.remove();
+                    expect(count).toEqual(5);
+                });
+                it('and attribute change', function () {
+                    divs.once('attributeChange:data-here', handler);
+                    expect(count).toEqual(0);
+                    divs.data('here', 1);
+                    expect(count).toEqual(5);
+                });
+            });
+            describe('there are also special handlers', function () {
+                it('like create', function () {
+                    $.registerElement('test0', {
+                        onCreate: handler
+                    });
+                    expect(count).toEqual(0);
+                    $.createElement('test0');
+                    expect(count).toEqual(1);
+                });
+                it('and destroy', function () {
+                    $.registerElement('test1', {
+                        onDestroy: handler
+                    });
+                    var div = $.createElement('test1');
+                    expect(count).toEqual(0);
+                    div.destroy();
+                    expect(count).toEqual(1);
+                });
+            });
+        });
+        it('tags cannot be created without being registered first', function () {
+            expect(function () {
+                $.createElement('unregistered');
+            }).toThrow();
+        });
+    });
+});
+application.scope().run(function (app, _, factories) {
+    var buster, iframe, count, handler = function () {
+            count++;
+        },
+        contextHandler = function (expects) {
+            return function () {
+                count += (expects === this);
+            };
+        };
+    describe('Buster', function () {
+        beforeEach(function () {
+            count = 0;
+        });
+        describe('can understand unfriendly windows', function () {
+            beforeEach(function () {
+                count = 0;
+                iframe = $.createElement('iframe');
+                app.getRegion('main').el.append(iframe);
+                buster = factories.Buster(window, iframe, {
+                    iframeHref: 'http://localhost:8000/test/framed.html'
+                });
+            });
+            afterEach(function () {
+                iframe.destroy();
+            });
+            it('can receive messages on windows', function (done) {
+                expect(_.isObject(buster)).toEqual(true);
+                buster.connected(handler);
+                buster.send('first', {
+                    count: 0
+                }).response(function () {
+                    done();
+                });
+            });
+        });
+    });
+});
+application.scope().run(function (app, _, factories) {
     describe('View', function () {
         var view, complexView, count, ComplexView = factories.View.extend({
             ui: {
@@ -2489,6 +2534,10 @@ application.scope().run(function (app, _, factories) {
             view = factories.View();
             complexView = ComplexView();
         });
+        afterEach(function () {
+            view.destroy();
+            complexView.destroy();
+        });
         it('is an object', function () {
             expect(_.isObject(view)).toEqual(true);
             expect(_.isInstance(view, factories.View)).toEqual(true);
@@ -2507,15 +2556,15 @@ application.scope().run(function (app, _, factories) {
             expect(complexView.el.html()).not.toEqual('');
         });
         it('can be attached to a region', function () {
-            expect(complexView.el.unwrap().parentNode).toEqual(null);
+            expect(complexView.el.element().parentNode).toEqual(null);
             app.getRegion('main').add(complexView);
-            expect(complexView.el.unwrap().parentNode).not.toEqual(null);
+            expect(complexView.el.element().parentNode).not.toEqual(null);
         });
         it('can be filtered', function () {
-            expect(complexView.el.unwrap().parentNode).toEqual(null);
+            expect(complexView.el.element().parentNode).toEqual(null);
             complexView.filter = false;
             app.getRegion('main').add(complexView);
-            expect(complexView.el.unwrap().parentNode).toEqual(null);
+            expect(complexView.el.element().parentNode).toEqual(null);
         });
         it('can have extra elements', function () {
             expect(_.isObject(complexView.ui)).toEqual(true);
@@ -2547,10 +2596,3 @@ application.scope().run(function (app, _, factories) {
         });
     });
 });
-application.scope().run(function (app, _, factories) {
-    var $iframe = $('iframe');
-    describe('Buster', function () {
-        //
-    });
-});
-//# sourceMappingURL=spec.js.map

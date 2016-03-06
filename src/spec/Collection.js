@@ -4,15 +4,15 @@ application.scope().run(function (app, _, factories) {
         beforeEach(function () {
             collection = factories.Collection();
             numberCollection = factories.Collection([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
-            complexCollection = factories.Collection([factories.Box(), factories.Box({
+            complexCollection = factories.Collection([factories.Model(), factories.Model({
                 one: 1,
                 two: 2,
                 three: 3
             })]);
             evenNumberList = [0, 2, 4, 6, 8];
         });
-        it('extends from factories.Model', function () {
-            expect(_.isInstance(collection, factories.Model)).toEqual(true);
+        it('extends from factories.Extendable', function () {
+            expect(_.isInstance(collection, factories.Extendable)).toEqual(true);
         });
         it('extends from factories.Collection', function () {
             expect(_.isInstance(collection, factories.Collection)).toEqual(true);
@@ -261,7 +261,7 @@ application.scope().run(function (app, _, factories) {
         beforeEach(function () {
             collection = SortedCollection();
             numberCollection = SortedCollection([4, 5, 3, 7, 8, 6, 2, 0, 1, 9]);
-            complexCollection = SortedCollection([factories.Box(), factories.Box({
+            complexCollection = SortedCollection([factories.Model(), factories.Model({
                 one: 1,
                 two: 2,
                 three: 3

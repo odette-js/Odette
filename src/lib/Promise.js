@@ -1,4 +1,4 @@
-application.scope(function (app) {
+app.scope(function (app) {
     var _ = app._,
         factories = _.factories,
         FAILURE = 'failure',
@@ -22,14 +22,8 @@ application.scope(function (app) {
         wraptry = _.wraptry,
         indexOf = _.indexOf,
         when = function () {
-            var promise = factories.Promise();
-            promise.add(foldl(flatten(arguments), function (memo, pro) {
-                if (promise.isChildType(pro)) {
-                    memo.push(pro);
-                }
-                return memo;
-            }, []));
-            return promise;
+            var promise = Promise();
+            return promise.when.apply(promise, arguments);
         },
         dispatch = function (promise, name, opts) {
             var shouldstop, finalName = name,
@@ -77,7 +71,7 @@ application.scope(function (app) {
                 return resulting;
             };
         },
-        Promise = _.Promise = factories.Box.extend('Promise', {
+        Promise = _.Promise = factories.Model.extend('Promise', {
             addState: addState,
             isFulfilled: stateChecker(SUCCESS),
             isRejected: stateChecker(FAILURE),
@@ -91,13 +85,13 @@ application.scope(function (app) {
                 return {
                     success: ALWAYS,
                     failure: ALWAYS,
-                    error: ALWAYS,
+                    error: FAILURE,
                     always: BOOLEAN_TRUE
                 };
             },
             constructor: function () {
                 var promise = this;
-                factories.Box.constructor.call(promise);
+                factories.Model[CONSTRUCTOR].call(promise);
                 promise.restart();
                 // cannot have been resolved in any way yet
                 intendedObject(extend({}, result(promise, 'baseStates'), result(promise, 'associativeStates')), NULL, addState, promise);
@@ -238,8 +232,24 @@ application.scope(function (app) {
                 this.addState(resolutionstate);
                 this.executeHandler(resolutionstate, fun, BOOLEAN_TRUE);
                 return this;
+            },
+            when: function () {
+                var promise = this;
+                promise.add(foldl(flatten(arguments), function (memo, pro) {
+                    if (promise.isChildType(pro)) {
+                        memo.push(pro);
+                    }
+                    return memo;
+                }, []));
+                return promise;
             }
-        }, BOOLEAN_TRUE);
+        }, BOOLEAN_TRUE),
+        appPromise = Promise();
+    app.extend({
+        dependency: function (promise) {
+            return appPromise.when.apply(appPromise, arguments);
+        }
+    });
     _.exports({
         when: when
     });

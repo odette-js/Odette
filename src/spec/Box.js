@@ -1,8 +1,8 @@
 application.scope().run(function (app, _, factories) {
     // var factories = _.factories;
-    describe('Box', function () {
+    describe('Model', function () {
         var blank, count, box,
-            Box = factories.Box,
+            Model = factories.Model,
             handler = function () {
                 return !0;
             },
@@ -24,7 +24,7 @@ application.scope().run(function (app, _, factories) {
             };
         beforeEach(function () {
             count = 0;
-            box = Box({
+            box = Model({
                 zero: 0,
                 one: 1,
                 two: 2,
@@ -37,19 +37,16 @@ application.scope().run(function (app, _, factories) {
                 nine: 9
             });
         });
-        it('extends from factories.Model', function () {
-            expect(factories.Model.isInstance(box)).toEqual(true);
+        it('extends from factories.Extendable', function () {
+            expect(factories.Extendable.isInstance(box)).toEqual(true);
         });
-        it('and from factories.Container', function () {
-            expect(factories.Container.isInstance(box)).toEqual(true);
-        });
-        describe('Boxes are always created with...', function () {
-            var box2 = Box();
+        describe('Modeles are always created with...', function () {
+            var box2 = Model();
             it('a unique id', function () {
                 expect(_.has(box2, 'id')).toEqual(true);
             });
             it('even if there is not one given', function () {
-                var box3 = Box({
+                var box3 = Model({
                     id: 5
                 });
                 expect(box2.id !== void 0).toEqual(true);
@@ -71,10 +68,10 @@ application.scope().run(function (app, _, factories) {
             // });
         });
         describe('you can set properties on the box you\'re handling with the set method', function () {
-            var box = Box(),
+            var box = Model(),
                 attrs = box.directive('data');
             beforeEach(function () {
-                box = Box({
+                box = Model({
                     zero: 0,
                     one: 1,
                     two: 2,
@@ -106,7 +103,7 @@ application.scope().run(function (app, _, factories) {
                 expect(box.get('one')).toEqual(2);
             });
             it('and you can remove properties by using the unset method', function () {
-                var box = Box();
+                var box = Model();
                 expect(box.get('one')).toEqual(void 0);
                 box.set({
                     one: 1
@@ -132,11 +129,11 @@ application.scope().run(function (app, _, factories) {
                     count++;
                 };
             beforeEach(function () {
-                box2 = Box();
+                box2 = Model();
                 count = 0;
             });
         });
-        describe('Boxes also trigger a variety of events any time the set method changes the attributes object', function () {
+        describe('Modeles also trigger a variety of events any time the set method changes the attributes object', function () {
             var fired;
             beforeEach(function () {
                 fired = 0;
@@ -182,7 +179,7 @@ application.scope().run(function (app, _, factories) {
                 expect(fired).toEqual(3);
             });
         });
-        describe('but beyond events and simple hashes, Boxes are able to manage themselves fairly well', function () {
+        describe('but beyond events and simple hashes, Modeles are able to manage themselves fairly well', function () {
             it('they can get properties from the attributes object with the get method', function () {
                 expect(box.get('one')).toEqual(1);
             });
@@ -196,12 +193,12 @@ application.scope().run(function (app, _, factories) {
             });
             it('they can clone children into an array', function () {
                 var clone;
-                box.add([factories.Box(), factories.Box()]);
+                box.add([factories.Model(), factories.Model()]);
                 clone = box.directive('children').toJSON();
                 expect(clone).toEqual([{}, {}]);
             });
             it('they can stringify themselves', function () {
-                box = factories.Box({
+                box = factories.Model({
                     some: 'thing'
                 });
                 expect(box.toString()).toEqual(JSON.stringify({
@@ -209,12 +206,12 @@ application.scope().run(function (app, _, factories) {
                 }));
             });
             it('they can stringify their children', function () {
-                box = factories.Box();
+                box = factories.Model();
                 box.add(data.children);
                 expect(box.directive('children').toString()).toEqual(JSON.stringify(data.children));
             });
         });
-        describe('Boxes can register other objects against a key hash as well', function () {
+        describe('Modeles can register other objects against a key hash as well', function () {
             it('it can register', function () {
                 var data = {
                     myObj: 1
@@ -252,12 +249,12 @@ application.scope().run(function (app, _, factories) {
                 expect(box.directive('children').length()).toEqual(3);
             });
             it('you can also remove them one at a time', function () {
-                box = factories.Box();
+                box = factories.Model();
                 box.add(data.children);
                 expect(box.directive('children').length()).toEqual(2);
             });
             it('or many at the same time', function () {
-                box = factories.Box();
+                box = factories.Model();
                 var children = box.directive('children');
                 expect(children.length()).toEqual(0);
                 box.add([{
@@ -276,7 +273,7 @@ application.scope().run(function (app, _, factories) {
         });
         describe('they can', function () {
             it('destroy themselves', function () {
-                box = factories.Box();
+                box = factories.Model();
                 box.add([{
                     one: 1
                 }, {
@@ -338,7 +335,7 @@ application.scope().run(function (app, _, factories) {
             });
             it('set up events on their parents', function () {
                 var count = 0;
-                Box.constructor.prototype.parentEvents = {
+                Model.constructor.prototype.parentEvents = {
                     beep: function () {
                         count++;
                     }
@@ -346,7 +343,7 @@ application.scope().run(function (app, _, factories) {
                 box.add([{}, {}, {}, {}]);
                 box.dispatchEvent('beep');
                 expect(count).toEqual(4);
-                delete Box.constructor.prototype.parentEvents;
+                delete Model.constructor.prototype.parentEvents;
             });
         });
         describe('boxes can "destroy" themselves', function () {
@@ -370,7 +367,7 @@ application.scope().run(function (app, _, factories) {
                 expect(count).toEqual(3);
             });
             it('conversely, if the box has listening objects, it will remove it\'s handlers from other objects', function () {
-                var box2 = factories.Box();
+                var box2 = factories.Model();
                 box.listenTo(box2, {
                     event1: counter,
                     event2: counter
@@ -456,7 +453,7 @@ application.scope().run(function (app, _, factories) {
             });
             it('and listeners on other objects with the watchOther api', function () {
                 var count = 0;
-                var box2 = factories.Box();
+                var box2 = factories.Model();
                 box.watchOther(box2, 'there', function (e) {
                     count++;
                     return e.target === box && this !== box;
@@ -475,7 +472,7 @@ application.scope().run(function (app, _, factories) {
             });
             it('and listeners on other objects with the watchOther api', function () {
                 var count = 0;
-                var box2 = factories.Box();
+                var box2 = factories.Model();
                 box.watchOtherOnce(box2, 'there', 'there', function (e) {
                     count++;
                 });
@@ -487,7 +484,7 @@ application.scope().run(function (app, _, factories) {
             });
             it('the once handler will only take itself off when it succeeds', function () {
                 var count = 0;
-                var box2 = factories.Box();
+                var box2 = factories.Model();
                 box.watchOtherOnce(box2, 'there', 'there', function (e) {
                     count++;
                 });
