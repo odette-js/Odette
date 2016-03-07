@@ -1293,50 +1293,51 @@ app.scope(function (app) {
             };
         },
         getInnard = function (attribute, manager) {
-            var win, doc, el = manager.element(),
-                returnValue = EMPTY_STRING;
+            var windo, win, doc, parentElement, returnValue = EMPTY_STRING;
             if (manager.isIframe) {
-                if (manager.isAccessable) {
-                    win = el.contentWindow;
-                    if (win) {
-                        doc = win[DOCUMENT];
-                        returnValue = doc.body ? doc.body[PARENT_NODE].outerHTML : EMPTY_STRING;
-                    }
+                testIframe(manager);
+                windo = manager.window();
+                if (windo.isAccessable) {
+                    parentElement = windo.element();
+                    doc = parentElement[DOCUMENT];
+                    returnValue = doc.body ? doc.body[PARENT_NODE].outerHTML : EMPTY_STRING;
                 }
             } else {
                 if (manager.isElement) {
-                    returnValue = el[attribute];
+                    parentElement = manager.element();
+                    returnValue = parentElement[attribute];
                 }
             }
             return returnValue;
         },
-        setInnard = function (attribute, manager, value, queryForCreation) {
-            var win, doc, el = manager.element();
+        setInnard = function (attribute, manager, value) {
+            var win, doc, windo, parentElement;
             if (manager.isIframe) {
-                if (manager.isAccessable) {
-                    win = el.contentWindow;
-                    if (win) {
-                        doc = win[DOCUMENT];
-                        doc.open();
-                        doc.write(value);
-                        doc.close();
-                    }
+                windo = manager.window();
+                testIframe(manager);
+                if (windo.isAccessable) {
+                    parentElement = windo.element();
+                    doc = parentElement[DOCUMENT];
+                    doc.open();
+                    doc.write(value);
+                    doc.close();
                 }
             } else {
                 if (manager.isElement) {
-                    el[attribute] = value || EMPTY_STRING;
-                    duff(query(CUSTOM_ATTRIBUTE, el), manager.owner.returnsManager, manager.owner);
+                    parentElement = manager.element();
+                    parentElement[attribute] = value || EMPTY_STRING;
+                    duff(query(CUSTOM_ATTRIBUTE, parentElement), manager.owner.returnsManager, manager.owner);
                 }
             }
         },
-        innardManipulator = function (attribute, queryForCreation) {
+        innardManipulator = function (attribute) {
             return function (value) {
                 var manager = this,
                     returnValue = manager;
                 if (value === UNDEFINED) {
                     returnValue = getInnard(attribute, manager);
                 } else {
-                    setInnard(attribute, manager, value, queryForCreation);
+                    setInnard(attribute, manager, value);
                 }
                 return returnValue;
             };
@@ -1800,10 +1801,22 @@ app.scope(function (app) {
                 return manager;
             },
             sameOrigin: function () {
-                var parsedReference;
-                var element = this.element();
-                var windo = this.owner.window();
-                return windo === this || this.isAccessable && !(parsedReference = reference(element.location.href)) && parsedReference === reference(windo.element().location.href);
+                var parsedReference, manager = this,
+                    element = manager.element(),
+                    windo = manager.owner.window(),
+                    windoElement = windo.element();
+                if (windo === manager) {
+                    return BOOLEAN_TRUE;
+                }
+                if (manager.isAccessable) {
+                    parsedReference = reference(element.location.href);
+                    if (!parsedReference && manager.iframe) {
+                        parsedReference = reference(manager.iframe.src());
+                    }
+                    return !parsedReference || parsedReference === reference(windoElement.location.href);
+                }
+                return BOOLEAN_FALSE;
+                // return !!(windo === this || (this.isAccessable && (parsedReference = reference(element.location.href) || reference(windoElement.location.href)) && parsedReference === reference(windoElement.location.href)));
             },
             $: manager_query,
             query: manager_query,
@@ -1828,7 +1841,7 @@ app.scope(function (app) {
             attr: attrApi(domIterates),
             data: dataApi(domIterates),
             prop: propApi(domIterates),
-            html: innardManipulator(INNER_HTML, BOOLEAN_TRUE),
+            html: innardManipulator(INNER_HTML),
             text: innardManipulator(INNER_TEXT),
             style: styleManipulator,
             css: styleManipulator,

@@ -21,6 +21,9 @@ app.scope(function (app) {
         BEFORE_RESPONDED = BEFORE_COLON + RESPONDED,
         BEFORE_RECEIVED = BEFORE_COLON + RECEIVED,
         QUEUED_MESSAGE_INDEX = 'queuedMessageIndex',
+        RECEIVED_REFERRER = 'receiveReferrer',
+        EMIT_REFERRER = 'emitReferrer',
+        BUSTER = 'buster',
         pI = _.pI,
         _setupInit = function (e) {
             // debugger;
@@ -122,7 +125,7 @@ app.scope(function (app) {
          */
         busterGroupHash = {},
         receive = function (evt) {
-            var buster, bustersCache, data = parse(evt.data),
+            var buster, data = parse(evt.data),
                 postTo = data.postTo;
             if (!data) {
                 return;
@@ -137,14 +140,8 @@ app.scope(function (app) {
             if (!buster) {
                 return;
             }
-            var packet, format, retVal, responded, onResponse, originalMessage, responseType, methodName,
-                attrs = buster.directive(DATA),
-                currentPoint = attrs.currentPoint = evt,
-                messages = attrs.sent,
-                runCount = data.runCount,
-                children = buster.children,
-                eventname = 'respond',
-                args = toArray(arguments);
+            var originalMessage, runCount = data.runCount,
+                children = buster.children;
             if (runCount) {
                 originalMessage = children.get(ID, data.messageId);
                 if (!originalMessage) {
@@ -166,7 +163,7 @@ app.scope(function (app) {
          */
         postMessage = function (base, buster) {
             var referrer, message = stringify(base);
-            return buster.emitWindow.emit(message, buster.get('emitReferrer'), receive);
+            return buster.emitWindow.emit(message, buster.get(EMIT_REFERRER), receive);
         },
         defaultGroupId = uuid(),
         RESPOND_HANDLERS = 'respondHandlers',
@@ -212,20 +209,12 @@ app.scope(function (app) {
                 return message;
             }
         }),
-        iframeEvents = {
-            attach: function () {
-                //
-            },
-            detach: function () {
-                //
-            }
-        },
         receiveWindowEvents = {
             message: receive
         },
         wipe = function (buster) {
             find(busterGroupHash, function (groupHash) {
-                find(groupHash, function (previousbuster, key, groupHash) {
+                return find(groupHash, function (previousbuster, key, groupHash) {
                     return buster === previousbuster && delete groupHash[key];
                 });
             });
@@ -239,27 +228,22 @@ app.scope(function (app) {
         connected = function (buster, message) {
             buster.connectPromise.resolve(message);
         },
+        connectReceived = function (e) {
+            // first submit a response so the other side can flush
+            var buster = this,
+                dataDirective = buster.directive(DATA);
+            if (dataDirective.get('isLate')) {
+                dataDirective.set(QUEUED_MESSAGE_INDEX, 1);
+            }
+            buster.respond(e.message.id);
+            connected(buster, e.message);
+            dataDirective.set('connected', BOOLEAN_TRUE);
+            buster.flush();
+        },
         Buster = factories.Buster = factories.Model.extend('Buster', {
             Child: Message,
-            events: {
-                unload: 'destroy',
-                'child:added': 'flush',
-                'received:connect': function (e) {
-                    // first submit a response so the other side can flush
-                    var buster = this,
-                        dataDirective = buster.directive(DATA);
-                    dataDirective.set(QUEUED_MESSAGE_INDEX, 1);
-                    dataDirective.set('connected', BOOLEAN_TRUE);
-                    buster.respond(e.message.id);
-                    connected(buster, e.message);
-                    buster.flush();
-                },
-                'received:begin': 'begin',
-                'received:update': function (e) {
-                    this.respond(e.message.id, e.data());
-                },
-                'received:unload': 'destroy',
-                'change:group change:id': 'setGroup'
+            bounce: function (e) {
+                return this.respond(e.message.id);
             },
             connected: function (handler) {
                 this.connectPromise.success(handler);
@@ -307,16 +291,16 @@ app.scope(function (app) {
              * @func
              * @name Buster#destroy
              */
-            currentPoint: function () {
-                var currentPoint = this.get('currentPoint');
-                return currentPoint ? {
-                    source: currentPoint.source,
-                    srcElement: currentPoint.srcElement,
-                    originTimestamp: currentPoint.timeStamp,
-                    frame: currentPoint.frame,
-                    responder: currentPoint.responder
-                } : {};
-            },
+            // currentPoint: function () {
+            //     var currentPoint = this.get('currentPoint');
+            //     return currentPoint ? {
+            //         source: currentPoint.source,
+            //         srcElement: currentPoint.srcElement,
+            //         originTimestamp: currentPoint.timeStamp,
+            //         frame: currentPoint.frame,
+            //         responder: currentPoint.responder
+            //     } : {};
+            // },
             destroy: function () {
                 var buster = this;
                 buster.set('connected', BOOLEAN_FALSE);
@@ -340,7 +324,7 @@ app.scope(function (app) {
                 };
             },
             defineWindows: function (receiveWindow, emitWindow) {
-                var buster = this;
+                var busterData, buster = this;
                 if (receiveWindow && receiveWindow.isWindow) {
                     if (buster.receiveWindow) {
                         buster.receiveWindow.off(receiveWindowEvents);
@@ -349,49 +333,55 @@ app.scope(function (app) {
                 }
                 if (emitWindow && emitWindow.isWindow) {
                     buster.emitWindow = emitWindow;
+                    busterData = buster.directive(DATA);
+                    busterData.set('postTo', busterData.get('postTo') || buster.emitWindow.address);
                 }
             },
             defineIframe: function (iframe) {
-                var busterData, emitReferrer, receiveReferrer, iframeHref, referrer, receiveWindow, data, href, windo, buster = this;
-                disconnected(buster);
+                var busterData, emitReferrer, receiveReferrer, iframeSrc, referrer, receiveWindow, data, href, windo, buster = this;
                 if (!iframe || !iframe.isIframe) {
                     return;
                 }
-                if (buster.iframe) {
-                    buster.iframe.off(iframeEvents);
-                }
-                buster.iframe = iframe.on(iframeEvents);
+                buster.iframe = iframe;
                 if (iframe.isAttached && (windo = iframe.window())) {
                     buster.defineWindows(NULL, windo);
                 }
-                busterData = buster.directive(DATA);
-                receiveReferrer = busterData.get('receiveReferrer') || (receiveReferrer = buster.receiveWindow.element().location.href);
-                receiveReferrer = parseUrl(receiveReferrer);
-                busterData.set('receiveReferrer', receiveReferrer.origin);
-                // this is going to the
-                data = {
-                    postTo: buster.id,
-                    useTop: false,
-                    // post to me
-                    useParent: true,
-                    emitReferrer: busterData.get('receiveReferrer'),
-                    id: buster.emitWindow.address,
-                    group: busterData.get('group')
-                };
-                iframeHref = busterData.get('iframeHref');
-                if (iframeHref) {
-                    emitReferrer = busterData.set('emitReferrer', reference(iframeHref));
+                if (iframe) {
+                    buster.setupIframe();
+                }
+            },
+            setupIframe: function () {
+                var emitReferrer, buster = this,
+                    iframe = buster.iframe,
+                    busterData = buster.directive(DATA),
+                    receiveReferrer = parseUrl(busterData.get(RECEIVED_REFERRER) || (receiveReferrer = buster.receiveWindow.element().location.href)).origin,
+                    iframeSrc = busterData.get('iframeSrc'),
+                    iframeContent = busterData.get('iframeContent'),
+                    // this is going to the
+                    data = {
+                        postTo: buster.id,
+                        useTop: false,
+                        // post to me
+                        useParent: true,
+                        emitReferrer: receiveReferrer,
+                        id: busterData.get('postTo'),
+                        group: busterData.get('group')
+                    };
+                busterData.set(RECEIVED_REFERRER, receiveReferrer);
+                if (iframeSrc) {
+                    emitReferrer = busterData.set(EMIT_REFERRER, reference(iframeSrc));
                     data.receiveReferrer = emitReferrer;
                 }
-                if (iframeHref && !iframe.src()) {
+                if (iframeSrc) {
                     iframe.src(stringifyQuery({
-                        url: iframeHref,
+                        url: iframeSrc,
                         hash: data
                     }));
-                } else {
-                    if (iframe.isFriendly && !iframe.data('buster')) {
-                        iframe.data('buster', encodeURI(JSON.stringify(data)));
-                    }
+                }
+                if (iframeContent) {
+                    iframe.data(BUSTER, encodeURI(stringify(data)));
+                    iframe.html(iframeContent);
+                    buster.begin('initialize');
                 }
             },
             stripData: function () {
@@ -402,7 +392,7 @@ app.scope(function (app) {
                 }
                 hashString = receiveWindow.element().location.hash.slice(1);
                 if (!hashString) {
-                    hashString = receiveWindow.parent('iframe').data('buster');
+                    hashString = receiveWindow.parent('iframe').data(BUSTER);
                 }
                 receiveData = JSON.parse(decodeURI(hashString));
                 buster.set(receiveData);
@@ -415,6 +405,15 @@ app.scope(function (app) {
                 var manager = $(talk).index(0);
                 settings.id = settings.id === UNDEFINED ? uuid() : settings.id;
                 factories.Model[CONSTRUCTOR].call(buster, settings);
+                buster.receiveHistory = factories.Collection();
+                disconnected(buster);
+                buster.on({
+                    'child:added change:connected': 'flush',
+                    'received:update': 'bounce',
+                    'received:unload': 'destroy',
+                    'received:initialize received:connect': connectReceived,
+                    'change:group change:id': 'setGroup'
+                });
                 buster.setGroup();
                 if (receiveWindow && receiveWindow.isWindow) {
                     buster.defineWindows(receiveWindow);
@@ -429,14 +428,15 @@ app.scope(function (app) {
                 if (buster.get('strip')) {
                     buster.stripData();
                 }
-                buster.receiveHistory = factories.Collection();
                 buster.set(QUEUED_MESSAGE_INDEX, 0);
                 if (buster.iframe) {
                     // oh, are we late?
-                    buster.begin(BOOLEAN_TRUE);
+                    if (buster.get('isLate')) {
+                        buster.begin('initialize');
+                    }
                 } else {
                     // is an inner buster... let's check to see if anyone is waiting for us
-                    buster.begin();
+                    buster.begin('connect');
                 }
                 return buster;
             },
@@ -494,11 +494,10 @@ app.scope(function (app) {
              */
             send: function (command, packet, extra) {
                 var buster = this,
-                    defaultObj = buster.defaultMessage(),
                     message = buster.add(extend({
                         command: command,
                         packet: packet
-                    }, defaultObj, extra));
+                    }, buster.defaultMessage(), extra));
                 return message[0];
             },
             /**
@@ -507,7 +506,7 @@ app.scope(function (app) {
              * @name Buster#sync
              */
             sync: function (fn) {
-                return this.send('update').respond(fn);
+                return this.send('update').response(fn);
             },
             /**
              * creates a default message based on the attributes of the buster
@@ -516,12 +515,13 @@ app.scope(function (app) {
              * @name Buster#defaultMessage
              */
             defaultMessage: function () {
+                var buster = this;
                 return {
-                    from: this.get('id'),
-                    postTo: this.get('postTo'),
-                    group: this.get('group'),
-                    version: this.get('version'),
-                    messageId: this.directive(CHILDREN)[LENGTH]()
+                    from: buster.get('id'),
+                    postTo: buster.get('postTo'),
+                    group: buster.get('group'),
+                    version: buster.get('version'),
+                    messageId: buster.directive(CHILDREN)[LENGTH]()
                 };
             },
             /**
@@ -572,9 +572,10 @@ app.scope(function (app) {
              * @func
              * @name Buster#begin
              */
-            begin: function (late) {
-                var buster = this;
-                return buster.send(late ? 'initialize' : 'connect').response(function (e) {
+            begin: function (command) {
+                var buster = this,
+                    children = buster.directive(CHILDREN);
+                return children.index(0) || buster.send(command).response(function (e) {
                     buster.set('connected', BOOLEAN_TRUE);
                 });
             }
