@@ -1672,6 +1672,7 @@ app.scope(function (app) {
                 registeredElementName: registeredElementName,
                 fragment: fragment,
                 query: query,
+                $: query,
                 returnsManager: returnsManager
             }, function (handler) {
                 return function (one) {
@@ -2531,22 +2532,16 @@ app.scope(function (app) {
             numberToUnit: numberToUnit
         }),
         // removeChild = eachProc(),
-        setupDomContentLoaded = function (handler, ctx) {
-            var $doc = DOMM(ctx),
-                docData = $doc[INDEX](),
-                bound = bind(handler, $doc);
-            if (docData.isReady) {
-                // make it async
-                _.AF.once(function () {
-                    bound($, docData.DOMContentLoadedEvent);
-                });
-                els = dom.unwrap();
+        setupDomContentLoaded = function (handler, documentManager) {
+            var bound = bind(handler, documentManager);
+            if (documentManager.isReady) {
+                bound($, documentManager.DOMContentLoadedEvent);
             } else {
-                $doc.on('DOMContentLoaded', function (e) {
+                documentManager.on('DOMContentLoaded', function (e) {
                     bound($, e);
                 });
             }
-            return $doc;
+            return documentManager;
         },
         applyToEach = function (method) {
             return function (one, two, three, four, five) {
@@ -2585,7 +2580,7 @@ app.scope(function (app) {
                     unwrapped = context.element();
                 if (isFunction(str)) {
                     if (isDocument(unwrapped)) {
-                        return setupDomContentLoaded(str, unwrapped);
+                        return setupDomContentLoaded(str, documentContext).wrap();
                     }
                 } else {
                     if (!isValid) {

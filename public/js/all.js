@@ -6800,6 +6800,7 @@ app.scope(function (app) {
                 registeredElementName: registeredElementName,
                 fragment: fragment,
                 query: query,
+                $: query,
                 returnsManager: returnsManager
             }, function (handler) {
                 return function (one) {
@@ -7659,22 +7660,16 @@ app.scope(function (app) {
             numberToUnit: numberToUnit
         }),
         // removeChild = eachProc(),
-        setupDomContentLoaded = function (handler, ctx) {
-            var $doc = DOMM(ctx),
-                docData = $doc[INDEX](),
-                bound = bind(handler, $doc);
-            if (docData.isReady) {
-                // make it async
-                _.AF.once(function () {
-                    bound($, docData.DOMContentLoadedEvent);
-                });
-                els = dom.unwrap();
+        setupDomContentLoaded = function (handler, documentManager) {
+            var bound = bind(handler, documentManager);
+            if (documentManager.isReady) {
+                bound($, documentManager.DOMContentLoadedEvent);
             } else {
-                $doc.on('DOMContentLoaded', function (e) {
+                documentManager.on('DOMContentLoaded', function (e) {
                     bound($, e);
                 });
             }
-            return $doc;
+            return documentManager;
         },
         applyToEach = function (method) {
             return function (one, two, three, four, five) {
@@ -7713,7 +7708,7 @@ app.scope(function (app) {
                     unwrapped = context.element();
                 if (isFunction(str)) {
                     if (isDocument(unwrapped)) {
-                        return setupDomContentLoaded(str, unwrapped);
+                        return setupDomContentLoaded(str, documentContext).wrap();
                     }
                 } else {
                     if (!isValid) {
@@ -8562,104 +8557,6 @@ app.scope(function (app) {
         EMIT_REFERRER = 'emitReferrer',
         BUSTER = 'buster',
         pI = _.pI,
-        _setupInit = function (e) {
-            // debugger;
-            // var i, currentCheck, src, parentEl, frameWin, frameEl, allFrames, tippyTop, spFacts, spOFacts, shouldRespond, friendly, topDoc, wrapper, buster = this,
-            //     frame = e.frame,
-            //     data = e.data(),
-            //     packet = data.packet,
-            //     responder = e.responder,
-            //     attrs = get(buster),
-            //     parts = buster.parts;
-            // if (app.topAccess) {
-            //     tippyTop = win[TOP];
-            //     topDoc = tippyTop.document;
-            //     wrapper = topDoc.body;
-            // }
-            // if (!frame) {
-            //     if (!data.toInner) {
-            //         /**
-            //          * when the buster has to go through an unfriendly iframe, it has to find the iframe it belonged to from the top document
-            //          * @private
-            //          * @arg {string} url that is the iframe. also, secondarily checks the window objects in the while loop
-            //          */
-            //         buster.el = (function (specFrame) {
-            //             var frame, frameWin, src, currentCheck, i,
-            //                 frames = topDoc.getElementsByTagName('iframe'),
-            //                 srcEl = e.srcElement;
-            //             if (specFrame) {
-            //                 for (i in frames) {
-            //                     frame = frames[i];
-            //                     frameWin = frame.contentWindow;
-            //                     src = frame.src;
-            //                     if (src === specFrame) {
-            //                         currentCheck = srcEl;
-            //                         while (currentCheck !== tippyTop) {
-            //                             if (frameWin === currentCheck) {
-            //                                 return frame;
-            //                             }
-            //                             currentCheck = currentCheck[PARENT];
-            //                         }
-            //                     }
-            //                 }
-            //             }
-            //             return 0;
-            //         }(attrs.srcOrigin));
-            //     }
-            //     if (data.toInner) {
-            //         buster.el = document.body;
-            //     }
-            //     if (buster.el) {
-            //         buster.el = $(buster.el);
-            //         buster.set({
-            //             friendly: 0,
-            //             id: data.from,
-            //             referrer: reference(parts.doc)
-            //         });
-            //         extend(parts, {
-            //             srcElement: e.source,
-            //             top: tippyTop || {},
-            //             doc: topDoc || {},
-            //             wrapper: wrapper || {}
-            //         });
-            //         shouldRespond = 1;
-            //         attrs.connected = 1;
-            //     }
-            // }
-            // if (frame) {
-            //     buster.el = frame;
-            //     buster.responder = e.responder;
-            //     shouldRespond = 1;
-            //     buster.set({
-            //         friendly: 1,
-            //         referrer: packet.referrer
-            //     });
-            //     extend(buster.parts, {
-            //         srcElement: e.srcElement,
-            //         wrapper: wrapper,
-            //         top: tippyTop,
-            //         doc: topDoc
-            //     });
-            // }
-            // if (shouldRespond) {
-            //     parentEl = buster.el[PARENT]();
-            //     buster.respond(data, {
-            //         parent: {
-            //             height: parentEl[HEIGHT](),
-            //             width: parentEl[WIDTH](),
-            //             style: {
-            //                 height: parentEl.index(0).style[HEIGHT],
-            //                 width: parentEl.index(0).style[WIDTH]
-            //             }
-            //         }
-            //     });
-            // }
-        },
-        /**
-         * single handler for all busters under same window makes it easy to remove from window when the time comes to unload
-         * @private
-         * @arg {event} event object passed in by browser
-         */
         busterGroupHash = {},
         receive = function (evt) {
             var buster, data = parse(evt.data),
@@ -8729,8 +8626,8 @@ app.scope(function (app) {
                     packet: {}
                 };
             },
-            deferred: function (fn) {
-                this.on('deferred', fn);
+            deferred: function (handler) {
+                this.on('deferred', handler);
                 return this;
             },
             response: function (handler) {
@@ -8756,14 +8653,17 @@ app.scope(function (app) {
                 });
             });
         },
-        disconnected = function (buster) {
+        disconnected = function () {
+            var buster = this;
             if (buster.connectPromise) {
                 buster.connectPromise.reject();
             }
+            buster.set('connected', BOOLEAN_FALSE);
             buster.connectPromise = _.Promise();
         },
         connected = function (buster, message) {
             buster.connectPromise.resolve(message);
+            buster.set('connected', BOOLEAN_TRUE);
         },
         connectReceived = function (e) {
             // first submit a response so the other side can flush
@@ -8774,7 +8674,6 @@ app.scope(function (app) {
             }
             buster.respond(e.message.id);
             connected(buster, e.message);
-            dataDirective.set('connected', BOOLEAN_TRUE);
             buster.flush();
         },
         Buster = factories.Buster = factories.Model.extend('Buster', {
@@ -8824,30 +8723,13 @@ app.scope(function (app) {
                     groupHash = busterGroupHash[group] = busterGroupHash[group] || {};
                 groupHash[id] = buster;
             },
-            /**
-             * @func
-             * @name Buster#destroy
-             */
-            // currentPoint: function () {
-            //     var currentPoint = this.get('currentPoint');
-            //     return currentPoint ? {
-            //         source: currentPoint.source,
-            //         srcElement: currentPoint.srcElement,
-            //         originTimestamp: currentPoint.timeStamp,
-            //         frame: currentPoint.frame,
-            //         responder: currentPoint.responder
-            //     } : {};
+            // destroy: function () {
+            //     var buster = this;
+            //     buster.set('connected', BOOLEAN_FALSE);
+            //     clearTimeout(attrs.__lastMouseMovingTimeout__);
+            //     factories.Model[CONSTRUCTOR][PROTOTYPE].destroy.apply(this, arguments);
+            //     return buster;
             // },
-            destroy: function () {
-                var buster = this;
-                buster.set('connected', BOOLEAN_FALSE);
-                clearTimeout(attrs.__lastMouseMovingTimeout__);
-                _.AF.remove(buster.get('elQueryId'));
-                _.AF.remove(buster.get('componentTransitionAFID'));
-                // associator.remove(buster.id);
-                factories.Model[CONSTRUCTOR][PROTOTYPE].destroy.apply(this, arguments);
-                return buster;
-            },
             /**
              * @func
              * @name Buster#defaults
@@ -8857,20 +8739,24 @@ app.scope(function (app) {
                     version: app.version,
                     group: defaultGroupId,
                     connected: BOOLEAN_FALSE,
-                    friendly: BOOLEAN_FALSE
+                    friendly: BOOLEAN_FALSE,
+                    documentReady: BOOLEAN_FALSE
                 };
             },
             defineWindows: function (receiveWindow, emitWindow) {
-                var busterData, buster = this;
+                var buster = this,
+                    busterData = buster.directive(DATA);
                 if (receiveWindow && receiveWindow.isWindow) {
                     if (buster.receiveWindow) {
                         buster.receiveWindow.off(receiveWindowEvents);
                     }
                     buster.receiveWindow = receiveWindow.on(receiveWindowEvents);
+                    buster.receiveWindow.owner.$(function () {
+                        buster.set('documentReady', BOOLEAN_TRUE);
+                    });
                 }
                 if (emitWindow && emitWindow.isWindow) {
                     buster.emitWindow = emitWindow;
-                    busterData = buster.directive(DATA);
                     busterData.set('postTo', busterData.get('postTo') || buster.emitWindow.address);
                 }
             },
@@ -8934,7 +8820,7 @@ app.scope(function (app) {
                 receiveData = JSON.parse(decodeURI(hashString));
                 buster.set(receiveData);
             },
-            constructor: function (listen, talk, settings_) {
+            constructor: function (listen, talk, settings_, events) {
                 var buster = this;
                 var settings = settings_ || {};
                 // normalize to manager
@@ -8943,14 +8829,16 @@ app.scope(function (app) {
                 settings.id = settings.id === UNDEFINED ? uuid() : settings.id;
                 factories.Model[CONSTRUCTOR].call(buster, settings);
                 buster.receiveHistory = factories.Collection();
-                disconnected(buster);
+                disconnected.call(buster);
                 buster.on({
-                    'child:added change:connected': 'flush',
+                    'child:added change:connected change:documentReady': 'flush',
                     'received:update': 'bounce',
                     'received:unload': 'destroy',
+                    destroy: disconnected,
                     'received:initialize received:connect': connectReceived,
                     'change:group change:id': 'setGroup'
                 });
+                buster.on(events);
                 buster.setGroup();
                 if (receiveWindow && receiveWindow.isWindow) {
                     buster.defineWindows(receiveWindow);
@@ -8991,6 +8879,9 @@ app.scope(function (app) {
                     connected = dataManager.get('connected'),
                     initedFrom = dataManager.get('initedFromPartner'),
                     flushing = dataManager.get('flushing');
+                if (!dataManager.get('documentReady')) {
+                    return buster;
+                }
                 if (!initedFrom || connected && ((connected || !currentIdx) && !flushing)) {
                     dataManager.set('flushing', BOOLEAN_TRUE);
                     children = buster.directive(CHILDREN);
