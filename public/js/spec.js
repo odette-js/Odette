@@ -522,12 +522,6 @@ application.scope().run(function (app, _, factories) {
         it('extends from factories.Extendable', function () {
             expect(_.isInstance(collection, factories.Extendable)).toEqual(true);
         });
-        it('extends from factories.Collection', function () {
-            expect(_.isInstance(collection, factories.Collection)).toEqual(true);
-        });
-        // it('has an array at _items', function () {
-        //     expect(_.isArray(collection.directive('list').items)).toEqual(true);
-        // });
         it('is not an array like object', function () {
             expect(_.isArrayLike(collection)).toEqual(false);
         });
@@ -840,7 +834,7 @@ application.scope().run(function (app, _, factories) {
                 nine: 9
             });
         });
-        describe('Modeles can have events', function () {
+        describe('Models can have events', function () {
             var box2;
             describe('and can create events for itself', function () {
                 it('either one at a time', function () {
@@ -892,7 +886,7 @@ application.scope().run(function (app, _, factories) {
                 });
             });
         });
-        describe('Modeles can also listen to other, similar objects', function () {
+        describe('Models can also listen to other, similar objects', function () {
             var box2;
             beforeEach(function () {
                 box2 = Model();
@@ -1171,7 +1165,7 @@ application.scope().run(function (app, _, factories) {
         it('extends from factories.Extendable', function () {
             expect(factories.Extendable.isInstance(box)).toEqual(true);
         });
-        describe('Modeles are always created with...', function () {
+        describe('Models are always created with...', function () {
             var box2 = Model();
             it('a unique id', function () {
                 expect(_.has(box2, 'id')).toEqual(true);
@@ -1264,7 +1258,7 @@ application.scope().run(function (app, _, factories) {
                 count = 0;
             });
         });
-        describe('Modeles also trigger a variety of events any time the set method changes the attributes object', function () {
+        describe('Models also trigger a variety of events any time the set method changes the attributes object', function () {
             var fired;
             beforeEach(function () {
                 fired = 0;
@@ -1310,7 +1304,7 @@ application.scope().run(function (app, _, factories) {
                 expect(fired).toEqual(3);
             });
         });
-        describe('but beyond events and simple hashes, Modeles are able to manage themselves fairly well', function () {
+        describe('but beyond events and simple hashes, Models are able to manage themselves fairly well', function () {
             it('they can get properties from the attributes object with the get method', function () {
                 expect(box.get('one')).toEqual(1);
             });
@@ -1342,7 +1336,7 @@ application.scope().run(function (app, _, factories) {
                 expect(box.directive('children').toString()).toEqual(JSON.stringify(data.children));
             });
         });
-        describe('Modeles can register other objects against a key hash as well', function () {
+        describe('Models can register other objects against a key hash as well', function () {
             it('it can register', function () {
                 var data = {
                     myObj: 1
@@ -2490,92 +2484,98 @@ application.scope().run(function (app, _, factories) {
             count = 0;
         });
         describe('can understand unfriendly windows', function () {
-            beforeEach(function () {
-                count = 0;
-                iframe = $.createElement('iframe');
+            it('can receive messages on windows', function (done) {
+                var iframe = $.createElement('iframe');
                 app.getRegion('main').el.append(iframe);
-                buster = factories.Buster(window, iframe, {
+                var buster = factories.Buster(window, iframe, {
                     iframeSrc: 'http://localhost:8000/test/framed.html'
                 });
-            });
-            afterEach(function () {
-                iframe.destroy();
-            });
-            it('can receive messages on windows', function (done) {
                 buster.connected(handler);
                 buster.sync(function (e) {
                     expect(count).toEqual(1);
-                }).response(done);
-            });
-            it('as well as deferred messages', function (done) {
-                buster.connected(handler);
-                buster.send('delayed').response(handler).deferred(function (e) {
-                    expect(e.data().success).toEqual(true);
-                    expect(count).toEqual(2);
+                    iframe.destroy();
                     done();
                 });
+            });
+            it('as well as deferred messages', function (done) {
+                var iframe = $.createElement('iframe');
+                app.getRegion('main').el.append(iframe);
+                var buster = factories.Buster(window, iframe, {
+                    iframeSrc: 'http://localhost:8000/test/framed.html'
+                });
+                buster.connected(handler);
+                buster.create('delayed').response(function () {
+                    console.log('response: delayed');
+                    handler();
+                }).deferred(function (e) {
+                    console.log('deferred: delayed');
+                    expect(e.data().success).toEqual(true);
+                    expect(count).toEqual(2);
+                    iframe.destroy();
+                    done();
+                }).send();
             });
         });
         describe('and windows without a source', function () {
-            beforeEach(function (done) {
+            it('can receive messages on windows', function (done) {
                 pagePromise.success(function (response) {
-                    count = 0;
-                    iframe = $.createElement('iframe');
+                    var iframe = $.createElement('iframe');
                     app.getRegion('main').el.append(iframe);
-                    buster = factories.Buster(window, iframe, {
+                    var buster = factories.Buster(window, iframe, {
                         iframeContent: response
                     });
-                    done();
+                    buster.connected(handler);
+                    buster.sync(function (e) {
+                        expect(count).toEqual(1);
+                        iframe.destroy();
+                        done();
+                    });
                 });
-            });
-            afterEach(function () {
-                iframe.destroy();
-            });
-            it('can receive messages on windows', function (done) {
-                var count = 0;
-                buster.connected(function () {
-                    count++;
-                });
-                buster.sync(function (e) {
-                    expect(count).toEqual(1);
-                }).response(done);
             });
             it('as well as deferred messages', function (done) {
-                buster.connected(handler);
-                buster.send('delayed').response(handler).deferred(function (e) {
-                    expect(e.data().success).toEqual(true);
-                    expect(count).toEqual(2);
-                    done();
+                pagePromise.success(function (response) {
+                    var iframe = $.createElement('iframe');
+                    app.getRegion('main').el.append(iframe);
+                    var buster = factories.Buster(window, iframe, {
+                        iframeContent: response
+                    });
+                    buster.connected(handler);
+                    buster.create('delayed').response(handler).deferred(function (e) {
+                        expect(e.data().success).toEqual(true);
+                        expect(count).toEqual(2);
+                        iframe.destroy();
+                        done();
+                    }).send();
                 });
             });
         });
         describe('can understand friendly windows', function () {
-            var stopHere;
-            beforeEach(function () {
-                count = 0;
-                iframe = $.createElement('iframe');
+            it('can receive messages on windows', function (done) {
+                var iframe = $.createElement('iframe');
                 app.getRegion('main').el.append(iframe);
-                buster = factories.Buster(window, iframe, {
+                var buster = factories.Buster(window, iframe, {
                     iframeSrc: 'http://localhost:8080/test/framed.html'
                 });
-            });
-            afterEach(function () {
-                iframe.destroy();
-            });
-            it('can receive messages on windows', function (done) {
                 buster.connected(handler);
                 buster.sync(function (e) {
                     expect(count).toEqual(1);
-                }).response(done);
-            });
-            it('as well as deferred messages', function (done) {
-                buster.connected(handler);
-                window.final = true;
-                buster.send('delayed').response(handler).deferred(function (e) {
-                    expect(e.data().success).toEqual(true);
-                    expect(count).toEqual(2);
+                    iframe.destroy();
                     done();
                 });
+            });
+            it('as well as deferred messages', function (done) {
+                var iframe = $.createElement('iframe');
+                app.getRegion('main').el.append(iframe);
+                var buster = factories.Buster(window, iframe, {
+                    iframeSrc: 'http://localhost:8080/test/framed.html'
+                });
+                buster.connected(handler);
+                buster.create('delayed').response(handler).deferred(function (e) {
+                    expect(e.data().success).toEqual(true);
+                    expect(count).toEqual(2);
+                    iframe.destroy();
+                    done();
+                }).send();
             });
         });
     });

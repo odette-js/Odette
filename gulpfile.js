@@ -15,7 +15,7 @@ var content = ['browserify'],
             }
         });
     },
-    modules = 'beforeSetup setup scopeStart constants utils shims Strings Directives Collection Messenger Events Box directives/Events directives/Data directives/Linguistics Promise Associator Ajax Module DOMM Looper Buster directives/Element View scopeEnd'.split(' '),
+    modules = 'beforeSetup setup scopeStart constants utils shims Strings Directives Collection Messenger Events Model directives/Events directives/Data directives/Linguistics Promise Associator Ajax Module DOMM Looper Buster directives/Element View scopeEnd'.split(' '),
     extraModules = 'Socket Router LocalStorage'.split(' '),
     framedModules = 'index'.split(' '),
     paths = makePath({

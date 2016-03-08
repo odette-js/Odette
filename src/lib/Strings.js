@@ -1,4 +1,3 @@
-// app.scope(function (app) {
 var cacheable = function (fn) {
         var cache = {};
         return function (input) {
@@ -208,22 +207,22 @@ var cacheable = function (fn) {
             temp = items[i].split("=");
             if (temp[0]) {
                 if (temp[LENGTH] < 2) {
-                    temp[PUSH]("");
+                    temp[PUSH](EMPTY_STRING);
                 }
                 val = temp[1];
                 val = dcUriComp(val);
                 if (val[0] === "'" || val[0] === '"') {
                     val = val.slice(1, val[LENGTH] - 1);
                 }
-                if (val === BOOLEAN_TRUE + '') {
+                if (val === BOOLEAN_TRUE + EMPTY_STRING) {
                     val = BOOLEAN_TRUE;
                 }
-                if (val === BOOLEAN_FALSE + '') {
+                if (val === BOOLEAN_FALSE + EMPTY_STRING) {
                     val = BOOLEAN_FALSE;
                 }
                 if (isString(val)) {
                     converted = +val;
-                    if (converted == val && converted + '' === val) {
+                    if (converted == val && converted + EMPTY_STRING === val) {
                         val = converted;
                     }
                 }
@@ -352,9 +351,6 @@ var cacheable = function (fn) {
             searchObject: searchObject
         });
     },
-    // recursivelyReplace = function (newlocation) {
-    //     return parseUrl(newlocation);
-    // },
     SIXTY = 60,
     SEVEN = 7,
     THIRTY = 30,
@@ -386,13 +382,13 @@ var cacheable = function (fn) {
         };
         return memo;
     }, {}),
-    forward_time = cacheable(function (number_) {
-        var number = number_ + EMPTY_STRING,
-            time = 0;
-        if (isString(number)) {
-            number = number.split(',');
-        }
-        duff(number, function (num_) {
+    commaSplit = splitGen(','),
+    weekdays = gapSplit('sunday monday tuesday wednesday thursday friday saturday'),
+    months = gapSplit('january feburary march april may june july august september october november december'),
+    monthsHash = wrap(months, BOOLEAN_TRUE),
+    time = cacheable(function (number_) {
+        var time = 0;
+        duff(commaSplit(number_ + EMPTY_STRING), function (num_) {
             var num = num_,
                 unit = customUnits(num, timeUnits),
                 number = +(num.split(unit || EMPTY_STRING).join(EMPTY_STRING)),
@@ -406,14 +402,11 @@ var cacheable = function (fn) {
             }
         });
         return time;
-    }),
-    absolute_time = function (input) {
-        // calculate time string relative to now
-    },
-    time = function (input) {
-        return forward_time(input) || (input && absolute_time(input));
-    };
+    });
 _.exports({
+    monthIndex: monthsHash,
+    months: months,
+    weekdays: weekdays,
     // constants
     customUnits: customUnits,
     // cache makers

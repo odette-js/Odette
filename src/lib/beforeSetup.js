@@ -1,4 +1,4 @@
-this.Application = function (global, WHERE, version, fn) {
+this.Odette = function (global, WHERE, version, fn) {
     'use strict';
     var UNDEFINED, topmostDoc, LENGTH = 'length',
         PARENT = 'parent',

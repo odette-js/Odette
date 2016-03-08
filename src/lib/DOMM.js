@@ -3069,7 +3069,8 @@ app.scope(function (app) {
         }, wrap(allEachMethods, applyToEach), wrap(firstMethods, applyToFirst), wrap(readMethods, applyToTarget)), BOOLEAN_TRUE),
         $ = win.$ = DOMM_SETUP(doc);
     app.undefine(function (windo) {
-        windo.$ = DOMM_SETUP(windo[DOCUMENT]);
+        windo.DOMM = DOMM_SETUP(windo[DOCUMENT]);
+        windo.$ = has(windo, '$') ? windo.$ : DOMM;
     });
     // collect all templates with an id
     $.collectTemplates();

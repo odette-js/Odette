@@ -33,7 +33,7 @@ application.scope().run(function (app, _, factories) {
                 nine: 9
             });
         });
-        describe('Modeles can have events', function () {
+        describe('Models can have events', function () {
             var box2;
             describe('and can create events for itself', function () {
                 it('either one at a time', function () {
@@ -85,7 +85,7 @@ application.scope().run(function (app, _, factories) {
                 });
             });
         });
-        describe('Modeles can also listen to other, similar objects', function () {
+        describe('Models can also listen to other, similar objects', function () {
             var box2;
             beforeEach(function () {
                 box2 = Model();

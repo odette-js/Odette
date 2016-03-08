@@ -13,92 +13,98 @@ application.scope().run(function (app, _, factories) {
             count = 0;
         });
         describe('can understand unfriendly windows', function () {
-            beforeEach(function () {
-                count = 0;
-                iframe = $.createElement('iframe');
+            it('can receive messages on windows', function (done) {
+                var iframe = $.createElement('iframe');
                 app.getRegion('main').el.append(iframe);
-                buster = factories.Buster(window, iframe, {
+                var buster = factories.Buster(window, iframe, {
                     iframeSrc: 'http://localhost:8000/test/framed.html'
                 });
-            });
-            afterEach(function () {
-                iframe.destroy();
-            });
-            it('can receive messages on windows', function (done) {
                 buster.connected(handler);
                 buster.sync(function (e) {
                     expect(count).toEqual(1);
-                }).response(done);
-            });
-            it('as well as deferred messages', function (done) {
-                buster.connected(handler);
-                buster.send('delayed').response(handler).deferred(function (e) {
-                    expect(e.data().success).toEqual(true);
-                    expect(count).toEqual(2);
+                    iframe.destroy();
                     done();
                 });
+            });
+            it('as well as deferred messages', function (done) {
+                var iframe = $.createElement('iframe');
+                app.getRegion('main').el.append(iframe);
+                var buster = factories.Buster(window, iframe, {
+                    iframeSrc: 'http://localhost:8000/test/framed.html'
+                });
+                buster.connected(handler);
+                buster.create('delayed').response(function () {
+                    console.log('response: delayed');
+                    handler();
+                }).deferred(function (e) {
+                    console.log('deferred: delayed');
+                    expect(e.data().success).toEqual(true);
+                    expect(count).toEqual(2);
+                    iframe.destroy();
+                    done();
+                }).send();
             });
         });
         describe('and windows without a source', function () {
-            beforeEach(function (done) {
+            it('can receive messages on windows', function (done) {
                 pagePromise.success(function (response) {
-                    count = 0;
-                    iframe = $.createElement('iframe');
+                    var iframe = $.createElement('iframe');
                     app.getRegion('main').el.append(iframe);
-                    buster = factories.Buster(window, iframe, {
+                    var buster = factories.Buster(window, iframe, {
                         iframeContent: response
                     });
-                    done();
+                    buster.connected(handler);
+                    buster.sync(function (e) {
+                        expect(count).toEqual(1);
+                        iframe.destroy();
+                        done();
+                    });
                 });
-            });
-            afterEach(function () {
-                iframe.destroy();
-            });
-            it('can receive messages on windows', function (done) {
-                var count = 0;
-                buster.connected(function () {
-                    count++;
-                });
-                buster.sync(function (e) {
-                    expect(count).toEqual(1);
-                }).response(done);
             });
             it('as well as deferred messages', function (done) {
-                buster.connected(handler);
-                buster.send('delayed').response(handler).deferred(function (e) {
-                    expect(e.data().success).toEqual(true);
-                    expect(count).toEqual(2);
-                    done();
+                pagePromise.success(function (response) {
+                    var iframe = $.createElement('iframe');
+                    app.getRegion('main').el.append(iframe);
+                    var buster = factories.Buster(window, iframe, {
+                        iframeContent: response
+                    });
+                    buster.connected(handler);
+                    buster.create('delayed').response(handler).deferred(function (e) {
+                        expect(e.data().success).toEqual(true);
+                        expect(count).toEqual(2);
+                        iframe.destroy();
+                        done();
+                    }).send();
                 });
             });
         });
         describe('can understand friendly windows', function () {
-            var stopHere;
-            beforeEach(function () {
-                count = 0;
-                iframe = $.createElement('iframe');
+            it('can receive messages on windows', function (done) {
+                var iframe = $.createElement('iframe');
                 app.getRegion('main').el.append(iframe);
-                buster = factories.Buster(window, iframe, {
+                var buster = factories.Buster(window, iframe, {
                     iframeSrc: 'http://localhost:8080/test/framed.html'
                 });
-            });
-            afterEach(function () {
-                iframe.destroy();
-            });
-            it('can receive messages on windows', function (done) {
                 buster.connected(handler);
                 buster.sync(function (e) {
                     expect(count).toEqual(1);
-                }).response(done);
-            });
-            it('as well as deferred messages', function (done) {
-                buster.connected(handler);
-                window.final = true;
-                buster.send('delayed').response(handler).deferred(function (e) {
-                    expect(e.data().success).toEqual(true);
-                    expect(count).toEqual(2);
+                    iframe.destroy();
                     done();
                 });
+            });
+            it('as well as deferred messages', function (done) {
+                var iframe = $.createElement('iframe');
+                app.getRegion('main').el.append(iframe);
+                var buster = factories.Buster(window, iframe, {
+                    iframeSrc: 'http://localhost:8080/test/framed.html'
+                });
+                buster.connected(handler);
+                buster.create('delayed').response(handler).deferred(function (e) {
+                    expect(e.data().success).toEqual(true);
+                    expect(count).toEqual(2);
+                    iframe.destroy();
+                    done();
+                }).send();
             });
         });
     });

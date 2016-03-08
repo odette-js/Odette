@@ -14,12 +14,6 @@ application.scope().run(function (app, _, factories) {
         it('extends from factories.Extendable', function () {
             expect(_.isInstance(collection, factories.Extendable)).toEqual(true);
         });
-        it('extends from factories.Collection', function () {
-            expect(_.isInstance(collection, factories.Collection)).toEqual(true);
-        });
-        // it('has an array at _items', function () {
-        //     expect(_.isArray(collection.directive('list').items)).toEqual(true);
-        // });
         it('is not an array like object', function () {
             expect(_.isArrayLike(collection)).toEqual(false);
         });

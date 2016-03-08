@@ -94,10 +94,6 @@ app.scope(function (app) {
                     packet: {}
                 };
             },
-            deferred: function (handler) {
-                this.on('deferred', handler);
-                return this;
-            },
             response: function (handler) {
                 var message = this;
                 if (!isFunction(handler)) {
@@ -109,6 +105,18 @@ app.scope(function (app) {
                     message.once('response', handler);
                 }
                 return message;
+            },
+            deferred: function (handler) {
+                var message = this,
+                    latestResponse = message.get('latestResponse');
+                message.on('deferred', handler);
+                if (latestResponse && latestResponse.isDeferred) {
+                    handler.call(message, message.createEvent('deferred', latestResponse.packet));
+                }
+                return message;
+            },
+            send: function () {
+                return this[PARENT].flush();
             }
         }),
         receiveWindowEvents = {
@@ -140,9 +148,8 @@ app.scope(function (app) {
             if (dataDirective.get('isLate')) {
                 dataDirective.set(QUEUED_MESSAGE_INDEX, 1);
             }
-            buster.respond(e.message.id);
-            connected(buster, e.message);
-            buster.flush();
+            buster.respond((e.message || e.origin).id);
+            buster.set('connected', BOOLEAN_TRUE);
         },
         Buster = factories.Buster = factories.Model.extend('Buster', {
             Child: Message,
@@ -168,12 +175,12 @@ app.scope(function (app) {
                 }
             },
             receive: function (data) {
-                var buster = this;
-                var receiveHistory = buster.receiveHistory;
+                var message, buster = this,
+                    receiveHistory = buster.receiveHistory;
                 data.originMessageId = data.messageId;
                 data.messageId = receiveHistory.length();
                 data.isDeferred = BOOLEAN_FALSE;
-                var message = new Message(data);
+                message = new Message(data);
                 receiveHistory.push(message);
                 receiveHistory.register(ID, data.messageId, message);
                 buster[DISPATCH_EVENT](BEFORE_RECEIVED);
@@ -190,14 +197,8 @@ app.scope(function (app) {
                     resultant = wipe(buster),
                     groupHash = busterGroupHash[group] = busterGroupHash[group] || {};
                 groupHash[id] = buster;
+                return buster;
             },
-            // destroy: function () {
-            //     var buster = this;
-            //     buster.set('connected', BOOLEAN_FALSE);
-            //     clearTimeout(attrs.__lastMouseMovingTimeout__);
-            //     factories.Model[CONSTRUCTOR][PROTOTYPE].destroy.apply(this, arguments);
-            //     return buster;
-            // },
             /**
              * @func
              * @name Buster#defaults
@@ -276,17 +277,15 @@ app.scope(function (app) {
                 }
             },
             stripData: function () {
-                var hashString, receiveData, buster = this,
+                var hashString, buster = this,
                     receiveWindow = buster.receiveWindow;
                 if (!receiveWindow || !receiveWindow.isWindow) {
                     return;
                 }
                 hashString = receiveWindow.element().location.hash.slice(1);
-                if (!hashString) {
-                    hashString = receiveWindow.parent('iframe').data(BUSTER);
-                }
-                receiveData = JSON.parse(decodeURI(hashString));
-                buster.set(receiveData);
+                buster.set(JSON.parse(decodeURI(hashString || wraptry(function () {
+                    return receiveWindow.parent('iframe').data(BUSTER);
+                }))));
             },
             constructor: function (listen, talk, settings_, events) {
                 var buster = this;
@@ -295,11 +294,14 @@ app.scope(function (app) {
                 var receiveWindow = $(listen).index(0);
                 var manager = $(talk).index(0);
                 settings.id = settings.id === UNDEFINED ? uuid() : settings.id;
-                factories.Model[CONSTRUCTOR].call(buster, settings);
                 buster.receiveHistory = factories.Collection();
                 disconnected.call(buster);
+                factories.Model[CONSTRUCTOR].call(buster, settings);
+                buster.once('change:connected', function (e) {
+                    buster.connectPromise.resolve(buster.children.first());
+                });
                 buster.on({
-                    'child:added change:connected change:documentReady': 'flush',
+                    'change:connected change:documentReady': 'flush',
                     'received:update': 'bounce',
                     'received:unload': 'destroy',
                     destroy: disconnected,
@@ -388,7 +390,7 @@ app.scope(function (app) {
              * @func
              * @name Buster#send
              */
-            send: function (command, packet, extra) {
+            create: function (command, packet, extra) {
                 var buster = this,
                     message = buster.add(extend({
                         command: command,
@@ -402,7 +404,7 @@ app.scope(function (app) {
              * @name Buster#sync
              */
             sync: function (fn) {
-                return this.send('update').response(fn);
+                return this.create('update').response(fn).send();
             },
             /**
              * creates a default message based on the attributes of the buster
@@ -471,9 +473,9 @@ app.scope(function (app) {
             begin: function (command) {
                 var buster = this,
                     children = buster.directive(CHILDREN);
-                return children.index(0) || buster.send(command).response(function (e) {
-                    buster.set('connected', BOOLEAN_TRUE);
-                });
+                return children.index(0) || buster.create(command).response(function (e) {
+                    connectReceived.call(buster, e);
+                }).send();
             }
         }, BOOLEAN_TRUE);
     if (app.topAccess()) {

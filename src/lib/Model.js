@@ -126,6 +126,7 @@ app.scope(function (app) {
                 // set id and let parent know what your new id is
                 // setup previous data
                 if (model[DATA] || (keysResult = keys(newAttributes))[LENGTH]) {
+                    keysResult = keysResult || keys(newAttributes);
                     model[DISPATCH_EVENT](BEFORE_COLON + RESET);
                     dataDirective = model.directive(DATA);
                     if (keysResult[LENGTH]) {

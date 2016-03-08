@@ -1,4 +1,4 @@
-this.Application = function (global, WHERE, version, fn) {
+this.Odette = function (global, WHERE, version, fn) {
     'use strict';
     var UNDEFINED, topmostDoc, LENGTH = 'length',
         PARENT = 'parent',
@@ -244,13 +244,11 @@ this.Application = function (global, WHERE, version, fn) {
     return app;
 };
 // arguments: context, where, version, handler
-Application(this, 'application', 'dev', function (innerGlobalApp, scopedApp) {
+Odette(this, 'application', 'dev', function (innerGlobalApp, scopedApp) {
     // custom setup code for this version
     var global = this;
     // global app is the object that will be shared with all other iframes
     var globalApplication = innerGlobalApp.touchTop(global);
-    // log it out for you to see
-    // console.log(scopedApp);
     // puts the scoped app on the global object
     global.app = scopedApp;
 });
@@ -1898,7 +1896,6 @@ app.scope(function (app) {
     };
     app.shims(win);
 });
-// app.scope(function (app) {
 var cacheable = function (fn) {
         var cache = {};
         return function (input) {
@@ -2108,22 +2105,22 @@ var cacheable = function (fn) {
             temp = items[i].split("=");
             if (temp[0]) {
                 if (temp[LENGTH] < 2) {
-                    temp[PUSH]("");
+                    temp[PUSH](EMPTY_STRING);
                 }
                 val = temp[1];
                 val = dcUriComp(val);
                 if (val[0] === "'" || val[0] === '"') {
                     val = val.slice(1, val[LENGTH] - 1);
                 }
-                if (val === BOOLEAN_TRUE + '') {
+                if (val === BOOLEAN_TRUE + EMPTY_STRING) {
                     val = BOOLEAN_TRUE;
                 }
-                if (val === BOOLEAN_FALSE + '') {
+                if (val === BOOLEAN_FALSE + EMPTY_STRING) {
                     val = BOOLEAN_FALSE;
                 }
                 if (isString(val)) {
                     converted = +val;
-                    if (converted == val && converted + '' === val) {
+                    if (converted == val && converted + EMPTY_STRING === val) {
                         val = converted;
                     }
                 }
@@ -2252,9 +2249,6 @@ var cacheable = function (fn) {
             searchObject: searchObject
         });
     },
-    // recursivelyReplace = function (newlocation) {
-    //     return parseUrl(newlocation);
-    // },
     SIXTY = 60,
     SEVEN = 7,
     THIRTY = 30,
@@ -2286,13 +2280,13 @@ var cacheable = function (fn) {
         };
         return memo;
     }, {}),
-    forward_time = cacheable(function (number_) {
-        var number = number_ + EMPTY_STRING,
-            time = 0;
-        if (isString(number)) {
-            number = number.split(',');
-        }
-        duff(number, function (num_) {
+    commaSplit = splitGen(','),
+    weekdays = gapSplit('sunday monday tuesday wednesday thursday friday saturday'),
+    months = gapSplit('january feburary march april may june july august september october november december'),
+    monthsHash = wrap(months, BOOLEAN_TRUE),
+    time = cacheable(function (number_) {
+        var time = 0;
+        duff(commaSplit(number_ + EMPTY_STRING), function (num_) {
             var num = num_,
                 unit = customUnits(num, timeUnits),
                 number = +(num.split(unit || EMPTY_STRING).join(EMPTY_STRING)),
@@ -2306,14 +2300,11 @@ var cacheable = function (fn) {
             }
         });
         return time;
-    }),
-    absolute_time = function (input) {
-        // calculate time string relative to now
-    },
-    time = function (input) {
-        return forward_time(input) || (input && absolute_time(input));
-    };
+    });
 _.exports({
+    monthIndex: monthsHash,
+    months: months,
+    weekdays: weekdays,
     // constants
     customUnits: customUnits,
     // cache makers
@@ -3661,6 +3652,7 @@ app.scope(function (app) {
                 // set id and let parent know what your new id is
                 // setup previous data
                 if (model[DATA] || (keysResult = keys(newAttributes))[LENGTH]) {
+                    keysResult = keysResult || keys(newAttributes);
                     model[DISPATCH_EVENT](BEFORE_COLON + RESET);
                     dataDirective = model.directive(DATA);
                     if (keysResult[LENGTH]) {
@@ -8197,7 +8189,8 @@ app.scope(function (app) {
         }, wrap(allEachMethods, applyToEach), wrap(firstMethods, applyToFirst), wrap(readMethods, applyToTarget)), BOOLEAN_TRUE),
         $ = win.$ = DOMM_SETUP(doc);
     app.undefine(function (windo) {
-        windo.$ = DOMM_SETUP(windo[DOCUMENT]);
+        windo.DOMM = DOMM_SETUP(windo[DOCUMENT]);
+        windo.$ = has(windo, '$') ? windo.$ : DOMM;
     });
     // collect all templates with an id
     $.collectTemplates();
@@ -8626,10 +8619,6 @@ app.scope(function (app) {
                     packet: {}
                 };
             },
-            deferred: function (handler) {
-                this.on('deferred', handler);
-                return this;
-            },
             response: function (handler) {
                 var message = this;
                 if (!isFunction(handler)) {
@@ -8641,6 +8630,18 @@ app.scope(function (app) {
                     message.once('response', handler);
                 }
                 return message;
+            },
+            deferred: function (handler) {
+                var message = this,
+                    latestResponse = message.get('latestResponse');
+                message.on('deferred', handler);
+                if (latestResponse && latestResponse.isDeferred) {
+                    handler.call(message, message.createEvent('deferred', latestResponse.packet));
+                }
+                return message;
+            },
+            send: function () {
+                return this[PARENT].flush();
             }
         }),
         receiveWindowEvents = {
@@ -8672,9 +8673,8 @@ app.scope(function (app) {
             if (dataDirective.get('isLate')) {
                 dataDirective.set(QUEUED_MESSAGE_INDEX, 1);
             }
-            buster.respond(e.message.id);
-            connected(buster, e.message);
-            buster.flush();
+            buster.respond((e.message || e.origin).id);
+            buster.set('connected', BOOLEAN_TRUE);
         },
         Buster = factories.Buster = factories.Model.extend('Buster', {
             Child: Message,
@@ -8700,12 +8700,12 @@ app.scope(function (app) {
                 }
             },
             receive: function (data) {
-                var buster = this;
-                var receiveHistory = buster.receiveHistory;
+                var message, buster = this,
+                    receiveHistory = buster.receiveHistory;
                 data.originMessageId = data.messageId;
                 data.messageId = receiveHistory.length();
                 data.isDeferred = BOOLEAN_FALSE;
-                var message = new Message(data);
+                message = new Message(data);
                 receiveHistory.push(message);
                 receiveHistory.register(ID, data.messageId, message);
                 buster[DISPATCH_EVENT](BEFORE_RECEIVED);
@@ -8722,14 +8722,8 @@ app.scope(function (app) {
                     resultant = wipe(buster),
                     groupHash = busterGroupHash[group] = busterGroupHash[group] || {};
                 groupHash[id] = buster;
+                return buster;
             },
-            // destroy: function () {
-            //     var buster = this;
-            //     buster.set('connected', BOOLEAN_FALSE);
-            //     clearTimeout(attrs.__lastMouseMovingTimeout__);
-            //     factories.Model[CONSTRUCTOR][PROTOTYPE].destroy.apply(this, arguments);
-            //     return buster;
-            // },
             /**
              * @func
              * @name Buster#defaults
@@ -8808,17 +8802,15 @@ app.scope(function (app) {
                 }
             },
             stripData: function () {
-                var hashString, receiveData, buster = this,
+                var hashString, buster = this,
                     receiveWindow = buster.receiveWindow;
                 if (!receiveWindow || !receiveWindow.isWindow) {
                     return;
                 }
                 hashString = receiveWindow.element().location.hash.slice(1);
-                if (!hashString) {
-                    hashString = receiveWindow.parent('iframe').data(BUSTER);
-                }
-                receiveData = JSON.parse(decodeURI(hashString));
-                buster.set(receiveData);
+                buster.set(JSON.parse(decodeURI(hashString || wraptry(function () {
+                    return receiveWindow.parent('iframe').data(BUSTER);
+                }))));
             },
             constructor: function (listen, talk, settings_, events) {
                 var buster = this;
@@ -8827,11 +8819,14 @@ app.scope(function (app) {
                 var receiveWindow = $(listen).index(0);
                 var manager = $(talk).index(0);
                 settings.id = settings.id === UNDEFINED ? uuid() : settings.id;
-                factories.Model[CONSTRUCTOR].call(buster, settings);
                 buster.receiveHistory = factories.Collection();
                 disconnected.call(buster);
+                factories.Model[CONSTRUCTOR].call(buster, settings);
+                buster.once('change:connected', function (e) {
+                    buster.connectPromise.resolve(buster.children.first());
+                });
                 buster.on({
-                    'child:added change:connected change:documentReady': 'flush',
+                    'change:connected change:documentReady': 'flush',
                     'received:update': 'bounce',
                     'received:unload': 'destroy',
                     destroy: disconnected,
@@ -8920,7 +8915,7 @@ app.scope(function (app) {
              * @func
              * @name Buster#send
              */
-            send: function (command, packet, extra) {
+            create: function (command, packet, extra) {
                 var buster = this,
                     message = buster.add(extend({
                         command: command,
@@ -8934,7 +8929,7 @@ app.scope(function (app) {
              * @name Buster#sync
              */
             sync: function (fn) {
-                return this.send('update').response(fn);
+                return this.create('update').response(fn).send();
             },
             /**
              * creates a default message based on the attributes of the buster
@@ -9003,9 +8998,9 @@ app.scope(function (app) {
             begin: function (command) {
                 var buster = this,
                     children = buster.directive(CHILDREN);
-                return children.index(0) || buster.send(command).response(function (e) {
-                    buster.set('connected', BOOLEAN_TRUE);
-                });
+                return children.index(0) || buster.create(command).response(function (e) {
+                    connectReceived.call(buster, e);
+                }).send();
             }
         }, BOOLEAN_TRUE);
     if (app.topAccess()) {

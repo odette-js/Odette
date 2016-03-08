@@ -40,7 +40,7 @@ application.scope().run(function (app, _, factories) {
         it('extends from factories.Extendable', function () {
             expect(factories.Extendable.isInstance(box)).toEqual(true);
         });
-        describe('Modeles are always created with...', function () {
+        describe('Models are always created with...', function () {
             var box2 = Model();
             it('a unique id', function () {
                 expect(_.has(box2, 'id')).toEqual(true);
@@ -133,7 +133,7 @@ application.scope().run(function (app, _, factories) {
                 count = 0;
             });
         });
-        describe('Modeles also trigger a variety of events any time the set method changes the attributes object', function () {
+        describe('Models also trigger a variety of events any time the set method changes the attributes object', function () {
             var fired;
             beforeEach(function () {
                 fired = 0;
@@ -179,7 +179,7 @@ application.scope().run(function (app, _, factories) {
                 expect(fired).toEqual(3);
             });
         });
-        describe('but beyond events and simple hashes, Modeles are able to manage themselves fairly well', function () {
+        describe('but beyond events and simple hashes, Models are able to manage themselves fairly well', function () {
             it('they can get properties from the attributes object with the get method', function () {
                 expect(box.get('one')).toEqual(1);
             });
@@ -211,7 +211,7 @@ application.scope().run(function (app, _, factories) {
                 expect(box.directive('children').toString()).toEqual(JSON.stringify(data.children));
             });
         });
-        describe('Modeles can register other objects against a key hash as well', function () {
+        describe('Models can register other objects against a key hash as well', function () {
             it('it can register', function () {
                 var data = {
                     myObj: 1
