@@ -52,7 +52,7 @@ app.scope(function (app) {
             }
         },
         moduleMethods = extend({}, factories.Events[CONSTRUCTOR][PROTOTYPE], startableMethods, {
-            module: function (name_, fn) {
+            module: function (name_, windo, fn) {
                 var parentModulesDirective, modules, attrs, parentIsModule, nametree, parent = this,
                     originalParent = parent,
                     name = name_,
@@ -97,15 +97,19 @@ app.scope(function (app) {
                     parentModulesDirective.register(ID, name, module);
                     app[CHILDREN].register(ID, globalname, module);
                 }
-                if (!module.hasInitialized && isFunction(fn)) {
-                    module.hasInitialized = BOOLEAN_TRUE;
-                    module.handler(fn);
+                if (isWindow(windo) || isFunction(windo) || isFunction(fn)) {
+                    module.isInitialized = BOOLEAN_TRUE;
+                    module.run(windo, fn);
                 }
                 return module;
             },
-            run: function (fn) {
+            run: function (windo, fn_) {
                 var module = this;
-                fn.apply(module, module.createArguments());
+                var fn = isFunction(windo) ? windo : fn_;
+                var args = isWindow(windo) ? [windo.DOMM] : [];
+                if (isFunction(fn)) {
+                    fn.apply(module, module.createArguments(args));
+                }
                 return module;
             },
             parentEvents: function () {
@@ -118,8 +122,8 @@ app.scope(function (app) {
                 extend(BOOLEAN_TRUE, this.get('exports'), obj);
                 return this;
             },
-            createArguments: function () {
-                return [this].concat(this.application.createArguments());
+            createArguments: function (args) {
+                return [this].concat(this.application.createArguments(), args || []);
             },
             constructor: function (attrs, opts) {
                 var module = this;
@@ -143,12 +147,6 @@ app.scope(function (app) {
                     application: this.application,
                     parent: this
                 };
-            },
-            handler: function (fn) {
-                var module = this;
-                module.handlers.push(fn);
-                module.run(fn);
-                return module;
             }
         }),
         Module = factories.Model.extend('Module', moduleMethods, BOOLEAN_TRUE),
@@ -196,8 +194,8 @@ app.scope(function (app) {
              * @name Specless#createArguments
              * @returns {Object[]}
              */
-            createArguments: function () {
-                return this.baseModuleArguments().concat(this[_EXTRA_MODULE_ARGS]);
+            createArguments: function (args) {
+                return this.baseModuleArguments().concat(this[_EXTRA_MODULE_ARGS], args || []);
             },
             require: function (modulename) {
                 var module = this[CHILDREN].get(ID, modulename) || exception({

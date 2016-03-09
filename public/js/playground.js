@@ -1,3 +1,3 @@
-application.scope().run(function (app, _, factories) {
-    // console.log(_);
+application.scope(function (app) {
+    //
 });

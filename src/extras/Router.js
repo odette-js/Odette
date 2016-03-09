@@ -1,5 +1,5 @@
 application.scope().module('Router', function (module, app, _, factories) {
-    var EMPTY_STRING = '',
+    var UNDEFINED, EMPTY_STRING = '',
         NULL = null,
         SLASH = '/',
         ROUTES = 'routes',
@@ -17,7 +17,7 @@ application.scope().module('Router', function (module, app, _, factories) {
                 return router;
             },
             parsePath: function (regexp) {
-                return isString(regexp) ? this.parseString(regexp) : regexp;
+                return _.isString(regexp) ? this.parseString(regexp) : regexp;
             },
             parseString: function (string) {
                 var router = this;
@@ -51,7 +51,7 @@ application.scope().module('Router', function (module, app, _, factories) {
             },
             route: function (regexp, handler_, trigger) {
                 var router = this;
-                intendedObject(regexp, handler_, function (regexp, handler, third) {
+                _.intendedObject(regexp, handler_, function (regexp, handler, third) {
                     var parsedRegExp = router.parsePath(regexp),
                         keys = parsedRegExp.exec(regexp),
                         keyedResult = _.map(keys.slice(1), function (key) {

@@ -21,8 +21,10 @@ module.exports = function (settings) {
     // uncomment after placing your favicon in /public
     app.use(logger(settings.env.logger));
     app.ws('/echo', function (ws, req) {
+        console.log('connected to someone');
         ws.on('message', function (msg_) {
             var msg = JSON.parse(msg_);
+            console.log('message received: ', msg);
             if (msg.type === 'message') {
                 ws.send(JSON.stringify({
                     type: 'success',

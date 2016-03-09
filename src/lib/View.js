@@ -17,7 +17,6 @@ app.scope(function (app) {
         CONSTRUCTOR = 'constructor',
         BUFFERED_VIEWS = 'bufferedViews',
         REGION_MANAGER = 'regionManager',
-        ESTABLISH_REGIONS = 'establishRegions',
         ESTABLISHED_REGIONS = '_establishedRegions',
         APPEND_CHILD_ELEMENTS = '_appendChildElements',
         getRegion = function (key) {
@@ -88,10 +87,13 @@ app.scope(function (app) {
                 children.remove(view);
             },
             attachElement: function (view) {
-                var bufferDirective, el = view.el && view.el.element();
+                var parentNode, bufferDirective, el = view.el && view.el.element();
                 if (el) {
+                    parentNode = el.parentNode;
                     bufferDirective = this.directive(BUFFERED_VIEWS);
-                    bufferDirective.els.appendChild(el);
+                    if (!parentNode || parentNode !== bufferDirective.region.el.element()) {
+                        bufferDirective.els.appendChild(el);
+                    }
                 }
             },
             setElement: function () {
@@ -183,7 +185,7 @@ app.scope(function (app) {
             },
             establishRegions: function () {
                 var regions = result(this, 'regions');
-                var regionsResult = regions && this.directive(REGION_MANAGER).establish(regionsResult);
+                var regionsResult = keys(regions)[LENGTH] && this.directive(REGION_MANAGER).establish(regionsResult);
                 return this;
             },
             valueOf: function () {
@@ -244,22 +246,6 @@ app.scope(function (app) {
                 return view;
             }
         }, BOOLEAN_TRUE),
-        // View = LeafView.extend('View', {
-        //     // getRegion: getRegion,
-        //     constructor: function (secondary) {
-        //         LeafView[CONSTRUCTOR].apply(this, arguments);
-        //         this.directive(REGION_MANAGER).establish(result(this, 'regions'));
-        //         return this;
-        //     },
-        //     render: function () {
-        //         var view = this;
-        //         LeafView[CONSTRUCTOR][PROTOTYPE][RENDER].apply(this, arguments);
-        //         if (view[IS_RENDERED]) {
-        //             view.directive(REGION_MANAGER).list.eachCall(RENDER);
-        //         }
-        //         return view;
-        //     }
-        // }, BOOLEAN_TRUE),
         _View = factories.View;
     var establishRegion = function (key, selector) {
             var regionManagerDirective = this,

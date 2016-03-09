@@ -9,7 +9,9 @@ app.scope(function (app) {
             return (that[name] = that[name] || directiveMod('creation', that, name));
         },
         directiveDestruction: function (name) {
-            return directiveMod('destruction', this, name);
+            var result = directiveMod('destruction', this, name);
+            delete this[name];
+            return result;
         }
     }, BOOLEAN_TRUE);
     var directives = {

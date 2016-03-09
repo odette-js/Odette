@@ -1968,16 +1968,16 @@ application.scope().run(function (app, _, factories) {
             });
             expect(count).toEqual(1);
         });
-        it('can only initialize itself once', function () {
+        it('can have multiple generation handlers', function () {
             var count = 0;
             app.module('level', function () {
                 count++;
             });
             expect(count).toEqual(1);
             app.module('level', function () {
-                count++;
+                count += 2;
             });
-            expect(count).toEqual(1);
+            expect(count).toEqual(3);
         });
         it('can have exports (can hold data)', function () {
             level.exports({
@@ -2031,19 +2031,30 @@ application.scope().run(function (app, _, factories) {
                 $con.append(divs);
                 return divs;
             },
-            $con = $.createElements('div').style({
+            $con = $.createElement('div').style({
                 height: '100%',
                 width: '100%'
             });
         $(document.body).append($con);
         beforeEach(create);
+        afterEach(function () {
+            divs.destroy();
+        });
         it('is essentially a collection', function () {
             expect(_.isInstance($empty, factories.DOMM)).toEqual(true);
             expect(_.isInstance($empty, factories.Collection)).toEqual(true);
         });
         it('it knows it\'s own client rect', function () {
             var div = divs.eq(0);
-            expect(div.rect()).toEqual(_.extend({}, div.element().getBoundingClientRect()));
+            var rect = div.element().getBoundingClientRect();
+            expect(div.rect()).toEqual({
+                height: rect.height,
+                width: rect.width,
+                bottom: rect.bottom,
+                right: rect.right,
+                left: rect.left,
+                top: rect.top,
+            });
         });
         it('can show and hide elements', function () {
             expect(divs.hide().map(function (manager) {
@@ -2493,7 +2504,9 @@ application.scope().run(function (app, _, factories) {
                 buster.connected(handler);
                 buster.sync(function (e) {
                     expect(count).toEqual(1);
-                    iframe.destroy();
+                    setTimeout(function () {
+                        iframe.destroy();
+                    });
                     done();
                 });
             });
@@ -2504,14 +2517,12 @@ application.scope().run(function (app, _, factories) {
                     iframeSrc: 'http://localhost:8000/test/framed.html'
                 });
                 buster.connected(handler);
-                buster.create('delayed').response(function () {
-                    console.log('response: delayed');
-                    handler();
-                }).deferred(function (e) {
-                    console.log('deferred: delayed');
+                buster.create('delayed').response(handler).deferred(function (e) {
                     expect(e.data().success).toEqual(true);
                     expect(count).toEqual(2);
-                    iframe.destroy();
+                    setTimeout(function () {
+                        iframe.destroy();
+                    });
                     done();
                 }).send();
             });
@@ -2527,7 +2538,9 @@ application.scope().run(function (app, _, factories) {
                     buster.connected(handler);
                     buster.sync(function (e) {
                         expect(count).toEqual(1);
-                        iframe.destroy();
+                        setTimeout(function () {
+                            iframe.destroy();
+                        });
                         done();
                     });
                 });
@@ -2543,7 +2556,9 @@ application.scope().run(function (app, _, factories) {
                     buster.create('delayed').response(handler).deferred(function (e) {
                         expect(e.data().success).toEqual(true);
                         expect(count).toEqual(2);
-                        iframe.destroy();
+                        setTimeout(function () {
+                            iframe.destroy();
+                        });
                         done();
                     }).send();
                 });
@@ -2559,7 +2574,9 @@ application.scope().run(function (app, _, factories) {
                 buster.connected(handler);
                 buster.sync(function (e) {
                     expect(count).toEqual(1);
-                    iframe.destroy();
+                    setTimeout(function () {
+                        iframe.destroy();
+                    });
                     done();
                 });
             });
@@ -2573,7 +2590,9 @@ application.scope().run(function (app, _, factories) {
                 buster.create('delayed').response(handler).deferred(function (e) {
                     expect(e.data().success).toEqual(true);
                     expect(count).toEqual(2);
-                    iframe.destroy();
+                    setTimeout(function () {
+                        iframe.destroy();
+                    });
                     done();
                 }).send();
             });

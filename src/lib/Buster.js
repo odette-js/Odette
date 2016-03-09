@@ -1,22 +1,31 @@
 app.scope(function (app) {
     var _ = app._,
         factories = _.factories,
-        isReceiving = 0,
-        get = _.get,
-        duff = _.duff,
-        collection = factories.Collection,
-        gapSplit = _.gapSplit,
-        // associator = _.associator,
-        unitsToNum = _.unitsToNum,
-        roundFloat = _.roundFloat,
-        reference = _.reference,
-        now = _.now,
         parse = _.parse,
-        foldl = _.foldl,
         stringify = _.stringify,
+        ENCODED_BRACKET = '%7B',
+        IS_LATE = 'isLate',
+        DOCUMENT_READY = 'documentReady',
+        IS_WINDOW = 'isWindow',
+        DEFERRED = 'deferred',
+        IS_DEFERRED = 'is' + upCase(DEFERRED),
+        GROUP = 'group',
+        POST_TO = 'postTo',
+        COMMAND = 'command',
+        RUN_COUNT = 'runCount',
+        FLUSHING = 'flushing',
+        CONNECT = 'connect',
+        CONNECTED = CONNECT + 'ed',
         COMPONENT = 'component',
-        RESPONSE_OPTIONS = 'responseOptions',
+        INITIALIZE = 'initialize',
+        RESPONSE = 'response',
+        MESSAGE = 'message',
+        RESPONSE_OPTIONS = RESPONSE + 'Options',
+        CAPITAL_RESPONSE = upCase(RESPONSE),
+        LATEST_RESPONSE = 'latest' + CAPITAL_RESPONSE,
+        LAST_RESPONSE = 'last' + CAPITAL_RESPONSE,
         RESPONDED = 'responded',
+        RESPONDED_WITH = RESPONDED + 'With',
         RECEIVED = 'received',
         BEFORE_RESPONDED = BEFORE_COLON + RESPONDED,
         BEFORE_RECEIVED = BEFORE_COLON + RECEIVED,
@@ -24,7 +33,8 @@ app.scope(function (app) {
         RECEIVED_REFERRER = 'receiveReferrer',
         EMIT_REFERRER = 'emitReferrer',
         BUSTER = 'buster',
-        pI = _.pI,
+        PACKET = 'packet',
+        VERSION = 'version',
         busterGroupHash = {},
         receive = function (evt) {
             var buster, data = parse(evt.data),
@@ -32,7 +42,7 @@ app.scope(function (app) {
             if (!data) {
                 return;
             }
-            if (app.version !== data.version || app.isDestroyed) {
+            if (app[VERSION] !== data[VERSION] || app.isDestroyed) {
                 return;
             }
             if (!postTo) {
@@ -69,28 +79,32 @@ app.scope(function (app) {
         },
         defaultGroupId = uuid(),
         RESPOND_HANDLERS = 'respondHandlers',
-        Message = factories.Model.extend('Message', {
-            idAttribute: 'messageId',
+        Message = factories.Model.extend(upCase(MESSAGE), {
+            idAttribute: MESSAGE + 'Id',
             initialize: function () {
                 var message = this;
                 message[RESPOND_HANDLERS] = [];
-                this.once('response', this.saveReceived);
+                message.once(RESPONSE, message.saveReceived);
+                message.on(DEFERRED, message.saveDeferred);
             },
             saveReceived: function (e) {
                 this.responseEventObject = e;
             },
+            saveDeferred: function (e) {
+                this.deferredEventObject = e;
+            },
             packet: function (data) {
                 var message = this;
                 if (arguments[0]) {
-                    message.set('packet', data || {});
+                    message.set(PACKET, data || {});
                 } else {
-                    message = parse(stringify(message.get('packet')));
+                    message = parse(stringify(message.get(PACKET)));
                 }
                 return message;
             },
             defaults: function () {
                 return {
-                    command: 'null',
+                    command: NULL + EMPTY_STRING,
                     packet: {}
                 };
             },
@@ -99,19 +113,19 @@ app.scope(function (app) {
                 if (!isFunction(handler)) {
                     return message;
                 }
-                if (message.get('respondedWith')) {
+                if (message.get(RESPONDED_WITH)) {
                     handler.call(message, message.responseEventObject);
                 } else {
-                    message.once('response', handler);
+                    message.once(RESPONSE, handler);
                 }
                 return message;
             },
             deferred: function (handler) {
                 var message = this,
-                    latestResponse = message.get('latestResponse');
-                message.on('deferred', handler);
+                    latestResponse = message.get(LATEST_RESPONSE);
+                message.on(DEFERRED, handler);
                 if (latestResponse && latestResponse.isDeferred) {
-                    handler.call(message, message.createEvent('deferred', latestResponse.packet));
+                    handler.call(message, message.deferredEventObject);
                 }
                 return message;
             },
@@ -123,7 +137,7 @@ app.scope(function (app) {
             message: receive
         },
         wipe = function (buster) {
-            find(busterGroupHash, function (groupHash) {
+            return find(busterGroupHash, function (groupHash) {
                 return find(groupHash, function (previousbuster, key, groupHash) {
                     return buster === previousbuster && delete groupHash[key];
                 });
@@ -134,24 +148,24 @@ app.scope(function (app) {
             if (buster.connectPromise) {
                 buster.connectPromise.reject();
             }
-            buster.set('connected', BOOLEAN_FALSE);
+            buster.set(CONNECTED, BOOLEAN_FALSE);
             buster.connectPromise = _.Promise();
         },
         connected = function (buster, message) {
             buster.connectPromise.resolve(message);
-            buster.set('connected', BOOLEAN_TRUE);
+            buster.set(CONNECTED, BOOLEAN_TRUE);
         },
         connectReceived = function (e) {
             // first submit a response so the other side can flush
             var buster = this,
                 dataDirective = buster.directive(DATA);
-            if (dataDirective.get('isLate')) {
+            if (dataDirective.get(IS_LATE)) {
                 dataDirective.set(QUEUED_MESSAGE_INDEX, 1);
             }
             buster.respond((e.message || e.origin).id);
-            buster.set('connected', BOOLEAN_TRUE);
+            buster.set(CONNECTED, BOOLEAN_TRUE);
         },
-        Buster = factories.Buster = factories.Model.extend('Buster', {
+        Buster = factories.Buster = factories.Model.extend(upCase(BUSTER), {
             Child: Message,
             bounce: function (e) {
                 return this.respond(e.message.id);
@@ -165,13 +179,13 @@ app.scope(function (app) {
                 if (!originalData) {
                     return;
                 }
-                originalData.set('latestResponse', data);
+                originalData.set(LATEST_RESPONSE, data);
                 if (originalData.get('isResolved')) {
-                    original[DISPATCH_EVENT]('deferred', data.packet);
+                    original[DISPATCH_EVENT](DEFERRED, data.packet);
                 } else {
-                    originalData.set('respondedWith', data);
+                    originalData.set(RESPONDED_WITH, data);
                     originalData.set('isResolved', BOOLEAN_TRUE);
-                    original[DISPATCH_EVENT]('response', data.packet);
+                    original[DISPATCH_EVENT](RESPONSE, data.packet);
                 }
             },
             receive: function (data) {
@@ -192,8 +206,8 @@ app.scope(function (app) {
             },
             setGroup: function () {
                 var buster = this,
-                    group = buster.get('group'),
-                    id = buster.get('id'),
+                    group = buster.get(GROUP),
+                    id = buster.get(ID),
                     resultant = wipe(buster),
                     groupHash = busterGroupHash[group] = busterGroupHash[group] || {};
                 groupHash[id] = buster;
@@ -205,28 +219,28 @@ app.scope(function (app) {
              */
             defaults: function () {
                 return {
-                    version: app.version,
+                    documentReady: BOOLEAN_TRUE,
+                    version: app[VERSION],
                     group: defaultGroupId,
                     connected: BOOLEAN_FALSE,
-                    friendly: BOOLEAN_FALSE,
-                    documentReady: BOOLEAN_FALSE
+                    friendly: BOOLEAN_FALSE
                 };
             },
             defineWindows: function (receiveWindow, emitWindow) {
                 var buster = this,
                     busterData = buster.directive(DATA);
-                if (receiveWindow && receiveWindow.isWindow) {
+                if (receiveWindow && receiveWindow[IS_WINDOW]) {
                     if (buster.receiveWindow) {
                         buster.receiveWindow.off(receiveWindowEvents);
                     }
                     buster.receiveWindow = receiveWindow.on(receiveWindowEvents);
-                    buster.receiveWindow.owner.$(function () {
-                        buster.set('documentReady', BOOLEAN_TRUE);
-                    });
+                    // buster.receiveWindow.owner.$(function () {
+                    buster.set(DOCUMENT_READY, BOOLEAN_TRUE);
+                    // });
                 }
-                if (emitWindow && emitWindow.isWindow) {
+                if (emitWindow && emitWindow[IS_WINDOW]) {
                     buster.emitWindow = emitWindow;
-                    busterData.set('postTo', busterData.get('postTo') || buster.emitWindow.address);
+                    busterData.set(POST_TO, busterData.get(POST_TO) || buster.emitWindow.address);
                 }
             },
             defineIframe: function (iframe) {
@@ -246,7 +260,11 @@ app.scope(function (app) {
                 var emitReferrer, buster = this,
                     iframe = buster.iframe,
                     busterData = buster.directive(DATA),
-                    receiveReferrer = parseUrl(busterData.get(RECEIVED_REFERRER) || (receiveReferrer = buster.receiveWindow.element().location.href)).origin,
+                    hrefSplit = buster.receiveWindow.element().location.href.split(ENCODED_BRACKET),
+                    hrefShift = hrefSplit.shift(),
+                    unshifted = hrefSplit.unshift(EMPTY_STRING),
+                    href = hrefSplit.join(ENCODED_BRACKET),
+                    receiveReferrer = parseUrl(busterData.get(RECEIVED_REFERRER) || href).origin,
                     iframeSrc = busterData.get('iframeSrc'),
                     iframeContent = busterData.get('iframeContent'),
                     // this is going to the
@@ -256,12 +274,12 @@ app.scope(function (app) {
                         // post to me
                         useParent: true,
                         emitReferrer: receiveReferrer,
-                        id: busterData.get('postTo'),
-                        group: busterData.get('group')
+                        id: busterData.get(POST_TO),
+                        group: busterData.get(GROUP)
                     };
                 busterData.set(RECEIVED_REFERRER, receiveReferrer);
                 if (iframeSrc) {
-                    emitReferrer = busterData.set(EMIT_REFERRER, reference(iframeSrc));
+                    emitReferrer = busterData.set(EMIT_REFERRER, _.reference(iframeSrc));
                     data.receiveReferrer = emitReferrer;
                 }
                 if (iframeSrc) {
@@ -273,17 +291,21 @@ app.scope(function (app) {
                 if (iframeContent) {
                     iframe.data(BUSTER, encodeURI(stringify(data)));
                     iframe.html(iframeContent);
-                    buster.begin('initialize');
+                    buster.begin(INITIALIZE);
                 }
             },
             stripData: function () {
-                var hashString, buster = this,
+                var hashSplit, hashShift, hashString, buster = this,
                     receiveWindow = buster.receiveWindow;
-                if (!receiveWindow || !receiveWindow.isWindow) {
+                if (!receiveWindow || !receiveWindow[IS_WINDOW]) {
                     return;
                 }
                 hashString = receiveWindow.element().location.hash.slice(1);
-                buster.set(JSON.parse(decodeURI(hashString || wraptry(function () {
+                hashSplit = hashString.split(ENCODED_BRACKET);
+                hashShift = hashSplit.shift();
+                hashSplit.unshift(EMPTY_STRING);
+                hashString = hashSplit.join(ENCODED_BRACKET);
+                buster.set(parse(decodeURI(hashString || wraptry(function () {
                     return receiveWindow.parent('iframe').data(BUSTER);
                 }))));
             },
@@ -310,10 +332,10 @@ app.scope(function (app) {
                 });
                 buster.on(events);
                 buster.setGroup();
-                if (receiveWindow && receiveWindow.isWindow) {
+                if (receiveWindow && receiveWindow[IS_WINDOW]) {
                     buster.defineWindows(receiveWindow);
                 }
-                if (manager.isWindow) {
+                if (manager[IS_WINDOW]) {
                     buster.defineWindows(NULL, manager);
                     // window tests... because messages are going up
                 } else {
@@ -326,12 +348,12 @@ app.scope(function (app) {
                 buster.set(QUEUED_MESSAGE_INDEX, 0);
                 if (buster.iframe) {
                     // oh, are we late?
-                    if (buster.get('isLate')) {
-                        buster.begin('initialize');
+                    if (buster.get(IS_LATE)) {
+                        buster.begin(INITIALIZE);
                     }
                 } else {
                     // is an inner buster... let's check to see if anyone is waiting for us
-                    buster.begin('connect');
+                    buster.begin(CONNECT);
                 }
                 return buster;
             },
@@ -346,19 +368,19 @@ app.scope(function (app) {
                     buster = this,
                     dataManager = buster.directive(DATA),
                     currentIdx = dataManager.get(QUEUED_MESSAGE_INDEX),
-                    connected = dataManager.get('connected'),
+                    connected = dataManager.get(CONNECTED),
                     initedFrom = dataManager.get('initedFromPartner'),
-                    flushing = dataManager.get('flushing');
-                if (!dataManager.get('documentReady')) {
+                    flushing = dataManager.get(FLUSHING);
+                if (!dataManager.get(DOCUMENT_READY)) {
                     return buster;
                 }
                 if (!initedFrom || connected && ((connected || !currentIdx) && !flushing)) {
-                    dataManager.set('flushing', BOOLEAN_TRUE);
+                    dataManager.set(FLUSHING, BOOLEAN_TRUE);
                     children = buster.directive(CHILDREN);
                     childrenLen = children[LENGTH]();
                     queuedMsg = children.index(currentIdx);
                     while (queuedMsg && currentIdx < childrenLen) {
-                        queuedMsg.directive(DATA).set('runCount', 0);
+                        queuedMsg.directive(DATA).set(RUN_COUNT, 0);
                         if (currentIdx || connected) {
                             queuedMsg = children.index(currentIdx);
                             currentIdx = (dataManager.get(QUEUED_MESSAGE_INDEX) + 1) || 0;
@@ -367,14 +389,14 @@ app.scope(function (app) {
                         } else {
                             // initializing
                             childrenLen = UNDEFINED;
-                            command = queuedMsg.get('command');
-                            if (command === 'connect' || command === 'initialize') {
+                            command = queuedMsg.get(COMMAND);
+                            if (command === CONNECT || command === INITIALIZE) {
                                 postMessage(queuedMsg, buster);
                             }
                         }
                     }
-                    buster.set('flushing', BOOLEAN_FALSE);
-                    if (buster.get('connected')) {
+                    buster.set(FLUSHING, BOOLEAN_FALSE);
+                    if (buster.get(CONNECTED)) {
                         if (children[LENGTH]() > buster.get(QUEUED_MESSAGE_INDEX)) {
                             buster.flush();
                         }
@@ -415,11 +437,12 @@ app.scope(function (app) {
             defaultMessage: function () {
                 var buster = this;
                 return {
-                    from: buster.get('id'),
-                    postTo: buster.get('postTo'),
-                    group: buster.get('group'),
-                    version: buster.get('version'),
-                    messageId: buster.directive(CHILDREN)[LENGTH]()
+                    from: buster.get(ID),
+                    postTo: buster.get(POST_TO),
+                    group: buster.get(GROUP),
+                    version: app[VERSION],
+                    messageId: buster.directive(CHILDREN)[LENGTH](),
+                    timeStamp: _.now()
                 };
             },
             /**
@@ -441,25 +464,25 @@ app.scope(function (app) {
                 // on the inner functions, we don't want to allow this
                 // module to be present, so the inner does not influence the outer
                 messageData = originalMessage.directive(DATA);
-                messageData.set('runCount', (messageData.get('runCount') || 0) + 1);
+                messageData.set(RUN_COUNT, (messageData.get(RUN_COUNT) || 0) + 1);
                 packet = extend(BOOLEAN_TRUE, result(buster, 'package') || {}, packet_);
                 newMessage = extend(buster.defaultMessage(), {
-                    from: originalMessage.get('postTo'),
+                    from: originalMessage.get(POST_TO),
                     postTo: originalMessage.get('from'),
                     messageId: originalMessage.get('originMessageId'),
                     isResponse: BOOLEAN_TRUE,
-                    isDeferred: originalMessage.get('isDeferred'),
-                    runCount: originalMessage.get('runCount'),
-                    command: originalMessage.get('command'),
+                    isDeferred: originalMessage.get(IS_DEFERRED),
+                    runCount: originalMessage.get(RUN_COUNT),
+                    command: originalMessage.get(COMMAND),
                     timeStamp: _.now(),
                     packet: packet,
-                    version: originalMessage.get('version')
+                    version: originalMessage.get(VERSION)
                 });
                 // silent sets
-                messageData.set('lastResponse', newMessage.timeStamp);
-                messageData.set('isDeferred', BOOLEAN_TRUE);
+                messageData.set(LAST_RESPONSE, newMessage.timeStamp);
+                messageData.set(IS_DEFERRED, BOOLEAN_TRUE);
                 // loud set
-                buster.set('lastResponse', newMessage.timeStamp);
+                buster.set(LAST_RESPONSE, newMessage.timeStamp);
                 postMessage(newMessage, buster);
                 buster[DISPATCH_EVENT](RESPONDED, packet);
                 return buster;
@@ -479,6 +502,6 @@ app.scope(function (app) {
             }
         }, BOOLEAN_TRUE);
     if (app.topAccess()) {
-        $(win[TOP]).on('message', receive);
+        $(win[TOP]).on(MESSAGE, receive);
     }
 });

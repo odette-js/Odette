@@ -29,19 +29,30 @@ application.scope().run(function (app, _, factories) {
                 $con.append(divs);
                 return divs;
             },
-            $con = $.createElements('div').style({
+            $con = $.createElement('div').style({
                 height: '100%',
                 width: '100%'
             });
         $(document.body).append($con);
         beforeEach(create);
+        afterEach(function () {
+            divs.destroy();
+        });
         it('is essentially a collection', function () {
             expect(_.isInstance($empty, factories.DOMM)).toEqual(true);
             expect(_.isInstance($empty, factories.Collection)).toEqual(true);
         });
         it('it knows it\'s own client rect', function () {
             var div = divs.eq(0);
-            expect(div.rect()).toEqual(_.extend({}, div.element().getBoundingClientRect()));
+            var rect = div.element().getBoundingClientRect();
+            expect(div.rect()).toEqual({
+                height: rect.height,
+                width: rect.width,
+                bottom: rect.bottom,
+                right: rect.right,
+                left: rect.left,
+                top: rect.top,
+            });
         });
         it('can show and hide elements', function () {
             expect(divs.hide().map(function (manager) {

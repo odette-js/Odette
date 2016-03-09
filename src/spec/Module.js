@@ -29,16 +29,16 @@ application.scope().run(function (app, _, factories) {
             });
             expect(count).toEqual(1);
         });
-        it('can only initialize itself once', function () {
+        it('can have multiple generation handlers', function () {
             var count = 0;
             app.module('level', function () {
                 count++;
             });
             expect(count).toEqual(1);
             app.module('level', function () {
-                count++;
+                count += 2;
             });
-            expect(count).toEqual(1);
+            expect(count).toEqual(3);
         });
         it('can have exports (can hold data)', function () {
             level.exports({

@@ -142,22 +142,28 @@ this.Odette = function (global, WHERE, version, fn) {
             return saved;
         },
         scope: function (name_, fn_) {
-            var name, fn, app = this,
+            var name, fn, scoped, app = this,
                 hash = app.versions;
-            if (typeof name_ === 'string') {
+            if (isString(name_)) {
                 name = name_;
                 fn = fn_;
             } else {
                 fn = name_;
                 name = app.defaultVersion;
             }
-            app.currentVersion = name;
-            if (typeof fn === 'function') {
-                this.wraptry(function () {
-                    fn.call(app, hash[name]);
-                });
+            if (!hash[name]) {
+                app.registerVersion(name);
+            } else {
+                app.currentVersion = name;
             }
-            return hash[name];
+            scoped = hash[name];
+            if (!isFunction(fn)) {
+                return scoped;
+            }
+            this.wraptry(function () {
+                fn.call(app, scoped);
+            });
+            return scoped;
         },
         map: function (arra, fn, ctx) {
             var i = 0,

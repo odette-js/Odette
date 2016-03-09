@@ -18,6 +18,15 @@
         <![endif]-->
         <div class="test-div"></div>
         <script src="/js/all.js"></script>
-        <script src="/js/framed.js"></script>
+        <script type="text/javascript">
+            var script = document.createElement('script');
+            script.type = 'text/javascript';
+            $(function () {
+                setTimeout(function () {
+                    document.body.appendChild(script);
+                    script.src = '/js/framed.js';
+                });
+            });
+        </script>
     </body>
 </html>

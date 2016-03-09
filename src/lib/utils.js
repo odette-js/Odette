@@ -859,15 +859,14 @@ var factories = {},
         }
         return val;
     },
-    evaluate = function (string, context) {
-        var parsed = string;
-        if (isString(parsed)) {
-            if (parsed.slice(0, 8) !== 'function') {
-                parsed = new Function[CONSTRUCTOR]('window', 'global', 'root', 'return ' + parsed);
-            }
+    evaluate = function (context, string_) {
+        var split, string = string_.toString();
+        if (isFunction(string_)) {
+            split = string.split('{');
+            string = split.shift();
+            string = (string = split.join('{')).slice(0, string[LENGTH] - 1)
         }
-        parsed = new Function[CONSTRUCTOR]('var document,\nconsole,\nwindow=this;\nreturn ' + parsed + '.call(this, this, this, this);');
-        return parsed.call(context);
+        return new FunctionConstructor('context', 'with(context) {\n' + string + '\n}')(context);
     },
     debounce = function (func, wait, immediate) {
         var timeout;

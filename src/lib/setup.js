@@ -5,5 +5,5 @@ Odette(this, 'application', 'dev', function (innerGlobalApp, scopedApp) {
     // global app is the object that will be shared with all other iframes
     var globalApplication = innerGlobalApp.touchTop(global);
     // puts the scoped app on the global object
-    global.app = scopedApp;
+    // global.app = scopedApp;
 });

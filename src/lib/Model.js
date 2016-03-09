@@ -125,18 +125,20 @@ app.scope(function (app) {
                     idResult = model.setId(newAttributes[idAttributeResult]);
                 // set id and let parent know what your new id is
                 // setup previous data
-                if (model[DATA] || (keysResult = keys(newAttributes))[LENGTH]) {
-                    keysResult = keysResult || keys(newAttributes);
-                    model[DISPATCH_EVENT](BEFORE_COLON + RESET);
-                    dataDirective = model.directive(DATA);
-                    if (keysResult[LENGTH]) {
-                        dataDirective.reset(newAttributes);
-                    } else {
-                        model.directiveDestruction(DATA);
-                    }
-                    // let everything know that it is changing
-                    model[DISPATCH_EVENT](RESET);
+                if (!model[DATA] && !((keysResult = keys(newAttributes))[LENGTH])) {
+                    return model;
                 }
+                keysResult = keysResult || keys(newAttributes);
+                model[DISPATCH_EVENT](BEFORE_COLON + RESET);
+                dataDirective = model.directive(DATA);
+                if (keysResult[LENGTH]) {
+                    dataDirective.reset(newAttributes);
+                } else {
+                    model.directiveDestruction(DATA);
+                }
+                // let everything know that it is changing
+                model[DISPATCH_EVENT](RESET);
+                return model;
             },
             /**
              * @description collects a splat of arguments and condenses them into a single object. Object is then extended onto the attributes object and any items that are different will be fired as events
@@ -192,7 +194,7 @@ app.scope(function (app) {
                     return model;
                 }
                 dataDirective.digest(model, function () {
-                    duffRev(path, function (item) {
+                    eachRight(path, function (item) {
                         var name = path.join(PERIOD);
                         dataDirective.changing[name] = BOOLEAN_TRUE;
                         model[DISPATCH_EVENT](CHANGE_COLON + name);
