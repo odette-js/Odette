@@ -19,7 +19,7 @@ app.scope(function (app) {
         setup = function () {
             running = BOOLEAN_TRUE;
             win[REQUEST_ANIMATION_FRAME](function (time) {
-                eachCall(runningLoopers, 'run', time);
+                eachCall(runningLoopers, 'run', _.now());
                 teardown();
             });
         },
@@ -105,10 +105,9 @@ app.scope(function (app) {
                     started: function () {
                         return !stopped;
                     },
-                    run: function () {
+                    run: function (_nowish) {
                         var tween = this,
-                            removeLater = [],
-                            _nowish = nowish();
+                            removeLater = [];
                         if (halted || stopped) {
                             return;
                         }

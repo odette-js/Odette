@@ -1545,7 +1545,7 @@ app.scope(function (app) {
                             }
                             return newDirective;
                         },
-                        directiveDestruction = function (instance, name, directive) {
+                        directiveDestruction = function (directive, instance, name) {
                             each(prototype, function (value, key) {
                                 if (instance[key] === value) {
                                     delete instance[key];
@@ -1860,49 +1860,49 @@ app.scope(function (app) {
             element: function () {
                 return this[TARGET];
             },
+            elements: function () {
+                return [this[TARGET]];
+            },
             length: function () {
                 return 1;
             },
             registerAs: function () {
                 var newName, oldName, manager = this,
                     registeredAs = manager.registeredAs;
-                if (manager.isCustom && registeredAs !== manager._lastCustom) {
-                    oldName = manager.owner.registeredElementName(manager._lastCustom);
-                    manager.directiveDestruction(oldName);
-                    manager._lastCustom = registeredAs;
-                    newName = manager.owner.registeredElementName(registeredAs);
-                    manager.directive(newName);
+                if (!manager.isCustom || registeredAs === manager._lastCustom) {
+                    return manager;
                 }
+                oldName = manager.owner.registeredElementName(manager._lastCustom);
+                manager.directiveDestruction(oldName);
+                manager._lastCustom = registeredAs;
+                newName = manager.owner.registeredElementName(registeredAs);
+                manager.directive(newName);
+                return manager;
             },
             wrap: function (list) {
                 return this.owner.query(list || this);
             },
-            collectChildren: function () {
-                return collectChildren(this.element());
-            },
-            children: function (eq, globalmemo) {
-                var filter = createDomFilter(eq),
-                    manager = this,
-                    children = manager.collectChildren(),
+            children: function (eq, memo) {
+                var filter, result, manager = this,
+                    children = collectChildren(manager.element());
+                if (eq === UNDEFINED) {
+                    return memo ? (memo.push.apply(memo, map(children, manager.owner.returnsManager, manager.owner)) ? memo : memo) : manager.wrap(children);
+                } else {
+                    filter = createDomFilter(eq);
                     result = foldl(children, function (memo, child, idx, children) {
                         if (filter(child, idx, children)) {
                             memo.push(manager.owner.returnsManager(child));
                         }
                         return memo;
-                    }, globalmemo || []);
-                return globalmemo ? result : manager.wrap(result);
+                    }, memo || []);
+                }
+                return memo ? result : manager.wrap(result);
             },
             hide: function () {
                 return this.applyStyle('display', 'none');
             },
             show: function () {
                 return this.applyStyle('display', 'block');
-            },
-            resetEvents: function () {
-                var manager = this;
-                manager.stopListening();
-                factories.Events[CONSTRUCTOR][PROTOTYPE].resetEvents.call(manager);
-                return manager;
             },
             applyStyle: function (key, value) {
                 applyStyle(key, value, this);
@@ -1932,6 +1932,7 @@ app.scope(function (app) {
                 }
                 return manager;
             },
+            // rework how to destroy elements
             destroy: function () {
                 var customName, manager = this,
                     registeredAs = manager.registeredAs,
@@ -1945,7 +1946,7 @@ app.scope(function (app) {
                     manager.directiveDestruction(customName);
                 }
                 // destroy events
-                manager.resetEvents();
+                factories.Events[CONSTRUCTOR][PROTOTYPE].destroy.call(manager);
                 // remove from global hash
                 manager.owner.data.remove(element);
                 return manager;
@@ -1961,13 +1962,15 @@ app.scope(function (app) {
             index: function () {
                 return this;
             },
-            each: function (fn) {
-                var wrapped = [this];
-                fn(this, 0, wrapped);
+            each: function (fn, ctx) {
+                var manager = this;
+                var wrapped = [manager];
+                var result = ctx ? fn.call(ctx, manager, 0, wrapped) : fn(manager, 0, wrapped);
                 return wrapped;
             },
             find: function (fn) {
-                return fn(this, 0, [this]) ? this : UNDEFINED;
+                var manager = this;
+                return fn(manager, 0, [manager]) ? manager : UNDEFINED;
             },
             get: function (where) {
                 var events = this,
@@ -1984,10 +1987,9 @@ app.scope(function (app) {
                 domManager.stashed = originalTarget;
                 if (mainHandler.currentEvent) {
                     // cancel this event because this stack has already been called
-                    exception({
+                    return exception({
                         message: 'queue prevented: this element is already being dispatched with the same event'
                     });
-                    return;
                 }
                 mainHandler.currentEvent = handler;
                 if (!handler) {
@@ -2031,7 +2033,7 @@ app.scope(function (app) {
                 if (!canBeProcessed(node)) {
                     return node;
                 }
-                children = manager.children().toJSON();
+                children = manager.children()[TO_JSON]();
                 obj = {
                     tag: tag(node)
                 };
@@ -2397,7 +2399,6 @@ app.scope(function (app) {
             unitToNumber: unitToNumber,
             numberToUnit: numberToUnit
         }),
-        // removeChild = eachProc(),
         setupDomContentLoaded = function (handler, documentManager) {
             var bound = bind(handler, documentManager);
             if (documentManager.isReady) {
@@ -2410,9 +2411,9 @@ app.scope(function (app) {
             return documentManager;
         },
         applyToEach = function (method) {
-            return function (one, two, three, four, five) {
+            return function (one, two, three, four, five, six) {
                 return this.each(function (manager) {
-                    manager[method](one, two, three, four, five);
+                    manager[method](one, two, three, four, five, six);
                 });
             };
         },
@@ -2432,7 +2433,7 @@ app.scope(function (app) {
                 return element && element[property];
             };
         },
-        DOMM = factories.Collection.extend('DOMM', extend(makeValueTarget('class', 'className', propertyApi, BOOLEAN_TRUE), {
+        DOMM = factories.Collection.extend('DOMM', extend(makeValueTarget(CLASS, CLASSNAME, propertyApi, BOOLEAN_TRUE), {
             /**
              * @func
              * @name DOMM#constructor
@@ -2461,6 +2462,9 @@ app.scope(function (app) {
                             if (DomManager.isInstance(els)) {
                                 els = [els];
                             } else {
+                                if (Collection.isInstance(els)) {
+                                    els = els.unwrap();
+                                }
                                 if (canBeProcessed(els)) {
                                     els = [documentContext.returnsManager(els)];
                                 } else {
@@ -2469,7 +2473,7 @@ app.scope(function (app) {
                             }
                         }
                     }
-                    dom.swap(els);
+                    dom.reset(els);
                 }
                 return dom;
             },
@@ -2766,7 +2770,7 @@ app.scope(function (app) {
                 return Collection(map(this.unwrap(), handler, context));
             },
             toJSON: function () {
-                return this.mapCall('toJSON');
+                return this.mapCall(TO_JSON);
             },
             toString: function () {
                 return JSON.stringify(this);
@@ -2789,5 +2793,8 @@ app.scope(function (app) {
     // define a hash for attribute caching
     app.defineDirective('attributes', function () {
         return {};
+    });
+    app.defineDirective('customElement', function (instance) {
+        //
     });
 });

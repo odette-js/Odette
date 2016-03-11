@@ -17,8 +17,8 @@ app.scope(function (app) {
                 eventsDirective.handlers = {};
                 eventsDirective.listeningTo = {};
                 eventsDirective.running = {};
-                eventsDirective.stack = Collection(BOOLEAN_TRUE, BOOLEAN_TRUE);
-                eventsDirective.removeQueue = Collection(BOOLEAN_TRUE, BOOLEAN_TRUE);
+                eventsDirective.stack = Collection();
+                eventsDirective.removeQueue = Collection();
                 return eventsDirective;
             },
             destroy: function () {},
@@ -34,7 +34,7 @@ app.scope(function (app) {
                 eventObject.fn = bind(eventObject.fn || eventObject.handler, eventObject.context);
                 // attach the id to the bound function because that instance is private
                 eventObject.fn[__FN_ID__] = eventObject.id;
-                list = handlers[name] = handlers[name] || SortedCollection(BOOLEAN_TRUE, BOOLEAN_TRUE);
+                list = handlers[name] = handlers[name] || SortedCollection();
                 // attaching name so list can remove itself from hash
                 list[NAME] = name;
                 // attached so event can remove itself

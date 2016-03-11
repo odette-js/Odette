@@ -1,15 +1,22 @@
 app.scope(function (app) {
     var _ = app._,
         factories = _.factories,
-        // hash = '_directivesHash',
-        returnsNull = returns(NULL);
+        returnsNull = returns(NULL),
+        returnsObject = function () {
+            return {};
+        };
     factories.Extendable.extend('Directive', {
         directive: function (name) {
-            var that = this;
-            return (that[name] = that[name] || directiveMod('creation', that, name));
+            var Handler, directive, that = this;
+            if ((directive = that[name])) {
+                return directive;
+            }
+            Handler = (that['directive:creation:' + name] || directives.creation[name] || returnsObject);
+            that[name] = new Handler(that, name);
+            return that[name];
         },
         directiveDestruction: function (name) {
-            var result = directiveMod('destruction', this, name);
+            var result = (directives.destruction[name] || returnsNull)(this[name], this, name);
             delete this[name];
             return result;
         }
@@ -19,38 +26,37 @@ app.scope(function (app) {
         destruction: {}
     };
     app.defineDirective = function (name, creation, destruction_) {
-        var err = (!isString(name) && exception({
+        var alreadyCreated, err = (!isString(name) && exception({
             message: 'directives must be registered with a string for a name'
         })) || (!isFunction(creation)) && exception({
-            message: 'directives must be registered with both create and destroy functions'
+            message: 'directives must be registered with at least a create function'
         });
-        var destruction = isFunction(destruction_) ? destruction_ : returnsNull;
-        var alreadyCreated = directives.creation[name];
-        directives.creation[name] = alreadyCreated || creation;
-        directives.destruction[name] = directives.destruction[name] || destruction;
+        directives.creation[name] = (alreadyCreated = directives.creation[name]) || creation;
+        directives.destruction[name] = directives.destruction[name] || destruction_;
+        // returns whether or not that directive is new or not
         return !alreadyCreated;
     };
     app.extendDirective = function (oldName, newName, handler_, destruction_) {
-        var destruction = destruction_ || returnsThird;
-        var handler = handler_ || returnsThird;
+        var Destruction = destruction_ || returnsThird;
+        var Handler = handler_ || returnsThird;
         var oldDirective = directives.creation[oldName] || exception({
             message: 'directives must exist before they can be extended'
         });
         return app.defineDirective(newName, function (instance, name, third) {
             var directive = directives.creation[oldName](instance, name, third);
-            return handler(instance, name, directive);
+            return new Handler(instance, name, directive);
         }, function (instance, name, third) {
             var directive = directives.destruction[oldName](instance, name, third);
-            return destruction(instance, name, directive);
+            return new Destruction(instance, name, directive);
         });
     };
     var returnsThird = function (one, two, three) {
         return three;
     };
-    var directiveMod = function (key, instance, name) {
-        var Handler = (instance['directive:' + key + COLON + name] || directives[key][name] || noop);
-        return new Handler(instance, name);
-    };
+    // var directiveMod = function (key, instance, name) {
+    //     var Handler = (instance['directive:' + key + COLON + name] || directives[key][name] || noop);
+    //     return new Handler(instance, name);
+    // };
     var parody = function (directive, method) {
         return function (one, two, three) {
             return this.directive(directive)[method](one, two, three);
@@ -64,16 +70,21 @@ app.scope(function (app) {
             return instance;
         };
     };
-    var parodyCheck = function (directive, method) {
-        return function (one, two, three) {
-            var directiveInstance;
-            return (directiveInstance = this[directive]) && directiveInstance[method](one, two, three);
+    var checkParody = function (directive, method, defaultValue) {
+        return function (one, two, three, four, five, six) {
+            return this[directive] ? this[directive][method](one, two, three, four, five, six) : defaultValue;
         };
     };
+    // var parodyRead = function (directive, attribute, defaultValue) {
+    //     return function () {
+    //         return this[directive] === UNDEFINED ? defaultValue : this[directive][attribute];
+    //     };
+    // };
     _.exports({
         directives: {
             parody: parody,
-            parodyCheck: parodyCheck,
+            checkParody: checkParody,
+            // parodyRead: parodyRead,
             iterate: iterate
         }
     });

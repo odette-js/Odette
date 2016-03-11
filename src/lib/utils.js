@@ -602,9 +602,9 @@ var factories = {},
             if (child) {
                 passedParent = child;
             }
-            child = new FunctionConstructor('var parent=arguments[0];return function ' + name + '(){return parent.apply(this,arguments);}')(passedParent);
+            child = new FunctionConstructor('parent', 'return function ' + name + '(){return parent.apply(this,arguments);}')(passedParent);
         } else {
-            child = child || parent;
+            child = child || new FunctionConstructor('parent', 'return ' + parent.toString())(parent);
         }
         child[EXTEND] = constructorExtend;
         var Surrogate = function () {
@@ -620,7 +620,7 @@ var factories = {},
         child = constructorWrapper(constructor);
         child.__super__ = parent;
         constructor[PROTOTYPE][CONSTRUCTOR_KEY] = child;
-        if (nameIsStr && attach) {
+        if (nameIsStr && attach && !_._preventConstructorAttach) {
             factories[name] = child;
         }
         return child;

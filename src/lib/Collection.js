@@ -268,7 +268,8 @@ app.scope(function (app) {
         unwrapInstance = function (instance_) {
             return isInstance(instance, factories.Collection) ? instance_ : instance.unwrap();
         },
-        wrappedCollectionMethods = extend(wrap({
+        recreatingSelfList = gapSplit('eq map mapCall filter pluck where whereNot cycle uncycle flatten'),
+        eachHandlers = {
             each: duff,
             duff: duff,
             forEach: duff,
@@ -277,46 +278,58 @@ app.scope(function (app) {
             duffRight: duffRight,
             forEachRight: duffRight,
             eachCallRight: eachCallRight
-        }, function (fn) {
-            return function (handler, context) {
-                // unshiftContext
-                var args0 = this.unwrap(),
-                    args1 = handler,
-                    args2 = arguments[LENGTH] > 1 ? context : this;
-                fn(args0, args1, args2);
-                return this;
+        },
+        eachHandlerKeys = keys(eachHandlers),
+        reverseList = gapSplit('reverse'),
+        pushUnshiftHandlers = gapSplit('push unshift'),
+        joinPopShiftHandlers = gapSplit('join pop shift'),
+        countingList = gapSplit('count countTo countFrom merge'),
+        foldIteration = gapSplit('foldr foldl reduce'),
+        findIteration = gapSplit('find findLast findWhere findLastWhere'),
+        indicesIteration = gapSplit('add addAt remove removeAt indexOf posit splice'),
+        foldFindIndexIteration = indicesIteration.concat(foldIteration, findIteration),
+        marksIterating = function (fn) {
+            return function (one, two, three, four, five, six) {
+                var result, list = this;
+                ++list.iterating;
+                result = fn(list, one, two, three, four, five, six);
+                --list.iterating;
+                return result;
             };
-        }), wrap(gapSplit('min max hypot pop shift'), function (name) {
-            return function () {
-                return _[name](this.unwrap());
-            };
-        }), wrap(gapSplit('push unshift'), function (name) {
-            return function () {
-                _[name](this.unwrap(), arguments);
-                return this;
-            };
-        }), wrap(gapSplit('join'), function (name) {
+        },
+        wrappedListMethods = extend(wrap(joinPopShiftHandlers, function (name) {
             return function (arg) {
-                return this.unwrap()[name](arg);
+                return this.items[name](arg);
             };
-        }), wrap(gapSplit('reverse', function (name) {
+        }), wrap(pushUnshiftHandlers, function (name) {
+            return function (args) {
+                var list = this;
+                list.items[name].apply(list.items, args);
+                return list;
+            };
+        }), wrap(reverseList, function (name) {
             return function () {
-                this.unwrap()[name]();
-                return this;
+                var list = this;
+                list.directive('status').toggle('reversed');
+                list.items[name]();
+                return list;
             };
-        })), wrap(gapSplit('count countTo countFrom merge'), function (name) {
-            return function (one, two, three) {
-                var ctx = this;
-                _[name](ctx.unwrap(), one, ctx, two, three);
-                return ctx;
-            };
-        }), wrap(gapSplit('foldr foldl reduce find findLast findWhere findLastWhere add addAt remove removeAt indexOf posit foldr foldl reduce splice mapCall'), function (name) {
-            return function (one, two, three) {
-                return _[name](this.unwrap(), one, two, three);
-            };
-        }), wrap(gapSplit('eq map filter pluck where whereNot cycle uncycle flatten'), function (name) {
-            return recreateSelf(function (fn) {
-                return _[name](this.unwrap(), fn);
+        }), wrap(eachHandlers, function (fn) {
+            return marksIterating(function (list, handler, context) {
+                var args0 = list.items,
+                    args1 = handler,
+                    args2 = arguments[LENGTH] > 1 ? context : list;
+                fn(args0, args1, args2);
+                return list;
+            });
+        }), wrap(countingList, function (name) {
+            return marksIterating(function (list, runner, context, fromHere, toThere) {
+                _[name](list.items, runner, context, fromHere, toThere);
+                return list;
+            });
+        }), wrap(foldFindIndexIteration.concat(recreatingSelfList), function (name) {
+            return marksIterating(function (list, one, two, three) {
+                return _[name](list.items, one, two, three);
             });
         })),
         ret = _.exports({
@@ -350,21 +363,120 @@ app.scope(function (app) {
             flatten: flatten,
             eq: eq
         }),
-        interactWithById = function (fun, expecting) {
-            return function (one, two, three) {
-                var directive = this,
-                    bycategories = directive.register,
-                    passedCategory = arguments[LENGTH] === expecting,
-                    category = passedCategory ? one : ID,
-                    categoryHash = bycategories[category] = bycategories[category] || {},
-                    key = passedCategory ? two : one,
-                    thing = passedCategory ? three : two;
-                return fun(directive, categoryHash, category, key, thing, passedCategory);
-            };
-        },
-        REGISTRY = 'registry',
         directives = _.directives,
+        REGISTRY = 'registry',
+        Registry = factories.Directive.extend(upCase(REGISTRY), {
+            constructor: function () {
+                this.reset();
+                return this;
+            },
+            get: function (category, id) {
+                var cat = this.register[category];
+                return cat && cat[id];
+            },
+            keep: function (category, id, value) {
+                var register = this.register,
+                    cat = register[category] = register[category] || {};
+                if (value === UNDEFINED) {
+                    this.count--;
+                }
+                if (cat[id] === UNDEFINED) {
+                    this.count++;
+                }
+                cat[id] = value;
+                return this;
+            },
+            swap: function (category, id, value) {
+                var cached = this.get(category, id);
+                this.keep(category, id, value);
+                return cached;
+            },
+            drop: function (category, id) {
+                return this.swap(category, id);
+            },
+            reset: function (registry) {
+                var cached = this.register;
+                this.register = registry || {};
+                this.count = 0;
+                return cached;
+            }
+        }),
+        LIST = 'list',
+        List = factories.Directive.extend(upCase(LIST), extend({
+            constructor: function () {
+                this.reset();
+                return this;
+            },
+            empty: function () {
+                return this.reset();
+            },
+            reset: function (items) {
+                // can be array like
+                var list = this;
+                var old = list.items || [];
+                list.items = items == NULL ? [] : (isArray(items) ? items : (isArrayLike(items) ? toArray(items) : [items]));
+                list.iterating = list.iterating ? exception({
+                    message: 'can\'t reset a list while it is iterating'
+                }) : 0;
+                list.reversed = BOOLEAN_FALSE;
+                return list;
+            },
+            unwrap: function () {
+                return this.items;
+            },
+            length: function () {
+                return this.items.length;
+            },
+            first: function () {
+                return this.items[0];
+            },
+            last: function () {
+                return this.items[this.items.length - 1];
+            },
+            indexOf: function (object) {
+                return smartIndexOf(this.items, object);
+            },
+            index: function (number) {
+                return this.items[number || 0];
+            },
+            has: function (object) {
+                return this.indexOf(object) !== -1;
+            },
+            sort: function (fn_) {
+                // normalization sort function for cross browsers
+                sort(this.items, fn_);
+                return this;
+            },
+            toString: function () {
+                return stringify(this.items);
+            },
+            toJSON: function () {
+                return map(this.items, function (item) {
+                    return result(item, TO_JSON);
+                });
+            }
+        }, wrappedListMethods), BOOLEAN_TRUE),
+        directiveResult = app.defineDirective(LIST, List[CONSTRUCTOR]),
         Collection = factories.Directive.extend('Collection', extend({
+            has: directives.parody(LIST, 'has'),
+            unwrap: directives.parody(LIST, 'unwrap'),
+            empty: _.flow(directives.parody(LIST, 'reset'), directives.parody(REGISTRY, 'reset')),
+            reset: directives.parody(LIST, 'reset'),
+            length: directives.parody(LIST, 'length'),
+            first: directives.parody(LIST, 'first'),
+            last: directives.parody(LIST, 'last'),
+            index: directives.parody(LIST, 'index'),
+            toString: directives.parody(LIST, 'toString'),
+            toJSON: directives.parody(LIST, TO_JSON),
+            sort: directives.parody(LIST, 'sort'),
+            get: directives.parody(REGISTRY, 'get'),
+            register: directives.parody(REGISTRY, 'keep'),
+            unRegister: directives.parody(REGISTRY, 'drop'),
+            swapRegister: directives.parody(REGISTRY, 'swap'),
+            constructor: function (arr) {
+                this.directive(LIST).reset(arr);
+                return this;
+            },
             range: recreateSelf(range),
             concat: recreateSelf(function () {
                 // this allows us to mix collections with regular arguments
@@ -373,52 +485,17 @@ app.scope(function (app) {
                     return Collection(arg).unwrap();
                 }));
             }),
-            has: function (object) {
-                return this.indexOf(object) !== -1;
-            },
             call: function (arg) {
                 this.each(function (fn) {
                     fn(arg);
                 });
                 return this;
             },
-            results: function (key, arg, handle) {
-                this.each(function (obj) {
-                    result(obj, key, arg);
+            results: function (key, arg) {
+                return this.map(function (obj) {
+                    return result(obj, key, arg);
                 });
-                return this;
-            },
-            unwrap: function () {
-                return this.list.items;
-            },
-            empty: _.flow(directives.parody('list', 'empty'), directives.parody(REGISTRY, 'reset')),
-            swap: function (arr) {
-                this.directive('list').items = arr || [];
-            },
-            length: function () {
-                return this.unwrap()[LENGTH];
-            },
-            first: function () {
-                return this.unwrap()[0];
-            },
-            last: function () {
-                return this.unwrap()[this[LENGTH]() - 1];
-            },
-            index: function (number) {
-                return this.unwrap()[number || 0];
-            },
-            sort: function (fn_) {
-                sort(this.unwrap(), fn_);
-                return this;
-            },
-            toString: function () {
-                return stringify(this.unwrap());
-            },
-            toJSON: function () {
-                return map(this.unwrap(), function (item) {
-                    return result(item, TO_JSON);
-                });
-            },
+            }
             /**
              * @description adds models to the children array
              * @param {Object|Object[]} objs - object or array of objects to be passed through the model factory and pushed onto the children array
@@ -427,25 +504,38 @@ app.scope(function (app) {
              * @name Model#add
              * @func
              */
-            constructor: function (arr) {
-                var collection = this;
-                if (isArrayLike(arr)) {
-                    if (!isArray(arr)) {
-                        arr = toArray(arr);
-                    }
-                } else {
-                    if (arr != NULL) {
-                        arr = [arr];
-                    }
-                }
-                collection.swap(arr);
-                return collection;
-            },
-            get: directives.parody(REGISTRY, 'get'),
-            register: directives.parody(REGISTRY, 'keep'),
-            unRegister: directives.parody(REGISTRY, 'drop'),
-            swapRegister: directives.parody(REGISTRY, 'swap')
-        }, wrappedCollectionMethods), BOOLEAN_TRUE),
+        }, wrap(recreatingSelfList, function (key) {
+            return recreateSelf(function (one) {
+                return this.list[key](one);
+            });
+        }), wrap(joinPopShiftHandlers.concat(indicesIteration), function (key) {
+            return function (one, two, three) {
+                return this.list[key](one, two, three);
+            };
+        }), wrap(pushUnshiftHandlers, function (key) {
+            return function () {
+                this.list[key](arguments);
+                return this;
+            };
+        }), wrap(countingList, function (key) {
+            return function (runner, countFrom, countTo) {
+                this.list[key](runner, this, countFrom, countTo);
+                return this;
+            };
+        }), wrap(reverseList.concat(eachHandlerKeys), function (key) {
+            return function (one, two, three, four) {
+                this.list[key](one, two || this);
+                return this;
+            };
+        }), wrap(foldIteration, function (key) {
+            return function (handler, memo, context) {
+                return this.list[key](handler, memo, context || this);
+            };
+        }), wrap(findIteration, function (key) {
+            return function (handler, context) {
+                return this.list[key](handler, context || this);
+            };
+        })), BOOLEAN_TRUE),
         isNullMessage = {
             message: 'object must not be null or undefined'
         },
@@ -564,7 +654,7 @@ app.scope(function (app) {
                     if (found) {
                         found.isValid(BOOLEAN_TRUE);
                     } else {
-                        found = sm.Child(string, sm);
+                        found = new sm.Child(string, sm);
                         sm.unwrap().push(found);
                         sm.register(ID, string, found);
                     }
@@ -577,6 +667,7 @@ app.scope(function (app) {
                 Collection[CONSTRUCTOR][PROTOTYPE].empty.call(sm);
                 // resets change counter
                 sm.current(EMPTY_STRING);
+                return sm;
             },
             increment: function () {
                 this._changeCounter++;
@@ -613,19 +704,19 @@ app.scope(function (app) {
             rebuild: function () {
                 // rebuilds the registry
                 var parent = this,
-                    validResult = foldl(parent.unwrap(), function (memo, stringInstance) {
+                    validResult = parent.foldl(function (memo, stringInstance) {
                         if (stringInstance.isValid()) {
-                            memo.list.push(stringInstance);
+                            memo.items.push(stringInstance);
                             memo.registry.id[stringInstance.value] = stringInstance;
                         }
                         return memo;
                     }, {
-                        list: [],
+                        items: [],
                         registry: {
                             id: {}
                         }
                     });
-                parent.swap(validResult.list);
+                parent.directive(LIST).reset(validResult.items);
                 parent.directive(REGISTRY).reset(validResult.registry);
             },
             generate: function (delimiter_) {
@@ -675,63 +766,6 @@ app.scope(function (app) {
                 sm.increment();
                 return sm;
             }
-        }, BOOLEAN_TRUE),
-        unwrap = function () {
-            return this.items;
-        },
-        list_swap = function (list) {
-            this.items = list;
-        },
-        empty = function () {
-            this.items = [];
-            this.iterating = 0;
-        };
-    app.defineDirective('list', function () {
-        return {
-            items: [],
-            reversed: BOOLEAN_FALSE,
-            iterating: 0,
-            empty: empty
-        };
-    });
-    var get = function (category, id) {
-        var cat = this.register[category];
-        return cat && cat[id];
-    },
-    keep = function (category, id, value) {
-        var register = this.register,
-            cat = register[category] = register[category] || {};
-        if (value === UNDEFINED) {
-            this.count--;
-        }
-        if (cat[id] === UNDEFINED) {
-            this.count++;
-        }
-        cat[id] = value;
-    },
-    drop = function (category, id) {
-        return this.swap(category, id);
-    },
-    swap = function (category, id, value) {
-        var cached = this.get(category, id);
-        this.keep(category, id, value);
-        return cached;
-    },
-    reset = function (registry) {
-        var cached = this.register;
-        this.register = registry || {};
-        this.count = 0;
-        return cached;
-    };
-    app.defineDirective(REGISTRY, function () {
-        return {
-            register: {},
-            count: 0,
-            get: get,
-            keep: keep,
-            drop: drop,
-            swap: swap,
-            reset: reset
-        };
-    });
+        }, BOOLEAN_TRUE);
+    app.defineDirective(REGISTRY, Registry[CONSTRUCTOR]);
 });

@@ -361,7 +361,7 @@ application.scope().run(function (app, _, factories) {
                 expect(count).toEqual(2);
                 box.dispatchEvent('event1');
                 expect(count).toEqual(3);
-                box.resetEvents();
+                box.directive('eventManager').reset();
                 expect(count).toEqual(3);
                 box.dispatchEvent('event2');
                 expect(count).toEqual(3);

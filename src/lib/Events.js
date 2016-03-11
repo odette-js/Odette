@@ -6,10 +6,14 @@ var DISPATCH_EVENT = 'dispatchEvent',
     REGISTERED = 'registered',
     LISTENING_PREFIX = 'l',
     STATE = 'state',
+    STATUS = 'status',
+    STATUSES = STATUS + 'es',
     ACTIONS = 'actions',
     IS_STOPPED = 'isStopped',
-    PROPAGATION_IS_STOPPED = 'propagationIsStopped',
-    IMMEDIATE_PROP_IS_STOPPED = 'immediatePropagationIsStopped',
+    UPCASED_IS_STOPPED = upCase(IS_STOPPED),
+    PROPAGATION = 'propagation',
+    PROPAGATION_IS_STOPPED = PROPAGATION + UPCASED_IS_STOPPED,
+    IMMEDIATE_PROP_IS_STOPPED = 'immediate' + upCase(PROPAGATION) + UPCASED_IS_STOPPED,
     HANDLERS = 'handlers';
 app.scope(function (app) {
     var remove = _.remove,
@@ -17,7 +21,7 @@ app.scope(function (app) {
             // only accepts a string or a function
             var fn = isString(handler) ? box[handler] : handler,
                 valid = !isFunction(fn) && exception({
-                    message: 'handler must be a function'
+                    message: 'handler must be a function or a string with a method on the prototype of the listener'
                 });
             return duff(gapSplit(events), function (eventName) {
                 iterator(box, eventName, {
@@ -130,7 +134,7 @@ app.scope(function (app) {
             return listening;
         },
         DEFAULT_PREVENTED = 'defaultPrevented',
-        SERIALIZED_DATA = '_serializedData',
+        SERIALIZED_DATA = '_sharedData',
         ObjectEvent = factories.Directive.extend('ObjectEvent', {
             constructor: function (data, target, name, options) {
                 var evnt = this;
@@ -234,10 +238,12 @@ app.scope(function (app) {
             watchOnce: setupWatcher(attachEventObject, 0, 1),
             watchOther: setupWatcher(listenToHandler, 1),
             watchOtherOnce: setupWatcher(listenToHandler, 1, 1),
-            resetEvents: directives.parody(EVENTS, 'reset'),
             request: directives.parody('messenger', 'request'),
             reply: directives.parody('messenger', 'reply'),
             when: directives.parody('Linguistics', 'when'),
+            mark: directives.parody(STATUS, 'mark'),
+            unmark: directives.parody(STATUS, 'unmark'),
+            is: directives.checkParody(STATUS, 'is', BOOLEAN_FALSE),
             constructor: function (opts) {
                 var model = this;
                 extend(model, opts);
@@ -249,6 +255,8 @@ app.scope(function (app) {
             },
             destroy: function () {
                 this[STOP_LISTENING]();
+                // this.directive(EVENTS).reset();
+                return this;
             },
             /**
              * @description attaches an event handler to the events object, and takes it off as soon as it runs once
@@ -347,5 +355,30 @@ app.scope(function (app) {
                     return evnt.returnValue;
                 }
             }
-        }, BOOLEAN_TRUE);
+        }, BOOLEAN_TRUE),
+        StatusMarker = factories.Extendable.extend('StatusMarker', {
+            constructor: function () {
+                this[STATUSES] = {};
+                return this;
+            },
+            has: function (status) {
+                return this[STATUSES][status] !== UNDEFINED;
+            },
+            mark: function (status) {
+                this[STATUSES][status] = BOOLEAN_TRUE;
+            },
+            unmark: function (status) {
+                this[STATUSES][status] = BOOLEAN_FALSE;
+            },
+            toggle: function (status, direction) {
+                this[STATUSES][status] = direction === UNDEFINED ? !this[STATUSES][status] : !!direction;
+            },
+            is: function (status) {
+                return this[STATUSES][status];
+            },
+            isNot: function (status) {
+                return !this.is(status);
+            }
+        });
+    app.defineDirective(STATUS, StatusMarker[CONSTRUCTOR]);
 });

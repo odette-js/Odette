@@ -30,12 +30,14 @@ application.scope().run(function (app, _, factories) {
         });
         it('has an element that you can interact with', function () {
             expect(_.isInstance(view.el, factories.DomManager)).toEqual(true);
+            window.readytostop = true;
         });
-        it('can even have extra elements tied to it... but only when it is rendered', function () {
-            expect(_.isString(complexView.ui.there)).toEqual(true);
-            complexView.render();
-            expect(_.isInstance(complexView.ui.there, factories.DOMM)).toEqual(true);
-        });
+        // this test is invalid because there should be no ui available before render
+        // it('can even have extra elements tied to it... but only when it is rendered', function () {
+        //     expect(_.isString(complexView.ui.there)).toEqual(true);
+        //     complexView.render();
+        //     expect(_.isInstance(complexView.ui.there, factories.DOMM)).toEqual(true);
+        // });
         it('can be rendered', function () {
             expect(complexView.el.html()).toEqual('');
             complexView.render();
@@ -53,10 +55,11 @@ application.scope().run(function (app, _, factories) {
             expect(complexView.el.element().parentNode).toEqual(null);
         });
         it('can have extra elements', function () {
-            expect(_.isObject(complexView.ui)).toEqual(true);
-            expect(_.isString(complexView.ui.there)).toEqual(true);
+            // expect(_.isObject(complexView.ui)).toEqual(true);
+            // expect(_.isString(complexView.ui.there)).toEqual(true);
             complexView.render();
             expect(_.isInstance(complexView.ui.there, factories.DOMM)).toEqual(true);
+            expect(complexView.ui.there.length()).toEqual(1);
         });
         it('can also attach events to it\'s element', function () {
             expect(count).toEqual(0);

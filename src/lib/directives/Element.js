@@ -57,134 +57,161 @@ app.scope(function (app) {
                 if (selector) {
                     element[SELECTOR] = selector;
                 }
-                if (!isInstance(selector, factories.DOMM)) {
-                    if (isString(selector)) {
-                        // sets external element
-                        el = selector;
-                    } else {
-                        // defauts back to wrapping the element
-                        // creates internal element
-                        el = element.create(result(view, 'tagName'));
-                        // subclassed to expand the attributes that can be used
-                    }
-                    element.set(el);
+                if (isInstance(selector, factories.DOMM)) {
+                    return;
                 }
+                if (isString(selector)) {
+                    // sets external element
+                    el = selector;
+                } else {
+                    // defauts back to wrapping the element
+                    // creates internal element
+                    el = element.create(result(view, 'tagName'));
+                    // subclassed to expand the attributes that can be used
+                }
+                element.set(el, BOOLEAN_FALSE);
             },
             create: function (tag) {
-                return $($.createElement(tag)).index(0);
+                return $.createElement(tag);
             },
-            set: function (el) {
-                this.view.el = this.el = factories.DomManager.isInstance(el) ? el : $(el).index(0);
+            unset: function () {
+                var element = this;
+                // element.undelegateEvents();
+                // element.undelegateTriggers();
+                delete element.view.el;
+                delete element.el;
             },
-            delegate: function () {
-                var key, method, match, elDir = this,
-                    view = elDir.view,
-                    el = elDir.el,
-                    elementBindings = elDir.elementBindings || result(view, 'elementEvents'),
+            set: function (el, render) {
+                var directive = this;
+                directive.view.el = directive.el = el;
+                // directive.degenerateUIBindings();
+                // if (render !== BOOLEAN_FALSE) {
+                //     directive.render(render);
+                //     directive.generateUIBindings();
+                //     directive.bindUI();
+                //     if (newelementisDifferent) {
+                //         directive.delegateEvents();
+                //         directive.delegateTriggers();
+                //     }
+                // }
+            },
+            render: function (html) {
+                var element = this;
+                element.el.html(html || '');
+                return element;
+            },
+            degenerateUIBindings: function () {
+                var directive = this;
+                if (!directive.ui) {
+                    return;
+                }
+                directive.ui = directive.view.ui = directive.uiBindings;
+                delete directive.uiBindings;
+            },
+            generateUIBindings: function () {
+                var directive = this,
+                    uiBindings = directive.uiBindings || result(directive.view, 'ui'),
+                    ui = directive.ui = directive.ui || {};
+                if (directive.uiBindings) {
+                    return directive;
+                }
+                // save it to skip the result call later
+                directive.uiBindings = uiBindings;
+                return directive;
+            },
+            delegateEvents: function () {
+                var key, method, match, directive = this,
+                    view = directive.view,
+                    el = directive.el,
+                    elementBindings = directive.elementBindings || result(view, 'elementEvents'),
                     __events = [];
-                if (elDir.elementBindings) {
-                    elDir.elementBindings = elementBindings;
+                if (directive.elementBindings) {
+                    directive.elementBindings = elementBindings;
                 }
                 if (!el) {
-                    return elDir;
+                    return directive;
                 }
                 each(elementBindings, function (method, key) {
-                    var object = makeDelegateEventKeys(view.cid, elDir.uiBindings, key),
+                    var object = makeDelegateEventKeys(view.cid, directive.uiBindings, key),
                         bound = object.fn = bind(view[method] || method, view);
                     __events.push(object);
                     el.on(object.events.join(SPACE), object[SELECTOR], bound);
                 });
-                elDir.cachedElementBindings = __events;
-                return elDir;
+                directive.cachedElementBindings = __events;
+                return directive;
             },
-            undelegate: function () {
-                var key, method, match, elDir = this,
-                    view = elDir.view,
-                    el = elDir.el,
-                    elementBindings = elDir.cachedElementBindings;
+            undelegateEvents: function () {
+                var key, method, match, directive = this,
+                    view = directive.view,
+                    el = directive.el,
+                    elementBindings = directive.cachedElementBindings;
                 if (!elementBindings || !el) {
-                    return elDir;
+                    return directive;
                 }
                 duff(elementBindings, function (binding) {
                     el.off(binding.events.join(SPACE), binding[SELECTOR], binding.fn);
                 });
-                elDir.cachedElementBindings = UNDEFINED;
-                return elDir;
+                directive.cachedElementBindings = UNDEFINED;
+                return directive;
             },
             delegateTriggers: function () {
-                var key, method, match, elDir = this,
-                    view = elDir.view,
-                    el = elDir.el,
-                    elementTriggers = elDir.elementTriggers || result(view, 'elementTriggers'),
+                var key, method, match, directive = this,
+                    view = directive.view,
+                    el = directive.el,
+                    elementTriggers = directive.elementTriggers || result(view, 'elementTriggers'),
                     __events = [];
-                if (!elDir.elementTriggers) {
-                    elDir.elementTriggers = elementTriggers;
+                if (!directive.elementTriggers) {
+                    directive.elementTriggers = elementTriggers;
                 }
                 if (!el) {
-                    return elDir;
+                    return directive;
                 }
                 each(elementTriggers, function (method, key) {
-                    var object = makeDelegateEventKeys(view.cid, elDir.uiBindings, key),
+                    var object = makeDelegateEventKeys(view.cid, directive.uiBindings, key),
                         bound = object.fn = basicViewTrigger.bind(view, method);
                     el.on(object.events.join(SPACE), object[SELECTOR], bound);
                 });
-                elDir.cachedElementTriggers = __events;
+                directive.cachedElementTriggers = __events;
             },
             undelegateTriggers: function () {
-                var key, method, match, elDir = this,
-                    view = elDir.view,
-                    el = elDir.el,
-                    elementBindings = elDir.cachedElementTriggers;
-                if (!elDir.cachedElementTriggers || !el) {
-                    return elDir;
+                var key, method, match, directive = this,
+                    view = directive.view,
+                    el = directive.el,
+                    elementBindings = directive.cachedElementTriggers;
+                if (!directive.cachedElementTriggers || !el) {
+                    return directive;
                 }
                 duff(elementBindings, function (binding) {
                     el.off(binding.events.join(SPACE), binding[SELECTOR], binding.fn);
                 });
-                elDir.cachedElementTriggers = UNDEFINED;
-                return elDir;
+                directive.cachedElementTriggers = UNDEFINED;
+                return directive;
             },
             setAttributes: function () {
-                var elDir = this,
-                    view = elDir.view,
+                var directive = this,
+                    view = directive.view,
                     attrs = result(view, 'elementAttributes');
                 if (view[CLASSNAME]) {
                     attrs = attrs || {};
                     attrs[CLASS] = result(view, CLASSNAME);
                 }
                 if (attrs) {
-                    elDir.el.attr(attrs);
+                    directive.el.attr(attrs);
                 }
-            },
-            render: function (html) {
-                var element = this;
-                element.undelegate();
-                element.undelegateTriggers();
-                element.unbindUI();
-                element.el.html(html || '');
-                element.bindUI();
-                element.delegate();
-                element.delegateTriggers();
+                return directive;
             },
             bindUI: function () {
-                var elDir = this,
-                    uiBindings = elDir.uiBindings || result(elDir.view, 'ui'),
-                    ui = elDir.ui = elDir.ui || {};
-                if (elDir.uiBindings) {
-                    return elDir;
-                }
-                // save it to skip the result call later
-                elDir.uiBindings = uiBindings;
-                elDir.ui = elDir.view.ui = map(uiBindings, elDir.el.$, elDir.el);
-                return elDir;
-            },
-            unbindUI: function () {
-                var elDir = this;
-                if (elDir.ui) {
-                    elDir.ui = elDir.uiBindings = UNDEFINED;
-                    delete elDir.view.ui;
-                }
+                var directive = this,
+                    uiBindings = directive.uiBindings;
+                directive.ui = directive.view.ui = map(uiBindings, directive.el.$, directive.el);
+                return directive;
             }
         });
-    app.defineDirective(ELEMENT, Element[CONSTRUCTOR]);
+    app.defineDirective(ELEMENT, Element[CONSTRUCTOR], function (directive, instance) {
+        directive.el.destroy();
+        directive.unset();
+        var ui = directive.ui;
+        directive.degenerateUIBindings();
+        _.eachCall(ui, 'destroy');
+    });
 });

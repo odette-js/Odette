@@ -91,7 +91,7 @@ app.scope(function (app) {
              * @func
              * @name Model#unset
              */
-            unset: _.directives.parodyCheck(DATA, 'unset'),
+            unset: _.directives.checkParody(DATA, 'unset'),
             /**
              * @description returns attribute passed into
              * @param {String} attr - property string that is being gotten from the attributes object
@@ -99,7 +99,7 @@ app.scope(function (app) {
              * @func
              * @name Model#get
              */
-            get: _.directives.parodyCheck(DATA, 'get'),
+            get: _.directives.checkParody(DATA, 'get'),
             /**
              * @func
              * @param {String} attr - property string that is being gotten from the attributes object
@@ -107,7 +107,7 @@ app.scope(function (app) {
              * @description checks to see if the current attribute is on the attributes object as anything other an undefined
              * @name Model#has
              */
-            has: _.directives.parodyCheck(DATA, 'has'),
+            has: _.directives.checkParody(DATA, 'has', BOOLEAN_FALSE),
             setId: function (id) {
                 var model = this;
                 model.id = id === UNDEFINED ? uniqueId(BOOLEAN_FALSE, BOOLEAN_TRUE) : id;
@@ -148,16 +148,17 @@ app.scope(function (app) {
              * @returns {Model} instance
              */
             destroy: function () {
-                var removeRet, box = this;
+                var removeRet, model = this;
                 // notify things like parent that it's about to destroy itself
-                box[DISPATCH_EVENT](BEFORE_DESTROY);
+                model[DISPATCH_EVENT](BEFORE_DESTROY);
                 // actually detach
-                removeRet = box[PARENT] && box[PARENT].remove(box);
+                removeRet = model[PARENT] && model[PARENT].remove(model);
                 // stop listening to other views
-                box[DISPATCH_EVENT](DESTROY);
+                model[DISPATCH_EVENT](DESTROY);
                 // stops listening to everything
-                factories.Events[CONSTRUCTOR][PROTOTYPE].destroy.call(box);
-                return box;
+                factories.Events[CONSTRUCTOR][PROTOTYPE].destroy.call(model);
+                delete model.id;
+                return model;
             },
             set: function (key, value) {
                 var changedList = [],
@@ -233,15 +234,15 @@ app.scope(function (app) {
             },
             Child: modelMaker,
             /**
-             * @description resets the box's attributes to the object that is passed in
+             * @description resets the model's attributes to the object that is passed in
              * @name Model#reset
              * @func
              * @param {Object} attributes - non circular hash that is extended onto what the defaults object produces
              * @returns {Model} instance the method was called on
              */
             resetChildren: function (newChildren) {
-                var length, child, box = this,
-                    children = box.directive(CHILDREN),
+                var length, child, model = this,
+                    children = model.directive(CHILDREN),
                     arr = children[UNWRAP]();
                 // this can be made far more efficient
                 while (arr[LENGTH]) {
@@ -257,8 +258,8 @@ app.scope(function (app) {
                         remove(arr, child);
                     }
                 }
-                box.add(newChildren);
-                return box;
+                model.add(newChildren);
+                return model;
             },
             isChildType: function (child) {
                 return isInstance(child, this.Child);
@@ -270,13 +271,13 @@ app.scope(function (app) {
                     evt = model[DISPATCH_EVENT] && model[DISPATCH_EVENT](BEFORE_COLON + ADDED);
                 // let the child know it's about to be added
                 // (tied to it's parent via events)
-                // unties boxes
+                // unties models
                 parent._remove(model);
                 // explicitly tie to parent
                 model[PARENT] = parent;
                 // attach events from parent
                 _addToHash(parent, model);
-                // ties boxes together
+                // ties models together
                 _delegateParentEvents(parent, model);
                 _delegateChildEvents(parent, model);
                 evt = model[DISPATCH_EVENT] && model[DISPATCH_EVENT](ADDED);
@@ -298,11 +299,12 @@ app.scope(function (app) {
                         // create a new model
                         // call it with new in case they use a constructor
                         newModel = isChildType ? obj : new parent.Child(obj, secondary),
-                        // find by the newly created's id
-                        foundModel = children.get(newModel.id);
+                        // unfortunately we can only find by the newly created's id
+                        // which we only know for sure after the child has been created ^
+                        foundModel = children.get(ID, newModel.id);
                     if (foundModel) {
                         // update the old
-                        foundModel.set(obj);
+                        foundModel.set(isChildType ? obj[TO_JSON]() : obj);
                         newModel = foundModel;
                     } else {
                         // add the new
@@ -317,6 +319,7 @@ app.scope(function (app) {
                 }
                 return list;
             },
+            // lots of private events
             _remove: function (model) {
                 // cache the parent
                 var parent = this;
@@ -340,6 +343,11 @@ app.scope(function (app) {
                 var models, parent = this,
                     retList = Collection(),
                     idModel = idModel_;
+                if (idModel_ == NULL) {
+                    parent = this.parent;
+                    retList = parent.remove(this);
+                    return this;
+                }
                 if (!isObject(idModel)) {
                     // it's an id
                     idModel = parent.directive(CHILDREN).get(ID, idModel + EMPTY_STRING);
@@ -366,7 +374,7 @@ app.scope(function (app) {
              * @name Model#sort
              */
             sort: function (comparator_) {
-                var comparatorString, isReversed, model = this,
+                var comparingAttribute, isReversed, model = this,
                     children = model[CHILDREN],
                     comparator = comparator_ || result(model, 'comparator');
                 if (!children) {
@@ -374,13 +382,13 @@ app.scope(function (app) {
                 }
                 if (isString(comparator)) {
                     isReversed = comparator[0] === '!';
-                    comparatorString = comparator;
+                    comparingAttribute = comparator;
                     if (isReversed) {
-                        comparatorString = comparator.slice(1);
+                        comparingAttribute = comparator.slice(1);
                     }
                     comparator = function (a, b) {
-                        var val_, val_A = a.get(comparatorString),
-                            val_B = b.get(comparatorString);
+                        var val_, val_A = a.get(comparingAttribute),
+                            val_B = b.get(comparingAttribute);
                         if (isReversed) {
                             val_ = val_B - val_A;
                         } else {
@@ -394,8 +402,12 @@ app.scope(function (app) {
                 return model;
             }
         }, BOOLEAN_TRUE);
+    // children should actually extend from collection.
+    // it should require certain things of the children it is tracking
+    // and should be able to listen to them
     app.defineDirective(CHILDREN, function () {
         return new Collection[CONSTRUCTOR](NULL, BOOLEAN_TRUE);
     });
+    // trick the modelMaker into thinking it is a Model Constructor
     modelMaker[CONSTRUCTOR] = Model[CONSTRUCTOR];
 });

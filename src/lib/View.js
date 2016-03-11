@@ -11,8 +11,8 @@ app.scope(function (app) {
         intendedObject = _.intendedObject,
         createDocumentFragment = _.createDocumentFragment,
         RENDER = 'render',
+        RENDERED = RENDER + 'ed',
         OPTIONS = 'options',
-        IS_RENDERED = 'isRendered',
         PARENT_NODE = 'parentNode',
         CONSTRUCTOR = 'constructor',
         BUFFERED_VIEWS = 'bufferedViews',
@@ -86,46 +86,49 @@ app.scope(function (app) {
                 view[PARENT] = NULL;
                 children.remove(view);
             },
-            attachElement: function (view) {
+            attach: function (view) {
                 var parentNode, bufferDirective, el = view.el && view.el.element();
-                if (el) {
-                    parentNode = el.parentNode;
-                    bufferDirective = this.directive(BUFFERED_VIEWS);
-                    if (!parentNode || parentNode !== bufferDirective.region.el.element()) {
-                        bufferDirective.els.appendChild(el);
-                    }
+                if (!el) {
+                    return;
                 }
+                parentNode = el.parentNode;
+                bufferDirective = this.directive(BUFFERED_VIEWS);
+                if (parentNode && parentNode === bufferDirective.region.el.element()) {
+                    return;
+                }
+                bufferDirective.els.appendChild(el);
             },
+            // this needs to be modified for shared windows
             setElement: function () {
                 var manager, region = this,
                     selector = region[SELECTOR],
                     parent = region[PARENT][PARENT];
                 if (parent !== app) {
-                    if (parent.isRendered) {
-                        manager = parent.$(selector)[INDEX](0);
+                    if (parent.is(RENDERED)) {
+                        manager = parent.el.$(selector)[INDEX](0);
                     }
                 } else {
-                    manager = $(selector)[INDEX](0);
+                    manager = (region._owner$ || $)(selector)[INDEX](0);
                 }
-                if (manager) {
-                    region.directive(ELEMENT).set(manager);
+                if (!manager) {
+                    return;
                 }
+                region.directive(ELEMENT).set(manager);
             },
             render: function () {
                 var region = this,
                     bufferDirective = region.directive(BUFFERED_VIEWS),
                     elementDirective = region.directive(ELEMENT);
-                region[IS_RENDERED] = BOOLEAN_FALSE;
+                region.unmark(RENDERED);
                 // doc frags on regionviews, list of children to trigger events on
                 bufferDirective.ensure();
                 // request extra data or something before rendering: dom is still completely intact
                 region[DISPATCH_EVENT]('before:' + RENDER);
                 // unbinds and rebinds element only if it changes
-                // update new element's attributes
                 region.setElement();
+                // update new element's attributes
                 elementDirective.setAttributes();
                 // puts children back inside parent
-                // bufferDirective.attach();
                 region[CHILDREN].eachCall(RENDER);
                 // attach region element
                 // appends child elements
@@ -133,7 +136,7 @@ app.scope(function (app) {
                 // pass the buffered views up
                 // region.passBuffered(list);
                 // mark the view as rendered
-                region[IS_RENDERED] = BOOLEAN_TRUE;
+                region.mark(RENDERED);
                 // reset buffered objects
                 bufferDirective.reset();
                 // dispatch the render event
@@ -141,26 +144,12 @@ app.scope(function (app) {
                 return region;
             }
         }, BOOLEAN_TRUE),
+        // view needs to be pitted against a document
         View = Region.extend('View', {
             tagName: 'div',
             filter: BOOLEAN_TRUE,
+            templateIsElement: BOOLEAN_FALSE,
             getRegion: getRegion,
-            $: function (selector) {
-                return this.el.$(selector);
-            },
-            setElement: function (element) {
-                var view = this,
-                    previousElement = view.el,
-                    elementDirective = view.directive(ELEMENT);
-                // detaches events with this view's namespace
-                elementDirective.set(element);
-                if (previousElement !== view.el) {
-                    elementDirective.undelegate(previousElement);
-                    elementDirective.delegate();
-                }
-                // attaches events with this view's namespace
-                return view;
-            },
             template: function () {
                 return EMPTY_STRING;
             },
@@ -191,29 +180,25 @@ app.scope(function (app) {
             valueOf: function () {
                 return this.id;
             },
-            remove: function () {
-                var el, view = this;
-                Model[CONSTRUCTOR][PROTOTYPE].remove.apply(view, arguments);
-                // if you were not told to select something in
-                // _ensureElements then remove the view from the dom
-                view.detach();
-                return view;
-            },
             destroy: function () {
                 var view = this;
-                Model[CONSTRUCTOR][PROTOTYPE].destroy.call(view);
+                if (view.is('destroying')) {
+                    return view;
+                }
+                view.mark('destroying');
+                if (view[REGION_MANAGER]) {
+                    view[REGION_MANAGER].list.eachCall('destroy');
+                }
                 view.el.destroy();
+                view.directiveDestruction(ELEMENT);
+                Model[CONSTRUCTOR][PROTOTYPE].destroy.call(view);
                 return view;
             },
-            rendered: function () {
-                return this[IS_RENDERED];
-            },
-            destroyed: function () {
-                return this.isDestroyed;
-            },
             render: function () {
-                var element, json, bufferedDirective, template, view = this;
-                view[IS_RENDERED] = BOOLEAN_FALSE;
+                var newelementisDifferent, element, json, html, renderResult, bufferedDirective, template, settingElement, view = this,
+                    // you might be able to do this a better way
+                    neverRendered = !view.is(RENDERED);
+                view.unmark(RENDERED);
                 if (!result(view, 'filter')) {
                     return view;
                 }
@@ -222,27 +207,48 @@ app.scope(function (app) {
                 // list of children to trigger events on)
                 // request extra data or something before rendering: dom is still completely intact
                 view[DISPATCH_EVENT]('before:' + RENDER);
+                // renders the html
+                if (isFunction(view.template)) {
+                    json = view.model && view.model.toJSON();
+                    // try to generate template
+                    html = view.template(json);
+                } else {
+                    html = view.template;
+                }
+                settingElement = view.el;
+                if (result(view, 'templateIsElement')) {
+                    settingElement = view.el.owner.fragment(html).children();
+                    html = BOOLEAN_FALSE;
+                }
+                newelementisDifferent = settingElement !== element.el;
+                if (newelementisDifferent) {
+                    element.unset();
+                }
+                // turns ui into a string
+                element.degenerateUIBindings();
                 // unbinds and rebinds element only if it changes
-                view.setElement(view.el);
+                element.set(settingElement);
+                if (html !== BOOLEAN_FALSE) {
+                    element.render(html);
+                }
+                element.generateUIBindings();
+                element.bindUI();
+                if (newelementisDifferent || neverRendered) {
+                    element.delegateEvents();
+                    element.delegateTriggers();
+                }
                 // update new element's attributes
                 element.setAttributes();
-                // renders the html
-                json = view.model && view.model.toJSON();
-                // try to generate template
-                template = result(view, 'template', json);
-                // render the template
-                element.render(template);
                 // mark the view as rendered
-                view[IS_RENDERED] = BOOLEAN_TRUE;
-                // bufferedDirective = view[BUFFERED_VIEWS];
-                // view.buffer();
-                element = view[PARENT] && view[PARENT].attachElement(view);
-                // pass buffered views up to region
+                view.establishRegions();
+                view.mark(RENDERED);
                 // dispatch the render event
                 view[DISPATCH_EVENT](RENDER);
-                // if (view[IS_RENDERED]) {
-                view.directive(REGION_MANAGER).list.eachCall(RENDER);
-                // }
+                // pass buffered views up to region
+                if (view[REGION_MANAGER]) {
+                    view[REGION_MANAGER].list.eachCall(RENDER);
+                }
+                element = view[PARENT] && view[PARENT].attach(view);
                 return view;
             }
         }, BOOLEAN_TRUE),

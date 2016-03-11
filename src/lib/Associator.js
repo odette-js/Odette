@@ -70,8 +70,10 @@ app.scope(function (app) {
                     delete type[__ELID__][idx];
                 } else {
                     idx = _[INDEX_OF](type[ITEMS], el);
-                    removeAt(type[DATA], idx);
-                    removeAt(type[ITEMS], idx);
+                    if (idx !== -1) {
+                        removeAt(type[DATA], idx);
+                        removeAt(type[ITEMS], idx);
+                    }
                 }
             },
             /**
