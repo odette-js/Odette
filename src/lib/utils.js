@@ -899,7 +899,11 @@ var factories = {},
         }) && collection;
     },
     arrayLikeToArray = function (arrayLike) {
-        return Array.apply(NULL, arrayLike);
+        if (arrayLike[LENGTH] === 1) {
+            return [arrayLike[0]];
+        } else {
+            return Array.apply(NULL, arrayLike);
+        }
     },
     objectToArray = function (obj) {
         return !obj ? [] : foldl(obj, function (memo, item) {
