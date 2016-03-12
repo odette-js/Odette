@@ -249,7 +249,7 @@ app.scope(function (app) {
                     return;
                 }
                 buster.iframe = iframe;
-                if (iframe.isAttached && (windo = iframe.window())) {
+                if (iframe.is('attached') && (windo = iframe.window())) {
                     buster.defineWindows(NULL, windo);
                 }
                 if (iframe) {

@@ -21,7 +21,6 @@ app.scope(function (app) {
                 eventsDirective.removeQueue = Collection();
                 return eventsDirective;
             },
-            destroy: function () {},
             attach: function (name, eventObject) {
                 var list, eventsDirective = this,
                     handlers = eventsDirective[HANDLERS],
@@ -33,13 +32,19 @@ app.scope(function (app) {
                 eventObject.context = eventObject.context || eventObject.origin;
                 eventObject.fn = bind(eventObject.fn || eventObject.handler, eventObject.context);
                 // attach the id to the bound function because that instance is private
-                eventObject.fn[__FN_ID__] = eventObject.id;
+                // eventObject.fn[__FN_ID__] = eventObject.id;
                 list = handlers[name] = handlers[name] || SortedCollection();
                 // attaching name so list can remove itself from hash
                 list[NAME] = name;
                 // attached so event can remove itself
                 eventObject.list = list;
-                list.add(eventObject);
+                eventsDirective.add(list, eventObject);
+            },
+            add: function (list, evnt) {
+                list.add(evnt);
+            },
+            remove: function (list, evnt) {
+                list.remove(evnt);
             },
             detach: function (evnt) {
                 var listeningTo, events = this,
@@ -50,7 +55,7 @@ app.scope(function (app) {
                     events[REMOVE_QUEUE].add(evnt);
                     return BOOLEAN_FALSE;
                 } else {
-                    list.remove(evnt);
+                    events.remove(list, evnt);
                     // disconnect it from the list above it
                     evnt.list = UNDEFINED;
                     // check to see if it was a listening type
@@ -99,32 +104,35 @@ app.scope(function (app) {
                     list = handlers[name],
                     removeList = events[REMOVE_QUEUE],
                     running = events.running,
-                    cached = running[name];
-                if (cached || evnt[IMMEDIATE_PROP_IS_STOPPED] || !list || !list[LENGTH]()) {
+                    cached = running[name],
+                    stopped = evnt[PROPAGATION_IS_STOPPED];
+                // make sure setup is proper
+                if (cached || stopped || !list || !list[LENGTH]()) {
                     return;
                 }
                 running[name] = BOOLEAN_TRUE;
-                list = list.unwrap();
+                list = events.subset(list.unwrap(), evnt);
                 listLength = list[LENGTH];
-                for (; i < listLength && !cached; i++) {
+                for (; i < listLength && !stopped; i++) {
                     handler = list[i];
                     if (!handler.disabled && events.queue(stack, handler, evnt)) {
                         handler.fn(evnt);
-                        cached = !!evnt[IMMEDIATE_PROP_IS_STOPPED];
+                        stopped = !!evnt[IMMEDIATE_PROP_IS_STOPPED];
                         events.unQueue(stack, handler, evnt);
                     }
                 }
+                running[name] = !!cached;
                 if (!stack[LENGTH]() && removeList[LENGTH]()) {
                     removeList.duffRight(events.detach, events);
                     removeList.empty();
                 }
-                if (cached === UNDEFINED) {
-                    delete running[name];
-                } else {
-                    running[name] = cached;
+                if (stopped) {
+                    events.cancelled(stack, evnt, i);
                 }
                 evnt.finished();
-                return evnt.returnValue;
+            },
+            subset: function (list) {
+                return list;
             }
         }, BOOLEAN_TRUE);
     app.defineDirective(EVENTS, factories.EventsDirective[CONSTRUCTOR]);

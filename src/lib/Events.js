@@ -243,6 +243,7 @@ app.scope(function (app) {
             when: directives.parody('Linguistics', 'when'),
             mark: directives.parody(STATUS, 'mark'),
             unmark: directives.parody(STATUS, 'unmark'),
+            remark: directives.parody(STATUS, 'remark'),
             is: directives.checkParody(STATUS, 'is', BOOLEAN_FALSE),
             constructor: function (opts) {
                 var model = this;
@@ -347,11 +348,12 @@ app.scope(function (app) {
                 return this[DISPATCH_EVENT](name);
             },
             dispatchEvent: function (name, data, options) {
-                var eventsDirective, evnt, box = this;
-                eventsDirective = (eventsDirective = box[EVENTS]) && eventsDirective.has(name) && box[EVENTS];
+                var hasResult, evnt, box = this,
+                    eventsDirective = box[EVENTS];
                 if (eventsDirective && !eventsDirective.running[name]) {
                     evnt = box.createEvent(data, name, options);
                     eventsDirective.dispatch(name, evnt);
+                    eventsDirective.dispatch('proxy', evnt);
                     return evnt.returnValue;
                 }
             }
@@ -370,7 +372,7 @@ app.scope(function (app) {
             unmark: function (status) {
                 this[STATUSES][status] = BOOLEAN_FALSE;
             },
-            toggle: function (status, direction) {
+            remark: function (status, direction) {
                 this[STATUSES][status] = direction === UNDEFINED ? !this[STATUSES][status] : !!direction;
             },
             is: function (status) {
