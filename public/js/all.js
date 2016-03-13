@@ -6732,7 +6732,7 @@ app.scope(function (app) {
             registeredElements = clone(validTagsNamesHash);
             setup = function (e) {
                 manager.DOMContentLoadedEvent = e;
-                manager.isReady = BOOLEAN_TRUE;
+                manager.mark('ready');
             };
             query = function (sel, ctx) {
                 var context = ctx || manager;
@@ -6746,7 +6746,7 @@ app.scope(function (app) {
                 createElements: createElements,
                 createDocumentFragment: createDocumentFragment,
                 registeredElementName: registeredElementName,
-                query: query,
+                // query: query,
                 $: query,
                 fragment: function () {
                     return returnsManager(fragment(NULL, manager), manager);
@@ -6825,14 +6825,15 @@ app.scope(function (app) {
                 isFragment: isFragment,
                 isElement: isElement
             });
-            if (manager.isReady === UNDEFINED) {
-                manager.isReady = BOOLEAN_FALSE;
-                if (manager.element().readyState === 'complete') {
-                    setup({});
-                } else {
-                    manager.on('DOMContentLoaded', setup);
-                }
-            }
+            setupDomContentLoaded(setup, manager);
+            // if (manager.isReady === UNDEFINED) {
+            //     manager.isReady = BOOLEAN_FALSE;
+            //     if (manager.element().readyState === 'complete') {
+            //         setup({});
+            //     } else {
+            //         manager.on('DOMContentLoaded', setup);
+            //     }
+            // }
             return query;
         },
         styleManipulator = function (one, two) {
@@ -7296,7 +7297,7 @@ app.scope(function (app) {
                 return 1;
             },
             wrap: function (list) {
-                return this.owner.query(list || this);
+                return this.owner.$(list || this);
             },
             unwrap: function () {
                 return [this];
@@ -7809,10 +7810,13 @@ app.scope(function (app) {
         }),
         setupDomContentLoaded = function (handler, documentManager) {
             var bound = bind(handler, documentManager);
-            if (documentManager.isReady) {
+            if (documentManager.is('ready')) {
                 bound($, documentManager.DOMContentLoadedEvent);
             } else {
                 documentManager.on('DOMContentLoaded', function (e) {
+                    bound($, e);
+                });
+                documentManager.window().on('load', function (e) {
                     bound($, e);
                 });
             }
@@ -8125,7 +8129,7 @@ app.scope(function (app) {
                 var isStringResult, els, shouldClone = !!shouldClone_,
                     owner = context.owner;
                 if (!(isStringResult = isString(element))) {
-                    els = isAppendable(els_) ? owner.returnsManager(els_) : owner.query(els_).fragment();
+                    els = isAppendable(els_) ? owner.returnsManager(els_) : owner.$(els_).fragment();
                 }
                 return context.foldl(function (memo, manager, index) {
                     var elements;
@@ -8277,7 +8281,7 @@ app.scope(function (app) {
     $.collectTemplates();
     // register all custom elements...
     // everything that's created after this should go through the DomManager to be marked appropriately
-    duff($.query(CUSTOM_ATTRIBUTE), returnsManager);
+    duff($(CUSTOM_ATTRIBUTE), $.returnsManager);
     // add $ to module madness
     // app.addModuleArguments([$]);
     // define a hash for attribute caching
@@ -9584,8 +9588,8 @@ app.scope(function (app) {
                 return view;
             }
         }, BOOLEAN_TRUE),
-        _View = factories.View;
-    var establishRegion = function (key, selector) {
+        _View = factories.View,
+        establishRegion = function (key, selector) {
             var regionManagerDirective = this,
                 parentView = regionManagerDirective[PARENT];
             if (!key) {
@@ -9601,9 +9605,9 @@ app.scope(function (app) {
                 } else {
                     $selected = $(region[SELECTOR])[INDEX](0);
                 }
-                if ($selected) {
-                    region.el = $selected;
-                }
+                // if ($selected) {
+                region.el = $selected;
+                // }
             });
             return regionManagerDirective;
         },

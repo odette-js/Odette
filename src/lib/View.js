@@ -252,8 +252,8 @@ app.scope(function (app) {
                 return view;
             }
         }, BOOLEAN_TRUE),
-        _View = factories.View;
-    var establishRegion = function (key, selector) {
+        _View = factories.View,
+        establishRegion = function (key, selector) {
             var regionManagerDirective = this,
                 parentView = regionManagerDirective[PARENT];
             if (!key) {
@@ -269,9 +269,9 @@ app.scope(function (app) {
                 } else {
                     $selected = $(region[SELECTOR])[INDEX](0);
                 }
-                if ($selected) {
-                    region.el = $selected;
-                }
+                // if ($selected) {
+                region.el = $selected;
+                // }
             });
             return regionManagerDirective;
         },
