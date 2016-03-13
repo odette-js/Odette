@@ -4052,26 +4052,23 @@ app.scope(function (app) {
                 eventsDirective.removeQueue = Collection();
                 return eventsDirective;
             },
-            attach: function (names, eventObject) {
+            attach: function (name, eventObject) {
                 var list, eventsDirective = this,
                     handlers = eventsDirective[HANDLERS],
                     ret = !handlers && exception({
                         message: 'events directive needs a handler object'
                     });
-                duff(eventsDirective.names(names), function (name) {
-                    eventObject.id = ++event_incrementer;
-                    eventObject.valueOf = returnsId;
-                    eventObject.context = eventObject.context || eventObject.origin;
-                    eventObject.fn = bind(eventObject.fn || eventObject.handler, eventObject.context);
-                    // attach the id to the bound function because that instance is private
-                    // eventObject.fn[__FN_ID__] = eventObject.id;
-                    list = handlers[name] = handlers[name] || SortedCollection();
-                    // attaching name so list can remove itself from hash
-                    list[NAME] = name;
-                    // attached so event can remove itself
-                    eventObject.list = list;
-                    eventsDirective.add(list, eventObject);
-                });
+                eventObject.id = ++event_incrementer;
+                eventObject.valueOf = returnsId;
+                eventObject.context = eventObject.context || eventObject.origin;
+                eventObject.fn = bind(eventObject.fn || eventObject.handler, eventObject.context);
+                // attach the id to the bound function because that instance is private
+                list = handlers[name] = handlers[name] || SortedCollection();
+                // attaching name so list can remove itself from hash
+                list[NAME] = name;
+                // attached so event can remove itself
+                eventObject.list = list;
+                eventsDirective.add(list, eventObject);
             },
             names: function (name) {
                 return [name];
@@ -5428,7 +5425,11 @@ app.scope(function (app) {
             };
         }()),
         writeAttribute = function (el, key, val_) {
-            el.setAttribute(key, (val_ === BOOLEAN_TRUE ? EMPTY_STRING : stringify(val_)) + EMPTY_STRING);
+            if (val_ === BOOLEAN_FALSE || val_ == NULL) {
+                removeAttribute(el, key);
+            } else {
+                el.setAttribute(key, (val_ === BOOLEAN_TRUE ? EMPTY_STRING : stringify(val_)) + EMPTY_STRING);
+            }
         },
         readAttribute = function (el, key) {
             var coerced, val = el.getAttribute(key);
@@ -6262,54 +6263,20 @@ app.scope(function (app) {
             return isFunction(handler) ? _removeEventListener(manager, name, group, selector, handler, capture) : manager;
         }),
         _addEventListener = function (manager, types, group, selector, handler, capture) {
-            var handleObj, eventHandler, el = manager.element(),
-                events = manager.directive(EVENTS),
-                elementHandlers = events.elementHandlers = events.elementHandlers || {},
-                // fn = bind(handler, manager),
-                wasCustom = manager.is(CUSTOM);
+            var events, wasCustom = manager.is(CUSTOM);
             duff(gapSplit(types), eventExpander(function (name, passedName) {
-                var foundDuplicate, handlerKey = capture + COLON + name,
-                    handlers = events[HANDLERS][handlerKey] = events[HANDLERS][handlerKey] || SortedCollection(),
-                    mainHandler = elementHandlers[handlerKey];
-                if (!mainHandler) {
-                    eventHandler = function (e) {
-                        return eventDispatcher(manager, e.type, e, capture);
-                    };
-                    if (el.addEventListener) {
-                        el.addEventListener(name, eventHandler, capture);
-                    } else {
-                        if (capture) {
-                            return;
-                        }
-                        el.attachEvent(name, eventHandler);
-                    }
-                    mainHandler = elementHandlers[handlerKey] = {
-                        fn: eventHandler,
-                        __delegateCount: 0,
-                        events: events,
-                        currentEvent: NULL,
-                        capturing: capture
-                    };
-                }
-                foundDuplicate = handlers.find(function (obj) {
-                    return handler === obj.handler && obj.group === group && selector === obj.selector;
-                });
-                if (foundDuplicate) {
-                    return;
-                }
+                events = events || manager.directive(EVENTS);
                 if (!ALL_EVENTS_HASH[name]) {
                     manager.mark(CUSTOM_LISTENER);
                 }
-                // addEventQueue
-                events.attach(handlerKey, {
-                    valueOf: returnsId,
+                events.attach(capture + COLON + name, {
+                    origin: manager,
                     handler: handler,
-                    disabled: BOOLEAN_FALSE,
                     group: group,
-                    mainHandler: mainHandler,
                     selector: selector,
                     passedName: passedName,
-                    context: manager
+                    domName: name,
+                    domTarget: manager
                 });
             }));
             if (!wasCustom && manager.is(CUSTOM_LISTENER)) {
@@ -6319,16 +6286,13 @@ app.scope(function (app) {
             return manager;
         },
         eventToNamespace = function (evnt) {
+            var evntName;
             if (!isString(evnt)) {
                 evnt = evnt.type;
             }
             evnt = evnt.split(PERIOD);
-            var evntName = evnt.shift();
+            evntName = evnt.shift();
             return [evntName, evnt.sort().join(PERIOD)];
-        },
-        SortedCollection = factories.SortedCollection,
-        returnsId = function () {
-            return this.id;
         },
         appendChild = function (el) {
             return this.insertAt(el, NULL);
@@ -6401,8 +6365,8 @@ app.scope(function (app) {
                 return;
             }
             contentWindow = element.contentWindow;
-            manager.windowReady = !!contentWindow;
-            if (!manager.windowReady) {
+            manager.remark('windowReady', !!contentWindow);
+            if (!contentWindow) {
                 return;
             }
             contentWindowManager = manager.owner.returnsManager(contentWindow);
@@ -6659,9 +6623,13 @@ app.scope(function (app) {
             }, {});
         },
         markCustom = function (manager, forceCustom) {
-            var isCustom, isCustomValue = readAttribute(manager.element(), CUSTOM_KEY);
-            manager.remark(CUSTOM, (isCustom = forceCustom || !!isCustomValue));
-            (isCustom ? writeAttribute : removeAttribute)(manager.element(), CUSTOM_KEY, isCustomValue || BOOLEAN_TRUE);
+            var isCustom, isCustomValue = attributeApi.read(manager.element(), CUSTOM_KEY);
+            manager.remark(CUSTOM, forceCustom || !!isCustomValue);
+            if (manager.is(CUSTOM) && !isCustomValue) {
+                isCustomValue = BOOLEAN_TRUE;
+            }
+            // isCustomValue = isCustomValue || BOOLEAN_TRUE;
+            writeAttribute(manager.element(), CUSTOM_KEY, isCustomValue);
             if (isCustomValue) {
                 manager.registeredAs = isCustomValue;
             }
@@ -7103,9 +7071,42 @@ app.scope(function (app) {
                 }
             },
             add: function (list, evnt) {
-                var mainHandler, __delegateCount;
+                var __delegateCount, eventHandler, events = this,
+                    el = evnt.element,
+                    // needs an extra hash to care for the actual event hanlders that get attached to dom
+                    elementHandlers = events.elementHandlers = events.elementHandlers || {},
+                    name = list.name,
+                    mainHandler = elementHandlers[name],
+                    capture = evnt.capture,
+                    foundDuplicate = list.find(function (obj) {
+                        return evnt.handler === obj.handler && obj.group === evnt.group && evnt.selector === obj.selector;
+                    });
+                if (foundDuplicate) {
+                    return;
+                }
+                if (!mainHandler) {
+                    eventHandler = function (e) {
+                        return eventDispatcher(evnt.domTarget, e.type, e, capture);
+                    };
+                    el = evnt.origin.element();
+                    if (el.addEventListener) {
+                        el.addEventListener(evnt.domName, eventHandler, capture);
+                    } else {
+                        if (capture) {
+                            return;
+                        }
+                        el.attachEvent(evnt.domName, eventHandler);
+                    }
+                    mainHandler = elementHandlers[name] = {
+                        fn: eventHandler,
+                        __delegateCount: 0,
+                        events: events,
+                        currentEvent: NULL,
+                        capturing: capture
+                    };
+                }
+                evnt.mainHandler = mainHandler;
                 if (evnt.selector) {
-                    mainHandler = evnt.mainHandler;
                     __delegateCount = mainHandler.__delegateCount;
                     ++mainHandler.__delegateCount;
                     if (__delegateCount) {
@@ -7583,7 +7584,7 @@ app.scope(function (app) {
                 }
                 return returnValue;
             },
-            remove: function (fragment) {
+            remove: function (fragment, handler) {
                 var el, parent, manager = this,
                     cachedRemoving = manager.is(REMOVING) || BOOLEAN_FALSE;
                 if (cachedRemoving || !(el = manager.element()) || !(parent = el[PARENT_NODE])) {
@@ -7597,6 +7598,9 @@ app.scope(function (app) {
                 }
                 dispatchDetached([el], manager.owner);
                 manager.remark(REMOVING, cachedRemoving);
+                if (manager.isIframe && handler && isFunction(handler)) {
+                    handler(manager);
+                }
                 return manager;
             },
             frame: function (head, body) {
@@ -7617,7 +7621,7 @@ app.scope(function (app) {
                 }
             },
             // rework how to destroy elements
-            destroy: function () {
+            destroy: function (handler) {
                 var customName, manager = this,
                     registeredAs = manager.registeredAs,
                     element = manager.element();
@@ -7628,7 +7632,7 @@ app.scope(function (app) {
                 if (manager.isIframe) {
                     manager.owner.data.remove(element.contentWindow);
                 }
-                manager.remove();
+                manager.remove(NULL, handler);
                 if (registeredAs) {
                     customName = manager.owner.registeredElementName(registeredAs);
                     manager.directiveDestruction(customName);
@@ -7834,7 +7838,7 @@ app.scope(function (app) {
                 });
             };
         },
-        allEachMethods = gapSplit('destroy show hide style remove on off once addEventListener removeEventListener dispatchEvent').concat(allDirectMethods),
+        allEachMethods = gapSplit('show hide style remove on off once addEventListener removeEventListener dispatchEvent').concat(allDirectMethods),
         firstMethods = gapSplit('tag element client box flow'),
         applyToFirst = function (method) {
             var shouldBeContext = method !== 'tag';
@@ -7858,6 +7862,12 @@ app.scope(function (app) {
              * @returns {DOMM} instance
              */
             isValidDOMM: BOOLEAN_TRUE,
+            destroy: function (handler_) {
+                var handler = isFunction(handler_) ? handler_ : NULL;
+                return this.each(function (manager) {
+                    manager.destroy(handler);
+                });
+            },
             constructor: function (str, ctx, isValid, validContext, documentContext) {
                 var isArrayResult, els = str,
                     dom = this,

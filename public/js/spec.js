@@ -2509,10 +2509,7 @@ application.scope().run(function (app, _, factories) {
                 buster.connected(handler);
                 buster.sync(function (e) {
                     expect(count).toEqual(1);
-                    setTimeout(function () {
-                        iframe.destroy();
-                    });
-                    done();
+                    iframe.destroy(done);
                 });
             });
             it('as well as deferred messages', function (done) {
