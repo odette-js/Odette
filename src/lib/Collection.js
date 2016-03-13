@@ -326,7 +326,8 @@ app.scope(function (app) {
             eachCallRight: eachCallRight
         },
         eachHandlerKeys = keys(eachHandlers),
-        abstractedCannotModify = gapSplit('add insertAt remove removeAt'),
+        abstractedCanModify = gapSplit('add'),
+        abstractedCannotModify = gapSplit('insertAt remove removeAt'),
         nativeCannotModify = gapSplit('pop shift splice'),
         reverseList = gapSplit('reverse'),
         splatHandlers = gapSplit('push unshift'),
@@ -335,7 +336,7 @@ app.scope(function (app) {
         foldIteration = gapSplit('foldr foldl reduce'),
         findIteration = gapSplit('find findLast findWhere findLastWhere'),
         indexers = gapSplit('indexOf posit'),
-        indicesIteration = gapSplit('add insertAt remove removeAt'),
+        // indicesIteration = gapSplit('add insertAt remove removeAt'),
         foldFindIteration = foldIteration.concat(findIteration),
         marksIterating = function (fn) {
             return function (one, two, three, four, five, six) {
@@ -350,7 +351,7 @@ app.scope(function (app) {
             return function (arg) {
                 return this.items[name](arg);
             };
-        }), wrap(indexers, function (name) {
+        }), wrap(indexers.concat(abstractedCanModify), function (name) {
             return function (one, two, three, four, five) {
                 var list = this;
                 return _[name](list.items, one, two, three, four, five);
@@ -529,12 +530,7 @@ app.scope(function (app) {
              * @name Model#add
              * @func
              */
-            // }, wrap(nativeCannotModify, function (key) {
-            //     return function (one, two, three, four, five, six) {
-            //         this.list[key](one, two, three, four, five, six);
-            //         return this;
-            //     };
-        }, wrap(gapSplit('has unwrap reset length first last index toString toJSON sort').concat(abstractedCannotModify, nativeCannotModify, indexers, joinHandlers, indicesIteration, splatHandlers), function (key) {
+        }, wrap(gapSplit('has unwrap reset length first last index toString toJSON sort').concat(abstractedCanModify, abstractedCannotModify, nativeCannotModify, indexers, joinHandlers, splatHandlers), function (key) {
             return directives.parody(LIST, key);
         }), wrap(recreatingSelfList, function (key) {
             return recreateSelf(function (one) {

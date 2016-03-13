@@ -85,8 +85,9 @@ app.scope(function (app) {
                 var instance = this,
                     isObj = isObj_ === UNDEFINED ? isObject(obj) : isObj_,
                     type = objectToString.call(obj),
-                    current = instance[type] = instance[type] || {},
-                    lowerType = type.toLowerCase(),
+                    isWindow = obj && obj.window === obj,
+                    lowerType = isWindow ? '[object global]' : type.toLowerCase(),
+                    current = instance[lowerType] = instance[lowerType] || {},
                     globalindex = lowerType[INDEX_OF]('global'),
                     indexOfWindow = lowerType[INDEX_OF](WINDOW) === -1;
                 // skip reading data
@@ -96,7 +97,4 @@ app.scope(function (app) {
                 return current;
             }
         }, BOOLEAN_TRUE);
-    // _.exports({
-    //     associator: Associator()
-    // });
 });

@@ -121,9 +121,12 @@ app.scope(function (app) {
                     list = evnt.list,
                     disabled = evnt.disabled = BOOLEAN_TRUE;
                 if (events[STACK][LENGTH]()) {
-                    events[REMOVE_QUEUE].add(evnt);
+                    events[REMOVE_QUEUE].push(evnt);
                     return BOOLEAN_FALSE;
                 } else {
+                    if (evnt.removed) {
+                        return BOOLEAN_TRUE;
+                    }
                     events.remove(list, evnt);
                     // disconnect it from the list above it
                     evnt.list = UNDEFINED;

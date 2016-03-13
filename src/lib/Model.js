@@ -186,25 +186,6 @@ app.scope(function (app) {
                 });
                 return model;
             },
-            setDeep: function (where, value) {
-                var former, lastkey, model = this,
-                    dataDirective = model.directive(DATA),
-                    triggers = [],
-                    path = toArray(where, PERIOD);
-                if (!dataDirective.setDeep(path, value)) {
-                    return model;
-                }
-                dataDirective.digest(model, function () {
-                    eachRight(path, function (item) {
-                        var name = path.join(PERIOD);
-                        dataDirective.changing[name] = BOOLEAN_TRUE;
-                        model[DISPATCH_EVENT](CHANGE_COLON + name);
-                        dataDirective.changing[name] = BOOLEAN_FALSE;
-                        path.pop();
-                    });
-                });
-                return model;
-            },
             /**
              * @description basic json clone of the attributes object
              * @func

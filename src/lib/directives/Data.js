@@ -27,25 +27,12 @@ app.scope(function (app) {
                 return this[CURRENT][key];
             },
             unset: function (key) {
-                var current = this[CURRENT];
-                var previous = current[key];
+                var current = this[CURRENT],
+                    previous = current[key];
                 return (delete current[key]) && previous !== UNDEFINED;
             },
             reset: function (hash) {
-                this[CURRENT] = hash;
-            },
-            setDeep: function (path, value) {
-                var previous, dataDirective = this,
-                    current = dataDirective[CURRENT];
-                duff(periodSplit(path), function (key, index, path) {
-                    var no_more = index === path[LENGTH] - 1;
-                    previous = current;
-                    current = no_more ? current[key] : isObject(current[key]) ? current[key] : (previous[key] = {});
-                });
-                if (previous && !isEqual(current, value)) {
-                    previous[key] = value;
-                    return BOOLEAN_TRUE;
-                }
+                this[CURRENT] = hash || {};
             },
             digest: function (model, fn) {
                 var dataDirective = this;

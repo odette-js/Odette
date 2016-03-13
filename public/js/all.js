@@ -2764,7 +2764,8 @@ app.scope(function (app) {
             eachCallRight: eachCallRight
         },
         eachHandlerKeys = keys(eachHandlers),
-        abstractedCannotModify = gapSplit('add insertAt remove removeAt'),
+        abstractedCanModify = gapSplit('add'),
+        abstractedCannotModify = gapSplit('insertAt remove removeAt'),
         nativeCannotModify = gapSplit('pop shift splice'),
         reverseList = gapSplit('reverse'),
         splatHandlers = gapSplit('push unshift'),
@@ -2773,7 +2774,7 @@ app.scope(function (app) {
         foldIteration = gapSplit('foldr foldl reduce'),
         findIteration = gapSplit('find findLast findWhere findLastWhere'),
         indexers = gapSplit('indexOf posit'),
-        indicesIteration = gapSplit('add insertAt remove removeAt'),
+        // indicesIteration = gapSplit('add insertAt remove removeAt'),
         foldFindIteration = foldIteration.concat(findIteration),
         marksIterating = function (fn) {
             return function (one, two, three, four, five, six) {
@@ -2788,7 +2789,7 @@ app.scope(function (app) {
             return function (arg) {
                 return this.items[name](arg);
             };
-        }), wrap(indexers, function (name) {
+        }), wrap(indexers.concat(abstractedCanModify), function (name) {
             return function (one, two, three, four, five) {
                 var list = this;
                 return _[name](list.items, one, two, three, four, five);
@@ -2967,12 +2968,7 @@ app.scope(function (app) {
              * @name Model#add
              * @func
              */
-            // }, wrap(nativeCannotModify, function (key) {
-            //     return function (one, two, three, four, five, six) {
-            //         this.list[key](one, two, three, four, five, six);
-            //         return this;
-            //     };
-        }, wrap(gapSplit('has unwrap reset length first last index toString toJSON sort').concat(abstractedCannotModify, nativeCannotModify, indexers, joinHandlers, indicesIteration, splatHandlers), function (key) {
+        }, wrap(gapSplit('has unwrap reset length first last index toString toJSON sort').concat(abstractedCanModify, abstractedCannotModify, nativeCannotModify, indexers, joinHandlers, splatHandlers), function (key) {
             return directives.parody(LIST, key);
         }), wrap(recreatingSelfList, function (key) {
             return recreateSelf(function (one) {
@@ -3761,25 +3757,6 @@ app.scope(function (app) {
                 });
                 return model;
             },
-            setDeep: function (where, value) {
-                var former, lastkey, model = this,
-                    dataDirective = model.directive(DATA),
-                    triggers = [],
-                    path = toArray(where, PERIOD);
-                if (!dataDirective.setDeep(path, value)) {
-                    return model;
-                }
-                dataDirective.digest(model, function () {
-                    eachRight(path, function (item) {
-                        var name = path.join(PERIOD);
-                        dataDirective.changing[name] = BOOLEAN_TRUE;
-                        model[DISPATCH_EVENT](CHANGE_COLON + name);
-                        dataDirective.changing[name] = BOOLEAN_FALSE;
-                        path.pop();
-                    });
-                });
-                return model;
-            },
             /**
              * @description basic json clone of the attributes object
              * @func
@@ -4109,9 +4086,12 @@ app.scope(function (app) {
                     list = evnt.list,
                     disabled = evnt.disabled = BOOLEAN_TRUE;
                 if (events[STACK][LENGTH]()) {
-                    events[REMOVE_QUEUE].add(evnt);
+                    events[REMOVE_QUEUE].push(evnt);
                     return BOOLEAN_FALSE;
                 } else {
+                    if (evnt.removed) {
+                        return BOOLEAN_TRUE;
+                    }
                     events.remove(list, evnt);
                     // disconnect it from the list above it
                     evnt.list = UNDEFINED;
@@ -4224,25 +4204,12 @@ app.scope(function (app) {
                 return this[CURRENT][key];
             },
             unset: function (key) {
-                var current = this[CURRENT];
-                var previous = current[key];
+                var current = this[CURRENT],
+                    previous = current[key];
                 return (delete current[key]) && previous !== UNDEFINED;
             },
             reset: function (hash) {
-                this[CURRENT] = hash;
-            },
-            setDeep: function (path, value) {
-                var previous, dataDirective = this,
-                    current = dataDirective[CURRENT];
-                duff(periodSplit(path), function (key, index, path) {
-                    var no_more = index === path[LENGTH] - 1;
-                    previous = current;
-                    current = no_more ? current[key] : isObject(current[key]) ? current[key] : (previous[key] = {});
-                });
-                if (previous && !isEqual(current, value)) {
-                    previous[key] = value;
-                    return BOOLEAN_TRUE;
-                }
+                this[CURRENT] = hash || {};
             },
             digest: function (model, fn) {
                 var dataDirective = this;
@@ -4807,8 +4774,9 @@ app.scope(function (app) {
                 var instance = this,
                     isObj = isObj_ === UNDEFINED ? isObject(obj) : isObj_,
                     type = objectToString.call(obj),
-                    current = instance[type] = instance[type] || {},
-                    lowerType = type.toLowerCase(),
+                    isWindow = obj && obj.window === obj,
+                    lowerType = isWindow ? '[object global]' : type.toLowerCase(),
+                    current = instance[lowerType] = instance[lowerType] || {},
                     globalindex = lowerType[INDEX_OF]('global'),
                     indexOfWindow = lowerType[INDEX_OF](WINDOW) === -1;
                 // skip reading data
@@ -4818,9 +4786,6 @@ app.scope(function (app) {
                 return current;
             }
         }, BOOLEAN_TRUE);
-    // _.exports({
-    //     associator: Associator()
-    // });
 });
 app.scope(function (app) {
     var _ = app._,
