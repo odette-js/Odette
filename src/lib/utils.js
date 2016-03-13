@@ -275,7 +275,9 @@ var factories = {},
             return !fn.apply(this, arguments);
         };
     },
-    isNumber = isWrap('number', negate(isNaN)),
+    isNumber = isWrap('number', function (thing) {
+        return thing === thing;
+    }),
     isFinite_ = win.isFinite,
     isFinite = function (thing) {
         return isNumber(thing) && isFinite_(thing);

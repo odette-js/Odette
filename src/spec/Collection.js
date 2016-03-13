@@ -107,8 +107,8 @@ application.scope().run(function (app, _, factories) {
                 expect(numberCollection.unwrap()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 61]);
                 expect(numberCollection.add(61)).toEqual(false);
             });
-            it('addAt', function () {
-                expect(numberCollection.addAt(5, 1)).toEqual(true);
+            it('insertAt', function () {
+                expect(numberCollection.insertAt(5, 1)).toEqual(true);
                 expect(numberCollection.unwrap()).toEqual([0, 5, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
             });
             it('remove', function () {

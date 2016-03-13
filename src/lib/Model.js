@@ -333,7 +333,7 @@ app.scope(function (app) {
                 // attach events from parent
                 _removeFromHash(parent, model);
                 // void out the parent member tied directly to the model
-                model[PARENT] = UNDEFINED;
+                delete model[PARENT];
                 // let everyone know that you've offically separated
                 model[DISPATCH_EVENT](REMOVED);
                 // notify the child that the remove pipeline is done

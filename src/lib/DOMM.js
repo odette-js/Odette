@@ -10,7 +10,9 @@ app.scope(function (app) {
         globalAssociator = factories.Associator(),
         DOM_MANAGER_STRING = 'DomManager',
         NODE_TYPE = 'nodeType',
+        DESTROYED = 'destroyed',
         CUSTOM = 'custom',
+        REMOVING = 'removing',
         ACCESSABLE = 'accessable',
         CUSTOM_LISTENER = CUSTOM + 'Listener',
         LOCAL_NAME = 'localName',
@@ -19,6 +21,7 @@ app.scope(function (app) {
         PARENT_NODE = 'parentNode',
         INNER_HTML = 'innerHTML',
         INNER_TEXT = 'innerText',
+        OUTER_HTML = 'outerHTML',
         ATTRIBUTE_CHANGE = 'attributeChange',
         ATTRIBUTES_CHANGING = 'attributesChanging',
         DELEGATE_COUNT = '__delegateCount',
@@ -42,14 +45,7 @@ app.scope(function (app) {
             }
             return data[DOM_MANAGER_STRING];
         },
-        // By default, Underscore uses ERB-style template delimiters, change the
-        // following template settings to use alternative delimiters.
-        // When customizing `templateSettings`, if you don't want to define an
-        // interpolation, evaluation or escaping regex, we need one that is
-        // guaranteed not to match.
         noMatch = /(.)^/,
-        // Certain characters need to be escaped so that they can be put into a
-        // string literal.
         escapes = {
             "'": "'",
             '\\': '\\',
@@ -62,7 +58,6 @@ app.scope(function (app) {
         escapeChar = function (match) {
             return '\\' + escapes[match];
         },
-        // List of HTML entities for escaping,
         escapeMap = {
             '&': '&amp;',
             '<': '&lt;',
@@ -72,12 +67,10 @@ app.scope(function (app) {
             '`': '&#x60;'
         },
         unescapeMap = invert(escapeMap),
-        // Functions for escaping and unescaping strings to/from HTML interpolation,
         createEscaper = function (map) {
             var escaper = function (match) {
                 return map[match];
             };
-            // Regexes for identifying a key that needs to be escaped.
             var source = '(?:' + keys(map).join('|') + ')';
             var testRegexp = RegExp(source);
             var replaceRegexp = RegExp(source, 'g');
@@ -88,17 +81,11 @@ app.scope(function (app) {
         },
         escape = createEscaper(escapeMap),
         unescape = createEscaper(unescapeMap),
-        // JavaScript micro-templating, similar to John Resig's implementation.
-        // Underscore templating handles arbitrary delimiters, preserves whitespace,
-        // and correctly escapes quotes within interpolated code.
-        // NB: `oldSettings` only exists for backwards compatibility.
         templateGenerator = function (text, templateSettings) {
             var settings = extend({}, templateSettings);
-            // Combine delimiters into one regular expression via alternation.
             var matcher = RegExp([
                 (settings.escape || noMatch).source, (settings.interpolate || noMatch).source, (settings.evaluate || noMatch).source
             ].join('|') + '|$', 'g');
-            // Compile the template source, escaping string literals appropriately.
             var index = 0;
             var source = "__p+='";
             text.replace(matcher, function (match, escape, interpolate, evaluate, offset) {
@@ -519,14 +506,14 @@ app.scope(function (app) {
             };
         },
         clientRect = function (item) {
-            var ret = isElement(item) ? item.getBoundingClientRect() : {};
+            var returnValue = isElement(item) ? item.getBoundingClientRect() : {};
             return {
-                top: ret[TOP] || 0,
-                left: ret[LEFT] || 0,
-                right: ret[RIGHT] || 0,
-                bottom: ret[BOTTOM] || 0,
-                width: ret[WIDTH] || 0,
-                height: ret[HEIGHT] || 0
+                top: returnValue[TOP] || 0,
+                left: returnValue[LEFT] || 0,
+                right: returnValue[RIGHT] || 0,
+                bottom: returnValue[BOTTOM] || 0,
+                width: returnValue[WIDTH] || item.clientWidth || 0,
+                height: returnValue[HEIGHT] || item.clientHeight || 0
             };
         },
         /**
@@ -710,7 +697,6 @@ app.scope(function (app) {
                     message: 'tag name must be registered'
                 });
             if (foundElement && foundElement !== BOOLEAN_TRUE) {
-                // registeredElements
                 attributeApi.write(newElement, CUSTOM_KEY, str);
             }
             return manager.returnsManager(newElement);
@@ -720,6 +706,9 @@ app.scope(function (app) {
             // collect custom element
             div.html(str);
             return DOMM(div).children().remove().unwrap();
+        },
+        makeBranch = function (str, manager) {
+            return makeTree(str, manager)[0];
         },
         /**
          * @private
@@ -790,13 +779,12 @@ app.scope(function (app) {
             };
         },
         horizontalTraverser = function (method, _idxChange) {
-            return attachPrevious(function (idxChange_) {
-                var domm = this,
-                    collected = [],
-                    list = domm.unwrap(),
+            return attachPrevious(function (context, idxChange_) {
+                var collected = [],
+                    list = context.unwrap(),
                     idxChange = _idxChange || idxChange_;
                 if (idxChange) {
-                    domm.duff(function (manager) {
+                    context.duff(function (manager) {
                         if ((traversal = manager[method](idxChange))) {
                             add(collected, traversal);
                         }
@@ -882,10 +870,10 @@ app.scope(function (app) {
             };
         },
         attachPrevious = function (fn) {
-            return function () {
+            return function (one, two, three, four, five) {
                 var prev = this,
                     // ensures it's still a dom object
-                    result = fn.apply(this, arguments),
+                    result = fn(prev, one, two, three, four, five),
                     // don't know if we went up or down, so use null as context
                     obj = new DOMM[CONSTRUCTOR](result, NULL, BOOLEAN_TRUE, NULL, prev.context.owner);
                 obj._previous = prev;
@@ -932,14 +920,14 @@ app.scope(function (app) {
                 duff(gapSplit(name), function (nme) {
                     var split = eventToNamespace(nme),
                         captures = BOOLEAN_FALSE,
-                        namespaceSplit = nme.split(PERIOD),
-                        nm = namespaceSplit.shift(),
-                        namespace = namespaceSplit.join(PERIOD);
+                        groupSplit = nme.split(PERIOD),
+                        nm = groupSplit.shift(),
+                        group = groupSplit.join(PERIOD);
                     if (nm[0] === '_') {
                         nm = nm.slice(1);
                         captures = BOOLEAN_TRUE;
                     }
-                    fn(nm, namespace, selector, fun, captures);
+                    fn(nm, group, selector, fun, captures);
                 });
             }
             return this;
@@ -947,7 +935,6 @@ app.scope(function (app) {
         expandEventListenerArguments = function (fn) {
             return function () {
                 var selector, domm = this,
-                    // if there's nothing selected, then do nothing
                     args = toArray(arguments),
                     nameOrObject = args.shift();
                 if (isObject(nameOrObject)) {
@@ -965,17 +952,16 @@ app.scope(function (app) {
             };
         },
         validateEvent = function (evnt, el, name_) {
-            return !isObject(evnt) ? {
-                type: evnt || name_,
+            return evnt && isObject(evnt) && !isWindow(evnt) && isNumber(evnt.AT_TARGET) ? evnt : {
+                type: name_,
                 bubbles: BOOLEAN_FALSE,
                 eventPhase: 2,
                 cancelable: BOOLEAN_FALSE,
                 defaultPrevented: BOOLEAN_FALSE,
-                data: EMPTY_STRING,
                 isTrusted: BOOLEAN_FALSE,
                 timeStamp: now(),
                 target: el
-            } : evnt;
+            };
         },
         isCapturing = function (evnt) {
             var capturing = BOOLEAN_FALSE,
@@ -1029,22 +1015,22 @@ app.scope(function (app) {
                 });
             };
         },
-        addEventListener = expandEventListenerArguments(function (name, namespace, selector, callback, capture) {
+        addEventListener = expandEventListenerArguments(function (name, group, selector, callback, capture) {
             var manager = this;
-            return isFunction(callback) ? _addEventListener(manager, name, namespace, selector, callback, capture) : manager;
+            return isFunction(callback) ? _addEventListener(manager, name, group, selector, callback, capture) : manager;
         }),
-        addEventListenerOnce = expandEventListenerArguments(function (types, namespace, selector, callback, capture) {
+        addEventListenerOnce = expandEventListenerArguments(function (types, group, selector, callback, capture) {
             var _callback, manager = this;
-            return isFunction(callback) && _addEventListener(manager, types, namespace, selector, (_callback = once(function () {
-                _removeEventListener(manager, types, namespace, selector, _callback, capture);
+            return isFunction(callback) && _addEventListener(manager, types, group, selector, (_callback = once(function () {
+                _removeEventListener(manager, types, group, selector, _callback, capture);
                 return callback.apply(this, arguments);
             })), capture);
         }),
-        removeEventListener = expandEventListenerArguments(function (name, namespace, selector, handler, capture) {
+        removeEventListener = expandEventListenerArguments(function (name, group, selector, handler, capture) {
             var manager = this;
-            return isFunction(handler) ? _removeEventListener(manager, name, namespace, selector, handler, capture) : manager;
+            return isFunction(handler) ? _removeEventListener(manager, name, group, selector, handler, capture) : manager;
         }),
-        _addEventListener = function (manager, types, namespace, selector, handler, capture) {
+        _addEventListener = function (manager, types, group, selector, handler, capture) {
             var handleObj, eventHandler, el = manager.element(),
                 events = manager.directive(EVENTS),
                 elementHandlers = events.elementHandlers = events.elementHandlers || {},
@@ -1075,7 +1061,7 @@ app.scope(function (app) {
                     };
                 }
                 foundDuplicate = handlers.find(function (obj) {
-                    return handler === obj.handler && obj.namespace === namespace && selector === obj.selector;
+                    return handler === obj.handler && obj.group === group && selector === obj.selector;
                 });
                 if (foundDuplicate) {
                     return;
@@ -1088,7 +1074,7 @@ app.scope(function (app) {
                     valueOf: returnsId,
                     handler: handler,
                     disabled: BOOLEAN_FALSE,
-                    namespace: namespace,
+                    group: group,
                     mainHandler: mainHandler,
                     selector: selector,
                     passedName: passedName,
@@ -1115,6 +1101,9 @@ app.scope(function (app) {
         },
         appendChild = function (el) {
             return this.insertAt(el, NULL);
+        },
+        prependChild = function (el) {
+            return this.insertAt(el, 0);
         },
         attributeParody = function (method) {
             return function (one, two) {
@@ -1182,16 +1171,25 @@ app.scope(function (app) {
             }
             contentWindow = element.contentWindow;
             manager.windowReady = !!contentWindow;
-            if (manager.windowReady) {
-                contentWindowManager = manager.owner.returnsManager(contentWindow);
-                contentWindowManager.iframe = manager;
-                markGlobal(contentWindowManager);
+            if (!manager.windowReady) {
+                return;
             }
+            contentWindowManager = manager.owner.returnsManager(contentWindow);
+            contentWindowManager.iframe = manager;
+            markGlobal(contentWindowManager);
+            if (!manager.cachedContent || !contentWindowManager.is(ACCESSABLE)) {
+                return;
+            }
+            manager.html(manager.cachedContent);
+            manager.cachedContent = NULL;
         },
+        cachedDispatch = factories.Events[CONSTRUCTOR][PROTOTYPE][DISPATCH_EVENT],
         eventDispatcher = function (manager, name, e, capturing_) {
             var capturing = !!capturing_,
                 fullName = capturing + COLON + name;
-            return factories.Events[CONSTRUCTOR][PROTOTYPE][DISPATCH_EVENT].call(manager, fullName, validateEvent(e, manager.element(), name), capturing);
+            return cachedDispatch.call(manager, fullName, validateEvent(e, manager.element(), name), {
+                capturing: capturing
+            });
         },
         directAttributes = {
             id: BOOLEAN_FALSE,
@@ -1517,6 +1515,7 @@ app.scope(function (app) {
             manager.documentId = uniqueId('doc');
             wrapped = extend(wrap({
                 makeTree: makeTree,
+                makeBranch: makeBranch,
                 createElement: createElement,
                 createElements: createElements,
                 createDocumentFragment: createDocumentFragment,
@@ -1594,7 +1593,12 @@ app.scope(function (app) {
                 }
             });
             extend(manager, wrapped);
-            extend(query, wrapped);
+            extend(query, wrapped, {
+                isWindow: isWindow,
+                isDocument: isDocument,
+                isFragment: isFragment,
+                isElement: isElement
+            });
             if (manager.isReady === UNDEFINED) {
                 manager.isReady = BOOLEAN_FALSE;
                 if (manager.element().readyState === 'complete') {
@@ -1652,12 +1656,241 @@ app.scope(function (app) {
                 return target && manager.owner.returnsManager(target);
             };
         },
+        collectCustom = function (manager, markedListener) {
+            var element = manager.element();
+            return (manager.isElement && manager.is(markedListener ? CUSTOM_LISTENER : CUSTOM) ? [element] : []).concat(query(CUSTOM_ATTRIBUTE, element));
+        },
+        reconstruct = function (string, context, parent) {
+            var fragment = parent || context.createDocumentFragment();
+            var objects = parse(string);
+            var contextDocument = context.unwrap();
+            each(toArray(objects), function (object) {
+                var element = contextDocument.createElement(object.tagName);
+                reconstruct(object.children, context, manager);
+                each(obj.attributes, function (value, key) {
+                    attributeApi.write(element, unCamelCase(key), value);
+                });
+                fragment.element().appendChild(element);
+            });
+            return fragment;
+        },
+        IS_TRUSTED = 'isTrusted',
+        fixHooks = {
+            // Includes some event props shared by KeyEvent and MouseEvent
+            props: gapSplit("altKey bubbles cancelable ctrlKey currentTarget eventPhase metaKey relatedTarget shiftKey target timeStamp view which"),
+            fixedHooks: {},
+            keyHooks: {
+                props: gapSplit("char charCode key keyCode"),
+                filter: function (evnt, original) {
+                    var charCode;
+                    // Add which for key evnts
+                    if (evnt.which == NULL) {
+                        charCode = original.charCode;
+                        evnt.which = charCode != NULL ? charCode : original.keyCode;
+                    }
+                    return evnt;
+                }
+            },
+            forceHooks: {
+                props: [],
+                filter: function (evnt, original) {
+                    evnt.value = ((original.force || original.webkitForce) / 3) || 0;
+                    return evnt;
+                }
+            },
+            motionHooks: {
+                props: [],
+                filter: function () {
+                    this.watchingMotion = BOOLEAN_TRUE;
+                }
+            },
+            mouseHooks: {
+                props: gapSplit("button buttons clientX clientY offsetX offsetY pageX pageY screenX screenY toElement"),
+                filter: function (evnt, original) {
+                    var eventDoc, doc, body,
+                        button = original.button;
+                    // Calculate pageX/Y if missing and clientX/Y available
+                    if (evnt.pageX == NULL && original.clientX != NULL) {
+                        evntDoc = evnt.target.ownerDocument || doc;
+                        doc = evntDoc.documentElement;
+                        body = evntDoc[BODY];
+                        evnt.pageX = original.clientX + (doc && doc.scrollLeft || body && body.scrollLeft || 0) - (doc && doc.clientLeft || body && body.clientLeft || 0);
+                        evnt.pageY = original.clientY + (doc && doc.scrollTop || body && body.scrollTop || 0) - (doc && doc.clientTop || body && body.clientTop || 0);
+                    }
+                    evnt.movementX = original.movementX || 0;
+                    evnt.movementY = original.movementY || 0;
+                    evnt.layerX = original.layerX || 0;
+                    evnt.layerY = original.layerY || 0;
+                    evnt.x = original.x || 0;
+                    evnt.y = original.y || 0;
+                    // Add which for click: 1 === left; 2 === middle; 3 === right
+                    // Note: button is not normalized, so don't use it
+                    if (!evnt.which && button !== UNDEFINED) {
+                        evnt.which = (button & 1 ? 1 : (button & 2 ? 3 : (button & 4 ? 2 : 0)));
+                    }
+                    return evnt;
+                }
+            },
+            make: (function () {
+                var cached = {};
+                return function (evnt, originalEvent, options) {
+                    var acc, acc_, doc, target, val, i, prop, copy, type = originalEvent.type,
+                        // Create a writable copy of the event object and normalize some properties
+                        fixHook = fixHooks.fixedHooks[type],
+                        origin = options.origin;
+                    if (!fixHook) {
+                        fixHooks.fixedHooks[type] = fixHook = rmouseEvent.test(type) ? this.mouseHooks : rkeyEvent.test(type) ? this.keyHooks : rforceEvent.test(type) ? this.forceHooks : motionMorph.test(type) ? this.motionHooks : {};
+                        // rfocusMorph
+                        // motionMorph
+                    }
+                    copy = fixHook.props ? this.props.concat(fixHook.props) : this.props;
+                    i = copy[LENGTH];
+                    while (i--) {
+                        prop = copy[i];
+                        val = originalEvent[prop];
+                        if (val != NULL) {
+                            evnt[prop] = val;
+                        }
+                    }
+                    evnt.originalType = originalEvent.type;
+                    // Support: Cordova 2.5 (WebKit) (#13255)
+                    // All events should have a target; Cordova deviceready doesn't
+                    // ie also does not have a target... so use current target
+                    target = evnt.target || (evnt.view ? evnt.view.event.currentTarget : event && event.currentTarget) || evnt.delegateTarget.element();
+                    if (!target) {
+                        target = evnt.target = doc;
+                    }
+                    // Support: Safari 6.0+, Chrome<28
+                    // Target should not be a text node (#504, #13143)
+                    if (target[NODE_TYPE] === 3) {
+                        evnt.target = target[PARENT_NODE];
+                    }
+                    if (isFunction(fixHook.filter)) {
+                        fixHook.filter(evnt, originalEvent);
+                    }
+                    type = distilledEventName[originalEvent.type] || originalEvent.type;
+                    cachedObjectEventConstructor.call(evnt, options.origin, parse(originalEvent.data), type, NULL, evnt.timeStamp);
+                    if (evnt.type === 'fullscreenchange') {
+                        doc = evnt.target;
+                        if (isWindow(doc)) {
+                            doc = doc[DOCUMENT];
+                        } else {
+                            while (doc && !isDocument(doc) && doc[PARENT_NODE]) {
+                                doc = doc[PARENT_NODE];
+                            }
+                        }
+                        evnt.fullscreenDocument = doc;
+                        if (isDocument(doc)) {
+                            evnt.isFullScreen = (doc.fullScreen || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.fullscreenElement) ? BOOLEAN_TRUE : BOOLEAN_FALSE;
+                        }
+                    }
+                    evnt[IS_TRUSTED] = _.has(originalEvent, IS_TRUSTED) ? originalEvent[IS_TRUSTED] : !DO_NOT_TRUST;
+                    if (!this.watchingMotion) {
+                        return evnt;
+                    }
+                    acc = originalEvent.acceleration || ((acc_ = originalEvent.accelerationIncludingGravity) && {
+                        x: acc_.x - 9.81,
+                        y: acc_.y - 9.81,
+                        z: acc_.z - 9.81
+                    });
+                    if (acc) {
+                        cached.x = acc.x;
+                        cached.y = acc.y;
+                        cached.z = acc.z;
+                        cached.interval = originalEvent.interval;
+                        cached.rotationRate = originalEvent.rotationRate;
+                    }
+                    if (cached.x != NULL) {
+                        evnt.motionX = cached.x;
+                        evnt.motionY = cached.y;
+                        evnt.motionZ = cached.z;
+                        evnt.interval = cached.interval;
+                        evnt.rotationRate = cached.rotationRate;
+                    }
+                    if (originalEvent.alpha != NULL) {
+                        cached.alpha = originalEvent.alpha;
+                        cached.beta = originalEvent.beta;
+                        cached.gamma = originalEvent.gamma;
+                        cached.absolute = originalEvent.absolute;
+                    }
+                    if (cached.alpha != NULL) {
+                        evnt.alpha = cached.alpha;
+                        evnt.beta = cached.beta;
+                        evnt.gamma = cached.gamma;
+                        evnt.absolute = cached.absolute;
+                    }
+                    return evnt;
+                };
+            }())
+        },
+        cachedObjectEventConstructor = factories.ObjectEvent[CONSTRUCTOR],
+        DomEvent = factories.ObjectEvent.extend('DomEvent', {
+            constructor: function (evnt, opts) {
+                var e = this;
+                if (DomEvent.isInstance(evnt)) {
+                    return evnt;
+                }
+                e.originalEvent = evnt;
+                if (!has(evnt.target) || !has(evnt.currentTarget)) {
+                    e.delegateTarget = opts.origin;
+                } else {
+                    e.delegateTarget = opts.origin.owner.returnsManager(opts.target);
+                }
+                fixHooks.make(e, evnt, opts);
+                e.capturing = opts.capturing === UNDEFINED ? isCapturing(e) : opts.capturing;
+                return e;
+            },
+            preventDefault: function () {
+                var e = this.originalEvent;
+                this[DEFAULT_PREVENTED] = BOOLEAN_TRUE;
+                if (e && e.preventDefault) {
+                    e.preventDefault();
+                }
+            },
+            stopPropagation: function () {
+                var e = this.originalEvent;
+                this[PROPAGATION_IS_STOPPED] = BOOLEAN_TRUE;
+                if (e && e.stopPropagation) {
+                    e.stopPropagation();
+                }
+            },
+            stopImmediatePropagation: function () {
+                var e = this.originalEvent;
+                this[IMMEDIATE_PROP_IS_STOPPED] = BOOLEAN_TRUE;
+                if (e && e.stopImmediatePropagation) {
+                    e.stopImmediatePropagation();
+                }
+                this.stopPropagation();
+            }
+        }, BOOLEAN_TRUE),
         DomEventsDirective = factories.EventsDirective.extend('DomEventsDirective', {
             remove: function (list, evnt) {
                 list.remove(evnt);
                 if (evnt.selector) {
                     evnt.mainHandler[DELEGATE_COUNT]--;
                 }
+            },
+            add: function (list, evnt) {
+                var mainHandler, __delegateCount;
+                if (evnt.selector) {
+                    mainHandler = evnt.mainHandler;
+                    __delegateCount = mainHandler.__delegateCount;
+                    ++mainHandler.__delegateCount;
+                    if (__delegateCount) {
+                        list.insertAt(evnt, __delegateCount);
+                    } else {
+                        list.unshift(evnt);
+                    }
+                } else {
+                    list.push(evnt);
+                }
+            },
+            create: function (origin, original, type, opts) {
+                return DomEvent(original, {
+                    target: origin.target,
+                    origin: origin,
+                    capturing: opts.capturing
+                });
             },
             queue: function (stack, handler, evnt) {
                 var queued;
@@ -1757,6 +1990,44 @@ app.scope(function (app) {
         },
         DomManager = factories.Events.extend(DOM_MANAGER_STRING, extend(classApi, {
             'directive:creation:eventManager': DomEventsDirective,
+            isValidDomManager: BOOLEAN_TRUE,
+            $: manager_query,
+            query: manager_query,
+            getValue: getValueCurried,
+            setValue: setValueCurried,
+            hasValue: hasValue(domContextFind),
+            addValue: addValue(domIterates),
+            removeValue: removeValue(domIterates),
+            toggleValue: toggleValue(domIterates),
+            changeValue: changeValue(domIterates),
+            on: addEventListener,
+            addEventListener: addEventListener,
+            once: addEventListenerOnce,
+            off: removeEventListener,
+            removeEventListener: removeEventListener,
+            append: appendChild,
+            prepend: prependChild,
+            getAttribute: getValueCurried,
+            setAttribute: setValueCurried,
+            removeAttribute: attributeParody('remove'),
+            attr: attrApi(domIterates),
+            data: dataApi(domIterates),
+            prop: propApi(domIterates),
+            html: innardManipulator(INNER_HTML),
+            outerHTML: innardManipulator(OUTER_HTML),
+            text: innardManipulator(INNER_TEXT),
+            style: styleManipulator,
+            css: styleManipulator,
+            next: managerHorizontalTraverser('nextElementSibling', 1),
+            prev: managerHorizontalTraverser('previousElementSibling', -1),
+            skip: managerHorizontalTraverser(NULL, 0),
+            siblings: function (filtr) {
+                var original = this;
+                var filter = createDomFilter(filtr);
+                return this.parent().children(function (manager, index, list) {
+                    return manager !== original && filter(manager, index, list);
+                });
+            },
             constructor: function (el, hash, owner_) {
                 var owner = owner_,
                     manager = this;
@@ -1782,53 +2053,28 @@ app.scope(function (app) {
                 manager.registerAs(manager.registeredAs);
                 return manager;
             },
-            sameOrigin: function () {
-                var parsedReference, manager = this,
-                    element = manager.element(),
-                    windo = manager.owner.window(),
-                    windoElement = windo.element();
-                if (windo === manager) {
-                    return BOOLEAN_TRUE;
+            clone: function () {
+                var clone, manager = this;
+                if (!manager.isElement) {
+                    return;
                 }
-                if (manager.is(ACCESSABLE)) {
-                    parsedReference = reference(element.location.href);
-                    if (!parsedReference && manager.iframe) {
-                        parsedReference = reference(manager.iframe.src());
-                    }
-                    return !parsedReference || parsedReference === reference(windoElement.location.href);
-                }
-                return BOOLEAN_FALSE;
+                return makeBranch(manager.element()[OUTER_HTML], manager.owner);
             },
-            $: manager_query,
-            query: manager_query,
-            getValue: getValueCurried,
-            setValue: setValueCurried,
-            hasValue: hasValue(domContextFind),
-            addValue: addValue(domIterates),
-            removeValue: removeValue(domIterates),
-            toggleValue: toggleValue(domIterates),
-            changeValue: changeValue(domIterates),
-            on: addEventListener,
-            addEventListener: addEventListener,
-            once: addEventListenerOnce,
-            off: removeEventListener,
-            removeEventListener: removeEventListener,
-            isValidDomManager: BOOLEAN_TRUE,
-            appendChild: appendChild,
-            append: appendChild,
-            getAttribute: getValueCurried,
-            setAttribute: setValueCurried,
-            removeAttribute: attributeParody('remove'),
-            attr: attrApi(domIterates),
-            data: dataApi(domIterates),
-            prop: propApi(domIterates),
-            html: innardManipulator(INNER_HTML),
-            text: innardManipulator(INNER_TEXT),
-            style: styleManipulator,
-            css: styleManipulator,
-            next: managerHorizontalTraverser('nextElementSibling', 1),
-            prev: managerHorizontalTraverser('previousElementSibling', -1),
-            skip: managerHorizontalTraverser(NULL, 0),
+            element: function () {
+                return this[TARGET];
+            },
+            elements: function () {
+                return [this[TARGET]];
+            },
+            length: function () {
+                return 1;
+            },
+            wrap: function (list) {
+                return this.owner.query(list || this);
+            },
+            unwrap: function () {
+                return [this];
+            },
             parent: (function () {
                 var finder = function (manager, fn, original) {
                         var parentElement, rets, found, parentManager = manager,
@@ -1840,7 +2086,9 @@ app.scope(function (app) {
                             found = rets[1];
                             next = rets[2];
                         }
-                        return parentManager;
+                        if (found) {
+                            return parentManager;
+                        }
                     },
                     number = function (parent, original, next) {
                         var element = parent.element();
@@ -1929,42 +2177,37 @@ app.scope(function (app) {
                     }
                 };
             }()),
-            setAddress: function (address) {
-                var manager = this;
-                address = manager.address = address || manager.address || uuid();
-                return address;
-            },
-            emit: function (message, referrer_, handler) {
-                var windo = this.window(),
-                    element = windo.element();
-                if (windo.is(ACCESSABLE)) {
-                    handler({
-                        data: message,
-                        srcElement: element,
-                        timeStamp: _.now()
-                    });
-                } else {
-                    wraptry(function () {
-                        if (!referrer_) {
-                            console.error('missing referrer: ' + windo.address);
-                        } else {
-                            element.postMessage(message, referrer_);
-                        }
-                    }, console.error);
+            contains: function (element_) {
+                var managerElement, target, element = element_,
+                    manager = this;
+                if (isWindow(element)) {
+                    return BOOLEAN_FALSE;
                 }
-                return this;
+                if (isString(element)) {
+                    return !!query(element, manager.element())[LENGTH];
+                }
+                if (element.isValidDOMM) {
+                    element = element.index(0);
+                }
+                target = manager.owner.returnsManager(element);
+                if (target.isDocument) {
+                    return target.window() === manager;
+                }
+                managerElement = manager.element();
+                return !!target.parent(function (parentNode) {
+                    return parentNode === managerElement;
+                });
             },
             insertAt: function (els, index) {
                 var manager = this,
                     owner = manager.owner,
-                    // normalize into a fragment
                     fragmentManager = isAppendable(els) ? owner.returnsManager(els) : DOMM(els).fragment(),
                     fragment = fragmentManager.element(),
                     children = index == NULL ? NULL : manager.children(),
                     child = children && children.index(index) || NULL,
                     element = child && child.element() || NULL,
                     managerElement = manager && manager.element(),
-                    fragmentChildren = (fragmentManager.isElement && fragmentManager.is(CUSTOM_LISTENER) ? [fragment] : []).concat(query(CUSTOM_ATTRIBUTE, fragment)),
+                    fragmentChildren = collectCustom(fragmentManager, BOOLEAN_TRUE),
                     detachNotify = dispatchDetached(fragmentChildren, owner),
                     returnValue = managerElement && managerElement.insertBefore(fragment, element),
                     notify = isAttached(managerElement, owner) && dispatchAttached(fragmentChildren, owner);
@@ -1987,14 +2230,52 @@ app.scope(function (app) {
                 // it's an element so go up
                 return manager.owner.window();
             },
-            element: function () {
-                return this[TARGET];
+            setAddress: function (address) {
+                var manager = this;
+                address = manager.address = address || manager.address || uuid();
+                return address;
             },
-            elements: function () {
-                return [this[TARGET]];
+            emit: function (message_, referrer_, handler) {
+                var message, windo = this.window(),
+                    element = windo.element();
+                if (windo.is(ACCESSABLE)) {
+                    message = parse(message_);
+                    handler({
+                        // this can be expanded a bit when you get some time
+                        srcElement: element,
+                        timeStamp: _.now(),
+                        data: function () {
+                            return message;
+                        }
+                    });
+                } else {
+                    wraptry(function () {
+                        // do not parse message so it can be sent as is
+                        if (!referrer_) {
+                            console.error('missing referrer: ' + windo.address);
+                        } else {
+                            element.postMessage(message_, referrer_);
+                        }
+                    }, console.error);
+                }
+                return this;
             },
-            length: function () {
-                return 1;
+            sameOrigin: function () {
+                var parsedReference, manager = this,
+                    element = manager.element(),
+                    windo = manager.owner.window(),
+                    windoElement = windo.element();
+                if (windo === manager) {
+                    return BOOLEAN_TRUE;
+                }
+                if (manager.is(ACCESSABLE)) {
+                    parsedReference = reference(element.location.href);
+                    if (!parsedReference && manager.iframe) {
+                        parsedReference = reference(manager.iframe.src());
+                    }
+                    return !parsedReference || parsedReference === reference(windoElement.location.href);
+                }
+                return BOOLEAN_FALSE;
             },
             registerAs: function () {
                 var newName, oldName, manager = this,
@@ -2008,9 +2289,6 @@ app.scope(function (app) {
                 newName = manager.owner.registeredElementName(registeredAs);
                 manager.directive(newName);
                 return manager;
-            },
-            wrap: function (list) {
-                return this.owner.query(list || this);
             },
             children: function (eq, memo) {
                 var filter, result, manager = this,
@@ -2061,7 +2339,7 @@ app.scope(function (app) {
                 return this.applyStyle('display', 'block');
             },
             applyStyle: function (key, value, important) {
-                applyStyle(key, value, this, important);
+                if (applyStyle(key, value, this, important)) {}
                 return this;
             },
             getStyle: function (eq) {
@@ -2069,30 +2347,52 @@ app.scope(function (app) {
                     manager = this,
                     first = manager.element();
                 if (first && manager.isElement) {
-                    returnValue = getComputed(first, manager.context);
+                    returnValue = getComputed(first, manager.owner);
                 }
                 return returnValue;
             },
             remove: function (fragment) {
                 var el, parent, manager = this,
-                    cachedRemoving = manager.isRemoving || BOOLEAN_FALSE;
-                if (!cachedRemoving && (el = manager.element()) && (parent = el[PARENT_NODE])) {
-                    manager.isRemoving = BOOLEAN_TRUE;
-                    if (fragment) {
-                        fragment.appendChild(el);
-                    } else {
-                        parent.removeChild(el);
-                    }
-                    dispatchDetached([el], manager.owner);
-                    manager.isRemoving = cachedRemoving;
+                    cachedRemoving = manager.is(REMOVING) || BOOLEAN_FALSE;
+                if (cachedRemoving || !(el = manager.element()) || !(parent = el[PARENT_NODE])) {
+                    return manager;
                 }
+                manager.mark(REMOVING);
+                if (fragment) {
+                    fragment.appendChild(el);
+                } else {
+                    parent.removeChild(el);
+                }
+                dispatchDetached([el], manager.owner);
+                manager.remark(REMOVING, cachedRemoving);
                 return manager;
+            },
+            frame: function (head, body) {
+                var manager = this,
+                    content = head;
+                if (body || content.toLowerCase().split('<!doctype ')[LENGTH] === 1) {
+                    content = '<!DOCTYPE html><html><head>' + content + '</head><body>' + body + '</body></html>';
+                }
+                if (manager.isIframe) {
+                    if (manager.isAttached) {
+                        manager.html(content);
+                    } else {
+                        manager.cachedContent = content;
+                    }
+                    return manager;
+                } else {
+                    return content;
+                }
             },
             // rework how to destroy elements
             destroy: function () {
                 var customName, manager = this,
                     registeredAs = manager.registeredAs,
                     element = manager.element();
+                if (manager.is(DESTROYED)) {
+                    return manager;
+                }
+                manager.mark(DESTROYED);
                 if (manager.isIframe) {
                     manager.owner.data.remove(element.contentWindow);
                 }
@@ -2102,18 +2402,10 @@ app.scope(function (app) {
                     manager.directiveDestruction(customName);
                 }
                 // destroy events
-                factories.Events[CONSTRUCTOR][PROTOTYPE].destroy.call(manager);
+                manager.directiveDestruction(EVENTS);
                 // remove from global hash
                 manager.owner.data.remove(element);
                 return manager;
-            },
-            createEvent: function (original, type, opts) {
-                return DomEvent(original, {
-                    target: this.target,
-                    origin: this,
-                    capturing: toBoolean(type.split(COLON)[0]),
-                    arg2: opts
-                });
             },
             index: function () {
                 return this;
@@ -2137,7 +2429,7 @@ app.scope(function (app) {
             tag: function (str) {
                 return tag(this.element(), str);
             },
-            rect: function () {
+            client: function () {
                 return clientRect(this.element());
             },
             box: function (context) {
@@ -2150,23 +2442,34 @@ app.scope(function (app) {
                 return eventDispatcher(this, name, e, capturing_);
             }),
             toJSON: function () {
-                var children, obj, manager = this,
+                var previous, temporaryFragment, childrenLength, children, obj, manager = this,
+                    owner = manager.owner,
                     node = manager.element();
-                if (!canBeProcessed(node)) {
-                    return node;
+                if (manager.isWindow || manager.isDocument) {
+                    return {};
                 }
-                children = manager.children()[TO_JSON]();
+                children = manager.children();
                 obj = {
-                    tag: tag(node)
+                    tag: manager.isFragment ? DIV : tag(node)
                 };
-                if (children[LENGTH]) {
-                    obj.children = children;
+                if ((childrenLength = children[LENGTH]())) {
+                    temporaryFragment = owner.element().createDocumentFragment();
+                    duffRight(children.unwrap(), function (manager) {
+                        var element = manager.element();
+                        temporaryFragment.insertBefore(element, previous || NULL);
+                        previous = element;
+                    });
+                    obj.children = children[TO_JSON]().unwrap();
                 }
                 if (node[INNER_TEXT]) {
                     obj[INNER_TEXT] = node[INNER_TEXT];
                 }
+                if (childrenLength) {
+                    node.appendChild(temporaryFragment);
+                }
                 duff(node[ATTRIBUTES], function (attr) {
-                    obj[camelCase(attr[LOCAL_NAME])] = attr.nodeValue;
+                    var attributes = obj.attributes = obj.attributes || {};
+                    attributes[camelCase(attr[LOCAL_NAME])] = attr.nodeValue;
                 });
                 return obj;
             }
@@ -2190,12 +2493,12 @@ app.scope(function (app) {
         }), wrap(videoDirectEvents, triggerEventWrapperManager), wrap(directEvents, function (attr) {
             return triggerEventWrapperManager(attr);
         })), BOOLEAN_TRUE),
-        _removeEventListener = function (manager, name, namespace, selector, handler, capture_) {
+        _removeEventListener = function (manager, name, group, selector, handler, capture_) {
             var capture = !!capture_,
                 directive = manager.directive(EVENTS),
                 removeFromList = function (list, name) {
                     return list && list.duffRight(function (obj) {
-                        if ((!name || name === obj[NAME]) && (!handler || obj.handler === handler) && (!namespace || obj.namespace === namespace) && (!selector || obj.selector === selector)) {
+                        if ((!name || name === obj[NAME]) && (!handler || obj.handler === handler) && (!group || obj.group === group) && (!selector || obj.selector === selector)) {
                             directive.detach(obj);
                         }
                     });
@@ -2207,195 +2510,6 @@ app.scope(function (app) {
          * @augments Model
          * @augments Collection
          */
-        IS_TRUSTED = 'isTrusted',
-        fixHooks = {
-            // Includes some event props shared by KeyEvent and MouseEvent
-            props: gapSplit("data altKey bubbles cancelable ctrlKey currentTarget eventPhase metaKey relatedTarget shiftKey target timeStamp view which"),
-            fixedHooks: {},
-            keyHooks: {
-                props: gapSplit("char charCode key keyCode"),
-                filter: function (evnt, original) {
-                    var charCode;
-                    // Add which for key evnts
-                    if (evnt.which == NULL) {
-                        charCode = original.charCode;
-                        evnt.which = charCode != NULL ? charCode : original.keyCode;
-                    }
-                    return evnt;
-                }
-            },
-            forceHooks: {
-                props: [],
-                filter: function (evnt, original) {
-                    evnt.value = ((original.force || original.webkitForce) / 3) || 0;
-                    return evnt;
-                }
-            },
-            motionHooks: {
-                props: [],
-                filter: function () {
-                    this.watchingMotion = BOOLEAN_TRUE;
-                }
-            },
-            mouseHooks: {
-                props: gapSplit("button buttons clientX clientY offsetX offsetY pageX pageY screenX screenY toElement"),
-                filter: function (evnt, original) {
-                    var eventDoc, doc, body,
-                        button = original.button;
-                    // Calculate pageX/Y if missing and clientX/Y available
-                    if (evnt.pageX == NULL && original.clientX != NULL) {
-                        evntDoc = evnt.target.ownerDocument || doc;
-                        doc = evntDoc.documentElement;
-                        body = evntDoc[BODY];
-                        evnt.pageX = original.clientX + (doc && doc.scrollLeft || body && body.scrollLeft || 0) - (doc && doc.clientLeft || body && body.clientLeft || 0);
-                        evnt.pageY = original.clientY + (doc && doc.scrollTop || body && body.scrollTop || 0) - (doc && doc.clientTop || body && body.clientTop || 0);
-                    }
-                    evnt.movementX = original.movementX || 0;
-                    evnt.movementY = original.movementY || 0;
-                    evnt.layerX = original.layerX || 0;
-                    evnt.layerY = original.layerY || 0;
-                    evnt.x = original.x || 0;
-                    evnt.y = original.y || 0;
-                    // Add which for click: 1 === left; 2 === middle; 3 === right
-                    // Note: button is not normalized, so don't use it
-                    if (!evnt.which && button !== UNDEFINED) {
-                        evnt.which = (button & 1 ? 1 : (button & 2 ? 3 : (button & 4 ? 2 : 0)));
-                    }
-                    return evnt;
-                }
-            },
-            make: (function () {
-                var cached = {};
-                return function (evnt, originalEvent, data) {
-                    var acc, acc_, doc, target, val, i, prop, copy, type = originalEvent.type,
-                        // Create a writable copy of the event object and normalize some properties
-                        fixHook = fixHooks.fixedHooks[type];
-                    if (!fixHook) {
-                        fixHooks.fixedHooks[type] = fixHook = rmouseEvent.test(type) ? this.mouseHooks : rkeyEvent.test(type) ? this.keyHooks : rforceEvent.test(type) ? this.forceHooks : motionMorph.test(type) ? this.motionHooks : {};
-                        // rfocusMorph
-                        // motionMorph
-                    }
-                    copy = fixHook.props ? this.props.concat(fixHook.props) : this.props;
-                    i = copy[LENGTH];
-                    while (i--) {
-                        prop = copy[i];
-                        val = originalEvent[prop];
-                        if (val != NULL) {
-                            evnt[prop] = val;
-                        }
-                    }
-                    evnt.originalType = originalEvent.type;
-                    // Support: Cordova 2.5 (WebKit) (#13255)
-                    // All events should have a target; Cordova deviceready doesn't
-                    // ie also does not have a target... so use current target
-                    target = evnt.target || (evnt.view ? evnt.view.event.currentTarget : event && event.currentTarget) || evnt.delegateTarget;
-                    if (!target) {
-                        target = evnt.target = doc;
-                    }
-                    // Support: Safari 6.0+, Chrome<28
-                    // Target should not be a text node (#504, #13143)
-                    if (target[NODE_TYPE] === 3) {
-                        evnt.target = target[PARENT_NODE];
-                    }
-                    if (isFunction(fixHook.filter)) {
-                        fixHook.filter(evnt, originalEvent);
-                    }
-                    evnt.type = distilledEventName[originalEvent.type] || originalEvent.type;
-                    evnt.set(originalEvent.data || data || EMPTY_STRING);
-                    evnt.isImmediatePropagationStopped = evnt.isPropagationStopped = evnt.isDefaultPrevented = BOOLEAN_FALSE;
-                    // special
-                    if (evnt.type === 'fullscreenchange') {
-                        doc = evnt.target;
-                        if (isWindow(doc)) {
-                            doc = doc[DOCUMENT];
-                        } else {
-                            while (doc && !isDocument(doc) && doc[PARENT_NODE]) {
-                                doc = doc[PARENT_NODE];
-                            }
-                        }
-                        evnt.fullscreenDocument = doc;
-                        if (isDocument(doc)) {
-                            evnt.isFullScreen = (doc.fullScreen || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.fullscreenElement) ? BOOLEAN_TRUE : BOOLEAN_FALSE;
-                        }
-                    }
-                    evnt[IS_TRUSTED] = _.has(originalEvent, IS_TRUSTED) ? originalEvent[IS_TRUSTED] : !DO_NOT_TRUST;
-                    if (this.watchingMotion) {
-                        acc = original.acceleration;
-                        if (!acc) {
-                            acc_ = original.accelerationIncludingGravity;
-                            acc = {
-                                x: acc_.x - 9.81,
-                                y: acc_.y - 9.81,
-                                z: acc_.z - 9.81
-                            };
-                        }
-                        if (acc) {
-                            cached.x = acc.x;
-                            cached.y = acc.y;
-                            cached.z = acc.z;
-                            cached.interval = original.interval;
-                            cached.rotationRate = original.rotationRate;
-                        }
-                        if (cached.x != NULL) {
-                            evnt.motionX = cached.x;
-                            evnt.motionY = cached.y;
-                            evnt.motionZ = cached.z;
-                            evnt.interval = cached.interval;
-                            evnt.rotationRate = cached.rotationRate;
-                        }
-                        if (original.alpha != NULL) {
-                            cached.alpha = original.alpha;
-                            cached.beta = original.beta;
-                            cached.gamma = original.gamma;
-                            cached.absolute = original.absolute;
-                        }
-                        if (cached.alpha != NULL) {
-                            evnt.alpha = cached.alpha;
-                            evnt.beta = cached.beta;
-                            evnt.gamma = cached.gamma;
-                            evnt.absolute = cached.absolute;
-                        }
-                    }
-                    return evnt;
-                };
-            }())
-        },
-        DomEvent = factories.ObjectEvent.extend('DomEvent', {
-            constructor: function (evnt, opts) {
-                var e = this;
-                if (DomEvent.isInstance(evnt)) {
-                    return evnt;
-                }
-                e.origin = opts.origin;
-                e.originalEvent = evnt;
-                e.delegateTarget = opts.target;
-                fixHooks.make(e, evnt, opts.arg2);
-                e.capturing = opts.capturing === UNDEFINED ? isCapturing(e) : opts.capturing;
-                return e;
-            },
-            preventDefault: function () {
-                var e = this.originalEvent;
-                this.isDefaultPrevented = BOOLEAN_TRUE;
-                if (e && e.preventDefault) {
-                    e.preventDefault();
-                }
-            },
-            stopPropagation: function () {
-                var e = this.originalEvent;
-                this.isPropagationStopped = BOOLEAN_TRUE;
-                if (e && e.stopPropagation) {
-                    e.stopPropagation();
-                }
-            },
-            stopImmediatePropagation: function () {
-                var e = this.originalEvent;
-                this.isImmediatePropagationStopped = BOOLEAN_TRUE;
-                if (e && e.stopImmediatePropagation) {
-                    e.stopImmediatePropagation();
-                }
-                this.stopPropagation();
-            }
-        }, BOOLEAN_TRUE),
         eq = _.eq,
         objectMatches = _.matches,
         createDomFilter = function (filtr) {
@@ -2441,32 +2555,11 @@ app.scope(function (app) {
                 return ret || 0;
             };
         },
-        dommFind = attachPrevious(function (str) {
-            var passedString = isString(str),
-                matchers = [],
-                domm = this,
-                push = function (el) {
-                    matchers.push(domm.context.owner.returnsManager(el));
-                };
-            return duff(domm.unwrap(), function (manager) {
-                if (passedString) {
-                    duff(query(str, manager.element()), push);
-                } else {
-                    push(manager);
-                }
-            }) && matchers;
-        }),
         canBeProcessed = function (item) {
             return isWindow(item) || isElement(item) || isDocument(item) || isFragment(item);
         },
         collectChildren = function (element) {
             return toArray(element.children || element.childNodes);
-        },
-        appendChildDOMM = function (els, clone) {
-            return this.insertAt(els, NULL, clone);
-        },
-        prependChildDOMM = function (els, clone) {
-            return this.insertAt(els, 0, clone);
         },
         returnsManager = function (element, owner) {
             return element && !isWindow(element) && element.isValidDomManager ? element : ensure(element, owner);
@@ -2507,7 +2600,7 @@ app.scope(function (app) {
             };
         },
         allEachMethods = gapSplit('destroy show hide style remove on off once addEventListener removeEventListener dispatchEvent').concat(allDirectMethods),
-        firstMethods = gapSplit('tag element rect box flow'),
+        firstMethods = gapSplit('tag element client box flow'),
         applyToFirst = function (method) {
             var shouldBeContext = method !== 'tag';
             return function (one, two) {
@@ -2529,22 +2622,27 @@ app.scope(function (app) {
              * @param {String | Node | Function} str - string to query the dom with, or a function to run on document load, or an element to wrap in a DOMM instance
              * @returns {DOMM} instance
              */
+            isValidDOMM: BOOLEAN_TRUE,
             constructor: function (str, ctx, isValid, validContext, documentContext) {
                 var isArrayResult, els = str,
                     dom = this,
-                    context = dom.context = validContext ? ctx.index(0) : documentContext, // returnsManager(ctx || win[DOCUMENT], documentContext),
+                    context = dom.context = validContext ? ctx.index(0) : documentContext,
+                    owner = dom.owner = documentContext,
                     unwrapped = context.element();
+                if (str && !isWindow(str) && str.isValidDOMM) {
+                    return str;
+                }
                 if (isFunction(str)) {
                     if (isDocument(unwrapped)) {
-                        return setupDomContentLoaded(str, documentContext).wrap();
+                        return setupDomContentLoaded(str, owner).wrap();
                     }
                 } else {
                     if (!isValid) {
                         if (isString(str)) {
                             if (str[0] === '<') {
-                                els = makeTree(str, documentContext);
+                                els = makeTree(str, owner);
                             } else {
-                                els = map(query(str, unwrapped), documentContext.returnsManager, documentContext);
+                                els = map(query(str, unwrapped), owner.returnsManager, owner);
                             }
                         } else {
                             els = str;
@@ -2555,9 +2653,9 @@ app.scope(function (app) {
                                     els = els.unwrap();
                                 }
                                 if (canBeProcessed(els)) {
-                                    els = [documentContext.returnsManager(els)];
+                                    els = [owner.returnsManager(els)];
                                 } else {
-                                    els = els && map(els, documentContext.returnsManager, documentContext);
+                                    els = els && map(els, owner.returnsManager, owner);
                                 }
                             }
                         }
@@ -2572,8 +2670,34 @@ app.scope(function (app) {
             removeValue: removeValue(domIterates),
             toggleValue: toggleValue(domIterates),
             changeValue: changeValue(domIterates),
-            push: function (el) {
-                this.unwrap().push(this.context.owner.returnsManager(el));
+            add: attachPrevious(function (context, query) {
+                var found = context.owner.$(query);
+                return context.unwrap().concat(found);
+            }),
+            addBack: attachPrevious(function (context, selector) {
+                var previous = context._previous;
+                if (!previous) {
+                    return context.unwrap().concat([]);
+                }
+                if (selector) {
+                    previous = previous.filter(selector);
+                }
+                return context.unwrap().concat(previous.unwrap());
+            }),
+            push: function () {
+                var owner = this.context.owner;
+                this.directive('list').push(foldl(arguments, function (memo, el) {
+                    if (!el) {
+                        return memo;
+                    }
+                    if (isWindow(el)) {
+                        memo.push(el);
+                    } else {
+                        memo = memo.concat(!isWindow(el) && isFunction(el.unwrap) ? el.unwrap() : owner.returnsManager(el));
+                    }
+                    return memo;
+                }, [], owner));
+                return this;
             },
             elements: function () {
                 // to array of DOMManagers
@@ -2603,8 +2727,14 @@ app.scope(function (app) {
              * @param {String|Function|Object} filtr - filter variable that will filter by matching the object that is passed in, or by selector if it is a string, or simply with a custom function
              * @returns {DOMM} new DOMM instance object
              */
-            filter: attachPrevious(function (filter) {
-                return domFilter(this.unwrap(), filter);
+            filter: attachPrevious(function (context, filter) {
+                return domFilter(context.unwrap(), filter);
+            }),
+            empty: attachPrevious(function (context, filtr) {
+                var filter = createDomFilter(filtr);
+                return dataReconstructor(context.unwrap(), unwrapsOnLoop(function (memo, manager, idx, list) {
+                    return !filter(manager, idx, list) && manager.remove();
+                }));
             }),
             /**
              * @func
@@ -2612,16 +2742,23 @@ app.scope(function (app) {
              * @param {String} str - string to use query to find against
              * @returns {DOMM} matching elements
              */
-            // find: dommFind,
-            $: dommFind,
+            $: attachPrevious(function (context, str) {
+                var matchers = [],
+                    push = function (el) {
+                        matchers.push(context.owner.returnsManager(el));
+                    };
+                return duff(context.unwrap(), function (manager) {
+                    duff(query(str, manager.element()), push);
+                }) && matchers;
+            }),
             /**
              * @func
              * @name DOMM#children
              * @param {Number} [eq] - index of the children to gather. If none is provided, then all children will be added
              * @returns {DOMM} all / matching children
              */
-            children: attachPrevious(function (eq) {
-                return foldl(this.unwrap(), function (memo, manager) {
+            children: attachPrevious(function (context, eq) {
+                return foldl(context.unwrap(), function (memo, manager) {
                     return manager.children(eq, memo);
                 }, []);
             }),
@@ -2672,7 +2809,7 @@ app.scope(function (app) {
              * @func
              * @name DOMM#attr
              * @param {...*} splat of objects and key value pairs that create a single object to be applied to the element
-             * @returns {DOMM|*} if multiple attributes were requested then a plain hash is returned, otherwise the DOMM instance is returned
+             * @returns {DOMM | *} if multiple attributes were requested then a plain hash is returned, otherwise the DOMM instance is returned
              */
             attr: attrApi(domIterates),
             data: dataApi(domIterates),
@@ -2683,8 +2820,8 @@ app.scope(function (app) {
              * @param {Number|Array} [num=0] - index or list of indexes to create a new DOMM element with.
              * @returns {DOMM} instance
              */
-            eq: attachPrevious(function (num) {
-                return eq(this.unwrap(), num);
+            eq: attachPrevious(function (context, num) {
+                return eq(context.unwrap(), num);
             }),
             /**
              * @func
@@ -2707,10 +2844,16 @@ app.scope(function (app) {
              * @func
              * @name DOMM#append
              */
-            append: appendChildDOMM,
-            appendChild: appendChildDOMM,
-            prepend: prependChildDOMM,
-            prependChild: prependChildDOMM,
+            append: function (els, clone) {
+                return this.insertAt(els, NULL, clone);
+            },
+            prepend: function (els, clone) {
+                return this.insertAt(els, 0, clone);
+            },
+            appendTo: function (target) {
+                $(target).append(this);
+                return this;
+            },
             /**
              * @func
              * @name DOMM#next
@@ -2729,6 +2872,12 @@ app.scope(function (app) {
              * @returns {DOMM} instance
              */
             skip: horizontalTraverser('skip', 0),
+            siblings: attachPrevious(function (context, filtr) {
+                var list = [];
+                return list.concat.apply(list, context.map(function (manager) {
+                    return manager.siblings(filtr).unwrap();
+                }, []));
+            }),
             /**
              * @func
              * @name DOMM#insertAt
@@ -2736,8 +2885,8 @@ app.scope(function (app) {
              */
             insertAt: function (els_, index, clone) {
                 var manager = this,
-                    owner = manager.context,
-                    els = isAppendable(els_) ? this.context.returnsManager(els_) : owner.query(els_).fragment();
+                    owner = manager.owner,
+                    els = isAppendable(els_) ? this.context.returnsManager(els_) : owner.$(els_).fragment();
                 return this.each(function (manager) {
                     var elements = els;
                     if (clone) {
@@ -2746,15 +2895,57 @@ app.scope(function (app) {
                     manager.insertAt(elements, index);
                 });
             },
+            replaceWith: attachPrevious(function (context, els_, shouldClone_) {
+                var isStringResult, els, shouldClone = !!shouldClone_,
+                    owner = context.owner;
+                if (!(isStringResult = isString(element))) {
+                    els = isAppendable(els_) ? owner.returnsManager(els_) : owner.query(els_).fragment();
+                }
+                return context.foldl(function (memo, manager, index) {
+                    var elements;
+                    if (!manager.isElement) {
+                        return memo;
+                    }
+                    if (isStringResult) {
+                        elements = context.owner.$(els_);
+                    } else {
+                        if (clone) {
+                            elements = els.clone();
+                        } else {
+                            if (index) {
+                                return memo;
+                            }
+                        }
+                    }
+                    parent = manager.parent();
+                    parent.insertAt(elements, parent.children().indexOf(manager));
+                    manager.remove();
+                    return memo.concat(elements.unwrap());
+                }, []).unwrap();
+            }),
+            contains: function (els) {
+                return !!this.find(function (manager) {
+                    return manager.contains(els);
+                });
+            },
+            clone: attachPrevious(function (context) {
+                return context.foldl(function (memo, manager) {
+                    if (manager.isElement) {
+                        memo.push(manager.clone());
+                    }
+                    return memo;
+                });
+            }),
             /**
              * @func
              * @name DOMM#parent
              * @param {Number} [count=1] - number of elements to go up in the parent chain
              * @returns {DOMM} instance of collected, unique parents
              */
-            parent: attachPrevious(function (original) {
+            parent: attachPrevious(function (context, original) {
+                // ensure unique
                 var hash = {};
-                return this.foldl(function (memo, manager) {
+                return context.foldl(function (memo, manager) {
                     var parent;
                     if ((parent = manager.parent(original)) && !hash[parent[TARGET][__ELID__]]) {
                         hash[parent[TARGET][__ELID__]] = parent;
@@ -2794,74 +2985,56 @@ app.scope(function (app) {
              * @name DOMM#contentRect
              * @returns {Object} dimensions of the content rectangle
              */
-            contentRect: function (num) {
-                var box = this.box(num),
-                    pB = box.paddingBottom,
-                    pT = box.paddingTop,
-                    pR = box.paddingRight,
-                    pL = box.paddingLeft,
-                    bT = box.borderTop,
-                    bB = box.borderBottom,
-                    bR = box.borderRight,
-                    bL = box.borderLeft;
-                return {
-                    bottom: box[BOTTOM] - pB - bB,
-                    height: box[HEIGHT] - pT - bT - pB - bB,
-                    right: box[RIGHT] - pR - bR,
-                    width: box[WIDTH] - pL - bL - pR - bR,
-                    left: box[LEFT] + pL - bL,
-                    top: box[TOP] + pT - bT
-                };
-            },
-            /**
-             * @func
-             * @name DOMM#flowRect
-             * @returns {Object} dimensions of the flow rectangle: the amount of space the element should take up in the dom
-             */
-            flowRect: function () {
-                var box = this.box(0),
-                    mT = box.marginTop,
-                    mL = box.marginLeft,
-                    mB = box.marginBottom,
-                    mR = box.marginRight;
-                return {
-                    height: box[HEIGHT] + mT + mB,
-                    bottom: box[BOTTOM] + mB,
-                    width: box[WIDTH] + mR + mL,
-                    right: box[RIGHT] + mR,
-                    left: box[LEFT] + mL,
-                    top: box[TOP] + mT
-                };
-            },
+            // contentRect: function (num) {
+            //     var box = this.box(num),
+            //         pB = box.paddingBottom,
+            //         pT = box.paddingTop,
+            //         pR = box.paddingRight,
+            //         pL = box.paddingLeft,
+            //         bT = box.borderTop,
+            //         bB = box.borderBottom,
+            //         bR = box.borderRight,
+            //         bL = box.borderLeft;
+            //     return {
+            //         bottom: box[BOTTOM] - pB - bB,
+            //         height: box[HEIGHT] - pT - bT - pB - bB,
+            //         right: box[RIGHT] - pR - bR,
+            //         width: box[WIDTH] - pL - bL - pR - bR,
+            //         left: box[LEFT] + pL - bL,
+            //         top: box[TOP] + pT - bT
+            //     };
+            // },
+            // /**
+            //  * @func
+            //  * @name DOMM#flowRect
+            //  * @returns {Object} dimensions of the flow rectangle: the amount of space the element should take up in the dom
+            //  */
+            // flowRect: function () {
+            //     var box = this.box(0),
+            //         mT = box.marginTop,
+            //         mL = box.marginLeft,
+            //         mB = box.marginBottom,
+            //         mR = box.marginRight;
+            //     return {
+            //         height: box[HEIGHT] + mT + mB,
+            //         bottom: box[BOTTOM] + mB,
+            //         width: box[WIDTH] + mR + mL,
+            //         right: box[RIGHT] + mR,
+            //         left: box[LEFT] + mL,
+            //         top: box[TOP] + mT
+            //     };
+            // },
             /**
              * @func
              * @name DOMM#childOf
              */
-            childOf: function (oParent_) {
-                var domm = this,
-                    _oParent = DOMM(oParent_),
-                    children = domm.unwrap(),
-                    oParent = _oParent.unwrap();
-                // has to use utility find because the DOMM find is just a scoped query ($)
-                return !!children[LENGTH] && !!oParent[LENGTH] && !find(oParent, function (_parent) {
-                    return find(children, function (child) {
-                        var parent = child,
-                            finding = BOOLEAN_TRUE;
-                        while (parent && finding) {
-                            if (_parent === parent) {
-                                finding = BOOLEAN_FALSE;
-                            }
-                            parent = parent[PARENT_NODE];
-                        }
-                        return finding;
-                    });
-                });
-            },
             map: function (handler, context) {
                 return Collection(map(this.unwrap(), handler, context));
             },
             toJSON: function () {
-                return this.mapCall(TO_JSON);
+                return this.map(function (manager) {
+                    return manager.toJSON();
+                });
             },
             toString: function () {
                 return JSON.stringify(this);

@@ -1,3 +1,10 @@
+var ACTIONS = 'actions',
+    IS_STOPPED = 'isStopped',
+    UPCASED_IS_STOPPED = upCase(IS_STOPPED),
+    PROPAGATION = 'propagation',
+    DEFAULT_PREVENTED = 'defaultPrevented',
+    PROPAGATION_IS_STOPPED = PROPAGATION + UPCASED_IS_STOPPED,
+    IMMEDIATE_PROP_IS_STOPPED = 'immediate' + upCase(PROPAGATION) + UPCASED_IS_STOPPED;
 app.scope(function (app) {
     var _ = app._,
         factories = _.factories,
@@ -10,6 +17,65 @@ app.scope(function (app) {
         returnsId = function () {
             return this.id;
         },
+        SERIALIZED_DATA = '_sharedData',
+        ObjectEvent = factories.Directive.extend('ObjectEvent', {
+            constructor: function (target, data, name, options, when) {
+                var evnt = this;
+                evnt[PROPAGATION_IS_STOPPED] = evnt[IMMEDIATE_PROP_IS_STOPPED] = BOOLEAN_FALSE;
+                evnt[ORIGIN] = target;
+                evnt[NAME] = name;
+                evnt[TYPE] = name.split(COLON)[0];
+                evnt.timeStamp = when || now();
+                evnt[SERIALIZED_DATA] = {};
+                evnt.data(data);
+                if (options) {
+                    extend(evnt, options);
+                }
+                return evnt;
+            },
+            isStopped: function () {
+                return this[PROPAGATION_IS_STOPPED] || this[IMMEDIATE_PROP_IS_STOPPED];
+            },
+            data: function (datum) {
+                return arguments[LENGTH] ? this.set(datum) : this[SERIALIZED_DATA];
+            },
+            get: function (key) {
+                return this[SERIALIZED_DATA][key];
+            },
+            set: function (data) {
+                var evnt = this;
+                evnt[SERIALIZED_DATA] = isObject(data) ? data : {};
+                return evnt;
+            },
+            stopImmediatePropagation: function () {
+                this.stopPropagation();
+                this[IMMEDIATE_PROP_IS_STOPPED] = BOOLEAN_TRUE;
+            },
+            stopPropagation: function () {
+                this[PROPAGATION_IS_STOPPED] = BOOLEAN_TRUE;
+            },
+            preventDefault: function () {
+                this[DEFAULT_PREVENTED] = BOOLEAN_TRUE;
+            },
+            defaultIsPrevented: function () {
+                return this[DEFAULT_PREVENTED];
+            },
+            action: function (fn) {
+                var evnt = this;
+                evnt.directive(ACTIONS).push(fn);
+                return evnt;
+            },
+            finished: function () {
+                var actions, evnt = this;
+                evnt.isTrusted = BOOLEAN_FALSE;
+                if (evnt.defaultIsPrevented()) {
+                    return;
+                }
+                if ((actions = evnt[ACTIONS])) {
+                    actions.call(evnt);
+                }
+            }
+        }, BOOLEAN_TRUE),
         EventsDirective = factories.Directive.extend('EventsDirective', {
             constructor: function () {
                 var eventsDirective = this;
@@ -40,8 +106,11 @@ app.scope(function (app) {
                 eventObject.list = list;
                 eventsDirective.add(list, eventObject);
             },
+            create: function (target, data, name, options) {
+                return ObjectEvent(target, data, name, options);
+            },
             add: function (list, evnt) {
-                list.add(evnt);
+                list.push(evnt);
             },
             remove: function (list, evnt) {
                 list.remove(evnt);
@@ -97,7 +166,7 @@ app.scope(function (app) {
                 return this.handlers[key] && this.handlers[key][LENGTH]();
             },
             dispatch: function (name, evnt) {
-                var handler, listLength, i = 0,
+                var handler, items, listLength, i = 0,
                     events = this,
                     stack = events[STACK],
                     handlers = events[HANDLERS],
@@ -111,10 +180,10 @@ app.scope(function (app) {
                     return;
                 }
                 running[name] = BOOLEAN_TRUE;
-                list = events.subset(list.unwrap(), evnt);
-                listLength = list[LENGTH];
-                for (; i < listLength && !stopped; i++) {
-                    handler = list[i];
+                items = events.subset(list.unwrap(), evnt);
+                listLength = items[LENGTH];
+                for (; i < listLength && !stopped && !list.scrubbed; i++) {
+                    handler = items[i];
                     if (!handler.disabled && events.queue(stack, handler, evnt)) {
                         handler.fn(evnt);
                         stopped = !!evnt[IMMEDIATE_PROP_IS_STOPPED];
@@ -123,13 +192,14 @@ app.scope(function (app) {
                 }
                 running[name] = !!cached;
                 if (!stack[LENGTH]() && removeList[LENGTH]()) {
-                    removeList.duffRight(events.detach, events);
-                    removeList.empty();
+                    removeList.each(events.detach, events);
+                    removeList.reset();
                 }
                 if (stopped) {
                     events.cancelled(stack, evnt, i);
                 }
                 evnt.finished();
+                return evnt.returnValue;
             },
             subset: function (list) {
                 return list;

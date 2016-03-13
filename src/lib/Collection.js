@@ -1,6 +1,13 @@
 app.scope(function (app) {
-    var ITEMS = '_items',
-        BY_ID = '_byId',
+    var isNullMessage = {
+            message: 'object must not be null or undefined'
+        },
+        validIdMessage = {
+            message: 'objects in sorted collections must have either a number or string for their valueOf result'
+        },
+        cannotModifyMessage = {
+            message: 'list cannot be modified while it is being iterated over'
+        },
         // ID = ID,
         eachCall = function (array, method, arg) {
             return duff(array, function (item) {
@@ -38,7 +45,7 @@ app.scope(function (app) {
             }
             return !!val;
         },
-        addAt = function (list, item, index) {
+        insertAt = function (list, item, index) {
             var len = list[LENGTH],
                 lastIdx = len || 0;
             splice(list, index || 0, 0, item);
@@ -268,101 +275,6 @@ app.scope(function (app) {
         unwrapInstance = function (instance_) {
             return isInstance(instance, factories.Collection) ? instance_ : instance.unwrap();
         },
-        recreatingSelfList = gapSplit('eq map mapCall filter pluck where whereNot cycle uncycle flatten'),
-        eachHandlers = {
-            each: duff,
-            duff: duff,
-            forEach: duff,
-            eachCall: eachCall,
-            eachRight: duffRight,
-            duffRight: duffRight,
-            forEachRight: duffRight,
-            eachCallRight: eachCallRight
-        },
-        eachHandlerKeys = keys(eachHandlers),
-        reverseList = gapSplit('reverse'),
-        pushUnshiftHandlers = gapSplit('push unshift'),
-        joinPopShiftHandlers = gapSplit('join pop shift'),
-        countingList = gapSplit('count countTo countFrom merge'),
-        foldIteration = gapSplit('foldr foldl reduce'),
-        findIteration = gapSplit('find findLast findWhere findLastWhere'),
-        indicesIteration = gapSplit('add addAt remove removeAt indexOf posit splice'),
-        foldFindIndexIteration = indicesIteration.concat(foldIteration, findIteration),
-        marksIterating = function (fn) {
-            return function (one, two, three, four, five, six) {
-                var result, list = this;
-                ++list.iterating;
-                result = fn(list, one, two, three, four, five, six);
-                --list.iterating;
-                return result;
-            };
-        },
-        wrappedListMethods = extend(wrap(joinPopShiftHandlers, function (name) {
-            return function (arg) {
-                return this.items[name](arg);
-            };
-        }), wrap(pushUnshiftHandlers, function (name) {
-            return function (args) {
-                var list = this;
-                list.items[name].apply(list.items, args);
-                return list;
-            };
-        }), wrap(reverseList, function (name) {
-            return function () {
-                var list = this;
-                list.directive('status').toggle('reversed');
-                list.items[name]();
-                return list;
-            };
-        }), wrap(eachHandlers, function (fn) {
-            return marksIterating(function (list, handler, context) {
-                var args0 = list.items,
-                    args1 = handler,
-                    args2 = arguments[LENGTH] > 1 ? context : list;
-                fn(args0, args1, args2);
-                return list;
-            });
-        }), wrap(countingList, function (name) {
-            return marksIterating(function (list, runner, context, fromHere, toThere) {
-                _[name](list.items, runner, context, fromHere, toThere);
-                return list;
-            });
-        }), wrap(foldFindIndexIteration.concat(recreatingSelfList), function (name) {
-            return marksIterating(function (list, one, two, three) {
-                return _[name](list.items, one, two, three);
-            });
-        })),
-        ret = _.exports({
-            eachCall: eachCall,
-            eachCallRight: eachCallRight,
-            filter: filter,
-            matches: matches,
-            mapCall: mapCall,
-            add: add,
-            addAt: addAt,
-            concatUnique: concatUnique,
-            removeAt: removeAt,
-            remove: remove,
-            cycle: cycle,
-            uncycle: uncycle,
-            mamboWrap: internalMambo,
-            mambo: externalMambo,
-            concat: concat,
-            pluck: pluck,
-            where: where,
-            findWhere: findWhere,
-            findLastWhere: findLastWhere,
-            posit: posit,
-            range: range,
-            count: count,
-            countTo: countTo,
-            countFrom: countFrom,
-            whereNot: whereNot,
-            eachRight: eachRight,
-            duffRight: duffRight,
-            flatten: flatten,
-            eq: eq
-        }),
         directives = _.directives,
         REGISTRY = 'registry',
         Registry = factories.Directive.extend(upCase(REGISTRY), {
@@ -394,12 +306,130 @@ app.scope(function (app) {
             drop: function (category, id) {
                 return this.swap(category, id);
             },
-            reset: function (registry) {
+            reset: function (registry, count) {
                 var cached = this.register;
+                var cachedCount = this.count;
                 this.register = registry || {};
-                this.count = 0;
-                return cached;
+                this.count = count || 0;
+                return [cached, cachedCount];
             }
+        }),
+        recreatingSelfList = gapSplit('eq map mapCall filter pluck where whereNot cycle uncycle flatten'),
+        eachHandlers = {
+            each: duff,
+            duff: duff,
+            forEach: duff,
+            eachCall: eachCall,
+            eachRight: duffRight,
+            duffRight: duffRight,
+            forEachRight: duffRight,
+            eachCallRight: eachCallRight
+        },
+        eachHandlerKeys = keys(eachHandlers),
+        abstractedCannotModify = gapSplit('add insertAt remove removeAt'),
+        nativeCannotModify = gapSplit('pop shift splice'),
+        reverseList = gapSplit('reverse'),
+        splatHandlers = gapSplit('push unshift'),
+        joinHandlers = gapSplit('join'),
+        countingList = gapSplit('count countTo countFrom merge'),
+        foldIteration = gapSplit('foldr foldl reduce'),
+        findIteration = gapSplit('find findLast findWhere findLastWhere'),
+        indexers = gapSplit('indexOf posit'),
+        indicesIteration = gapSplit('add insertAt remove removeAt'),
+        foldFindIteration = foldIteration.concat(findIteration),
+        marksIterating = function (fn) {
+            return function (one, two, three, four, five, six) {
+                var result, list = this;
+                ++list.iterating;
+                result = fn(list, one, two, three, four, five, six);
+                --list.iterating;
+                return result;
+            };
+        },
+        wrappedListMethods = extend(wrap(joinHandlers, function (name) {
+            return function (arg) {
+                return this.items[name](arg);
+            };
+        }), wrap(indexers, function (name) {
+            return function (one, two, three, four, five) {
+                var list = this;
+                return _[name](list.items, one, two, three, four, five);
+            };
+        }), wrap(splatHandlers, function (name) {
+            return function (args) {
+                return this.items[name].apply(this.items, args);
+            };
+        }), wrap(nativeCannotModify, function (name) {
+            return function (one, two, three, four, five, six) {
+                var list = this;
+                if (list.iterating) {
+                    return exception(cannotModifyMessage);
+                }
+                return list.items[name](one, two, three, four, five, six);
+            };
+        }), wrap(abstractedCannotModify, function (name) {
+            return function (one, two, three, four, five) {
+                var list = this;
+                if (list.iterating) {
+                    return exception(cannotModifyMessage);
+                }
+                return _[name](list.items, one, two, three, four, five);
+            };
+        }), wrap(reverseList, function (name) {
+            return function () {
+                var list = this;
+                list.directive('status').toggle('reversed');
+                list.items[name]();
+                return list;
+            };
+        }), wrap(eachHandlers, function (fn) {
+            return marksIterating(function (list, handler, context) {
+                var args0 = list.items,
+                    args1 = handler,
+                    args2 = arguments[LENGTH] > 1 ? context : list;
+                fn(args0, args1, args2);
+                return list;
+            });
+        }), wrap(countingList, function (name) {
+            return function (runner, context, fromHere, toThere) {
+                _[name](this.items, runner, context, fromHere, toThere);
+                return this;
+            };
+        }), wrap(foldFindIteration.concat(recreatingSelfList), function (name) {
+            return marksIterating(function (list, one, two, three) {
+                return _[name](list.items, one, two, three);
+            });
+        })),
+        ret = _.exports({
+            eachCall: eachCall,
+            eachCallRight: eachCallRight,
+            filter: filter,
+            matches: matches,
+            mapCall: mapCall,
+            add: add,
+            insertAt: insertAt,
+            concatUnique: concatUnique,
+            removeAt: removeAt,
+            remove: remove,
+            cycle: cycle,
+            uncycle: uncycle,
+            mamboWrap: internalMambo,
+            mambo: externalMambo,
+            concat: concat,
+            pluck: pluck,
+            where: where,
+            findWhere: findWhere,
+            findLastWhere: findLastWhere,
+            posit: posit,
+            range: range,
+            count: count,
+            countTo: countTo,
+            countFrom: countFrom,
+            whereNot: whereNot,
+            eachRight: eachRight,
+            duffRight: duffRight,
+            flatten: flatten,
+            eq: eq
         }),
         LIST = 'list',
         List = factories.Directive.extend(upCase(LIST), extend({
@@ -414,10 +444,8 @@ app.scope(function (app) {
                 // can be array like
                 var list = this;
                 var old = list.items || [];
-                list.items = items == NULL ? [] : (isArray(items) ? items : (isArrayLike(items) ? toArray(items) : [items]));
-                list.iterating = list.iterating ? exception({
-                    message: 'can\'t reset a list while it is iterating'
-                }) : 0;
+                list.iterating = list.iterating ? exception(cannotModifyMessage) : 0;
+                list.items = items == NULL ? [] : (isArrayLike(items) ? toArray(items) : [items]);
                 list.reversed = BOOLEAN_FALSE;
                 return list;
             },
@@ -432,9 +460,6 @@ app.scope(function (app) {
             },
             last: function () {
                 return this.items[this.items.length - 1];
-            },
-            indexOf: function (object) {
-                return smartIndexOf(this.items, object);
             },
             index: function (number) {
                 return this.items[number || 0];
@@ -458,17 +483,17 @@ app.scope(function (app) {
         }, wrappedListMethods), BOOLEAN_TRUE),
         directiveResult = app.defineDirective(LIST, List[CONSTRUCTOR]),
         Collection = factories.Directive.extend('Collection', extend({
-            has: directives.parody(LIST, 'has'),
-            unwrap: directives.parody(LIST, 'unwrap'),
             empty: _.flow(directives.parody(LIST, 'reset'), directives.parody(REGISTRY, 'reset')),
-            reset: directives.parody(LIST, 'reset'),
-            length: directives.parody(LIST, 'length'),
-            first: directives.parody(LIST, 'first'),
-            last: directives.parody(LIST, 'last'),
-            index: directives.parody(LIST, 'index'),
-            toString: directives.parody(LIST, 'toString'),
-            toJSON: directives.parody(LIST, TO_JSON),
-            sort: directives.parody(LIST, 'sort'),
+            // has: directives.parody(LIST, 'has'),
+            // unwrap: directives.parody(LIST, 'unwrap'),
+            // reset: directives.parody(LIST, 'reset'),
+            // length: directives.parody(LIST, LENGTH),
+            // first: directives.parody(LIST, 'first'),
+            // last: directives.parody(LIST, 'last'),
+            // index: directives.parody(LIST, 'index'),
+            // toString: directives.parody(LIST, 'toString'),
+            // toJSON: directives.parody(LIST, TO_JSON),
+            // sort: directives.parody(LIST, 'sort'),
             get: directives.parody(REGISTRY, 'get'),
             register: directives.parody(REGISTRY, 'keep'),
             unRegister: directives.parody(REGISTRY, 'drop'),
@@ -504,28 +529,33 @@ app.scope(function (app) {
              * @name Model#add
              * @func
              */
-        }, wrap(recreatingSelfList, function (key) {
+            // }, wrap(nativeCannotModify, function (key) {
+            //     return function (one, two, three, four, five, six) {
+            //         this.list[key](one, two, three, four, five, six);
+            //         return this;
+            //     };
+        }, wrap(gapSplit('has unwrap reset length first last index toString toJSON sort').concat(abstractedCannotModify, nativeCannotModify, indexers, joinHandlers, indicesIteration, splatHandlers), function (key) {
+            return directives.parody(LIST, key);
+        }), wrap(recreatingSelfList, function (key) {
             return recreateSelf(function (one) {
                 return this.list[key](one);
             });
-        }), wrap(joinPopShiftHandlers.concat(indicesIteration), function (key) {
-            return function (one, two, three) {
-                return this.list[key](one, two, three);
-            };
-        }), wrap(pushUnshiftHandlers, function (key) {
+        }), wrap(splatHandlers, function (key) {
             return function () {
                 this.list[key](arguments);
                 return this;
             };
         }), wrap(countingList, function (key) {
             return function (runner, countFrom, countTo) {
-                this.list[key](runner, this, countFrom, countTo);
-                return this;
+                var context = this;
+                context.list[key](runner, context, countFrom, countTo);
+                return context;
             };
         }), wrap(reverseList.concat(eachHandlerKeys), function (key) {
             return function (one, two, three, four) {
-                this.list[key](one, two || this);
-                return this;
+                var context = this;
+                context.list[key](one, two || context);
+                return context;
             };
         }), wrap(foldIteration, function (key) {
             return function (handler, memo, context) {
@@ -536,12 +566,6 @@ app.scope(function (app) {
                 return this.list[key](handler, context || this);
             };
         })), BOOLEAN_TRUE),
-        isNullMessage = {
-            message: 'object must not be null or undefined'
-        },
-        validIdMessage = {
-            message: 'objects in sorted collections must have either a number or string for their valueOf result'
-        },
         SortedCollection = Collection.extend('SortedCollection', {
             constructor: function (list_, skip) {
                 var sorted = this;
@@ -552,6 +576,7 @@ app.scope(function (app) {
                 return sorted;
             },
             sort: function () {
+                // does not take a function because it relies on ids / valueOf results
                 var sorted = this;
                 sort(sorted.unwrap(), sorted.reversed ? function (a, b) {
                     return a < b;
@@ -591,7 +616,7 @@ app.scope(function (app) {
                     retrieved = (registryDirective = sorted[REGISTRY]) && sorted.get(ID, valueOfResult);
                 if (!retrieved) {
                     ret = !sorted.validIDType(valueOfResult) && exception(validIdMessage);
-                    sorted.addAt(object, sorted.closest(valueOfResult) + 1);
+                    sorted.insertAt(object, sorted.closest(valueOfResult) + 1);
                     (registryDirective || sorted.directive(REGISTRY)).keep(ID, valueOfResult, object);
                     return BOOLEAN_TRUE;
                 }

@@ -37,7 +37,7 @@ app.scope(function (app) {
         VERSION = 'version',
         busterGroupHash = {},
         receive = function (evt) {
-            var buster, data = parse(evt.data),
+            var buster, data = evt.data(),
                 postTo = data.postTo;
             if (!data) {
                 return;

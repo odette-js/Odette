@@ -45,7 +45,7 @@ application.scope().run(function (app, _, factories) {
         it('it knows it\'s own client rect', function () {
             var div = divs.eq(0);
             var rect = div.element().getBoundingClientRect();
-            expect(div.rect()).toEqual({
+            expect(div.client()).toEqual({
                 height: rect.height,
                 width: rect.width,
                 bottom: rect.bottom,

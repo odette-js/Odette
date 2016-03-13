@@ -216,11 +216,11 @@ app.scope(function (app) {
     _.exports(_.foldl(validTypes, function (memo, key_) {
         var key = key_;
         key = key.toLowerCase();
-        memo[key] = function (url) {
-            return Ajax({
+        memo[key] = function (url, options) {
+            return Ajax(_.extend({
                 type: key_,
                 url: url
-            });
+            }, options));
         };
         return memo;
     }, {}));
