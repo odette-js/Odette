@@ -4052,24 +4052,29 @@ app.scope(function (app) {
                 eventsDirective.removeQueue = Collection();
                 return eventsDirective;
             },
-            attach: function (name, eventObject) {
+            attach: function (names, eventObject) {
                 var list, eventsDirective = this,
                     handlers = eventsDirective[HANDLERS],
                     ret = !handlers && exception({
                         message: 'events directive needs a handler object'
                     });
-                eventObject.id = ++event_incrementer;
-                eventObject.valueOf = returnsId;
-                eventObject.context = eventObject.context || eventObject.origin;
-                eventObject.fn = bind(eventObject.fn || eventObject.handler, eventObject.context);
-                // attach the id to the bound function because that instance is private
-                // eventObject.fn[__FN_ID__] = eventObject.id;
-                list = handlers[name] = handlers[name] || SortedCollection();
-                // attaching name so list can remove itself from hash
-                list[NAME] = name;
-                // attached so event can remove itself
-                eventObject.list = list;
-                eventsDirective.add(list, eventObject);
+                duff(eventsDirective.names(names), function (name) {
+                    eventObject.id = ++event_incrementer;
+                    eventObject.valueOf = returnsId;
+                    eventObject.context = eventObject.context || eventObject.origin;
+                    eventObject.fn = bind(eventObject.fn || eventObject.handler, eventObject.context);
+                    // attach the id to the bound function because that instance is private
+                    // eventObject.fn[__FN_ID__] = eventObject.id;
+                    list = handlers[name] = handlers[name] || SortedCollection();
+                    // attaching name so list can remove itself from hash
+                    list[NAME] = name;
+                    // attached so event can remove itself
+                    eventObject.list = list;
+                    eventsDirective.add(list, eventObject);
+                });
+            },
+            names: function (name) {
+                return [name];
             },
             create: function (target, data, name, options) {
                 return ObjectEvent(target, data, name, options);
