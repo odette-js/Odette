@@ -222,12 +222,10 @@ app.scope(function (app) {
                 return this.handlers[key] && this.handlers[key][LENGTH]();
             },
             dispatch: function (name, evnt) {
-                var handler, items, listLength, returnValue, i = 0,
-                    events = this,
+                var events = this,
                     stack = events[STACK],
                     handlers = events[HANDLERS],
                     list = handlers[name],
-                    // removeList = events[REMOVE_QUEUE],
                     running = events.running,
                     cached = running[name],
                     stopped = evnt[PROPAGATION_IS_STOPPED],
@@ -248,9 +246,8 @@ app.scope(function (app) {
                     events.cancelled(stack, evnt, i);
                 }
                 evnt.finished();
-                returnValue = evnt.returnValue;
                 running[name] = !!cached;
-                return returnValue;
+                return evnt.returnValue;
             },
             subset: function (list) {
                 return list.slice(0);
