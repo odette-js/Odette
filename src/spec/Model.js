@@ -1,6 +1,6 @@
 application.scope().run(function (app, _, factories) {
     // var factories = _.factories;
-    describe('Model', function () {
+    _.describe('Model', function () {
         var blank, count, box,
             Model = factories.Model,
             handler = function () {
@@ -22,7 +22,7 @@ application.scope().run(function (app, _, factories) {
                     time: 'pause'
                 }]
             };
-        beforeEach(function () {
+        _.beforeEach(function () {
             count = 0;
             box = Model({
                 zero: 0,
@@ -37,40 +37,40 @@ application.scope().run(function (app, _, factories) {
                 nine: 9
             });
         });
-        it('extends from factories.Extendable', function () {
-            expect(factories.Extendable.isInstance(box)).toEqual(true);
+        _.it('extends from factories.Extendable', function () {
+            _.expect(factories.Extendable.isInstance(box)).toEqual(true);
         });
-        describe('Models are always created with...', function () {
+        _.describe('Models are always created with...', function () {
             var box2 = Model();
-            it('a unique id', function () {
-                expect(_.has(box2, 'id')).toEqual(true);
+            _.it('a unique id', function () {
+                _.expect(_.has(box2, 'id')).toEqual(true);
             });
-            it('even if there is not one given', function () {
+            _.it('even if there is not one given', function () {
                 var box3 = Model({
                     id: 5
                 });
-                expect(box2.id !== void 0).toEqual(true);
-                expect(box3.id === 5).toEqual(true);
+                _.expect(box2.id !== void 0).toEqual(true);
+                _.expect(box3.id === 5).toEqual(true);
             });
-            // it('an empty _previousAttributes hash', function () {
-            //     expect(_.has(box2, '_previousAttributes')).toEqual(true);
-            //     expect(_.isObject(box2._previousAttributes)).toEqual(true);
-            //     expect(_.isEmpty(box2._previousAttributes)).toEqual(true);
+            // _.it('an empty _previousAttributes hash', function () {
+            //     _.expect(_.has(box2, '_previousAttributes')).toEqual(true);
+            //     _.expect(_.isObject(box2._previousAttributes)).toEqual(true);
+            //     _.expect(_.isEmpty(box2._previousAttributes)).toEqual(true);
             // });
-            // it('a collection for children', function () {
-            //     expect(_.has(box2, 'children')).toEqual(true);
-            //     expect(factories.Collection.isInstance(box2.directive('children'))).toEqual(true);
-            //     expect(box2.directive('children').length()).toEqual(0);
+            // _.it('a collection for children', function () {
+            //     _.expect(_.has(box2, 'Children')).toEqual(true);
+            //     _.expect(factories.Collection.isInstance(box2.directive('Children'))).toEqual(true);
+            //     _.expect(box2.directive('Children').length()).toEqual(0);
             // });
-            // it('and an attributes object', function () {
-            //     expect(_.has(box2, 'attributes')).toEqual(true);
-            //     expect(_.isObject(box2.directive('data').current)).toEqual(true);
+            // _.it('and an attributes object', function () {
+            //     _.expect(_.has(box2, 'attributes')).toEqual(true);
+            //     _.expect(_.isObject(box2.directive('data').current)).toEqual(true);
             // });
         });
-        describe('you can set properties on the box you\'re handling with the set method', function () {
+        _.describe('you can set properties on the box you\'re handling with the set method', function () {
             var box = Model(),
                 attrs = box.directive('data');
-            beforeEach(function () {
+            _.beforeEach(function () {
                 box = Model({
                     zero: 0,
                     one: 1,
@@ -84,161 +84,161 @@ application.scope().run(function (app, _, factories) {
                     nine: 9
                 });
             });
-            it('you can add new properties', function () {
-                expect(attrs.ten).toEqual(void 0);
+            _.it('you can add new properties', function () {
+                _.expect(attrs.ten).toEqual(void 0);
                 box.set({
                     ten: 10,
                     eleven: 11,
                     twelve: 12
                 });
-                expect(box.get('ten')).toEqual(10);
+                _.expect(box.get('ten')).toEqual(10);
             });
-            it('you can modify existing properties', function () {
-                expect(box.get('one')).toEqual(1);
+            _.it('you can modify existing properties', function () {
+                _.expect(box.get('one')).toEqual(1);
                 box.set({
                     one: 2,
                     two: 3,
                     three: 4
                 });
-                expect(box.get('one')).toEqual(2);
+                _.expect(box.get('one')).toEqual(2);
             });
-            it('and you can remove properties by using the unset method', function () {
+            _.it('and you can remove properties by using the unset method', function () {
                 var box = Model();
-                expect(box.get('one')).toEqual(void 0);
+                _.expect(box.get('one')).toEqual(void 0);
                 box.set({
                     one: 1
                 });
-                expect(box.get('one')).toEqual(1);
+                _.expect(box.get('one')).toEqual(1);
                 box.unset('one');
-                expect(box.get('one')).toEqual(void 0);
+                _.expect(box.get('one')).toEqual(void 0);
             });
-            // it('or remove a bunch of properties by passing in a space separated list to the unset method', function () {
-            //     expect(box.get('one')).toEqual(1);
-            //     expect(box.get('three')).toEqual(3);
-            //     expect(box.get('five')).toEqual(5);
+            // _.it('or remove a bunch of properties by passing in a space separated list to the unset method', function () {
+            //     _.expect(box.get('one')).toEqual(1);
+            //     _.expect(box.get('three')).toEqual(3);
+            //     _.expect(box.get('five')).toEqual(5);
             //     box.unset('one three five');
-            //     expect(box.get('one')).toEqual(void 0);
-            //     expect(box.get('three')).toEqual(void 0);
-            //     expect(box.get('five')).toEqual(void 0);
+            //     _.expect(box.get('one')).toEqual(void 0);
+            //     _.expect(box.get('three')).toEqual(void 0);
+            //     _.expect(box.get('five')).toEqual(void 0);
             // });
         });
         // pass to the on, once, off, listenTo, listenToOnce, and stopListening functions
-        describe('there are super special characters that you can use for terseness', function () {
+        _.describe('there are super special characters that you can use for terseness', function () {
             var count = 0,
                 handler = function () {
                     count++;
                 };
-            beforeEach(function () {
+            _.beforeEach(function () {
                 box2 = Model();
                 count = 0;
             });
         });
-        describe('Models also trigger a variety of events any time the set method changes the attributes object', function () {
+        _.describe('Models also trigger a variety of events any time the set method changes the attributes object', function () {
             var fired;
-            beforeEach(function () {
+            _.beforeEach(function () {
                 fired = 0;
             });
-            it('such as the change event', function () {
-                expect(fired).toEqual(0);
+            _.it('such as the change event', function () {
+                _.expect(fired).toEqual(0);
                 box.on('change', function () {
                     fired = 1;
                 });
-                expect(fired).toEqual(0);
+                _.expect(fired).toEqual(0);
                 box.set({
                     here: 'there'
                 });
-                expect(fired).toEqual(1);
+                _.expect(fired).toEqual(1);
             });
-            it('and the alter event', function () {
-                expect(fired).toEqual(0);
+            _.it('and the alter event', function () {
+                _.expect(fired).toEqual(0);
                 box.on('change', function () {
                     fired = 1;
                 });
-                expect(fired).toEqual(0);
+                _.expect(fired).toEqual(0);
                 box.set({
                     one: 1,
                     two: 2
                 });
-                expect(fired).toEqual(0);
+                _.expect(fired).toEqual(0);
                 box.set({
                     two: 1
                 });
-                expect(fired).toEqual(1);
+                _.expect(fired).toEqual(1);
             });
-            it('as well as alter events specific to each property', function () {
-                expect(fired).toEqual(0);
+            _.it('as well as alter events specific to each property', function () {
+                _.expect(fired).toEqual(0);
                 box.on('change:one change:two change:three', function () {
                     fired++;
                 });
-                expect(fired).toEqual(0);
+                _.expect(fired).toEqual(0);
                 box.set({
                     one: 9,
                     two: 8,
                     three: 7
                 });
-                expect(fired).toEqual(3);
+                _.expect(fired).toEqual(3);
             });
         });
-        describe('but beyond events and simple hashes, Models are able to manage themselves fairly well', function () {
-            it('they can get properties from the attributes object with the get method', function () {
-                expect(box.get('one')).toEqual(1);
+        _.describe('but beyond events and simple hashes, Models are able to manage themselves fairly well', function () {
+            _.it('they can get properties from the attributes object with the get method', function () {
+                _.expect(box.get('one')).toEqual(1);
             });
-            it('they can tell you if it has a property with the has method', function () {
-                expect(box.has('one')).toEqual(true);
+            _.it('they can tell you if it has a property with the has method', function () {
+                _.expect(box.has('one')).toEqual(true);
             });
-            it('they can clone it\'s attributes by using the toJSON method', function () {
+            _.it('they can clone it\'s attributes by using the toJSON method', function () {
                 var clone = box.toJSON();
-                expect(clone).toEqual(box.directive('data').current);
-                expect(clone === box.directive('data').current).toEqual(false);
+                _.expect(clone).toEqual(box.directive('data').current);
+                _.expect(clone === box.directive('data').current).toEqual(false);
             });
-            it('they can clone children into an array', function () {
+            _.it('they can clone children into an array', function () {
                 var clone;
                 box.add([factories.Model(), factories.Model()]);
-                clone = box.directive('children').toJSON();
-                expect(clone).toEqual([{}, {}]);
+                clone = box.directive('Children').toJSON();
+                _.expect(clone).toEqual([{}, {}]);
             });
-            it('they can stringify themselves', function () {
+            _.it('they can stringify themselves', function () {
                 box = factories.Model({
                     some: 'thing'
                 });
-                expect(box.toString()).toEqual(JSON.stringify({
+                _.expect(box.toString()).toEqual(JSON.stringify({
                     some: 'thing'
                 }));
             });
-            it('they can stringify their children', function () {
+            _.it('they can stringify their children', function () {
                 box = factories.Model();
                 box.add(data.children);
-                expect(box.directive('children').toString()).toEqual(JSON.stringify(data.children));
+                _.expect(box.directive('Children').toString()).toEqual(JSON.stringify(data.children));
             });
         });
-        describe('Models can register other objects against a key hash as well', function () {
-            it('it can register', function () {
+        _.describe('Models can register other objects against a key hash as well', function () {
+            _.it('it can register', function () {
                 var data = {
                     myObj: 1
                 };
-                expect(box.directive('children').get('id', 'key')).toEqual(void 0);
-                box.directive('children').register('id', 'key', data);
-                expect(box.directive('children').get('id', 'key')).toEqual(data);
+                _.expect(box.directive('Children').get('id', 'key')).toEqual(void 0);
+                box.directive('Children').register('id', 'key', data);
+                _.expect(box.directive('Children').get('id', 'key')).toEqual(data);
             });
-            it('and retreive information', function () {
+            _.it('and retreive information', function () {
                 var data = {
                     myObj: 1
                 };
-                expect(box.directive('children').get('id', 'key')).toEqual(void 0);
-                box.directive('children').register('id', 'key', data);
-                expect(box.directive('children').get('id', 'key') === data).toEqual(true);
+                _.expect(box.directive('Children').get('id', 'key')).toEqual(void 0);
+                box.directive('Children').register('id', 'key', data);
+                _.expect(box.directive('Children').get('id', 'key') === data).toEqual(true);
             });
         });
-        describe('boxes can have children', function () {
-            it('you can add one at a time', function () {
-                expect(box.directive('children').length()).toEqual(0);
+        _.describe('boxes can have children', function () {
+            _.it('you can add one at a time', function () {
+                _.expect(box.directive('Children').length()).toEqual(0);
                 box.add({
                     isChild: !0
                 });
-                expect(box.directive('children').length()).toEqual(1);
+                _.expect(box.directive('Children').length()).toEqual(1);
             });
-            it('or many at once', function () {
-                expect(box.directive('children').length()).toEqual(0);
+            _.it('or many at once', function () {
+                _.expect(box.directive('Children').length()).toEqual(0);
                 box.add([{
                     isChild: !0
                 }, {
@@ -246,17 +246,17 @@ application.scope().run(function (app, _, factories) {
                 }, {
                     isChild: 'may'
                 }]);
-                expect(box.directive('children').length()).toEqual(3);
+                _.expect(box.directive('Children').length()).toEqual(3);
             });
-            it('you can also remove them one at a time', function () {
+            _.it('you can also remove them one at a time', function () {
                 box = factories.Model();
                 box.add(data.children);
-                expect(box.directive('children').length()).toEqual(2);
+                _.expect(box.directive('Children').length()).toEqual(2);
             });
-            it('or many at the same time', function () {
+            _.it('or many at the same time', function () {
                 box = factories.Model();
-                var children = box.directive('children');
-                expect(children.length()).toEqual(0);
+                var children = box.directive('Children');
+                _.expect(children.length()).toEqual(0);
                 box.add([{
                     one: 1
                 }, {
@@ -266,13 +266,13 @@ application.scope().run(function (app, _, factories) {
                 }, {
                     one: 4
                 }]);
-                expect(children.length()).toEqual(4);
+                _.expect(children.length()).toEqual(4);
                 box.remove([children.index(1), children.index(3)]);
-                expect(children.length()).toEqual(2);
+                _.expect(children.length()).toEqual(2);
             });
         });
-        describe('they can', function () {
-            it('destroy themselves', function () {
+        _.describe('they can', function () {
+            _.it('destroy themselves', function () {
                 box = factories.Model();
                 box.add([{
                     one: 1
@@ -283,14 +283,14 @@ application.scope().run(function (app, _, factories) {
                 }, {
                     one: 4
                 }]);
-                var destroyer = box.directive('children').index(2);
-                expect(box.directive('children').get('cid', destroyer.cid) === destroyer).toEqual(true);
-                expect(box.directive('children').get('id', destroyer.id) === destroyer).toEqual(true);
+                var destroyer = box.directive('Children').index(2);
+                _.expect(box.directive('Children').get('cid', destroyer.cid) === destroyer).toEqual(true);
+                _.expect(box.directive('Children').get('id', destroyer.id) === destroyer).toEqual(true);
                 destroyer.destroy();
-                expect(box.directive('children').get('cid', destroyer.cid)).toEqual(void 0);
-                expect(box.directive('children').get('id', destroyer.id)).toEqual(void 0);
+                _.expect(box.directive('Children').get('cid', destroyer.cid)).toEqual(void 0);
+                _.expect(box.directive('Children').get('id', destroyer.id)).toEqual(void 0);
             });
-            it('sort their children', function () {
+            _.it('sort their children', function () {
                 box.add([{
                     one: 1,
                     two: 2,
@@ -306,16 +306,16 @@ application.scope().run(function (app, _, factories) {
                 }]);
                 box.comparator = 'two';
                 box.sort();
-                expect(box.directive('children').map(function (model) {
+                _.expect(box.directive('Children').list.map(function (model) {
                     return model.get('two');
-                }).unwrap()).toEqual([1, 2, 8]);
+                })).toEqual([1, 2, 8]);
                 box.comparator = '!two';
                 box.sort();
-                expect(box.directive('children').map(function (model) {
+                _.expect(box.directive('Children').list.map(function (model) {
                     return model.get('two');
-                }).unwrap()).toEqual([8, 2, 1]);
+                })).toEqual([8, 2, 1]);
             });
-            it('set up events on their children', function () {
+            _.it('set up events on their children', function () {
                 var counter = 0;
                 box.childEvents = {
                     beep: function () {
@@ -327,13 +327,13 @@ application.scope().run(function (app, _, factories) {
                     }
                 };
                 box.add([{}, {}, {}, {}]);
-                expect(counter).toEqual(0);
-                box.directive('children').results('dispatchEvent', 'beep');
-                expect(counter).toEqual(8);
-                box.directive('children').results('dispatchEvent', 'boop');
-                expect(counter).toEqual(4);
+                _.expect(counter).toEqual(0);
+                box.directive('Children').results('dispatchEvent', 'beep');
+                _.expect(counter).toEqual(8);
+                box.directive('Children').results('dispatchEvent', 'boop');
+                _.expect(counter).toEqual(4);
             });
-            it('set up events on their parents', function () {
+            _.it('set up events on their parents', function () {
                 var count = 0;
                 Model.constructor.prototype.parentEvents = {
                     beep: function () {
@@ -342,66 +342,66 @@ application.scope().run(function (app, _, factories) {
                 };
                 box.add([{}, {}, {}, {}]);
                 box.dispatchEvent('beep');
-                expect(count).toEqual(4);
+                _.expect(count).toEqual(4);
                 delete Model.constructor.prototype.parentEvents;
             });
         });
-        describe('boxes can "destroy" themselves', function () {
-            it('their events will persist until they decide to reset their own events', function () {
+        _.describe('boxes can "destroy" themselves', function () {
+            _.it('their events will persist until they decide to reset their own events', function () {
                 box.on({
                     event1: counter,
                     event2: counter
                 });
-                expect(count).toEqual(0);
+                _.expect(count).toEqual(0);
                 box.dispatchEvent('event1');
-                expect(count).toEqual(1);
+                _.expect(count).toEqual(1);
                 box.dispatchEvent('event2');
-                expect(count).toEqual(2);
+                _.expect(count).toEqual(2);
                 box.destroy();
-                expect(count).toEqual(2);
+                _.expect(count).toEqual(2);
                 box.dispatchEvent('event1');
-                expect(count).toEqual(3);
-                box.directive('eventManager').reset();
-                expect(count).toEqual(3);
+                _.expect(count).toEqual(3);
+                box.directive('EventManager').reset();
+                _.expect(count).toEqual(3);
                 box.dispatchEvent('event2');
-                expect(count).toEqual(3);
+                _.expect(count).toEqual(3);
             });
-            it('conversely, if the box has listening objects, it will remove it\'s handlers from other objects', function () {
+            _.it('conversely, if the box has listening objects, it will remove it\'s handlers from other objects', function () {
                 var box2 = factories.Model();
                 box.listenTo(box2, {
                     event1: counter,
                     event2: counter
                 });
-                expect(count).toEqual(0);
+                _.expect(count).toEqual(0);
                 box2.dispatchEvent('event1');
-                expect(count).toEqual(1);
+                _.expect(count).toEqual(1);
                 box2.dispatchEvent('event2');
-                expect(count).toEqual(2);
+                _.expect(count).toEqual(2);
                 box.destroy();
-                expect(count).toEqual(2);
+                _.expect(count).toEqual(2);
                 box2.dispatchEvent('event1');
-                expect(count).toEqual(2);
+                _.expect(count).toEqual(2);
                 box2.dispatchEvent('event2');
-                expect(count).toEqual(2);
+                _.expect(count).toEqual(2);
             });
         });
-        describe('there is also an alternative to the on api called the watch api', function () {
-            it('it can attach event listeners', function () {
+        _.describe('there is also an alternative to the on api called the watch api', function () {
+            _.it('it can attach event listeners', function () {
                 var count = 0;
                 box.watch('there', 'there', function (e) {
                     count++;
                 });
-                expect(count).toEqual(0);
+                _.expect(count).toEqual(0);
                 box.set('there', 'here');
-                expect(count).toEqual(0);
+                _.expect(count).toEqual(0);
                 box.set('there', 'there');
-                expect(count).toEqual(1);
+                _.expect(count).toEqual(1);
                 box.set('there', 'here');
-                expect(count).toEqual(1);
+                _.expect(count).toEqual(1);
                 box.set('there', 'there');
-                expect(count).toEqual(2);
+                _.expect(count).toEqual(2);
             });
-            it('and watch variables dynamically', function () {
+            _.it('and watch variables dynamically', function () {
                 var half = -1,
                     count = 0;
                 box.watch('there', function (e) {
@@ -413,45 +413,45 @@ application.scope().run(function (app, _, factories) {
                 }, function (e) {
                     count++;
                 });
-                expect(count).toEqual(0);
+                _.expect(count).toEqual(0);
                 box.set('there', 'here');
-                expect(count).toEqual(0);
+                _.expect(count).toEqual(0);
                 box.set('there', 'there');
-                expect(count).toEqual(1);
+                _.expect(count).toEqual(1);
                 box.set('there', 'here');
-                expect(count).toEqual(1);
+                _.expect(count).toEqual(1);
                 box.set('there', 'there');
-                expect(count).toEqual(2);
+                _.expect(count).toEqual(2);
             });
-            it('it does not have a context in the first argument', function () {
+            _.it('it does not have a context in the first argument', function () {
                 var count = 0;
                 box.watch('there', function (e) {
                     return e.origin === box && this !== box;
                 }, function (e) {
                     count++;
                 });
-                expect(count).toEqual(0);
+                _.expect(count).toEqual(0);
                 box.set('there', 'here');
-                expect(count).toEqual(1);
+                _.expect(count).toEqual(1);
                 box.set('there', 'there');
-                expect(count).toEqual(2);
+                _.expect(count).toEqual(2);
             });
-            it('it does can attach listeners using the once api', function () {
+            _.it('it does can attach listeners using the once api', function () {
                 var count = 0;
                 box.watchOnce('there', 'there', function (e) {
                     count++;
                 });
-                expect(count).toEqual(0);
+                _.expect(count).toEqual(0);
                 box.set('there', 'here');
-                expect(count).toEqual(0);
+                _.expect(count).toEqual(0);
                 box.set('there', 'there');
-                expect(count).toEqual(1);
+                _.expect(count).toEqual(1);
                 box.set('there', 'here');
-                expect(count).toEqual(1);
+                _.expect(count).toEqual(1);
                 box.set('there', 'there');
-                expect(count).toEqual(1);
+                _.expect(count).toEqual(1);
             });
-            it('and listeners on other objects with the watchOther api', function () {
+            _.it('and listeners on other objects with the watchOther api', function () {
                 var count = 0;
                 var box2 = factories.Model();
                 box.watchOther(box2, 'there', function (e) {
@@ -460,43 +460,43 @@ application.scope().run(function (app, _, factories) {
                 }, function (e) {
                     count++;
                 });
-                expect(count).toEqual(0);
+                _.expect(count).toEqual(0);
                 box2.set('there', 'here');
-                expect(count).toEqual(1);
+                _.expect(count).toEqual(1);
                 box2.set('there', 'there');
-                expect(count).toEqual(2);
+                _.expect(count).toEqual(2);
                 box2.set('there', 'here');
-                expect(count).toEqual(3);
+                _.expect(count).toEqual(3);
                 box2.set('there', 'there');
-                expect(count).toEqual(4);
+                _.expect(count).toEqual(4);
             });
-            it('and listeners on other objects with the watchOther api', function () {
+            _.it('and listeners on other objects with the watchOther api', function () {
                 var count = 0;
                 var box2 = factories.Model();
                 box.watchOtherOnce(box2, 'there', 'there', function (e) {
                     count++;
                 });
-                expect(count).toEqual(0);
+                _.expect(count).toEqual(0);
                 box2.set('there', 'there');
-                expect(count).toEqual(1);
+                _.expect(count).toEqual(1);
                 box2.set('there', 'here');
-                expect(count).toEqual(1);
+                _.expect(count).toEqual(1);
             });
-            it('the once handler will only take itself off when it succeeds', function () {
+            _.it('the once handler will only take itself off when it succeeds', function () {
                 var count = 0;
                 var box2 = factories.Model();
                 box.watchOtherOnce(box2, 'there', 'there', function (e) {
                     count++;
                 });
-                expect(count).toEqual(0);
+                _.expect(count).toEqual(0);
                 box2.set('there', 'here');
-                expect(count).toEqual(0);
+                _.expect(count).toEqual(0);
                 box2.set('there', 'there');
-                expect(count).toEqual(1);
+                _.expect(count).toEqual(1);
                 box2.set('there', 'here');
-                expect(count).toEqual(1);
+                _.expect(count).toEqual(1);
                 box2.set('there', 'there');
-                expect(count).toEqual(1);
+                _.expect(count).toEqual(1);
             });
         });
     });

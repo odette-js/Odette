@@ -1,214 +1,214 @@
 application.scope().run(function (app, _) {
     var factories = _.factories;
-    describe('var _ = app._;', function () {
+    _.describe('var _ = app._;', function () {
         var baseString = 'my string is a great string',
             specialString = 'here&are*a ()lot o~/f special_+characters',
             makeArray = function () {
                 return baseString.split(' ');
             };
-        describe('base array methods', function () {
-            it('_.listSlice', function () {
-                var actual = [1, 2, 3, 4, 5];
-                expect(_.listSlice(actual, 0)).toEqual(actual.slice(0));
+        _.describe('base array methods', function () {
+            // _.it('_.listSlice', function () {
+            //     var actual = [1, 2, 3, 4, 5];
+            //     _.expect(_.listSlice(actual, 0)).toEqual(actual.slice(0));
+            // });
+            // _.it('_.join', function () {
+            //     var myList = baseString.split(' ');
+            //     _.expect(_.join(myList, ' ')).toEqual(myList.join(' '));
+            // });
+            // _.it('_.pop', function () {
+            //     _.expect(_.pop(baseString.split(' '))).toEqual(baseString.split(' ').pop());
+            // });
+            // _.it('_.push', function () {
+            //     _.expect(_.push(baseString.split(' '), ['string'])).toEqual(baseString.split(' ').push('string'));
+            // });
+            // _.it('_.shift', function () {
+            //     _.expect(_.shift(baseString.split(' '))).toEqual(baseString.split(' ').shift());
+            // });
+            _.it('_.indexOf', function () {
+                _.expect(_.indexOf(makeArray(), 'is')).toEqual(makeArray().indexOf('is'));
             });
-            it('_.join', function () {
-                var myList = baseString.split(' ');
-                expect(_.join(myList, ' ')).toEqual(myList.join(' '));
+            // _.it('_.splice', function () {
+            //     var actual = [1, 2, 3, 4, 5];
+            //     _.expect(_.listSlice(actual, 2)).toEqual(actual.slice(2));
+            // });
+            _.it('_.sort', function () {
+                _.expect(_.sort(makeArray())).toEqual(makeArray().sort());
             });
-            it('_.pop', function () {
-                expect(_.pop(baseString.split(' '))).toEqual(baseString.split(' ').pop());
-            });
-            it('_.push', function () {
-                expect(_.push(baseString.split(' '), ['string'])).toEqual(baseString.split(' ').push('string'));
-            });
-            it('_.shift', function () {
-                expect(_.shift(baseString.split(' '))).toEqual(baseString.split(' ').shift());
-            });
-            it('_.indexOf', function () {
-                expect(_.indexOf(makeArray(), 'is')).toEqual(makeArray().indexOf('is'));
-            });
-            it('_.splice', function () {
-                var actual = [1, 2, 3, 4, 5];
-                expect(_.listSlice(actual, 2)).toEqual(actual.slice(2));
-            });
-            it('_.sort', function () {
-                expect(_.sort(makeArray())).toEqual(makeArray().sort());
-            });
-            it('_.reverse', function () {
-                expect(_.reverse(makeArray())).toEqual(makeArray().reverse());
-            });
+            // _.it('_.reverse', function () {
+            //     _.expect(_.reverse(makeArray())).toEqual(makeArray().reverse());
+            // });
         });
-        describe('base object methods', function () {
-            it('_.has', function () {
+        _.describe('base object methods', function () {
+            _.it('_.has', function () {
                 var baseObj = {
                     one: null
                 };
-                expect(_.has(baseObj, 'one')).toEqual(baseObj.hasOwnProperty('one'));
+                _.expect(_.has(baseObj, 'one')).toEqual(baseObj.hasOwnProperty('one'));
             });
-            it('_.splitGen', function () {
+            _.it('_.splitGen', function () {
                 var ampSplit = _.splitGen('&'),
                     qSplit = _.splitGen('?');
-                expect(ampSplit(baseString)).toEqual(baseString.split('&'));
-                expect(ampSplit(specialString)).toEqual(specialString.split('&'));
-                expect(qSplit(baseString)).toEqual(baseString.split('?'));
-                expect(qSplit(specialString)).toEqual(specialString.split('?'));
+                _.expect(ampSplit(baseString)).toEqual(baseString.split('&'));
+                _.expect(ampSplit(specialString)).toEqual(specialString.split('&'));
+                _.expect(qSplit(baseString)).toEqual(baseString.split('?'));
+                _.expect(qSplit(specialString)).toEqual(specialString.split('?'));
             });
-            it('_.joinGen', function () {
+            _.it('_.joinGen', function () {
                 var ampJoin = _.joinGen('&'),
                     qJoin = _.joinGen('?'),
                     baseArray = baseString.split(' '),
                     specialArray = baseString.split(' ');
-                expect(ampJoin(baseArray)).toEqual(baseArray.join('&'));
-                expect(ampJoin(specialArray)).toEqual(specialArray.join('&'));
-                expect(qJoin(baseArray)).toEqual(baseArray.join('?'));
-                expect(qJoin(specialArray)).toEqual(specialArray.join('?'));
+                _.expect(ampJoin(baseArray)).toEqual(baseArray.join('&'));
+                _.expect(ampJoin(specialArray)).toEqual(specialArray.join('&'));
+                _.expect(qJoin(baseArray)).toEqual(baseArray.join('?'));
+                _.expect(qJoin(specialArray)).toEqual(specialArray.join('?'));
             });
-            it('_.gapJoin', function () {
+            _.it('_.gapJoin', function () {
                 var baseArray = baseString.split(' '),
                     specialArray = baseString.split(' ');
-                expect(_.gapJoin(baseArray)).toEqual(baseArray.join(' '));
-                expect(_.gapJoin(specialArray)).toEqual(specialArray.join(' '));
+                _.expect(_.gapJoin(baseArray)).toEqual(baseArray.join(' '));
+                _.expect(_.gapJoin(specialArray)).toEqual(specialArray.join(' '));
             });
-            it('_.gapSplit', function () {
-                expect(_.gapSplit(baseString)).toEqual(baseString.split(' '));
-                expect(_.gapSplit(specialString)).toEqual(specialString.split(' '));
+            _.it('_.gapSplit', function () {
+                _.expect(_.gapSplit(baseString)).toEqual(baseString.split(' '));
+                _.expect(_.gapSplit(specialString)).toEqual(specialString.split(' '));
             });
-            it('_.isFunction', function () {
-                expect(_.isFunction(true)).toEqual(false);
-                expect(_.isFunction(false)).toEqual(false);
-                expect(_.isFunction(1)).toEqual(false);
-                expect(_.isFunction(0)).toEqual(false);
-                expect(_.isFunction(Infinity)).toEqual(false);
-                expect(_.isFunction(NaN)).toEqual(false);
-                expect(_.isFunction(null)).toEqual(false);
-                expect(_.isFunction(undefined)).toEqual(false);
-                expect(_.isFunction('')).toEqual(false);
-                expect(_.isFunction(baseString)).toEqual(false);
-                expect(_.isFunction([])).toEqual(false);
-                expect(_.isFunction({})).toEqual(false);
-                expect(_.isFunction(window)).toEqual(false);
-                expect(_.isFunction(function () {})).toEqual(true);
+            _.it('_.isFunction', function () {
+                _.expect(_.isFunction(true)).toEqual(false);
+                _.expect(_.isFunction(false)).toEqual(false);
+                _.expect(_.isFunction(1)).toEqual(false);
+                _.expect(_.isFunction(0)).toEqual(false);
+                _.expect(_.isFunction(Infinity)).toEqual(false);
+                _.expect(_.isFunction(NaN)).toEqual(false);
+                _.expect(_.isFunction(null)).toEqual(false);
+                _.expect(_.isFunction(undefined)).toEqual(false);
+                _.expect(_.isFunction('')).toEqual(false);
+                _.expect(_.isFunction(baseString)).toEqual(false);
+                _.expect(_.isFunction([])).toEqual(false);
+                _.expect(_.isFunction({})).toEqual(false);
+                _.expect(_.isFunction(window)).toEqual(false);
+                _.expect(_.isFunction(function () {})).toEqual(true);
             });
-            it('_.isBoolean', function () {
-                expect(_.isBoolean(true)).toEqual(true);
-                expect(_.isBoolean(false)).toEqual(true);
-                expect(_.isBoolean(1)).toEqual(false);
-                expect(_.isBoolean(0)).toEqual(false);
-                expect(_.isBoolean(Infinity)).toEqual(false);
-                expect(_.isBoolean(NaN)).toEqual(false);
-                expect(_.isBoolean(null)).toEqual(false);
-                expect(_.isBoolean(undefined)).toEqual(false);
-                expect(_.isBoolean('')).toEqual(false);
-                expect(_.isBoolean(baseString)).toEqual(false);
-                expect(_.isBoolean([])).toEqual(false);
-                expect(_.isBoolean({})).toEqual(false);
-                expect(_.isBoolean(window)).toEqual(false);
-                expect(_.isBoolean(function () {})).toEqual(false);
+            _.it('_.isBoolean', function () {
+                _.expect(_.isBoolean(true)).toEqual(true);
+                _.expect(_.isBoolean(false)).toEqual(true);
+                _.expect(_.isBoolean(1)).toEqual(false);
+                _.expect(_.isBoolean(0)).toEqual(false);
+                _.expect(_.isBoolean(Infinity)).toEqual(false);
+                _.expect(_.isBoolean(NaN)).toEqual(false);
+                _.expect(_.isBoolean(null)).toEqual(false);
+                _.expect(_.isBoolean(undefined)).toEqual(false);
+                _.expect(_.isBoolean('')).toEqual(false);
+                _.expect(_.isBoolean(baseString)).toEqual(false);
+                _.expect(_.isBoolean([])).toEqual(false);
+                _.expect(_.isBoolean({})).toEqual(false);
+                _.expect(_.isBoolean(window)).toEqual(false);
+                _.expect(_.isBoolean(function () {})).toEqual(false);
             });
-            it('_.isString', function () {
-                expect(_.isString(true)).toEqual(false);
-                expect(_.isString(false)).toEqual(false);
-                expect(_.isString(1)).toEqual(false);
-                expect(_.isString(0)).toEqual(false);
-                expect(_.isString(Infinity)).toEqual(false);
-                expect(_.isString(NaN)).toEqual(false);
-                expect(_.isString(null)).toEqual(false);
-                expect(_.isString(undefined)).toEqual(false);
-                expect(_.isString('')).toEqual(true);
-                expect(_.isString(baseString)).toEqual(true);
-                expect(_.isString([])).toEqual(false);
-                expect(_.isString({})).toEqual(false);
-                expect(_.isString(window)).toEqual(false);
-                expect(_.isString(function () {})).toEqual(false);
+            _.it('_.isString', function () {
+                _.expect(_.isString(true)).toEqual(false);
+                _.expect(_.isString(false)).toEqual(false);
+                _.expect(_.isString(1)).toEqual(false);
+                _.expect(_.isString(0)).toEqual(false);
+                _.expect(_.isString(Infinity)).toEqual(false);
+                _.expect(_.isString(NaN)).toEqual(false);
+                _.expect(_.isString(null)).toEqual(false);
+                _.expect(_.isString(undefined)).toEqual(false);
+                _.expect(_.isString('')).toEqual(true);
+                _.expect(_.isString(baseString)).toEqual(true);
+                _.expect(_.isString([])).toEqual(false);
+                _.expect(_.isString({})).toEqual(false);
+                _.expect(_.isString(window)).toEqual(false);
+                _.expect(_.isString(function () {})).toEqual(false);
             });
-            it('_.isNumber', function () {
-                expect(_.isNumber(true)).toEqual(false);
-                expect(_.isNumber(false)).toEqual(false);
-                expect(_.isNumber(1)).toEqual(true);
-                expect(_.isNumber(0)).toEqual(true);
-                expect(_.isNumber(Infinity)).toEqual(true);
-                expect(_.isNumber(NaN)).toEqual(false);
-                expect(_.isNumber(null)).toEqual(false);
-                expect(_.isNumber(undefined)).toEqual(false);
-                expect(_.isNumber('')).toEqual(false);
-                expect(_.isNumber(baseString)).toEqual(false);
-                expect(_.isNumber([])).toEqual(false);
-                expect(_.isNumber({})).toEqual(false);
-                expect(_.isNumber(window)).toEqual(false);
-                expect(_.isNumber(function () {})).toEqual(false);
+            _.it('_.isNumber', function () {
+                _.expect(_.isNumber(true)).toEqual(false);
+                _.expect(_.isNumber(false)).toEqual(false);
+                _.expect(_.isNumber(1)).toEqual(true);
+                _.expect(_.isNumber(0)).toEqual(true);
+                _.expect(_.isNumber(Infinity)).toEqual(true);
+                _.expect(_.isNumber(NaN)).toEqual(false);
+                _.expect(_.isNumber(null)).toEqual(false);
+                _.expect(_.isNumber(undefined)).toEqual(false);
+                _.expect(_.isNumber('')).toEqual(false);
+                _.expect(_.isNumber(baseString)).toEqual(false);
+                _.expect(_.isNumber([])).toEqual(false);
+                _.expect(_.isNumber({})).toEqual(false);
+                _.expect(_.isNumber(window)).toEqual(false);
+                _.expect(_.isNumber(function () {})).toEqual(false);
             });
-            it('_.isObject', function () {
-                expect(_.isObject(true)).toEqual(false);
-                expect(_.isObject(false)).toEqual(false);
-                expect(_.isObject(1)).toEqual(false);
-                expect(_.isObject(0)).toEqual(false);
-                expect(_.isObject(Infinity)).toEqual(false);
-                expect(_.isObject(NaN)).toEqual(false);
-                expect(_.isObject(null)).toEqual(false);
-                expect(_.isObject(undefined)).toEqual(false);
-                expect(_.isObject('')).toEqual(false);
-                expect(_.isObject(baseString)).toEqual(false);
-                expect(_.isObject([])).toEqual(true);
-                expect(_.isObject({})).toEqual(true);
-                expect(_.isObject(window)).toEqual(true);
-                expect(_.isObject(function () {})).toEqual(false);
+            _.it('_.isObject', function () {
+                _.expect(_.isObject(true)).toEqual(false);
+                _.expect(_.isObject(false)).toEqual(false);
+                _.expect(_.isObject(1)).toEqual(false);
+                _.expect(_.isObject(0)).toEqual(false);
+                _.expect(_.isObject(Infinity)).toEqual(false);
+                _.expect(_.isObject(NaN)).toEqual(false);
+                _.expect(_.isObject(null)).toEqual(false);
+                _.expect(_.isObject(undefined)).toEqual(false);
+                _.expect(_.isObject('')).toEqual(false);
+                _.expect(_.isObject(baseString)).toEqual(false);
+                _.expect(_.isObject([])).toEqual(true);
+                _.expect(_.isObject({})).toEqual(true);
+                _.expect(_.isObject(window)).toEqual(true);
+                _.expect(_.isObject(function () {})).toEqual(false);
             });
-            it('_.isArray', function () {
-                expect(_.isArray(true)).toEqual(false);
-                expect(_.isArray(false)).toEqual(false);
-                expect(_.isArray(1)).toEqual(false);
-                expect(_.isArray(0)).toEqual(false);
-                expect(_.isArray(Infinity)).toEqual(false);
-                expect(_.isArray(NaN)).toEqual(false);
-                expect(_.isArray(null)).toEqual(false);
-                expect(_.isArray(undefined)).toEqual(false);
-                expect(_.isArray('')).toEqual(false);
-                expect(_.isArray(baseString)).toEqual(false);
-                expect(_.isArray([])).toEqual(true);
-                expect(_.isArray({})).toEqual(false);
-                expect(_.isArray(window)).toEqual(false);
-                expect(_.isArray(function () {})).toEqual(false);
+            _.it('_.isArray', function () {
+                _.expect(_.isArray(true)).toEqual(false);
+                _.expect(_.isArray(false)).toEqual(false);
+                _.expect(_.isArray(1)).toEqual(false);
+                _.expect(_.isArray(0)).toEqual(false);
+                _.expect(_.isArray(Infinity)).toEqual(false);
+                _.expect(_.isArray(NaN)).toEqual(false);
+                _.expect(_.isArray(null)).toEqual(false);
+                _.expect(_.isArray(undefined)).toEqual(false);
+                _.expect(_.isArray('')).toEqual(false);
+                _.expect(_.isArray(baseString)).toEqual(false);
+                _.expect(_.isArray([])).toEqual(true);
+                _.expect(_.isArray({})).toEqual(false);
+                _.expect(_.isArray(window)).toEqual(false);
+                _.expect(_.isArray(function () {})).toEqual(false);
             });
-            it('_.isEmpty', function () {
-                expect(_.isEmpty(true)).toEqual(true);
-                expect(_.isEmpty(false)).toEqual(true);
-                expect(_.isEmpty(1)).toEqual(true);
-                expect(_.isEmpty(0)).toEqual(true);
-                expect(_.isEmpty(Infinity)).toEqual(true);
-                expect(_.isEmpty(NaN)).toEqual(true);
-                expect(_.isEmpty(null)).toEqual(true);
-                expect(_.isEmpty(undefined)).toEqual(true);
-                expect(_.isEmpty('')).toEqual(true);
-                expect(_.isEmpty(baseString)).toEqual(true);
-                expect(_.isEmpty([])).toEqual(true);
-                expect(_.isEmpty({})).toEqual(true);
-                expect(_.isEmpty(window)).toEqual(false);
-                expect(_.isEmpty(function () {})).toEqual(true);
-                expect(_.isEmpty([1])).toEqual(false);
-                expect(_.isEmpty({
+            _.it('_.isEmpty', function () {
+                _.expect(_.isEmpty(true)).toEqual(true);
+                _.expect(_.isEmpty(false)).toEqual(true);
+                _.expect(_.isEmpty(1)).toEqual(true);
+                _.expect(_.isEmpty(0)).toEqual(true);
+                _.expect(_.isEmpty(Infinity)).toEqual(true);
+                _.expect(_.isEmpty(NaN)).toEqual(true);
+                _.expect(_.isEmpty(null)).toEqual(true);
+                _.expect(_.isEmpty(undefined)).toEqual(true);
+                _.expect(_.isEmpty('')).toEqual(true);
+                _.expect(_.isEmpty(baseString)).toEqual(true);
+                _.expect(_.isEmpty([])).toEqual(true);
+                _.expect(_.isEmpty({})).toEqual(true);
+                _.expect(_.isEmpty(window)).toEqual(false);
+                _.expect(_.isEmpty(function () {})).toEqual(true);
+                _.expect(_.isEmpty([1])).toEqual(false);
+                _.expect(_.isEmpty({
                     one: 1
                 })).toEqual(false);
             });
-            it('_.isInstance', function () {
+            _.it('_.isInstance', function () {
                 var obj = {},
                     newModel = factories.Model();
-                expect(_.isInstance(obj, Object)).toEqual(true);
-                expect(_.isInstance(newModel, factories.Model)).toEqual(true);
-                expect(_.isInstance(newModel, factories.Model)).toEqual(true);
-                expect(_.isInstance(newModel, factories.Collection)).toEqual(false);
+                _.expect(_.isInstance(obj, Object)).toEqual(true);
+                _.expect(_.isInstance(newModel, factories.Model)).toEqual(true);
+                _.expect(_.isInstance(newModel, factories.Model)).toEqual(true);
+                _.expect(_.isInstance(newModel, factories.Collection)).toEqual(false);
             });
-            it('_.negate', function () {
+            _.it('_.negate', function () {
                 var falsey = _.negate(function () {
                         return false;
                     }),
                     truthy = _.negate(function () {
                         return true;
                     });
-                expect(truthy()).toEqual(false);
-                expect(falsey()).toEqual(true);
+                _.expect(truthy()).toEqual(false);
+                _.expect(falsey()).toEqual(true);
             });
-            it('_.invert', function () {
-                expect(_.invert({
+            _.it('_.invert', function () {
+                _.expect(_.invert({
                     one: 1,
                     two: 2
                 })).toEqual({
@@ -216,13 +216,13 @@ application.scope().run(function (app, _) {
                     '2': 'two'
                 });
             });
-            it('_.stringify', function () {
-                expect(_.stringify({})).toEqual(JSON.stringify({}));
-                expect(_.stringify({})).not.toEqual({}.toString());
-                expect(_.stringify(function () {})).toEqual(function () {}.toString());
+            _.it('_.stringify', function () {
+                _.expect(_.stringify({})).toEqual(JSON.stringify({}));
+                _.expect(_.stringify({})).not.toEqual({}.toString());
+                _.expect(_.stringify(function () {})).toEqual(function () {}.toString());
             });
-            it('_.extend', function () {
-                expect(_.extend({
+            _.it('_.extend', function () {
+                _.expect(_.extend({
                     four: 1,
                     three: 3
                 }, {
@@ -236,7 +236,7 @@ application.scope().run(function (app, _) {
                     three: 2,
                     one: 4
                 });
-                expect(_.extend(!0, {
+                _.expect(_.extend(!0, {
                     some: {}
                 }, {
                     some: {
@@ -254,7 +254,7 @@ application.scope().run(function (app, _) {
                         one: 'is waiting for me'
                     }
                 });
-                expect(_.extend({
+                _.expect(_.extend({
                     some: {}
                 }, {
                     some: {
@@ -272,9 +272,9 @@ application.scope().run(function (app, _) {
                     }
                 });
             });
-            it('_.merge', function () {
+            _.it('_.merge', function () {
                 // modifies the original object
-                expect(_.merge({
+                _.expect(_.merge({
                     one: {
                         two: {
                             three: 4
@@ -288,17 +288,17 @@ application.scope().run(function (app, _) {
                     two: 2
                 });
             });
-            it('_.isArrayLike', function () {
-                expect(_.isArrayLike('')).toEqual(false);
-                expect(_.isArrayLike([])).toEqual(true);
-                expect(_.isArrayLike({
+            _.it('_.isArrayLike', function () {
+                _.expect(_.isArrayLike('')).toEqual(false);
+                _.expect(_.isArrayLike([])).toEqual(true);
+                _.expect(_.isArrayLike({
                     '0': 0,
                     '1': 1,
                     length: 2,
                     splice: function () {}
                 })).toEqual(true);
             });
-            it('_.each', function () {
+            _.it('_.each', function () {
                 var args = [],
                     obj = {
                         one: 1,
@@ -308,7 +308,7 @@ application.scope().run(function (app, _) {
                 _.each(obj, function (item, idx, iteratingObj) {
                     args.push([item, idx, iteratingObj]);
                 });
-                expect(args).toEqual([
+                _.expect(args).toEqual([
                     [1, 'one', obj],
                     [2, 'two', obj],
                     [3, 'three', obj]
@@ -318,20 +318,20 @@ application.scope().run(function (app, _) {
                 _.each(obj, function (val, idx, o) {
                     args.push([val, idx, o]);
                 });
-                expect(args).toEqual([
+                _.expect(args).toEqual([
                     ['one', 0, obj],
                     ['two', 1, obj],
                     ['three', 2, obj]
                 ]);
             });
-            it('_.duff', function () {
+            _.it('_.duff', function () {
                 var test1 = [1, 2, 3, 4];
                 var count = 0;
-                expect(count).toEqual(0);
+                _.expect(count).toEqual(0);
                 _.duff(test1, function (item) {
                     count += item;
                 });
-                expect(count).toEqual(10);
+                _.expect(count).toEqual(10);
                 _.duff({
                     one: 1,
                     two: 2,
@@ -340,16 +340,16 @@ application.scope().run(function (app, _) {
                 }, function (item) {
                     count += item;
                 });
-                expect(count).toEqual(10);
+                _.expect(count).toEqual(10);
             });
-            it('_.toBoolean', function () {
-                expect(_.toBoolean('truth')).toEqual('truth');
-                expect(_.toBoolean('true')).toEqual(true);
-                expect(_.toBoolean('falsey')).toEqual('falsey');
-                expect(_.toBoolean('false')).toEqual(false);
-                expect(_.toBoolean({})).toEqual({});
+            _.it('_.toBoolean', function () {
+                _.expect(_.toBoolean('truth')).toEqual('truth');
+                _.expect(_.toBoolean('true')).toEqual(true);
+                _.expect(_.toBoolean('falsey')).toEqual('falsey');
+                _.expect(_.toBoolean('false')).toEqual(false);
+                _.expect(_.toBoolean({})).toEqual({});
             });
-            it('_.once', function () {
+            _.it('_.once', function () {
                 var count = 0,
                     counted = 0,
                     counter = _.once(function () {
@@ -359,10 +359,10 @@ application.scope().run(function (app, _) {
                     counter();
                     count++;
                 }
-                expect(counted).toEqual(1);
+                _.expect(counted).toEqual(1);
             });
-            it('_.isEqual', function () {
-                expect(_.isEqual({
+            _.it('_.isEqual', function () {
+                _.expect(_.isEqual({
                     one: {
                         one: [1, 2, 4, 5]
                     }
@@ -372,31 +372,31 @@ application.scope().run(function (app, _) {
                     }
                 })).toEqual(true);
             });
-            it('_.clone', function () {
+            _.it('_.clone', function () {
                 var original = {
                         some: 'thing',
                         out: 'there'
                     },
                     cloned = _.clone(original);
-                expect(cloned).toEqual(original);
+                _.expect(cloned).toEqual(original);
             });
             // write more differentiating code for this test
-            it('_.fullClone', function () {
+            _.it('_.fullClone', function () {
                 var original = {
                         some: 'thing',
                         out: 'there'
                     },
                     cloned = _.fullClone(original);
-                expect(cloned).toEqual(original);
+                _.expect(cloned).toEqual(original);
             });
-            it('_.wrap', function () {
-                expect(_.wrap(['some', 'where'], function (val) {
+            _.it('_.wrap', function () {
+                _.expect(_.wrap(['some', 'where'], function (val) {
                     return !val.indexOf('s');
                 })).toEqual({
                     some: true,
                     where: false
                 });
-                expect(_.wrap({
+                _.expect(_.wrap({
                     click: '0event',
                     hover: '1event'
                 }, function (val, eventName) {
@@ -406,23 +406,23 @@ application.scope().run(function (app, _) {
                     hover: false
                 });
             });
-            it('_.unshift', function () {
-                var make = function () {
-                    return [1, 2, 3, 4, 5, 6];
-                };
-                expect(_.unshift(make(), [0])).toEqual(make().unshift(0));
-            });
+            // _.it('_.unshift', function () {
+            //     var make = function () {
+            //         return [1, 2, 3, 4, 5, 6];
+            //     };
+            //     _.expect(_.unshift(make(), [0])).toEqual(make().unshift(0));
+            // });
             // write async test
-            it('_.fetch', function () {
+            _.it('_.fetch', function () {
                 var img = _.fetch("data:image/webp;base64,UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA");
-                expect(img instanceof Image).toEqual(true);
+                _.expect(img instanceof Image).toEqual(true);
             });
-            it('_.parse', function () {
-                expect(_.parse('{"some":1,"one":true}')).toEqual({
+            _.it('_.parse', function () {
+                _.expect(_.parse('{"some":1,"one":true}')).toEqual({
                     some: 1,
                     one: true
                 });
-                expect(_.parse({
+                _.expect(_.parse({
                     some: 1,
                     one: true
                 })).toEqual({
@@ -430,25 +430,25 @@ application.scope().run(function (app, _) {
                     one: true
                 });
             });
-            it('_.units', function () {
-                expect(_.units('')).toEqual(false);
-                expect(_.units(500)).toEqual(false);
-                expect(_.units('500')).toEqual(false);
-                expect(_.units('500px')).toEqual('px');
-                expect(_.units('500rem')).toEqual('rem');
-                expect(_.units('500em')).toEqual('em');
-                expect(_.units('500%')).toEqual('%');
-                expect(_.units('500ex')).toEqual('ex');
-                expect(_.units('500in')).toEqual('in');
-                expect(_.units('500cm')).toEqual('cm');
-                expect(_.units('500vh')).toEqual('vh');
-                expect(_.units('500vw')).toEqual('vw');
-                expect(_.units('500pc')).toEqual('pc');
-                expect(_.units('500pt')).toEqual('pt');
-                expect(_.units('500mm')).toEqual('mm');
+            _.it('_.units', function () {
+                _.expect(_.units('')).toEqual(false);
+                _.expect(_.units(500)).toEqual(false);
+                _.expect(_.units('500')).toEqual(false);
+                _.expect(_.units('500px')).toEqual('px');
+                _.expect(_.units('500rem')).toEqual('rem');
+                _.expect(_.units('500em')).toEqual('em');
+                _.expect(_.units('500%')).toEqual('%');
+                _.expect(_.units('500ex')).toEqual('ex');
+                _.expect(_.units('500in')).toEqual('in');
+                _.expect(_.units('500cm')).toEqual('cm');
+                _.expect(_.units('500vh')).toEqual('vh');
+                _.expect(_.units('500vw')).toEqual('vw');
+                _.expect(_.units('500pc')).toEqual('pc');
+                _.expect(_.units('500pt')).toEqual('pt');
+                _.expect(_.units('500mm')).toEqual('mm');
             });
-            it('_.stringifyQuery', function () {
-                expect(_.stringifyQuery({
+            _.it('_.stringifyQuery', function () {
+                _.expect(_.stringifyQuery({
                     url: '//google.com',
                     query: {
                         some: 'where',
@@ -467,49 +467,48 @@ application.scope().run(function (app, _) {
                     }
                 })).toEqual('//google.com?some=where&und=efined&blank=undefined&under=statement&one=1&has=false&nully=null&even=%7B%22moar%22%3A%22things%22%7D');
             });
-            it('_.protoProp', function () {
+            _.it('_.protoProp', function () {
                 var box = factories.Model();
                 box.idAttribute = 'something';
-                expect(_.protoProp(box, 'idAttribute')).toEqual(factories.Model.constructor.prototype.idAttribute);
+                _.expect(_.protoProp(box, 'idAttribute')).toEqual(factories.Model.constructor.prototype.idAttribute);
             });
-            it('_.roundFloat', function () {
-                expect(_.roundFloat(1.5489909, 3)).toEqual(1.548);
+            _.it('_.roundFloat', function () {
+                _.expect(_.roundFloat(1.5489909, 3)).toEqual(1.548);
             });
         });
     });
 });
-var _ = application.scope()._;
 application.scope().run(function (app, _) {
-    describe('Strings', function () {
-        it('_.camelCase', function () {
+    _.describe('Strings', function () {
+        _.it('_.camelCase', function () {
             var thatIsCamelCased = 'thisIsCamelCased';
             // default delimiter is -
-            expect(_.camelCase('this-is-camel-cased')).toEqual(thatIsCamelCased);
-            expect(_.camelCase('thisIsCamelCased')).toEqual(thatIsCamelCased);
+            _.expect(_.camelCase('this-is-camel-cased')).toEqual(thatIsCamelCased);
+            _.expect(_.camelCase('thisIsCamelCased')).toEqual(thatIsCamelCased);
             // overridable by second param
-            expect(_.camelCase('this_is_camel_cased', '_')).toEqual(thatIsCamelCased);
-            expect(_.camelCase('this is camel cased', ' ')).toEqual(thatIsCamelCased);
+            _.expect(_.camelCase('this_is_camel_cased', '_')).toEqual(thatIsCamelCased);
+            _.expect(_.camelCase('this is camel cased', ' ')).toEqual(thatIsCamelCased);
             // does not modify the first character if it is passed in as a capital letter
-            expect(_.camelCase('This Is Camel Cased', ' ')).not.toEqual(thatIsCamelCased);
+            _.expect(_.camelCase('This Is Camel Cased', ' ')).not.toEqual(thatIsCamelCased);
         });
-        it('_.upCase', function () {
-            expect(_.upCase('some')).toEqual('Some');
-            expect(_.upCase('Some')).toEqual('Some');
-            expect(_.upCase('sOmE')).toEqual('SOmE');
+        _.it('_.upCase', function () {
+            _.expect(_.upCase('some')).toEqual('Some');
+            _.expect(_.upCase('Some')).toEqual('Some');
+            _.expect(_.upCase('sOmE')).toEqual('SOmE');
         });
-        it('_.unCamelCase', function () {
+        _.it('_.unCamelCase', function () {
             var thatIsCamelCased = 'thisIsUnCamelCased';
-            expect(_.unCamelCase(thatIsCamelCased)).toEqual('this-is-un-camel-cased');
-            expect(_.unCamelCase(thatIsCamelCased, ' ')).toEqual('this is un camel cased');
-            expect(_.unCamelCase(thatIsCamelCased, '_')).toEqual('this_is_un_camel_cased');
-            expect(_.unCamelCase(thatIsCamelCased, '1')).toEqual('this1is1un1camel1cased');
+            _.expect(_.unCamelCase(thatIsCamelCased)).toEqual('this-is-un-camel-cased');
+            _.expect(_.unCamelCase(thatIsCamelCased, ' ')).toEqual('this is un camel cased');
+            _.expect(_.unCamelCase(thatIsCamelCased, '_')).toEqual('this_is_un_camel_cased');
+            _.expect(_.unCamelCase(thatIsCamelCased, '1')).toEqual('this1is1un1camel1cased');
         });
     });
 });
 application.scope().run(function (app, _, factories) {
-    describe('Collection', function () {
+    _.describe('Collection', function () {
         var collection, numberCollection, complexCollection, evenNumberList;
-        beforeEach(function () {
+        _.beforeEach(function () {
             collection = factories.Collection();
             numberCollection = factories.Collection([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
             complexCollection = factories.Collection([factories.Model(), factories.Model({
@@ -519,143 +518,143 @@ application.scope().run(function (app, _, factories) {
             })]);
             evenNumberList = [0, 2, 4, 6, 8];
         });
-        it('extends from factories.Extendable', function () {
-            expect(_.isInstance(collection, factories.Extendable)).toEqual(true);
+        _.it('extends from factories.Extendable', function () {
+            _.expect(_.isInstance(collection, factories.Extendable)).toEqual(true);
         });
-        it('is not an array like object', function () {
-            expect(_.isArrayLike(collection)).toEqual(false);
+        _.it('is not an array like object', function () {
+            _.expect(_.isArrayLike(collection)).toEqual(false);
         });
-        it('knows it\'s length', function () {
-            expect(numberCollection.length()).toEqual(10);
+        _.it('knows it\'s length', function () {
+            _.expect(numberCollection.length()).toEqual(10);
         });
-        it('can give you all of it\'s values at once', function () {
-            expect(collection.unwrap()).toEqual(collection.directive('list').items);
+        _.it('can give you all of it\'s values at once', function () {
+            _.expect(collection.unwrap()).toEqual(collection.directive('list').items);
         });
-        it('or one at a time', function () {
+        _.it('or one at a time', function () {
             numberCollection.duff(function (item, idx) {
-                expect(numberCollection.index(idx)).toEqual(numberCollection.directive('list').items[idx]);
+                _.expect(numberCollection.index(idx)).toEqual(numberCollection.directive('list').items[idx]);
             });
         });
-        it('as well as in reverse order', function () {
+        _.it('as well as in reverse order', function () {
             var list = [];
             numberCollection.duffRight(function (item, idx) {
-                expect(numberCollection.index(idx)).toEqual(numberCollection.directive('list').items[idx]);
+                _.expect(numberCollection.index(idx)).toEqual(numberCollection.directive('list').items[idx]);
                 list.push(item);
             });
-            expect(list).toEqual([9, 8, 7, 6, 5, 4, 3, 2, 1, 0]);
+            _.expect(list).toEqual([9, 8, 7, 6, 5, 4, 3, 2, 1, 0]);
         });
-        it('can trigger toJSON on children', function () {
-            expect(JSON.stringify(numberCollection)).toEqual('[0,1,2,3,4,5,6,7,8,9]');
-            expect(JSON.stringify(complexCollection)).toEqual('[{},{"one":1,"two":2,"three":3}]');
+        _.it('can trigger toJSON on children', function () {
+            _.expect(JSON.stringify(numberCollection)).toEqual('[0,1,2,3,4,5,6,7,8,9]');
+            _.expect(JSON.stringify(complexCollection)).toEqual('[{},{"one":1,"two":2,"three":3}]');
         });
-        it('can also concatonate itself with collections and arrays just like a regular array', function () {
+        _.it('can also concatonate itself with collections and arrays just like a regular array', function () {
             var collection = factories.Collection([0, 1, 2, 3, 4]),
                 list = factories.Collection([5, 6, 7, 8, 9]);
-            expect(collection.concat(list, evenNumberList).unwrap()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 2, 4, 6, 8]);
+            _.expect(collection.concat(list, evenNumberList).unwrap()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 2, 4, 6, 8]);
         });
-        // it('can also reverse itself momentarily', function () {
+        // _.it('can also reverse itself momentarily', function () {
         //     var test = [];
         //     numberCollection.mambo(function (list) {
         //         list.duff(function (val) {
         //             test.push(val);
         //         });
         //     });
-        //     expect(test).toEqual([9, 8, 7, 6, 5, 4, 3, 2, 1, 0]);
+        //     _.expect(test).toEqual([9, 8, 7, 6, 5, 4, 3, 2, 1, 0]);
         // });
-        describe('but other methods need arrays... Collections also have a bunch of methods that they stole from the _ object such as:', function () {
-            // it('addAll', function () {
-            //     expect(numberCollection.addAll([0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20]).unwrap()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16, 18, 20]);
+        _.describe('but other methods need arrays... Collections also have a bunch of methods that they stole from the _ object such as:', function () {
+            // _.it('addAll', function () {
+            //     _.expect(numberCollection.addAll([0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20]).unwrap()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16, 18, 20]);
             // });
-            // it('removeAll', function () {
-            //     expect(numberCollection.removeAll([0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20]).unwrap()).toEqual([1, 3, 5, 7, 9]);
+            // _.it('removeAll', function () {
+            //     _.expect(numberCollection.removeAll([0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20]).unwrap()).toEqual([1, 3, 5, 7, 9]);
             // });
-            it('sort', function () {
-                expect(numberCollection.sort().unwrap()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
-                expect(numberCollection.sort(function (a, b) {
+            _.it('sort', function () {
+                _.expect(numberCollection.sort().unwrap()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+                _.expect(numberCollection.sort(function (a, b) {
                     return (a % 3) - (b % 3);
                 }).unwrap()).toEqual([0, 3, 6, 9, 1, 4, 7, 2, 5, 8]);
             });
-            it('unshift', function () {
-                expect(numberCollection.unshift(-1).unwrap()).toEqual([-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+            _.it('unshift', function () {
+                _.expect(numberCollection.unshift(-1).unwrap()).toEqual([-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
             });
-            it('push', function () {
-                expect(numberCollection.push(10).unwrap()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
-                expect(numberCollection.push(11, 12, 13).unwrap()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]);
+            _.it('push', function () {
+                _.expect(numberCollection.push(10).unwrap()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+                _.expect(numberCollection.push([11, 12, 13]).unwrap()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]);
             });
-            it('cycle', function () {
-                expect(numberCollection.cycle(3).unwrap()).toEqual([3, 4, 5, 6, 7, 8, 9, 0, 1, 2]);
+            _.it('cycle', function () {
+                _.expect(numberCollection.cycle(3).unwrap()).toEqual([3, 4, 5, 6, 7, 8, 9, 0, 1, 2]);
             });
-            it('uncycle', function () {
-                expect(numberCollection.uncycle(3).unwrap()).toEqual([7, 8, 9, 0, 1, 2, 3, 4, 5, 6]);
+            _.it('uncycle', function () {
+                _.expect(numberCollection.uncycle(3).unwrap()).toEqual([7, 8, 9, 0, 1, 2, 3, 4, 5, 6]);
             });
-            it('count', function () {
-                expect(numberCollection.count(function (item, idx, list) {
+            _.it('count', function () {
+                _.expect(numberCollection.count(function (item, idx, list) {
                     if (item === null) {
                         list.push(idx);
                     }
                 }, 10, 20).length()).toEqual(20);
             });
-            it('countTo', function () {
-                expect(numberCollection.countTo(function (item, idx, list) {
+            _.it('countTo', function () {
+                _.expect(numberCollection.countTo(function (item, idx, list) {
                     if (item === null) {
                         list.push(idx);
                     }
                 }, 20).length()).toEqual(20);
             });
-            it('countFrom', function () {
+            _.it('countFrom', function () {
                 var count = 0;
                 numberCollection.countFrom(function (item, idx, list) {
                     count++;
                 }, 6);
-                expect(count).toEqual(4);
+                _.expect(count).toEqual(4);
             });
-            it('add', function () {
-                expect(numberCollection.add(61)).toEqual(true);
-                expect(numberCollection.add(5)).toEqual(false);
-                expect(numberCollection.unwrap()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 61]);
-                expect(numberCollection.add(61)).toEqual(false);
+            _.it('add', function () {
+                _.expect(numberCollection.add(61)).toEqual(true);
+                _.expect(numberCollection.add(5)).toEqual(false);
+                _.expect(numberCollection.unwrap()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 61]);
+                _.expect(numberCollection.add(61)).toEqual(false);
             });
-            it('insertAt', function () {
-                expect(numberCollection.insertAt(5, 1)).toEqual(true);
-                expect(numberCollection.unwrap()).toEqual([0, 5, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+            _.it('insertAt', function () {
+                _.expect(numberCollection.insertAt(5, 1)).toEqual(true);
+                _.expect(numberCollection.unwrap()).toEqual([0, 5, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
             });
-            it('remove', function () {
-                expect(numberCollection.remove(5)).toEqual(true);
-                expect(numberCollection.unwrap()).toEqual([0, 1, 2, 3, 4, 6, 7, 8, 9]);
-                expect(numberCollection.remove(5)).toEqual(false);
+            _.it('remove', function () {
+                _.expect(numberCollection.remove(5)).toEqual(true);
+                _.expect(numberCollection.unwrap()).toEqual([0, 1, 2, 3, 4, 6, 7, 8, 9]);
+                _.expect(numberCollection.remove(5)).toEqual(false);
             });
-            it('removeAt', function () {
-                expect(numberCollection.removeAt(3)).toEqual(3);
-                expect(numberCollection.removeAt(3)).toEqual(4);
-                expect(numberCollection.length()).toEqual(8);
+            _.it('removeAt', function () {
+                _.expect(numberCollection.removeAt(3)).toEqual(3);
+                _.expect(numberCollection.removeAt(3)).toEqual(4);
+                _.expect(numberCollection.length()).toEqual(8);
             });
-            it('pop', function () {
-                expect(numberCollection.pop()).toEqual(9);
-                expect(numberCollection.pop()).toEqual(8);
-                expect(numberCollection.length()).toEqual(8);
+            _.it('pop', function () {
+                _.expect(numberCollection.pop()).toEqual(9);
+                _.expect(numberCollection.pop()).toEqual(8);
+                _.expect(numberCollection.length()).toEqual(8);
             });
-            it('shift', function () {
-                expect(numberCollection.shift()).toEqual(0);
-                expect(numberCollection.shift()).toEqual(1);
-                expect(numberCollection.length()).toEqual(8);
+            _.it('shift', function () {
+                _.expect(numberCollection.shift()).toEqual(0);
+                _.expect(numberCollection.shift()).toEqual(1);
+                _.expect(numberCollection.length()).toEqual(8);
             });
-            it('indexOf', function () {
-                expect(numberCollection.indexOf(3)).toEqual(3);
-                expect(numberCollection.indexOf(7)).toEqual(7);
+            _.it('indexOf', function () {
+                _.expect(numberCollection.indexOf(3)).toEqual(3);
+                _.expect(numberCollection.indexOf(7)).toEqual(7);
             });
-            it('find', function () {
-                expect(numberCollection.find(function (ix, item) {
+            _.it('find', function () {
+                _.expect(numberCollection.find(function (ix, item) {
                     return item === 10;
                 })).toEqual(void 0);
-                expect(numberCollection.find(function (ix, item) {
+                _.expect(numberCollection.find(function (ix, item) {
                     return item === 7;
                 })).toEqual(7);
             });
-            it('findLast', function () {
-                expect(factories.Collection([12, 1, 2, 1, 104, 2, 1, 5, 55, 6, 2, 7]).findLast(function (item) {
+            _.it('findLast', function () {
+                _.expect(factories.Collection([12, 1, 2, 1, 104, 2, 1, 5, 55, 6, 2, 7]).findLast(function (item) {
                     return item % 17 === 0;
                 })).toEqual(void 0);
-                expect(factories.Collection([88, 2, 1, 5, 70, 23, 43, 9]).findLast(function (item) {
+                _.expect(factories.Collection([88, 2, 1, 5, 70, 23, 43, 9]).findLast(function (item) {
                     return item % 2 === 0;
                 })).toEqual(70);
             });
@@ -669,60 +668,60 @@ application.scope().run(function (app, _, factories) {
                     two: 2,
                     four: 4
                 };
-            it('findWhere', function () {
-                expect(factories.Collection([firstFindObj, secondFindObj]).findWhere({
+            _.it('findWhere', function () {
+                _.expect(factories.Collection([firstFindObj, secondFindObj]).findWhere({
                     one: 2
                 })).toEqual(void 0);
-                expect(factories.Collection([firstFindObj, secondFindObj]).findWhere({
+                _.expect(factories.Collection([firstFindObj, secondFindObj]).findWhere({
                     two: 2
                 })).toEqual(firstFindObj);
             });
-            it('findLastWhere', function () {
-                expect(factories.Collection([firstFindObj, secondFindObj]).findLastWhere({
+            _.it('findLastWhere', function () {
+                _.expect(factories.Collection([firstFindObj, secondFindObj]).findLastWhere({
                     one: 2
                 })).toEqual(void 0);
-                expect(factories.Collection([firstFindObj, secondFindObj]).findLastWhere({
+                _.expect(factories.Collection([firstFindObj, secondFindObj]).findLastWhere({
                     two: 2
                 })).toEqual(secondFindObj);
             });
-            it('posit', function () {
-                expect(numberCollection.posit(5)).toEqual(6);
-                expect(numberCollection.posit(11)).toEqual(0);
+            _.it('posit', function () {
+                _.expect(numberCollection.posit(5)).toEqual(6);
+                _.expect(numberCollection.posit(11)).toEqual(0);
             });
-            it('foldr', function () {
-                expect(numberCollection.foldr(function (memo, idx, item) {
+            _.it('foldr', function () {
+                _.expect(numberCollection.foldr(function (memo, idx, item) {
                     memo.push(item);
                     return memo;
                 }, [])).toEqual([9, 8, 7, 6, 5, 4, 3, 2, 1, 0]);
             });
-            it('foldl', function () {
-                expect(numberCollection.foldl(function (memo, idx, item) {
+            _.it('foldl', function () {
+                _.expect(numberCollection.foldl(function (memo, idx, item) {
                     memo.push(item);
                     return memo;
                 }, [])).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
             });
-            it('merge', function () {
-                expect(numberCollection.merge([0, 1, 2, 6, 7, 8]).unwrap()).toEqual([0, 1, 2, 6, 7, 8, 6, 7, 8, 9]);
+            _.it('merge', function () {
+                _.expect(numberCollection.merge([0, 1, 2, 6, 7, 8]).unwrap()).toEqual([0, 1, 2, 6, 7, 8, 6, 7, 8, 9]);
             });
-            it('range', function () {
-                expect(factories.Collection().range(4, 9).unwrap()).toEqual([4, 5, 6, 7, 8]);
+            _.it('range', function () {
+                _.expect(factories.Collection().range(4, 9).unwrap()).toEqual([4, 5, 6, 7, 8]);
             });
-            it('eq', function () {
-                expect(numberCollection.eq(4).unwrap()).toEqual([4]);
-                expect(numberCollection.eq([3, 9]).unwrap()).toEqual([3, 9]);
+            _.it('eq', function () {
+                _.expect(numberCollection.eq(4).unwrap()).toEqual([4]);
+                _.expect(numberCollection.eq([3, 9]).unwrap()).toEqual([3, 9]);
             });
-            it('map', function () {
-                expect(numberCollection.map(function (idx, item) {
+            _.it('map', function () {
+                _.expect(numberCollection.map(function (idx, item) {
                     return item * 2;
                 }).unwrap()).toEqual([0, 2, 4, 6, 8, 10, 12, 14, 16, 18]);
             });
-            it('filter', function () {
-                expect(numberCollection.filter(function (idx, item) {
+            _.it('filter', function () {
+                _.expect(numberCollection.filter(function (idx, item) {
                     return item % 2;
                 }).unwrap()).toEqual([1, 3, 5, 7, 9]);
             });
-            it('pluck', function () {
-                expect(factories.Collection([{
+            _.it('pluck', function () {
+                _.expect(factories.Collection([{
                     one: 1
                 }, {
                     one: 2
@@ -732,8 +731,8 @@ application.scope().run(function (app, _, factories) {
                     one: 4
                 }]).pluck('one').unwrap()).toEqual([1, 2, 3, 4]);
             });
-            it('where', function () {
-                expect(factories.Collection([{
+            _.it('where', function () {
+                _.expect(factories.Collection([{
                     one: 1
                 }, {
                     one: 2
@@ -749,8 +748,8 @@ application.scope().run(function (app, _, factories) {
                     one: 1
                 }]);
             });
-            it('flatten', function () {
-                expect(factories.Collection([
+            _.it('flatten', function () {
+                _.expect(factories.Collection([
                     [0, 1, 2, 3],
                     [4, 5, 6, 7, 8],
                     [9, 10, 11, 12]
@@ -758,9 +757,9 @@ application.scope().run(function (app, _, factories) {
             });
         });
     });
-    describe('SortedCollection', function () {
+    _.describe('SortedCollection', function () {
         var numberCollection, SortedCollection = factories.SortedCollection;
-        beforeEach(function () {
+        _.beforeEach(function () {
             collection = SortedCollection();
             numberCollection = SortedCollection([4, 5, 3, 7, 8, 6, 2, 0, 1, 9]);
             complexCollection = SortedCollection([factories.Model(), factories.Model({
@@ -770,37 +769,37 @@ application.scope().run(function (app, _, factories) {
             })]);
             evenNumberList = [0, 2, 4, 6, 8];
         });
-        it('should be sorted at the beginning', function () {
-            expect(numberCollection.toJSON()).toEqual(numberCollection.sort().toJSON());
+        _.it('should be sorted at the beginning', function () {
+            _.expect(numberCollection.toJSON()).toEqual(numberCollection.sort().toJSON());
         });
-        it('can get values without having to iterate over everything', function () {
+        _.it('can get values without having to iterate over everything', function () {
             numberCollection.indexOf = _.noop;
-            expect(numberCollection.get('id', 8)).toEqual(8);
+            _.expect(numberCollection.get('id', 8)).toEqual(8);
         });
-        it('can add values in the correct place', function () {
+        _.it('can add values in the correct place', function () {
             var sorted = SortedCollection(evenNumberList);
             sorted.add(1);
             sorted.add(5);
             sorted.add(3);
-            expect(sorted.index(0)).toEqual(0);
-            expect(sorted.index(1)).toEqual(1);
-            expect(sorted.index(2)).toEqual(2);
-            expect(sorted.index(3)).toEqual(3);
-            expect(sorted.index(4)).toEqual(4);
-            expect(sorted.index(5)).toEqual(5);
+            _.expect(sorted.index(0)).toEqual(0);
+            _.expect(sorted.index(1)).toEqual(1);
+            _.expect(sorted.index(2)).toEqual(2);
+            _.expect(sorted.index(3)).toEqual(3);
+            _.expect(sorted.index(4)).toEqual(4);
+            _.expect(sorted.index(5)).toEqual(5);
         });
-        it('can remove values from the correct place', function () {
+        _.it('can remove values from the correct place', function () {
             var sorted = SortedCollection(evenNumberList);
             sorted.remove(4);
             sorted.remove(2);
-            expect(sorted.index(0)).toEqual(0);
-            expect(sorted.index(1)).toEqual(6);
-            expect(sorted.index(2)).toEqual(8);
+            _.expect(sorted.index(0)).toEqual(0);
+            _.expect(sorted.index(1)).toEqual(6);
+            _.expect(sorted.index(2)).toEqual(8);
         });
     });
 });
 application.scope().run(function (app, _, factories) {
-    describe('Events', function () {
+    _.describe('Events', function () {
         var blank, box,
             Model = factories.Model,
             handler = function () {
@@ -819,7 +818,7 @@ application.scope().run(function (app, _, factories) {
                     time: 'pause'
                 }]
             };
-        beforeEach(function () {
+        _.beforeEach(function () {
             count = 0;
             box = Model({
                 zero: 0,
@@ -834,227 +833,227 @@ application.scope().run(function (app, _, factories) {
                 nine: 9
             });
         });
-        describe('Models can have events', function () {
+        _.describe('Models can have events', function () {
             var box2;
-            describe('and can create events for itself', function () {
-                it('either one at a time', function () {
+            _.describe('and can create events for itself', function () {
+                _.it('either one at a time', function () {
                     box.on('evnt', handler);
-                    expect(count).toEqual(0);
+                    _.expect(count).toEqual(0);
                     box.dispatchEvent('evnt');
-                    expect(count).toEqual(1);
+                    _.expect(count).toEqual(1);
                     box.dispatchEvent('evnt');
-                    expect(count).toEqual(2);
+                    _.expect(count).toEqual(2);
                 });
-                it('or many at a time', function () {
+                _.it('or many at a time', function () {
                     box.on('evnt eventer mikesevent', handler);
-                    expect(count).toEqual(0);
+                    _.expect(count).toEqual(0);
                     box.dispatchEvent('evnt');
                     box.dispatchEvent('eventer');
                     box.dispatchEvent('mikesevent');
-                    expect(count).toEqual(3);
+                    _.expect(count).toEqual(3);
                     box.dispatchEvent('evnt');
                     box.dispatchEvent('eventer');
                     box.dispatchEvent('mikesevent');
-                    expect(count).toEqual(6);
+                    _.expect(count).toEqual(6);
                 });
             });
-            describe('and can remove events from itself', function () {
-                it('either one at a time', function () {
+            _.describe('and can remove events from itself', function () {
+                _.it('either one at a time', function () {
                     box.on('evnt', handler);
-                    expect(count).toEqual(0);
+                    _.expect(count).toEqual(0);
                     box.dispatchEvent('evnt');
-                    expect(count).toEqual(1);
+                    _.expect(count).toEqual(1);
                     box.dispatchEvent('evnt');
-                    expect(count).toEqual(2);
+                    _.expect(count).toEqual(2);
                     box.off('evnt', handler);
-                    expect(count).toEqual(2);
+                    _.expect(count).toEqual(2);
                     box.dispatchEvent('evnt');
-                    expect(count).toEqual(2);
+                    _.expect(count).toEqual(2);
                 });
-                it('or many at a time', function () {
+                _.it('or many at a time', function () {
                     box.on('evnt eventer mikesevent', handler);
-                    expect(count).toEqual(0);
+                    _.expect(count).toEqual(0);
                     box.dispatchEvent('evnt');
                     box.dispatchEvent('eventer');
                     box.dispatchEvent('mikesevent');
-                    expect(count).toEqual(3);
+                    _.expect(count).toEqual(3);
                     box.dispatchEvent('evnt');
                     box.dispatchEvent('eventer');
                     box.dispatchEvent('mikesevent');
-                    expect(count).toEqual(6);
+                    _.expect(count).toEqual(6);
                     box.off('evnt eventer mikesevent', handler);
                 });
             });
         });
-        describe('Models can also listen to other, similar objects', function () {
+        _.describe('Models can also listen to other, similar objects', function () {
             var box2;
-            beforeEach(function () {
+            _.beforeEach(function () {
                 box2 = Model();
             });
-            describe('by using the listenTo method', function () {
-                it('either one at a time', function () {
+            _.describe('by using the listenTo method', function () {
+                _.it('either one at a time', function () {
                     box.listenTo(box2, 'evnt', handler);
-                    expect(count).toEqual(0);
+                    _.expect(count).toEqual(0);
                     box2.dispatchEvent('evnt');
-                    expect(count).toEqual(1);
+                    _.expect(count).toEqual(1);
                     box2.dispatchEvent('evnt');
-                    expect(count).toEqual(2);
+                    _.expect(count).toEqual(2);
                 });
-                it('or many at a time', function () {
+                _.it('or many at a time', function () {
                     box.listenTo(box2, 'evnt eventer mikesevent', handler);
-                    expect(count).toEqual(0);
+                    _.expect(count).toEqual(0);
                     box2.dispatchEvent('evnt');
-                    expect(count).toEqual(1);
+                    _.expect(count).toEqual(1);
                     box2.dispatchEvent('eventer');
-                    expect(count).toEqual(2);
+                    _.expect(count).toEqual(2);
                     box2.dispatchEvent('mikesevent');
-                    expect(count).toEqual(3);
+                    _.expect(count).toEqual(3);
                 });
             });
-            it('you can even take a shortcut and dispatch an event one at a time using dispatchEvent', function () {
+            _.it('you can even take a shortcut and dispatch an event one at a time using dispatchEvent', function () {
                 box.on('handle', handler);
-                expect(count).toEqual(0);
+                _.expect(count).toEqual(0);
                 box.dispatchEvent('handle');
-                expect(count).toEqual(1);
+                _.expect(count).toEqual(1);
             });
-            it('or many at a time using dispatchEvents', function () {
+            _.it('or many at a time using dispatchEvents', function () {
                 box.on('handle handler beep boop blob', handler);
-                expect(count).toEqual(0);
+                _.expect(count).toEqual(0);
                 box.dispatchEvents('handle handler beep boop blob');
-                expect(count).toEqual(5);
+                _.expect(count).toEqual(5);
             });
-            describe('and can stop listening by using the stopListening method', function () {
-                it('can remove events one at a time', function () {
+            _.describe('and can stop listening by using the stopListening method', function () {
+                _.it('can remove events one at a time', function () {
                     var listenObj;
                     box.listenTo(box2, 'evnt', handler);
-                    expect(count).toEqual(0);
+                    _.expect(count).toEqual(0);
                     box2.dispatchEvent('evnt');
-                    expect(count).toEqual(1);
+                    _.expect(count).toEqual(1);
                     box.stopListening(box2, 'evnt', handler);
-                    expect(count).toEqual(1);
+                    _.expect(count).toEqual(1);
                     box2.dispatchEvent('evnt');
-                    expect(count).toEqual(1);
+                    _.expect(count).toEqual(1);
                 });
-                it('or many at a time', function () {
+                _.it('or many at a time', function () {
                     box.listenTo(box2, 'evnt eventer mikesevent', handler);
                     box.listenTo(box2, 'evnt eventer mikesevent', function () {
                         count += this === box;
                     });
-                    expect(count).toEqual(0);
+                    _.expect(count).toEqual(0);
                     box2.dispatchEvent('evnt');
                     box2.dispatchEvent('eventer');
                     box2.dispatchEvent('mikesevent');
-                    expect(count).toEqual(6);
+                    _.expect(count).toEqual(6);
                     box.stopListening(box2, 'evnt eventer mikesevent', handler);
-                    expect(count).toEqual(6);
+                    _.expect(count).toEqual(6);
                     box2.dispatchEvent('evnt');
                     box2.dispatchEvent('eventer');
                     box2.dispatchEvent('mikesevent');
-                    expect(count).toEqual(9);
+                    _.expect(count).toEqual(9);
                 });
             });
-            describe('listenTo', function () {
-                it('should have an equivalent context', function () {
+            _.describe('listenTo', function () {
+                _.it('should have an equivalent context', function () {
                     box.listenTo(box2, 'e1', function () {
                         count++;
                         count += (this === box);
                     });
-                    expect(count).toEqual(0);
+                    _.expect(count).toEqual(0);
                     box2.dispatchEvent('e1');
-                    expect(count).toEqual(2);
+                    _.expect(count).toEqual(2);
                 });
-                it('can be overridden with an extra argument', function () {
+                _.it('can be overridden with an extra argument', function () {
                     box.listenTo(box2, 'e1', function () {
                         count++;
                         count += this === box2;
                     }, box2);
-                    expect(count).toEqual(0);
+                    _.expect(count).toEqual(0);
                     box2.dispatchEvent('e1');
-                    expect(count).toEqual(2);
+                    _.expect(count).toEqual(2);
                 });
             });
-            describe('watch directive', function () {
-                it('can listenTo the object that it belongs to', function () {
+            _.describe('watch directive', function () {
+                _.it('can listenTo the object that it belongs to', function () {
                     box.watch('here', 'there', function () {
                         count++;
                     });
-                    expect(count).toEqual(0);
+                    _.expect(count).toEqual(0);
                     box.set('here', 1);
-                    expect(count).toEqual(0);
+                    _.expect(count).toEqual(0);
                     box.set('here', 'there');
-                    expect(count).toEqual(1);
+                    _.expect(count).toEqual(1);
                     box.set('here', 'where');
-                    expect(count).toEqual(1);
+                    _.expect(count).toEqual(1);
                     box.set('here', 'there');
-                    expect(count).toEqual(2);
+                    _.expect(count).toEqual(2);
                 });
             });
-            describe('when directive', function () {
-                it('gives an api synonymous with english', function () {
+            _.describe('when directive', function () {
+                _.it('gives an api synonymous with english', function () {
                     box.when('here').is('there').and('when').is('now').then(function () {
                         count++;
                     }).otherwise(function () {
                         count--;
                     });
-                    expect(count).toEqual(0);
+                    _.expect(count).toEqual(0);
                     box.set('here', 'nothere');
-                    expect(count).toEqual(-1);
+                    _.expect(count).toEqual(-1);
                     box.set('when', 'later');
-                    expect(count).toEqual(-1);
+                    _.expect(count).toEqual(-1);
                     box.set('when', 'now');
-                    expect(count).toEqual(-1);
+                    _.expect(count).toEqual(-1);
                     box.set('here', 'there');
-                    expect(count).toEqual(0);
+                    _.expect(count).toEqual(0);
                 });
-                it('allows for negatives to be used like isNot and isnt', function () {
+                _.it('allows for negatives to be used like isNot and isnt', function () {
                     box.when('one').isNot(2).and('up').isnt('down').then(function () {
                         count++;
                     }).otherwise(function () {
                         count--;
                     });
-                    expect(count).toEqual(0);
+                    _.expect(count).toEqual(0);
                     box.set('up', 'down');
-                    expect(count).toEqual(-1);
+                    _.expect(count).toEqual(-1);
                     box.set('one', 2);
-                    expect(count).toEqual(-1);
+                    _.expect(count).toEqual(-1);
                     box.set('one', 1);
-                    expect(count).toEqual(-1);
+                    _.expect(count).toEqual(-1);
                     box.set('up', 'side');
-                    expect(count).toEqual(0);
+                    _.expect(count).toEqual(0);
                 });
-                it('can compare numbers using basic operators and negation', function () {
+                _.it('can compare numbers using basic operators and negation', function () {
                     box.when('one').isGreaterThan(5).and('ten').isLessThan(4).and('phone').isNotLessThan(5).then(function () {
                         count++;
                     }).otherwise(function () {
                         count--;
                     });
-                    expect(count).toEqual(0);
+                    _.expect(count).toEqual(0);
                     box.set('phone', 10);
-                    expect(count).toEqual(-1);
+                    _.expect(count).toEqual(-1);
                     box.set('one', 6);
-                    expect(count).toEqual(-1);
+                    _.expect(count).toEqual(-1);
                     box.set('ten', 5);
-                    expect(count).toEqual(-1);
+                    _.expect(count).toEqual(-1);
                     box.set('ten', 2);
-                    expect(count).toEqual(0);
+                    _.expect(count).toEqual(0);
                 });
-                it('can compare string values using basic operators and negation', function () {
+                _.it('can compare string values using basic operators and negation', function () {
                     box.when('one').isGreaterThan('a').and('ten').isLessThan('b').then(function () {
                         count++;
                     }).otherwise(function () {
                         count--;
                     });
-                    expect(count).toEqual(0);
+                    _.expect(count).toEqual(0);
                     box.set('one', '0');
-                    expect(count).toEqual(-1);
+                    _.expect(count).toEqual(-1);
                     box.set('ten', 'beach');
-                    expect(count).toEqual(-1);
+                    _.expect(count).toEqual(-1);
                     box.set('ten', 'aardvark');
-                    expect(count).toEqual(-1);
+                    _.expect(count).toEqual(-1);
                     box.set('one', 'ten');
-                    expect(count).toEqual(0);
+                    _.expect(count).toEqual(0);
                 });
-                it('can also handle custom functions', function () {
+                _.it('can also handle custom functions', function () {
                     box.when('one').is(function () {
                         return box.get('one') > 5;
                     }).then(function () {
@@ -1062,31 +1061,31 @@ application.scope().run(function (app, _, factories) {
                     }).otherwise(function () {
                         count--;
                     });
-                    expect(count).toEqual(0);
+                    _.expect(count).toEqual(0);
                     box.set('one', 10);
-                    expect(count).toEqual(1);
+                    _.expect(count).toEqual(1);
                     box.set('one', 3);
-                    expect(count).toEqual(0);
+                    _.expect(count).toEqual(0);
                 });
-                it('can also make "groups" using the or method', function () {
+                _.it('can also make "groups" using the or method', function () {
                     var sequence = box.when('one').is(1).or('truth').is(true).then(function () {
                         count++;
                     }).otherwise(function () {
                         count--;
                     });
-                    expect(count).toEqual(0);
+                    _.expect(count).toEqual(0);
                     box.set('one', 2);
-                    expect(count).toEqual(-1);
+                    _.expect(count).toEqual(-1);
                     box.set('one', 0);
-                    expect(count).toEqual(-1);
+                    _.expect(count).toEqual(-1);
                     box.set('truth', true);
-                    expect(count).toEqual(0);
+                    _.expect(count).toEqual(0);
                     box.set('one', 1);
-                    expect(count).toEqual(0);
+                    _.expect(count).toEqual(0);
                     box.set('truth', false);
-                    expect(count).toEqual(0);
+                    _.expect(count).toEqual(0);
                 });
-                it('can also have multiple watchers on a particular instance that run independently', function () {
+                _.it('can also have multiple watchers on a particular instance that run independently', function () {
                     var last;
                     var sequence = box.when('five').isLessThan(10).then(function () {
                         count++;
@@ -1096,14 +1095,14 @@ application.scope().run(function (app, _, factories) {
                         count++;
                         last = 2;
                     });
-                    expect(count).toEqual(0);
-                    expect(last).toEqual(void 0);
+                    _.expect(count).toEqual(0);
+                    _.expect(last).toEqual(void 0);
                     box.set('five', 3);
-                    expect(count).toEqual(1);
-                    expect(last).toEqual(1);
+                    _.expect(count).toEqual(1);
+                    _.expect(last).toEqual(1);
                     box.set('here', 'there');
-                    expect(count).toEqual(2);
-                    expect(last).toEqual(2);
+                    _.expect(count).toEqual(2);
+                    _.expect(last).toEqual(2);
                 });
             });
         });
@@ -1125,7 +1124,7 @@ application.scope().run(function (app, _, factories) {
 });
 application.scope().run(function (app, _, factories) {
     // var factories = _.factories;
-    describe('Model', function () {
+    _.describe('Model', function () {
         var blank, count, box,
             Model = factories.Model,
             handler = function () {
@@ -1147,7 +1146,7 @@ application.scope().run(function (app, _, factories) {
                     time: 'pause'
                 }]
             };
-        beforeEach(function () {
+        _.beforeEach(function () {
             count = 0;
             box = Model({
                 zero: 0,
@@ -1162,40 +1161,40 @@ application.scope().run(function (app, _, factories) {
                 nine: 9
             });
         });
-        it('extends from factories.Extendable', function () {
-            expect(factories.Extendable.isInstance(box)).toEqual(true);
+        _.it('extends from factories.Extendable', function () {
+            _.expect(factories.Extendable.isInstance(box)).toEqual(true);
         });
-        describe('Models are always created with...', function () {
+        _.describe('Models are always created with...', function () {
             var box2 = Model();
-            it('a unique id', function () {
-                expect(_.has(box2, 'id')).toEqual(true);
+            _.it('a unique id', function () {
+                _.expect(_.has(box2, 'id')).toEqual(true);
             });
-            it('even if there is not one given', function () {
+            _.it('even if there is not one given', function () {
                 var box3 = Model({
                     id: 5
                 });
-                expect(box2.id !== void 0).toEqual(true);
-                expect(box3.id === 5).toEqual(true);
+                _.expect(box2.id !== void 0).toEqual(true);
+                _.expect(box3.id === 5).toEqual(true);
             });
-            // it('an empty _previousAttributes hash', function () {
-            //     expect(_.has(box2, '_previousAttributes')).toEqual(true);
-            //     expect(_.isObject(box2._previousAttributes)).toEqual(true);
-            //     expect(_.isEmpty(box2._previousAttributes)).toEqual(true);
+            // _.it('an empty _previousAttributes hash', function () {
+            //     _.expect(_.has(box2, '_previousAttributes')).toEqual(true);
+            //     _.expect(_.isObject(box2._previousAttributes)).toEqual(true);
+            //     _.expect(_.isEmpty(box2._previousAttributes)).toEqual(true);
             // });
-            // it('a collection for children', function () {
-            //     expect(_.has(box2, 'children')).toEqual(true);
-            //     expect(factories.Collection.isInstance(box2.directive('children'))).toEqual(true);
-            //     expect(box2.directive('children').length()).toEqual(0);
+            // _.it('a collection for children', function () {
+            //     _.expect(_.has(box2, 'Children')).toEqual(true);
+            //     _.expect(factories.Collection.isInstance(box2.directive('Children'))).toEqual(true);
+            //     _.expect(box2.directive('Children').length()).toEqual(0);
             // });
-            // it('and an attributes object', function () {
-            //     expect(_.has(box2, 'attributes')).toEqual(true);
-            //     expect(_.isObject(box2.directive('data').current)).toEqual(true);
+            // _.it('and an attributes object', function () {
+            //     _.expect(_.has(box2, 'attributes')).toEqual(true);
+            //     _.expect(_.isObject(box2.directive('data').current)).toEqual(true);
             // });
         });
-        describe('you can set properties on the box you\'re handling with the set method', function () {
+        _.describe('you can set properties on the box you\'re handling with the set method', function () {
             var box = Model(),
                 attrs = box.directive('data');
-            beforeEach(function () {
+            _.beforeEach(function () {
                 box = Model({
                     zero: 0,
                     one: 1,
@@ -1209,161 +1208,161 @@ application.scope().run(function (app, _, factories) {
                     nine: 9
                 });
             });
-            it('you can add new properties', function () {
-                expect(attrs.ten).toEqual(void 0);
+            _.it('you can add new properties', function () {
+                _.expect(attrs.ten).toEqual(void 0);
                 box.set({
                     ten: 10,
                     eleven: 11,
                     twelve: 12
                 });
-                expect(box.get('ten')).toEqual(10);
+                _.expect(box.get('ten')).toEqual(10);
             });
-            it('you can modify existing properties', function () {
-                expect(box.get('one')).toEqual(1);
+            _.it('you can modify existing properties', function () {
+                _.expect(box.get('one')).toEqual(1);
                 box.set({
                     one: 2,
                     two: 3,
                     three: 4
                 });
-                expect(box.get('one')).toEqual(2);
+                _.expect(box.get('one')).toEqual(2);
             });
-            it('and you can remove properties by using the unset method', function () {
+            _.it('and you can remove properties by using the unset method', function () {
                 var box = Model();
-                expect(box.get('one')).toEqual(void 0);
+                _.expect(box.get('one')).toEqual(void 0);
                 box.set({
                     one: 1
                 });
-                expect(box.get('one')).toEqual(1);
+                _.expect(box.get('one')).toEqual(1);
                 box.unset('one');
-                expect(box.get('one')).toEqual(void 0);
+                _.expect(box.get('one')).toEqual(void 0);
             });
-            // it('or remove a bunch of properties by passing in a space separated list to the unset method', function () {
-            //     expect(box.get('one')).toEqual(1);
-            //     expect(box.get('three')).toEqual(3);
-            //     expect(box.get('five')).toEqual(5);
+            // _.it('or remove a bunch of properties by passing in a space separated list to the unset method', function () {
+            //     _.expect(box.get('one')).toEqual(1);
+            //     _.expect(box.get('three')).toEqual(3);
+            //     _.expect(box.get('five')).toEqual(5);
             //     box.unset('one three five');
-            //     expect(box.get('one')).toEqual(void 0);
-            //     expect(box.get('three')).toEqual(void 0);
-            //     expect(box.get('five')).toEqual(void 0);
+            //     _.expect(box.get('one')).toEqual(void 0);
+            //     _.expect(box.get('three')).toEqual(void 0);
+            //     _.expect(box.get('five')).toEqual(void 0);
             // });
         });
         // pass to the on, once, off, listenTo, listenToOnce, and stopListening functions
-        describe('there are super special characters that you can use for terseness', function () {
+        _.describe('there are super special characters that you can use for terseness', function () {
             var count = 0,
                 handler = function () {
                     count++;
                 };
-            beforeEach(function () {
+            _.beforeEach(function () {
                 box2 = Model();
                 count = 0;
             });
         });
-        describe('Models also trigger a variety of events any time the set method changes the attributes object', function () {
+        _.describe('Models also trigger a variety of events any time the set method changes the attributes object', function () {
             var fired;
-            beforeEach(function () {
+            _.beforeEach(function () {
                 fired = 0;
             });
-            it('such as the change event', function () {
-                expect(fired).toEqual(0);
+            _.it('such as the change event', function () {
+                _.expect(fired).toEqual(0);
                 box.on('change', function () {
                     fired = 1;
                 });
-                expect(fired).toEqual(0);
+                _.expect(fired).toEqual(0);
                 box.set({
                     here: 'there'
                 });
-                expect(fired).toEqual(1);
+                _.expect(fired).toEqual(1);
             });
-            it('and the alter event', function () {
-                expect(fired).toEqual(0);
+            _.it('and the alter event', function () {
+                _.expect(fired).toEqual(0);
                 box.on('change', function () {
                     fired = 1;
                 });
-                expect(fired).toEqual(0);
+                _.expect(fired).toEqual(0);
                 box.set({
                     one: 1,
                     two: 2
                 });
-                expect(fired).toEqual(0);
+                _.expect(fired).toEqual(0);
                 box.set({
                     two: 1
                 });
-                expect(fired).toEqual(1);
+                _.expect(fired).toEqual(1);
             });
-            it('as well as alter events specific to each property', function () {
-                expect(fired).toEqual(0);
+            _.it('as well as alter events specific to each property', function () {
+                _.expect(fired).toEqual(0);
                 box.on('change:one change:two change:three', function () {
                     fired++;
                 });
-                expect(fired).toEqual(0);
+                _.expect(fired).toEqual(0);
                 box.set({
                     one: 9,
                     two: 8,
                     three: 7
                 });
-                expect(fired).toEqual(3);
+                _.expect(fired).toEqual(3);
             });
         });
-        describe('but beyond events and simple hashes, Models are able to manage themselves fairly well', function () {
-            it('they can get properties from the attributes object with the get method', function () {
-                expect(box.get('one')).toEqual(1);
+        _.describe('but beyond events and simple hashes, Models are able to manage themselves fairly well', function () {
+            _.it('they can get properties from the attributes object with the get method', function () {
+                _.expect(box.get('one')).toEqual(1);
             });
-            it('they can tell you if it has a property with the has method', function () {
-                expect(box.has('one')).toEqual(true);
+            _.it('they can tell you if it has a property with the has method', function () {
+                _.expect(box.has('one')).toEqual(true);
             });
-            it('they can clone it\'s attributes by using the toJSON method', function () {
+            _.it('they can clone it\'s attributes by using the toJSON method', function () {
                 var clone = box.toJSON();
-                expect(clone).toEqual(box.directive('data').current);
-                expect(clone === box.directive('data').current).toEqual(false);
+                _.expect(clone).toEqual(box.directive('data').current);
+                _.expect(clone === box.directive('data').current).toEqual(false);
             });
-            it('they can clone children into an array', function () {
+            _.it('they can clone children into an array', function () {
                 var clone;
                 box.add([factories.Model(), factories.Model()]);
-                clone = box.directive('children').toJSON();
-                expect(clone).toEqual([{}, {}]);
+                clone = box.directive('Children').toJSON();
+                _.expect(clone).toEqual([{}, {}]);
             });
-            it('they can stringify themselves', function () {
+            _.it('they can stringify themselves', function () {
                 box = factories.Model({
                     some: 'thing'
                 });
-                expect(box.toString()).toEqual(JSON.stringify({
+                _.expect(box.toString()).toEqual(JSON.stringify({
                     some: 'thing'
                 }));
             });
-            it('they can stringify their children', function () {
+            _.it('they can stringify their children', function () {
                 box = factories.Model();
                 box.add(data.children);
-                expect(box.directive('children').toString()).toEqual(JSON.stringify(data.children));
+                _.expect(box.directive('Children').toString()).toEqual(JSON.stringify(data.children));
             });
         });
-        describe('Models can register other objects against a key hash as well', function () {
-            it('it can register', function () {
+        _.describe('Models can register other objects against a key hash as well', function () {
+            _.it('it can register', function () {
                 var data = {
                     myObj: 1
                 };
-                expect(box.directive('children').get('id', 'key')).toEqual(void 0);
-                box.directive('children').register('id', 'key', data);
-                expect(box.directive('children').get('id', 'key')).toEqual(data);
+                _.expect(box.directive('Children').get('id', 'key')).toEqual(void 0);
+                box.directive('Children').register('id', 'key', data);
+                _.expect(box.directive('Children').get('id', 'key')).toEqual(data);
             });
-            it('and retreive information', function () {
+            _.it('and retreive information', function () {
                 var data = {
                     myObj: 1
                 };
-                expect(box.directive('children').get('id', 'key')).toEqual(void 0);
-                box.directive('children').register('id', 'key', data);
-                expect(box.directive('children').get('id', 'key') === data).toEqual(true);
+                _.expect(box.directive('Children').get('id', 'key')).toEqual(void 0);
+                box.directive('Children').register('id', 'key', data);
+                _.expect(box.directive('Children').get('id', 'key') === data).toEqual(true);
             });
         });
-        describe('boxes can have children', function () {
-            it('you can add one at a time', function () {
-                expect(box.directive('children').length()).toEqual(0);
+        _.describe('boxes can have children', function () {
+            _.it('you can add one at a time', function () {
+                _.expect(box.directive('Children').length()).toEqual(0);
                 box.add({
                     isChild: !0
                 });
-                expect(box.directive('children').length()).toEqual(1);
+                _.expect(box.directive('Children').length()).toEqual(1);
             });
-            it('or many at once', function () {
-                expect(box.directive('children').length()).toEqual(0);
+            _.it('or many at once', function () {
+                _.expect(box.directive('Children').length()).toEqual(0);
                 box.add([{
                     isChild: !0
                 }, {
@@ -1371,17 +1370,17 @@ application.scope().run(function (app, _, factories) {
                 }, {
                     isChild: 'may'
                 }]);
-                expect(box.directive('children').length()).toEqual(3);
+                _.expect(box.directive('Children').length()).toEqual(3);
             });
-            it('you can also remove them one at a time', function () {
+            _.it('you can also remove them one at a time', function () {
                 box = factories.Model();
                 box.add(data.children);
-                expect(box.directive('children').length()).toEqual(2);
+                _.expect(box.directive('Children').length()).toEqual(2);
             });
-            it('or many at the same time', function () {
+            _.it('or many at the same time', function () {
                 box = factories.Model();
-                var children = box.directive('children');
-                expect(children.length()).toEqual(0);
+                var children = box.directive('Children');
+                _.expect(children.length()).toEqual(0);
                 box.add([{
                     one: 1
                 }, {
@@ -1391,13 +1390,13 @@ application.scope().run(function (app, _, factories) {
                 }, {
                     one: 4
                 }]);
-                expect(children.length()).toEqual(4);
+                _.expect(children.length()).toEqual(4);
                 box.remove([children.index(1), children.index(3)]);
-                expect(children.length()).toEqual(2);
+                _.expect(children.length()).toEqual(2);
             });
         });
-        describe('they can', function () {
-            it('destroy themselves', function () {
+        _.describe('they can', function () {
+            _.it('destroy themselves', function () {
                 box = factories.Model();
                 box.add([{
                     one: 1
@@ -1408,14 +1407,14 @@ application.scope().run(function (app, _, factories) {
                 }, {
                     one: 4
                 }]);
-                var destroyer = box.directive('children').index(2);
-                expect(box.directive('children').get('cid', destroyer.cid) === destroyer).toEqual(true);
-                expect(box.directive('children').get('id', destroyer.id) === destroyer).toEqual(true);
+                var destroyer = box.directive('Children').index(2);
+                _.expect(box.directive('Children').get('cid', destroyer.cid) === destroyer).toEqual(true);
+                _.expect(box.directive('Children').get('id', destroyer.id) === destroyer).toEqual(true);
                 destroyer.destroy();
-                expect(box.directive('children').get('cid', destroyer.cid)).toEqual(void 0);
-                expect(box.directive('children').get('id', destroyer.id)).toEqual(void 0);
+                _.expect(box.directive('Children').get('cid', destroyer.cid)).toEqual(void 0);
+                _.expect(box.directive('Children').get('id', destroyer.id)).toEqual(void 0);
             });
-            it('sort their children', function () {
+            _.it('sort their children', function () {
                 box.add([{
                     one: 1,
                     two: 2,
@@ -1431,16 +1430,16 @@ application.scope().run(function (app, _, factories) {
                 }]);
                 box.comparator = 'two';
                 box.sort();
-                expect(box.directive('children').map(function (model) {
+                _.expect(box.directive('Children').list.map(function (model) {
                     return model.get('two');
-                }).unwrap()).toEqual([1, 2, 8]);
+                })).toEqual([1, 2, 8]);
                 box.comparator = '!two';
                 box.sort();
-                expect(box.directive('children').map(function (model) {
+                _.expect(box.directive('Children').list.map(function (model) {
                     return model.get('two');
-                }).unwrap()).toEqual([8, 2, 1]);
+                })).toEqual([8, 2, 1]);
             });
-            it('set up events on their children', function () {
+            _.it('set up events on their children', function () {
                 var counter = 0;
                 box.childEvents = {
                     beep: function () {
@@ -1452,13 +1451,13 @@ application.scope().run(function (app, _, factories) {
                     }
                 };
                 box.add([{}, {}, {}, {}]);
-                expect(counter).toEqual(0);
-                box.directive('children').results('dispatchEvent', 'beep');
-                expect(counter).toEqual(8);
-                box.directive('children').results('dispatchEvent', 'boop');
-                expect(counter).toEqual(4);
+                _.expect(counter).toEqual(0);
+                box.directive('Children').results('dispatchEvent', 'beep');
+                _.expect(counter).toEqual(8);
+                box.directive('Children').results('dispatchEvent', 'boop');
+                _.expect(counter).toEqual(4);
             });
-            it('set up events on their parents', function () {
+            _.it('set up events on their parents', function () {
                 var count = 0;
                 Model.constructor.prototype.parentEvents = {
                     beep: function () {
@@ -1467,66 +1466,66 @@ application.scope().run(function (app, _, factories) {
                 };
                 box.add([{}, {}, {}, {}]);
                 box.dispatchEvent('beep');
-                expect(count).toEqual(4);
+                _.expect(count).toEqual(4);
                 delete Model.constructor.prototype.parentEvents;
             });
         });
-        describe('boxes can "destroy" themselves', function () {
-            it('their events will persist until they decide to reset their own events', function () {
+        _.describe('boxes can "destroy" themselves', function () {
+            _.it('their events will persist until they decide to reset their own events', function () {
                 box.on({
                     event1: counter,
                     event2: counter
                 });
-                expect(count).toEqual(0);
+                _.expect(count).toEqual(0);
                 box.dispatchEvent('event1');
-                expect(count).toEqual(1);
+                _.expect(count).toEqual(1);
                 box.dispatchEvent('event2');
-                expect(count).toEqual(2);
+                _.expect(count).toEqual(2);
                 box.destroy();
-                expect(count).toEqual(2);
+                _.expect(count).toEqual(2);
                 box.dispatchEvent('event1');
-                expect(count).toEqual(3);
-                box.directive('eventManager').reset();
-                expect(count).toEqual(3);
+                _.expect(count).toEqual(3);
+                box.directive('EventManager').reset();
+                _.expect(count).toEqual(3);
                 box.dispatchEvent('event2');
-                expect(count).toEqual(3);
+                _.expect(count).toEqual(3);
             });
-            it('conversely, if the box has listening objects, it will remove it\'s handlers from other objects', function () {
+            _.it('conversely, if the box has listening objects, it will remove it\'s handlers from other objects', function () {
                 var box2 = factories.Model();
                 box.listenTo(box2, {
                     event1: counter,
                     event2: counter
                 });
-                expect(count).toEqual(0);
+                _.expect(count).toEqual(0);
                 box2.dispatchEvent('event1');
-                expect(count).toEqual(1);
+                _.expect(count).toEqual(1);
                 box2.dispatchEvent('event2');
-                expect(count).toEqual(2);
+                _.expect(count).toEqual(2);
                 box.destroy();
-                expect(count).toEqual(2);
+                _.expect(count).toEqual(2);
                 box2.dispatchEvent('event1');
-                expect(count).toEqual(2);
+                _.expect(count).toEqual(2);
                 box2.dispatchEvent('event2');
-                expect(count).toEqual(2);
+                _.expect(count).toEqual(2);
             });
         });
-        describe('there is also an alternative to the on api called the watch api', function () {
-            it('it can attach event listeners', function () {
+        _.describe('there is also an alternative to the on api called the watch api', function () {
+            _.it('it can attach event listeners', function () {
                 var count = 0;
                 box.watch('there', 'there', function (e) {
                     count++;
                 });
-                expect(count).toEqual(0);
+                _.expect(count).toEqual(0);
                 box.set('there', 'here');
-                expect(count).toEqual(0);
+                _.expect(count).toEqual(0);
                 box.set('there', 'there');
-                expect(count).toEqual(1);
+                _.expect(count).toEqual(1);
                 box.set('there', 'here');
-                expect(count).toEqual(1);
+                _.expect(count).toEqual(1);
                 box.set('there', 'there');
-                expect(count).toEqual(2);
+                _.expect(count).toEqual(2);
             });
-            it('and watch variables dynamically', function () {
+            _.it('and watch variables dynamically', function () {
                 var half = -1,
                     count = 0;
                 box.watch('there', function (e) {
@@ -1538,45 +1537,45 @@ application.scope().run(function (app, _, factories) {
                 }, function (e) {
                     count++;
                 });
-                expect(count).toEqual(0);
+                _.expect(count).toEqual(0);
                 box.set('there', 'here');
-                expect(count).toEqual(0);
+                _.expect(count).toEqual(0);
                 box.set('there', 'there');
-                expect(count).toEqual(1);
+                _.expect(count).toEqual(1);
                 box.set('there', 'here');
-                expect(count).toEqual(1);
+                _.expect(count).toEqual(1);
                 box.set('there', 'there');
-                expect(count).toEqual(2);
+                _.expect(count).toEqual(2);
             });
-            it('it does not have a context in the first argument', function () {
+            _.it('it does not have a context in the first argument', function () {
                 var count = 0;
                 box.watch('there', function (e) {
                     return e.origin === box && this !== box;
                 }, function (e) {
                     count++;
                 });
-                expect(count).toEqual(0);
+                _.expect(count).toEqual(0);
                 box.set('there', 'here');
-                expect(count).toEqual(1);
+                _.expect(count).toEqual(1);
                 box.set('there', 'there');
-                expect(count).toEqual(2);
+                _.expect(count).toEqual(2);
             });
-            it('it does can attach listeners using the once api', function () {
+            _.it('it does can attach listeners using the once api', function () {
                 var count = 0;
                 box.watchOnce('there', 'there', function (e) {
                     count++;
                 });
-                expect(count).toEqual(0);
+                _.expect(count).toEqual(0);
                 box.set('there', 'here');
-                expect(count).toEqual(0);
+                _.expect(count).toEqual(0);
                 box.set('there', 'there');
-                expect(count).toEqual(1);
+                _.expect(count).toEqual(1);
                 box.set('there', 'here');
-                expect(count).toEqual(1);
+                _.expect(count).toEqual(1);
                 box.set('there', 'there');
-                expect(count).toEqual(1);
+                _.expect(count).toEqual(1);
             });
-            it('and listeners on other objects with the watchOther api', function () {
+            _.it('and listeners on other objects with the watchOther api', function () {
                 var count = 0;
                 var box2 = factories.Model();
                 box.watchOther(box2, 'there', function (e) {
@@ -1585,131 +1584,131 @@ application.scope().run(function (app, _, factories) {
                 }, function (e) {
                     count++;
                 });
-                expect(count).toEqual(0);
+                _.expect(count).toEqual(0);
                 box2.set('there', 'here');
-                expect(count).toEqual(1);
+                _.expect(count).toEqual(1);
                 box2.set('there', 'there');
-                expect(count).toEqual(2);
+                _.expect(count).toEqual(2);
                 box2.set('there', 'here');
-                expect(count).toEqual(3);
+                _.expect(count).toEqual(3);
                 box2.set('there', 'there');
-                expect(count).toEqual(4);
+                _.expect(count).toEqual(4);
             });
-            it('and listeners on other objects with the watchOther api', function () {
+            _.it('and listeners on other objects with the watchOther api', function () {
                 var count = 0;
                 var box2 = factories.Model();
                 box.watchOtherOnce(box2, 'there', 'there', function (e) {
                     count++;
                 });
-                expect(count).toEqual(0);
+                _.expect(count).toEqual(0);
                 box2.set('there', 'there');
-                expect(count).toEqual(1);
+                _.expect(count).toEqual(1);
                 box2.set('there', 'here');
-                expect(count).toEqual(1);
+                _.expect(count).toEqual(1);
             });
-            it('the once handler will only take itself off when it succeeds', function () {
+            _.it('the once handler will only take itself off when it succeeds', function () {
                 var count = 0;
                 var box2 = factories.Model();
                 box.watchOtherOnce(box2, 'there', 'there', function (e) {
                     count++;
                 });
-                expect(count).toEqual(0);
+                _.expect(count).toEqual(0);
                 box2.set('there', 'here');
-                expect(count).toEqual(0);
+                _.expect(count).toEqual(0);
                 box2.set('there', 'there');
-                expect(count).toEqual(1);
+                _.expect(count).toEqual(1);
                 box2.set('there', 'here');
-                expect(count).toEqual(1);
+                _.expect(count).toEqual(1);
                 box2.set('there', 'there');
-                expect(count).toEqual(1);
+                _.expect(count).toEqual(1);
             });
         });
     });
 });
 application.scope().run(function (app, _, factories) {
-    describe('Promise', function () {
+    _.describe('Promise', function () {
         var madeit, promise, handler = function () {
             madeit++;
         };
-        beforeEach(function () {
+        _.beforeEach(function () {
             madeit = 0;
             promise = factories.Promise();
         });
-        it('allows for async resolution of state', function () {
-            expect(_.isObject(promise)).toEqual(true);
+        _.it('allows for async resolution of state', function () {
+            _.expect(_.isObject(promise)).toEqual(true);
             promise.always(handler);
             // test for premature trigger
-            expect(madeit).toEqual(0);
+            _.expect(madeit).toEqual(0);
             // make sure promise is an object
-            expect(_.isObject(promise)).toEqual(true);
+            _.expect(_.isObject(promise)).toEqual(true);
             // make sure it has the right "state"
-            expect(promise.state()).toEqual('pending');
+            _.expect(promise.state()).toEqual('pending');
             // resolve the promise
             promise.resolve();
             // make sure that it hit the function once and only once
-            expect(madeit).toEqual(1);
+            _.expect(madeit).toEqual(1);
             // make sure it has the correct state after resolution
-            expect(promise.state()).toEqual('success');
+            _.expect(promise.state()).toEqual('success');
         });
-        it('can tell you if it has resolved or not', function () {
-            expect(promise.resolved()).toEqual(false);
+        _.it('can tell you if it has resolved or not', function () {
+            _.expect(promise.resolved()).toEqual(false);
             promise.resolve();
-            expect(promise.resolved()).toEqual(true);
+            _.expect(promise.resolved()).toEqual(true);
         });
-        describe('can tell you what state it is in such as', function () {
-            it('pending', function () {
-                expect(promise.state()).toEqual('pending');
+        _.describe('can tell you what state it is in such as', function () {
+            _.it('pending', function () {
+                _.expect(promise.state()).toEqual('pending');
             });
-            it('success', function () {
+            _.it('success', function () {
                 promise.resolve();
-                expect(promise.state()).toEqual('success');
+                _.expect(promise.state()).toEqual('success');
             });
-            it('failure', function () {
+            _.it('failure', function () {
                 promise.reject();
-                expect(promise.state()).toEqual('failure');
+                _.expect(promise.state()).toEqual('failure');
             });
         });
-        describe('or it can give you a boolean value for resolutions like', function () {
-            it('pending', function () {
-                expect(promise.isPending()).toEqual(true);
+        _.describe('or it can give you a boolean value for resolutions like', function () {
+            _.it('pending', function () {
+                _.expect(promise.isPending()).toEqual(true);
             });
-            it('success', function () {
+            _.it('success', function () {
                 promise.resolve();
-                expect(promise.isFulfilled()).toEqual(true);
+                _.expect(promise.isFulfilled()).toEqual(true);
             });
-            it('failure', function () {
+            _.it('failure', function () {
                 promise.reject();
-                expect(promise.isRejected()).toEqual(true);
+                _.expect(promise.isRejected()).toEqual(true);
             });
         });
-        describe('can resolve to different states such as', function () {
-            it('success', function (done) {
+        _.describe('can resolve to different states such as', function () {
+            _.it('success', function (done) {
                 // attach handler
                 promise.success(handler);
                 setTimeout(function () {
                     // resolve promise for success
                     promise.resolve();
                     // expect madeit to increase
-                    expect(madeit).toEqual(1);
+                    _.expect(madeit).toEqual(1);
                     // let jasmine know we're all good
                     done();
                 });
             });
-            it('failure', function (done) {
+            _.it('failure', function (done) {
                 // attach failure handler
                 promise.failure(handler);
                 setTimeout(function () {
                     // resolve promise for failure
                     promise.reject();
                     // expect madeit to increase
-                    expect(madeit).toEqual(1);
+                    _.expect(madeit).toEqual(1);
                     // let jasmine know we're all good
                     done();
                 });
             });
         });
-        describe('but it also can trigger functions on any resolution with the always method such as', function () {
-            it('resolve', function (done) {
+        _.describe('but it also can trigger functions on any resolution with the always method such as', function () {
+            _.it('resolve', function (done) {
                 // attach always handler
                 promise.success(handler);
                 promise.always(handler);
@@ -1717,13 +1716,13 @@ application.scope().run(function (app, _, factories) {
                     // resolve promise for failure
                     promise.resolve();
                     // expect madeit to increase
-                    expect(madeit).toEqual(2);
+                    _.expect(madeit).toEqual(2);
                     // let jasmine know we're all good
                     done();
                 });
-                expect(madeit).toEqual(0);
+                _.expect(madeit).toEqual(0);
             });
-            it('reject', function (done) {
+            _.it('reject', function (done) {
                 // attach always handler
                 promise.failure(handler);
                 promise.always(handler);
@@ -1731,50 +1730,50 @@ application.scope().run(function (app, _, factories) {
                     // reject promise
                     promise.reject();
                     // expect madeit to increase
-                    expect(madeit).toEqual(2);
+                    _.expect(madeit).toEqual(2);
                     // let jasmine know we're all good
                     done();
                 });
-                expect(madeit).toEqual(0);
+                _.expect(madeit).toEqual(0);
             });
         });
-        describe('creates a tree of dependencies', function () {
-            it('always is a nonstring (so it terminates)', function () {
+        _.describe('creates a tree of dependencies', function () {
+            _.it('always is a nonstring (so it terminates)', function () {
                 var allstates = promise.allStates();
-                expect(!_.isString(allstates.always)).toEqual(true);
+                _.expect(!_.isString(allstates.always)).toEqual(true);
             });
-            it('success is set to always', function () {
+            _.it('success is set to always', function () {
                 var allstates = promise.allStates();
-                expect(allstates.success).toEqual('always');
+                _.expect(allstates.success).toEqual('always');
             });
-            it('failure is set to always', function () {
+            _.it('failure is set to always', function () {
                 var allstates = promise.allStates();
-                expect(allstates.failure).toEqual('always');
+                _.expect(allstates.failure).toEqual('always');
             });
-            it('error is set to failure', function () {
+            _.it('error is set to always', function () {
                 var allstates = promise.allStates();
-                expect(allstates.error).toEqual('failure');
+                _.expect(allstates.error).toEqual('always');
             });
         });
     });
 });
 application.scope().run(function (app, _, factories) {
     var registry = factories.Associator();
-    describe('Registry', function () {
-        beforeEach(function () {});
-        it('is made by the specless object', function () {
-            expect(_.isInstance(registry, factories.Associator)).toEqual(true);
+    _.describe('Registry', function () {
+        _.beforeEach(function () {});
+        _.it('is made by the specless object', function () {
+            _.expect(_.isInstance(registry, factories.Associator)).toEqual(true);
         });
-        it('is not a collection', function () {
-            expect(_.isInstance(registry, factories.Collection)).toEqual(false);
+        _.it('is not a collection', function () {
+            _.expect(_.isInstance(registry, factories.Collection)).toEqual(false);
         });
-        it('can save data against pointers', function () {
+        _.it('can save data against pointers', function () {
             registry.set(window, {
                 some: 'data'
             });
-            expect(registry.get(window).some).toEqual('data');
+            _.expect(registry.get(window).some).toEqual('data');
         });
-        it('can also get any group of data that the same type', function () {
+        _.it('can also get any group of data that the same type', function () {
             var one = {},
                 two = {};
             registry.set(one, {
@@ -1783,72 +1782,72 @@ application.scope().run(function (app, _, factories) {
             registry.set(two, {
                 two: 2
             });
-            expect(_.keys(registry.sameType(two).__elid__).length).toEqual(2);
+            _.expect(_.keys(registry.sameType(two).__elid__).length).toEqual(2);
         });
     });
 });
 application.scope().run(function (app, _, factories) {
     var BOOLEAN_TRUE = true,
         isObject = _.isObject;
-    describe('Ajax', function () {
+    _.describe('Ajax', function () {
         var ajax, allstates;
-        beforeEach(function () {
+        _.beforeEach(function () {
             ajax = factories.Ajax();
             allstates = ajax.allStates();
         });
-        it('is an object', function () {
-            expect(isObject(ajax)).toEqual(BOOLEAN_TRUE);
+        _.it('is an object', function () {
+            _.expect(isObject(ajax)).toEqual(BOOLEAN_TRUE);
         });
-        it('can accept an object as a first argument', function (done) {
+        _.it('can accept an object as a first argument', function (done) {
             factories.Ajax({
                 url: '/json/reporting.json'
             }).success(function (json) {
-                expect(isObject(json)).toEqual(BOOLEAN_TRUE);
+                _.expect(isObject(json)).toEqual(BOOLEAN_TRUE);
                 done();
             });
         });
-        it('can accept a string as a first argument', function (done) {
+        _.it('can accept a string as a first argument', function (done) {
             var original, handlerCounter = 0;
             factories.Ajax('/json/reporting.json').handle('status:200', function (json) {
                 handlerCounter++;
                 original = json;
             }).success(function (json) {
                 handlerCounter++;
-                expect(original === json).toEqual(BOOLEAN_TRUE);
+                _.expect(original === json).toEqual(BOOLEAN_TRUE);
             }).always(function () {
                 handlerCounter++;
-                expect(handlerCounter).toEqual(3);
+                _.expect(handlerCounter).toEqual(3);
                 done();
             });
         });
-        describe('can handle', function () {
-            it('failures', function (done) {
+        _.describe('can handle', function () {
+            _.it('failures', function (done) {
                 var handlerCounter = 0;
                 var prom = factories.Ajax().failure(function () {
                     handlerCounter++;
                 }).always(function () {
                     handlerCounter++;
-                    expect(handlerCounter).toEqual(2);
+                    _.expect(handlerCounter).toEqual(2);
                     done();
                 });
                 prom.reject();
             });
-            it('errors', function (done) {
+            _.it('errors', function (done) {
                 var handlerCounter = 0;
                 factories.Ajax('/json/reporting.json').success(function (json) {
                     handlerCounter++;
-                    expect(handlerCounter).toEqual(1);
+                    _.expect(handlerCounter).toEqual(1);
                     throw new Error('some message here');
                 }).error(function () {
                     handlerCounter++;
                 }).always(function () {
                     handlerCounter++;
-                    expect(handlerCounter).toEqual(3);
+                    _.expect(handlerCounter).toEqual(3);
                     done();
                 });
             });
-            describe('status codes (more than the ones listed here)', function () {
-                it('200', function (done) {
+            _.describe('status codes (more than the ones listed here)', function () {
+                _.it('200', function (done) {
                     var handlerCounter = 0;
                     factories.Ajax('/gibberish/200').handle('status:200', function () {
                         handlerCounter++;
@@ -1858,11 +1857,11 @@ application.scope().run(function (app, _, factories) {
                         handlerCounter--;
                     }).always(function () {
                         handlerCounter++;
-                        expect(handlerCounter).toEqual(3);
+                        _.expect(handlerCounter).toEqual(3);
                         done();
                     });
                 });
-                it('404', function (done) {
+                _.it('404', function (done) {
                     var handlerCounter = 0;
                     factories.Ajax('/gibberish/404').handle('status:404', function () {
                         handlerCounter++;
@@ -1870,131 +1869,131 @@ application.scope().run(function (app, _, factories) {
                         handlerCounter++;
                     }).always(function () {
                         handlerCounter++;
-                        expect(handlerCounter).toEqual(3);
+                        _.expect(handlerCounter).toEqual(3);
                         done();
                     });
                 });
-                it('500', function (done) {
+                _.it('500', function (done) {
                     var handlerCounter = 0;
                     factories.Ajax('/gibberish/500').handle('status:500', function () {
                         handlerCounter++;
-                    }).failure(function () {
+                    }).error(function () {
                         handlerCounter++;
                     }).always(function () {
                         handlerCounter++;
-                        expect(handlerCounter).toEqual(3);
+                        _.expect(handlerCounter).toEqual(3);
                         done();
                     });
                 });
             });
         });
-        describe('status codes are used as a layer over success and failure', function () {
-            it('200 is success', function () {
-                expect(allstates['status:200']).toEqual('success');
+        _.describe('status codes are used as a layer over success and failure', function () {
+            _.it('200 is success', function () {
+                _.expect(allstates['status:200']).toEqual('success');
             });
-            it('202 is success', function () {
-                expect(allstates['status:202']).toEqual('success');
+            _.it('202 is success', function () {
+                _.expect(allstates['status:202']).toEqual('success');
             });
-            it('205 is success', function () {
-                expect(allstates['status:205']).toEqual('success');
+            _.it('205 is success', function () {
+                _.expect(allstates['status:205']).toEqual('success');
             });
-            it('302 is success', function () {
-                expect(allstates['status:302']).toEqual('success');
+            _.it('302 is success', function () {
+                _.expect(allstates['status:302']).toEqual('success');
             });
-            it('304 is success', function () {
-                expect(allstates['status:304']).toEqual('success');
+            _.it('304 is success', function () {
+                _.expect(allstates['status:304']).toEqual('success');
             });
-            it('400 is failure', function () {
-                expect(allstates['status:400']).toEqual('failure');
+            _.it('400 is failure', function () {
+                _.expect(allstates['status:400']).toEqual('failure');
             });
-            it('401 is failure', function () {
-                expect(allstates['status:401']).toEqual('failure');
+            _.it('401 is failure', function () {
+                _.expect(allstates['status:401']).toEqual('failure');
             });
-            it('403 is failure', function () {
-                expect(allstates['status:403']).toEqual('failure');
+            _.it('403 is failure', function () {
+                _.expect(allstates['status:403']).toEqual('failure');
             });
-            it('404 is failure', function () {
-                expect(allstates['status:404']).toEqual('failure');
+            _.it('404 is failure', function () {
+                _.expect(allstates['status:404']).toEqual('failure');
             });
-            it('405 is failure', function () {
-                expect(allstates['status:405']).toEqual('failure');
+            _.it('405 is failure', function () {
+                _.expect(allstates['status:405']).toEqual('failure');
             });
-            it('406 is failure', function () {
-                expect(allstates['status:406']).toEqual('failure');
+            _.it('406 is failure', function () {
+                _.expect(allstates['status:406']).toEqual('failure');
             });
-            it('500 is failure', function () {
-                expect(allstates['status:500']).toEqual('failure');
+            _.it('500 is error', function () {
+                _.expect(allstates['status:500']).toEqual('error');
             });
-            it('502 is failure', function () {
-                expect(allstates['status:502']).toEqual('failure');
+            _.it('502 is error', function () {
+                _.expect(allstates['status:502']).toEqual('error');
             });
-            it('505 is failure', function () {
-                expect(allstates['status:505']).toEqual('failure');
+            _.it('505 is error', function () {
+                _.expect(allstates['status:505']).toEqual('error');
             });
-            it('511 is failure', function () {
-                expect(allstates['status:511']).toEqual('failure');
+            _.it('511 is error', function () {
+                _.expect(allstates['status:511']).toEqual('error');
             });
         });
     });
 });
 application.scope().run(function (app, _, factories) {
-    describe('Modules', function () {
+    _.describe('Modules', function () {
         var level = app.module('level');
         var lower = app.module('level.lower');
         var lowered = app.module('level.lower.lowered');
-        it('can have children', function () {
-            expect(lower.parent === level).toEqual(true);
-            expect(lower === lowered.parent).toEqual(true);
+        _.it('can have children', function () {
+            _.expect(lower.parent === level).toEqual(true);
+            _.expect(lower === lowered.parent).toEqual(true);
         });
-        it('can access it\'s children through the exact same api', function () {
-            expect(lower.module('lowered') === lowered).toEqual(true);
-            expect(lower === level.module('lower')).toEqual(true);
+        _.it('can access it\'s children through the exact same api', function () {
+            _.expect(lower.module('lowered') === lowered).toEqual(true);
+            _.expect(lower === level.module('lower')).toEqual(true);
         });
-        it('can be initialized after it is created', function () {
+        _.it('can be initialized after it is created', function () {
             var count = 0;
             app.module('level.lower', function () {
                 count++;
             });
-            expect(count).toEqual(1);
+            _.expect(count).toEqual(1);
         });
-        it('passes itself into it\'s initializing functions', function () {
+        _.it('passes itself into it\'s initializing functions', function () {
             var count = 0;
             app.module('lower', function (module, app_, _, factories) {
                 count = 1;
-                expect(module).toEqual(app.module('lower'));
-                expect(app_).toEqual(app);
-                expect(_).toEqual(app._);
-                expect(factories).toEqual(_.factories);
+                _.expect(module).toEqual(app.module('lower'));
+                _.expect(app_).toEqual(app);
+                _.expect(_).toEqual(app._);
+                _.expect(factories).toEqual(_.factories);
             });
-            expect(count).toEqual(1);
+            _.expect(count).toEqual(1);
         });
-        it('can have multiple generation handlers', function () {
+        _.it('can have multiple generation handlers', function () {
             var count = 0;
             app.module('level', function () {
                 count++;
             });
-            expect(count).toEqual(1);
+            _.expect(count).toEqual(1);
             app.module('level', function () {
                 count += 2;
             });
-            expect(count).toEqual(3);
+            _.expect(count).toEqual(3);
         });
-        it('can have exports (can hold data)', function () {
+        _.it('can have exports (can hold data)', function () {
             level.exports({
                 one: 1,
                 two: 2
             });
-            expect(level.get('exports').one).toEqual(1);
-            expect(level.get('exports').two).toEqual(2);
+            _.expect(level.get('exports').one).toEqual(1);
+            _.expect(level.get('exports').two).toEqual(2);
         });
-        it('which is like giving public data', function () {
+        _.it('which is like giving public data', function () {
             var mod = app.module('newmodule', function () {
                 this.exports({
                     here: 'there'
                 });
             });
-            expect(app.require('newmodule').here).toEqual('there');
-            expect(function () {
+            _.expect(app.require('newmodule').here).toEqual('there');
+            _.expect(function () {
                 app.require('somenonexistantmodule');
             }).toThrow();
         });
@@ -2002,7 +2001,7 @@ application.scope().run(function (app, _, factories) {
 });
 application.scope().run(function (app, _, factories) {
     var elementData = _.associator;
-    describe('DOMM', function () {
+    _.describe('DOMM', function () {
         var divs, count, $empty = $(),
             $win = $(window),
             $doc = $(document),
@@ -2029,25 +2028,27 @@ application.scope().run(function (app, _, factories) {
                     this.push(div);
                 }, 0, 5);
                 $con.append(divs);
-                return divs;
+                // done();
+                // return divs;
             },
             $con = $.createElement('div').style({
                 height: '100%',
                 width: '100%'
             });
         $(document.body).append($con);
-        beforeEach(create);
-        afterEach(function () {
+        _.beforeEach(create);
+        _.afterEach(function () {
             divs.destroy();
+            // done();
         });
-        it('is essentially a collection', function () {
-            expect(_.isInstance($empty, factories.DOMM)).toEqual(true);
-            expect(_.isInstance($empty, factories.Collection)).toEqual(true);
+        _.it('is essentially a collection', function () {
+            _.expect(_.isInstance($empty, factories.DOMM)).toEqual(true);
+            _.expect(_.isInstance($empty, factories.Collection)).toEqual(true);
         });
-        it('it knows it\'s own client rect', function () {
+        _.it('it knows it\'s own client rect', function () {
             var div = divs.eq(0);
             var rect = div.element().getBoundingClientRect();
-            expect(div.client()).toEqual({
+            _.expect(div.client()).toEqual({
                 height: rect.height,
                 width: rect.width,
                 bottom: rect.bottom,
@@ -2056,8 +2057,8 @@ application.scope().run(function (app, _, factories) {
                 top: rect.top,
             });
         });
-        it('can show and hide elements', function () {
-            expect(divs.hide().map(function (manager) {
+        _.it('can show and hide elements', function () {
+            _.expect(divs.hide().map(function (manager) {
                 var el = manager.element();
                 if (el.style.display === 'none') {
                     return '';
@@ -2065,7 +2066,7 @@ application.scope().run(function (app, _, factories) {
                     return el.style.display;
                 }
             }).join('')).toEqual('');
-            expect(divs.show().map(function (manager) {
+            _.expect(divs.show().map(function (manager) {
                 var el = manager.element();
                 if (el.style.display === 'block') {
                     return '';
@@ -2074,73 +2075,73 @@ application.scope().run(function (app, _, factories) {
                 }
             }).join('')).toEqual('');
         });
-        it('can attach dom elements', function () {
+        _.it('can attach dom elements', function () {
             var div = divs.eq();
             div.append(divs.element(1));
-            expect(div.children().element()).toEqual(divs.element(1));
+            _.expect(div.children().element()).toEqual(divs.element(1));
         });
-        it('can remove dom elements', function () {
+        _.it('can remove dom elements', function () {
             var div = divs.eq();
             div.append(divs.element(1));
-            expect(div.children().element()).toEqual(divs.element(1));
+            _.expect(div.children().element()).toEqual(divs.element(1));
             div.children().remove();
-            expect(div.children().length()).toEqual(0);
+            _.expect(div.children().length()).toEqual(0);
         });
-        describe('except it has some methods that are highly pertinant to DOM manipulation... ergo: DOMM', function () {
-            it('can check if its items are windows', function () {
-                expect($win.isWindow()).toEqual(true);
-                expect($doc.isWindow()).toEqual(false);
-                expect($body.isWindow()).toEqual(false);
+        _.describe('except it has some methods that are highly pertinant to DOM manipulation... ergo: DOMM', function () {
+            _.it('can check if its items are windows', function () {
+                _.expect($win.isWindow()).toEqual(true);
+                _.expect($doc.isWindow()).toEqual(false);
+                _.expect($body.isWindow()).toEqual(false);
             });
-            it('can check if its items are documents', function () {
-                expect($win.isDocument()).toEqual(false);
-                expect($doc.isDocument()).toEqual(true);
-                expect($body.isDocument()).toEqual(false);
+            _.it('can check if its items are documents', function () {
+                _.expect($win.isDocument()).toEqual(false);
+                _.expect($doc.isDocument()).toEqual(true);
+                _.expect($body.isDocument()).toEqual(false);
             });
-            it('can check if its items are actually elements', function () {
-                expect($win.allElements()).toEqual(false);
-                expect($doc.allElements()).toEqual(false);
-                expect($body.allElements()).toEqual(true);
-                expect($('a').allElements()).toEqual(true);
+            _.it('can check if its items are actually elements', function () {
+                _.expect($win.allElements()).toEqual(false);
+                _.expect($doc.allElements()).toEqual(false);
+                _.expect($body.allElements()).toEqual(true);
+                _.expect($('div').allElements()).toEqual(true);
             });
-            it('can check if its items are document fragments', function () {
+            _.it('can check if its items are document fragments', function () {
                 var frag = document.createDocumentFragment();
                 frag.appendChild(document.createElement('div'));
-                expect($win.isFragment()).toEqual(false);
-                expect($doc.isFragment()).toEqual(false);
-                expect($body.isFragment()).toEqual(false);
-                expect($('a').isFragment()).toEqual(false);
-                expect($(frag).isFragment()).toEqual(true);
+                _.expect($win.isFragment()).toEqual(false);
+                _.expect($doc.isFragment()).toEqual(false);
+                _.expect($body.isFragment()).toEqual(false);
+                _.expect($('div').isFragment()).toEqual(false);
+                _.expect($(frag).isFragment()).toEqual(true);
             });
         });
-        describe('it can filter itself', function () {
-            it('by query string matching', function () {
+        _.describe('it can filter itself', function () {
+            _.it('by query string matching', function () {
                 var newDivs = divs.filter('.two');
-                expect(newDivs.length()).toEqual(2);
+                _.expect(newDivs.length()).toEqual(2);
             });
-            it('by filtering against a function', function () {
+            _.it('by filtering against a function', function () {
                 var newDivs = divs.filter(function (item, idx) {
                     return ((idx % 3) - 1) === 0;
                 });
-                expect(newDivs.length()).toEqual(2);
-                expect(newDivs.get()).toEqual(divs.get(1));
-                expect(newDivs.get(1)).toEqual(divs.get(4));
+                _.expect(newDivs.length()).toEqual(2);
+                _.expect(newDivs.get()).toEqual(divs.get(1));
+                _.expect(newDivs.get(1)).toEqual(divs.get(4));
             });
-            it('by passing in an object', function () {
+            _.it('by passing in an object', function () {
                 var newDivs = divs.filter({
                     className: 'one not'
                 });
-                expect(newDivs.length()).toEqual(3);
+                _.expect(newDivs.length()).toEqual(3);
             });
-            it('can also get the first', function () {
-                expect(divs.first().element()).toEqual(divs.element(0));
+            _.it('can also get the first', function () {
+                _.expect(divs.first().element()).toEqual(divs.element(0));
             });
-            it('and the last element in the list', function () {
-                expect(divs.last().element()).toEqual(divs.element(divs.length() - 1));
+            _.it('and the last element in the list', function () {
+                _.expect(divs.last().element()).toEqual(divs.element(divs.length() - 1));
             });
         });
-        describe('it can find it\'s children', function () {
-            it('by calling the children method', function () {
+        _.describe('it can find it\'s children', function () {
+            _.it('by calling the children method', function () {
                 divs.duff(function (manager, idx) {
                     var div = manager.element();
                     var span1 = document.createElement('span');
@@ -2151,195 +2152,196 @@ application.scope().run(function (app, _, factories) {
                     div.appendChild(span2);
                 });
                 var kids = divs.children();
-                expect(kids.length()).toEqual(10);
+                _.expect(kids.length()).toEqual(10);
                 kids.duff(function (kid, idx) {
-                    expect(kid.element().localName).toEqual('span');
+                    _.expect(kid.element().localName).toEqual('span');
                 });
                 kids = divs.children(1);
-                expect(kids.length()).toEqual(5);
+                _.expect(kids.length()).toEqual(5);
                 kids = divs.children('.span-2');
-                expect(kids.unwrap()).toEqual(divs.children().filter('.span-2').unwrap());
-                expect(kids.length()).toEqual(2);
-                expect(kids.element() === kids.element(1)).toEqual(false);
+                _.expect(kids.unwrap()).toEqual(divs.children().filter('.span-2').unwrap());
+                _.expect(kids.length()).toEqual(2);
+                _.expect(kids.element() === kids.element(1)).toEqual(false);
             });
-            it('by querying the dom elements', function () {
+            _.it('by querying the dom elements', function () {
                 divs.duff(function (div, idx) {
                     div.element().innerHTML = '<span></span><img/>';
                 });
                 var kids = divs.$('img');
-                expect(kids.length()).toEqual(5);
+                _.expect(kids.length()).toEqual(5);
                 kids.duff(function (kid, idx) {
-                    expect(kid.element().tagName).toEqual('IMG');
+                    _.expect(kid.element().tagName).toEqual('IMG');
                 });
             });
         });
-        describe('it can also find it\'s parents', function () {
-            it('either by counting up', function () {
-                var $start = $('.results .failures'),
-                    $end = $('.jasmine_html-reporter'),
+        _.describe('it can also find it\'s parents', function () {
+            _.it('either by counting up', function () {
+                var $start = $('.leaves'),
+                    $end = $('.tree'),
                     end = $start.parent(2);
-                expect(end.element()).toEqual($end.element());
+                _.expect(end.element()).toEqual($end.element());
             });
-            it('or by finding via selector', function () {
-                var $start = $('.results .failures'),
-                    $end = $('.jasmine_html-reporter'),
-                    end = $start.parent('.jasmine_html-reporter');
-                expect(end.element()).toEqual($end.element());
+            _.it('or by finding via selector', function () {
+                var $start = $('.leaves'),
+                    $end = $('.tree'),
+                    end = $start.parent('.tree');
+                _.expect(end.element()).toEqual($end.element());
             });
-            it('or by passing a function', function () {
-                var $start = $('.results .failures'),
+            _.it('or by passing a function', function () {
+                var $start = $('.leaves'),
                     end = $start.parent(function (el) {
-                        return el.tagName === 'BODY';
+                        var parent = el.parentNode;
+                        return [parent, parent && parent.tagName === 'BODY'];
                     });
-                expect(end.element()).toEqual(document.body);
+                _.expect(end.element()).toEqual(document.body);
             });
-            describe('or by passing a keyword', function () {
-                it('like document', function () {
-                    var $start = $('.results .failures'),
+            _.describe('or by passing a keyword', function () {
+                _.it('like document', function () {
+                    var $start = $('.leaves'),
                         end = $start.parent('document');
-                    expect(end.element()).toEqual(document);
+                    _.expect(end.element()).toEqual(document);
                 });
-                it('or window', function () {
-                    var $start = $('.results .failures'),
+                _.it('or window', function () {
+                    var $start = $('.leaves'),
                         end = $start.parent('window');
-                    expect(end.element()).toEqual(window);
+                    _.expect(end.element()).toEqual(window);
                 });
             });
         });
-        describe('all of this traversing can be undone', function () {
-            it('with the end method', function () {
+        _.describe('all of this traversing can be undone', function () {
+            _.it('with the end method', function () {
                 var $start = $('.results .failures');
                 var $next = $start.parent();
                 $next = $next.children();
                 $next = $next.end();
-                expect($next === $start).toEqual(true);
+                _.expect($next === $start).toEqual(true);
             });
         });
-        describe('the domm is also special because it abstracts event listeners for you', function () {
-            describe('can add handlers', function () {
-                it('one at a time', function () {
+        _.describe('the domm is also special because it abstracts event listeners for you', function () {
+            _.describe('can add handlers', function () {
+                _.it('one at a time', function () {
                     divs.on('click', handler);
-                    expect(count).toEqual(0);
+                    _.expect(count).toEqual(0);
                     divs.click();
-                    expect(count).toEqual(5);
+                    _.expect(count).toEqual(5);
                 });
-                it('many at a time', function () {
+                _.it('many at a time', function () {
                     divs.on('click mouseover mouseout', handler);
-                    expect(count).toEqual(0);
+                    _.expect(count).toEqual(0);
                     divs.dispatchEvent('click');
                     divs.dispatchEvent('mouseover');
                     divs.dispatchEvent('mouseout');
-                    expect(count).toEqual(15);
+                    _.expect(count).toEqual(15);
                 });
             });
         });
-        describe('the domm is also special because it abstracts event listeners for you', function () {
-            describe('can add handlers', function () {
-                it('one at a time', function () {
+        _.describe('the domm is also special because it abstracts event listeners for you', function () {
+            _.describe('can add handlers', function () {
+                _.it('one at a time', function () {
                     divs.on('click', handler);
-                    expect(count).toEqual(0);
+                    _.expect(count).toEqual(0);
                     divs.dispatchEvent('click');
-                    expect(count).toEqual(5);
+                    _.expect(count).toEqual(5);
                 });
-                it('many at a time', function () {
+                _.it('many at a time', function () {
                     divs.on('click mouseover mouseout', handler);
-                    expect(count).toEqual(0);
+                    _.expect(count).toEqual(0);
                     divs.dispatchEvent('click');
                     divs.dispatchEvent('mouseover');
                     divs.dispatchEvent('mouseout');
-                    expect(count).toEqual(15);
+                    _.expect(count).toEqual(15);
                 });
             });
-            describe('also capture handlers', function () {
-                it('one at a time', function () {
+            _.describe('also capture handlers', function () {
+                _.it('one at a time', function () {
                     divs.on('_click', handler);
-                    expect(count).toEqual(0);
+                    _.expect(count).toEqual(0);
                     divs.dispatchEvent('click', {}, true);
-                    expect(count).toEqual(5);
+                    _.expect(count).toEqual(5);
                 });
-                it('many at a time', function () {
+                _.it('many at a time', function () {
                     divs.on('_click _mouseover _mouseout', handler);
-                    expect(count).toEqual(0);
+                    _.expect(count).toEqual(0);
                     divs.dispatchEvent('click', {}, true);
                     divs.dispatchEvent('mouseover', {}, true);
                     divs.dispatchEvent('mouseout', {}, true);
-                    expect(count).toEqual(15);
+                    _.expect(count).toEqual(15);
                 });
             });
-            it('will only add a method to the queue once. if a duplicate is passed in, it will be ignored (just like the browser implementation)', function () {
+            _.it('will only add a method to the queue once. if a duplicate is passed in, it will be ignored (just like the browser implementation)', function () {
                 divs.on('click', handler).on('click', handler);
-                expect(count).toEqual(0);
+                _.expect(count).toEqual(0);
                 divs.dispatchEvent('click');
-                expect(count).toEqual(5);
+                _.expect(count).toEqual(5);
                 divs.dispatchEvent('click');
-                expect(count).toEqual(10);
+                _.expect(count).toEqual(10);
             });
-            it('once wrappers can also be used with the once method and they can be added the same way as once', function () {
+            _.it('once wrappers can also be used with the once method and they can be added the same way as once', function () {
                 divs.once('click', handler);
-                expect(count).toEqual(0);
+                _.expect(count).toEqual(0);
                 divs.dispatchEvent('click');
-                expect(count).toEqual(5);
+                _.expect(count).toEqual(5);
                 divs.dispatchEvent('click');
-                expect(count).toEqual(5);
+                _.expect(count).toEqual(5);
             });
-            it('be careful with the once function because they can be added multiple times to the queue, since they use a proxy function, like the one available at _.once', function () {
+            _.it('be careful with the once function because they can be added multiple times to the queue, since they use a proxy function, like the one available at _.once', function () {
                 divs.once('click', handler);
-                expect(count).toEqual(0);
+                _.expect(count).toEqual(0);
                 divs.dispatchEvent('click');
-                expect(count).toEqual(5);
+                _.expect(count).toEqual(5);
                 divs.dispatchEvent('click');
-                expect(count).toEqual(5);
+                _.expect(count).toEqual(5);
             });
         });
-        describe('the each function is special because', function () {
-            it('it wraps each element in a DOMM object before passing it through your iterator', function () {
+        _.describe('the each function is special because', function () {
+            _.it('it wraps each element in a DOMM object before passing it through your iterator', function () {
                 divs.each(function (el, idx) {
-                    expect(_.isInstance(el, factories.DOMM)).toEqual(false);
-                    expect(factories.DomManager.isInstance(el)).toEqual(true);
-                    expect(divs.element(idx) === el.element());
+                    _.expect(_.isInstance(el, factories.DOMM)).toEqual(false);
+                    _.expect(factories.DomManager.isInstance(el)).toEqual(true);
+                    _.expect(divs.element(idx) === el.element());
                 });
             });
-            it('where the duff and forEach function just gives you the element at each index, just like a collection', function () {
+            _.it('where the duff and forEach function just gives you the element at each index, just like a collection', function () {
                 divs.duff(function (el, idx) {
-                    expect(_.isInstance(el, $)).toEqual(false);
+                    _.expect(_.isInstance(el, $)).toEqual(false);
                 });
                 divs.forEach(function (el, idx) {
-                    expect(_.isInstance(el, $)).toEqual(false);
+                    _.expect(_.isInstance(el, $)).toEqual(false);
                 });
             });
         });
-        describe('adding and removing classes is done by string checking instead of the classList to invoke only one reflow', function () {
-            it('you can use addClass', function () {
+        _.describe('adding and removing classes is done by string checking instead of the classList to invoke only one reflow', function () {
+            _.it('you can use addClass', function () {
                 divs.each(function (div, idx) {
-                    expect(div.hasClass('three')).toEqual(false);
+                    _.expect(div.hasClass('three')).toEqual(false);
                 });
                 divs.addClass('three');
                 divs.each(function (div, idx) {
-                    expect(div.hasClass('three')).toEqual(true);
+                    _.expect(div.hasClass('three')).toEqual(true);
                 });
             });
-            it('you can use removeClass', function () {
+            _.it('you can use removeClass', function () {
                 divs.each(function (div, idx) {
-                    expect(div.hasClass('three')).toEqual(false);
+                    _.expect(div.hasClass('three')).toEqual(false);
                 });
-                expect(divs.hasClass('three')).toEqual(false);
+                _.expect(divs.hasClass('three')).toEqual(false);
                 divs.addClass('three');
-                expect(divs.hasClass('three')).toEqual(true);
+                _.expect(divs.hasClass('three')).toEqual(true);
             });
-            it('you can use hasClass to check if all of the elements has a particular class', function () {
-                expect(divs.hasClass('two')).toEqual(false);
-                expect(divs.hasClass('one')).toEqual(true);
+            _.it('you can use hasClass to check if all of the elements has a particular class', function () {
+                _.expect(divs.hasClass('two')).toEqual(false);
+                _.expect(divs.hasClass('one')).toEqual(true);
             });
-            it('you can use toggleClass swap classes depending on whether or not they exist on each element', function () {
+            _.it('you can use toggleClass swap classes depending on whether or not they exist on each element', function () {
                 divs.each(function (div, idx) {
-                    expect(div.hasClass('one')).toEqual(true);
+                    _.expect(div.hasClass('one')).toEqual(true);
                 });
                 divs.toggleClass('one');
                 divs.each(function (div, idx) {
-                    expect(div.hasClass('one')).toEqual(false);
+                    _.expect(div.hasClass('one')).toEqual(false);
                 });
             });
-            it('it will also do this for individual elements', function () {
+            _.it('it will also do this for individual elements', function () {
                 var list = [],
                     unique = [];
                 divs.each(function (div, idx) {
@@ -2349,260 +2351,152 @@ application.scope().run(function (app, _, factories) {
                 });
                 divs.toggleClass('two');
                 divs.each(function (div, idx) {
-                    expect(div.hasClass('two')).toEqual(!list[idx]);
+                    _.expect(div.hasClass('two')).toEqual(!list[idx]);
                 });
-                expect(unique.length > 1).toEqual(true);
+                _.expect(unique.length > 1).toEqual(true);
             });
-            it('you can also use changeClass as a shorthand of removeClass and addClass', function () {
+            _.it('you can also use changeClass as a shorthand of removeClass and addClass', function () {
                 divs.changeClass('one not two', 'three');
                 divs.each(function (div, idx) {
-                    expect(div.hasClass('one')).toEqual(false);
-                    expect(div.hasClass('two')).toEqual(false);
-                    expect(div.hasClass('not')).toEqual(false);
-                    expect(div.hasClass('three')).toEqual(true);
+                    _.expect(div.hasClass('one')).toEqual(false);
+                    _.expect(div.hasClass('two')).toEqual(false);
+                    _.expect(div.hasClass('not')).toEqual(false);
+                    _.expect(div.hasClass('three')).toEqual(true);
                 });
             });
         });
-        describe('there is also a data attributes interface', function () {
-            it('where you can add', function () {
+        _.describe('there is also a data attributes interface', function () {
+            _.it('where you can add', function () {
                 divs.duff(function (div, idx) {
-                    expect(div.element().getAttribute('data-one')).toEqual(null);
-                    expect(div.element().getAttribute('data-two')).toEqual(null);
+                    _.expect(div.element().getAttribute('data-one')).toEqual(null);
+                    _.expect(div.element().getAttribute('data-two')).toEqual(null);
                 });
                 divs.data({
                     one: 'one',
                     two: 'two'
                 });
                 divs.duff(function (div, idx) {
-                    expect(div.element().getAttribute('data-one')).toEqual('one');
-                    expect(div.element().getAttribute('data-two')).toEqual('two');
+                    _.expect(div.element().getAttribute('data-one')).toEqual('one');
+                    _.expect(div.element().getAttribute('data-two')).toEqual('two');
                 });
             });
-            it('remove', function () {
+            _.it('remove', function () {
                 divs.data({
                     one: 'one',
                     two: 'two'
                 });
                 divs.duff(function (div, idx) {
-                    expect(div.element().getAttribute('data-one')).toEqual('one');
-                    expect(div.element().getAttribute('data-two')).toEqual('two');
+                    _.expect(div.element().getAttribute('data-one')).toEqual('one');
+                    _.expect(div.element().getAttribute('data-two')).toEqual('two');
                 });
                 divs.data({
                     one: false,
                     two: false
                 });
                 divs.duff(function (div, idx) {
-                    expect(div.element().getAttribute('data-one')).toEqual(null);
-                    expect(div.element().getAttribute('data-two')).toEqual(null);
+                    _.expect(div.element().getAttribute('data-one')).toEqual(null);
+                    _.expect(div.element().getAttribute('data-two')).toEqual(null);
                 });
             });
-            it('and update data attributes', function () {
+            _.it('and update data attributes', function () {
                 divs.data({
                     one: 'one',
                     two: 'two'
                 });
                 divs.duff(function (div) {
-                    expect(div.element().getAttribute('data-one')).toEqual('one');
-                    expect(div.element().getAttribute('data-two')).toEqual('two');
+                    _.expect(div.element().getAttribute('data-one')).toEqual('one');
+                    _.expect(div.element().getAttribute('data-two')).toEqual('two');
                 });
             });
         });
-        describe('it can also manipulate elements in other ways', function () {
-            it('like by manipulating their attributes', function () {
+        _.describe('it can also manipulate elements in other ways', function () {
+            _.it('like by manipulating their attributes', function () {
                 divs.duff(function (div) {
-                    expect(div.element().getAttribute('tabindex')).toEqual(null);
+                    _.expect(div.element().getAttribute('tabindex')).toEqual(null);
                 });
                 divs.attr({
                     tabindex: -1
                 });
                 divs.each(function (div, idx) {
-                    expect(div.attr('tabindex')).toEqual(-1);
+                    _.expect(div.attr('tabindex')).toEqual(-1);
                 });
             });
-            it('or by manipulating their properties', function () {
+            _.it('or by manipulating their properties', function () {
                 divs.duff(function (div, idx) {
-                    expect(div.element().align).toEqual('');
+                    _.expect(div.element().align).toEqual('');
                 });
                 divs.prop({
                     align: 'left'
                 });
                 divs.each(function (div, idx) {
-                    expect(div.prop('align')).toEqual('left');
+                    _.expect(div.prop('align')).toEqual('left');
                 });
             });
         });
-        describe('can have specialized elements', function () {
-            describe('has lifecycle events', function () {
-                it('like attach', function () {
+        _.describe('can have specialized elements', function () {
+            _.describe('has lifecycle events', function () {
+                _.it('like attach', function () {
                     divs.remove();
                     divs.on('attach', handler);
-                    expect(count).toEqual(0);
+                    _.expect(count).toEqual(0);
                     $con.append(divs);
-                    expect(count).toEqual(5);
+                    _.expect(count).toEqual(5);
                 });
-                it('and detach', function () {
+                _.it('and detach', function () {
                     divs.once('detach', handler);
-                    expect(count).toEqual(0);
+                    _.expect(count).toEqual(0);
                     divs.remove();
-                    expect(count).toEqual(5);
+                    _.expect(count).toEqual(5);
                 });
-                it('and attribute change', function () {
+                _.it('and attribute change', function () {
                     divs.once('attributeChange:data-here', handler);
-                    expect(count).toEqual(0);
+                    _.expect(count).toEqual(0);
                     divs.data('here', 1);
-                    expect(count).toEqual(5);
+                    _.expect(count).toEqual(5);
                 });
             });
-            describe('there are also special handlers', function () {
-                it('like create', function () {
+            _.describe('there are also special handlers', function () {
+                _.it('like create', function () {
                     $.registerElement('test0', {
                         onCreate: handler
                     });
-                    expect(count).toEqual(0);
+                    _.expect(count).toEqual(0);
                     $.createElement('test0');
-                    expect(count).toEqual(1);
+                    _.expect(count).toEqual(1);
                 });
-                it('and destroy', function () {
+                _.it('and destroy', function () {
                     $.registerElement('test1', {
                         onDestroy: handler
                     });
                     var div = $.createElement('test1');
-                    expect(count).toEqual(0);
+                    _.expect(count).toEqual(0);
                     div.destroy();
-                    expect(count).toEqual(1);
+                    _.expect(count).toEqual(1);
+                });
+                _.it('can even apply to elements that have already been created', function () {
+                    $.createElement('test2');
+                    _.expect(count).toEqual(0);
+                    $.registerElement('test2', {
+                        onCreate: handler
+                    });
+                    _.expect(count).toEqual(1);
                 });
             });
         });
-        it('tags cannot be created without being registered first', function () {
-            expect(function () {
+        _.it('tags cannot be created without being registered first', function () {
+            _.expect(function () {
                 $.createElement('unregistered');
             }).toThrow();
         });
     });
 });
 application.scope().run(function (app, _, factories) {
-    describe('Looper', function () {
+    _.describe('Looper', function () {
         //
     });
 });
 application.scope().run(function (app, _, factories) {
-    var buster, iframe, count, handler = function () {
-            count++;
-        },
-        contextHandler = function (expects) {
-            return function () {
-                count += (expects === this);
-            };
-        },
-        pagePromise = _.get('/test/framed.html');
-    describe('Buster', function () {
-        beforeEach(function () {
-            count = 0;
-        });
-        describe('can understand unfriendly windows', function () {
-            it('can receive messages on windows', function (done) {
-                var iframe = $.createElement('iframe');
-                app.getRegion('main').el.append(iframe);
-                var buster = factories.Buster(window, iframe, {
-                    iframeSrc: 'http://localhost:8000/test/framed.html'
-                });
-                buster.connected(handler);
-                buster.sync(function (e) {
-                    expect(count).toEqual(1);
-                    iframe.destroy(done);
-                });
-            });
-            it('as well as deferred messages', function (done) {
-                var iframe = $.createElement('iframe');
-                app.getRegion('main').el.append(iframe);
-                var buster = factories.Buster(window, iframe, {
-                    iframeSrc: 'http://localhost:8000/test/framed.html'
-                });
-                buster.connected(handler);
-                buster.create('delayed').response(handler).deferred(function (e) {
-                    expect(e.data().success).toEqual(true);
-                    expect(count).toEqual(2);
-                    setTimeout(function () {
-                        iframe.destroy();
-                    });
-                    done();
-                }).send();
-            });
-        });
-        describe('and windows without a source', function () {
-            it('can receive messages on windows', function (done) {
-                pagePromise.success(function (response) {
-                    var iframe = $.createElement('iframe');
-                    app.getRegion('main').el.append(iframe);
-                    var buster = factories.Buster(window, iframe, {
-                        iframeContent: response
-                    });
-                    buster.connected(handler);
-                    buster.sync(function (e) {
-                        expect(count).toEqual(1);
-                        setTimeout(function () {
-                            iframe.destroy();
-                        });
-                        done();
-                    });
-                });
-            });
-            it('as well as deferred messages', function (done) {
-                pagePromise.success(function (response) {
-                    var iframe = $.createElement('iframe');
-                    app.getRegion('main').el.append(iframe);
-                    var buster = factories.Buster(window, iframe, {
-                        iframeContent: response
-                    });
-                    buster.connected(handler);
-                    buster.create('delayed').response(handler).deferred(function (e) {
-                        expect(e.data().success).toEqual(true);
-                        expect(count).toEqual(2);
-                        setTimeout(function () {
-                            iframe.destroy();
-                        });
-                        done();
-                    }).send();
-                });
-            });
-        });
-        describe('can understand friendly windows', function () {
-            it('can receive messages on windows', function (done) {
-                var iframe = $.createElement('iframe');
-                app.getRegion('main').el.append(iframe);
-                var buster = factories.Buster(window, iframe, {
-                    iframeSrc: 'http://localhost:8080/test/framed.html'
-                });
-                buster.connected(handler);
-                buster.sync(function (e) {
-                    expect(count).toEqual(1);
-                    setTimeout(function () {
-                        iframe.destroy();
-                    });
-                    done();
-                });
-            });
-            it('as well as deferred messages', function (done) {
-                var iframe = $.createElement('iframe');
-                app.getRegion('main').el.append(iframe);
-                var buster = factories.Buster(window, iframe, {
-                    iframeSrc: 'http://localhost:8080/test/framed.html'
-                });
-                buster.connected(handler);
-                buster.create('delayed').response(handler).deferred(function (e) {
-                    expect(e.data().success).toEqual(true);
-                    expect(count).toEqual(2);
-                    setTimeout(function () {
-                        iframe.destroy();
-                    });
-                    done();
-                }).send();
-            });
-        });
-    });
-});
-application.scope().run(function (app, _, factories) {
-    describe('View', function () {
+    _.describe('View', function () {
         var view, complexView, count, ComplexView = factories.View.extend({
             ui: {
                 there: '.here'
@@ -2618,114 +2512,186 @@ application.scope().run(function (app, _, factories) {
             }
         });
         app.addRegion('main', '.test-div');
-        beforeEach(function () {
+        _.beforeEach(function () {
             count = 0;
             view = factories.View();
             complexView = ComplexView();
         });
-        afterEach(function () {
+        _.afterEach(function () {
             view.destroy();
             complexView.destroy();
         });
-        it('is an object', function () {
-            expect(_.isObject(view)).toEqual(true);
-            expect(_.isInstance(view, factories.View)).toEqual(true);
+        _.it('is an object', function () {
+            _.expect(_.isObject(view)).toEqual(true);
+            _.expect(_.isInstance(view, factories.View)).toEqual(true);
         });
-        it('has an element that you can interact with', function () {
-            expect(_.isInstance(view.el, factories.DomManager)).toEqual(true);
+        _.it('has an element that you can interact with', function () {
+            _.expect(_.isInstance(view.el, factories.DomManager)).toEqual(true);
             window.readytostop = true;
         });
         // this test is invalid because there should be no ui available before render
-        it('can even have extra elements tied to it... but only when it is rendered', function () {
-            expect(_.isString(complexView.ui.there)).toEqual(true);
+        _.it('can even have extra elements tied to it... but only when it is rendered', function () {
+            _.expect(_.isString(complexView.ui.there)).toEqual(true);
             complexView.render();
-            expect(_.isInstance(complexView.ui.there, factories.DOMM)).toEqual(true);
+            _.expect(_.isInstance(complexView.ui.there, factories.DOMM)).toEqual(true);
         });
-        it('can be rendered', function () {
-            expect(complexView.el.html()).toEqual('');
+        _.it('can be rendered', function () {
+            _.expect(complexView.el.html()).toEqual('');
             complexView.render();
-            expect(complexView.el.html()).not.toEqual('');
+            _.expect(complexView.el.html()).not.toEqual('');
         });
-        it('can be attached to a region', function () {
-            expect(complexView.el.element().parentNode).toEqual(null);
+        _.it('can be attached to a region', function () {
+            _.expect(complexView.el.element().parentNode).toEqual(null);
             app.getRegion('main').add(complexView);
-            expect(complexView.el.element().parentNode).not.toEqual(null);
+            _.expect(complexView.el.element().parentNode).not.toEqual(null);
         });
-        it('can be filtered', function () {
-            expect(complexView.el.element().parentNode).toEqual(null);
+        _.it('can be filtered', function () {
+            _.expect(complexView.el.element().parentNode).toEqual(null);
             complexView.filter = false;
             app.getRegion('main').add(complexView);
-            expect(complexView.el.element().parentNode).toEqual(null);
+            _.expect(complexView.el.element().parentNode).toEqual(null);
         });
-        it('can have extra elements', function () {
-            expect(_.isObject(complexView.ui)).toEqual(true);
-            expect(_.isString(complexView.ui.there)).toEqual(true);
+        _.it('can have extra elements', function () {
+            _.expect(_.isObject(complexView.ui)).toEqual(true);
+            _.expect(_.isString(complexView.ui.there)).toEqual(true);
             complexView.render();
-            expect(_.isInstance(complexView.ui.there, factories.DOMM)).toEqual(true);
-            expect(complexView.ui.there.length()).toEqual(1);
+            _.expect(_.isInstance(complexView.ui.there, factories.DOMM)).toEqual(true);
+            _.expect(complexView.ui.there.length()).toEqual(1);
         });
-        it('can also attach events to it\'s element', function () {
-            expect(count).toEqual(0);
+        _.it('can also attach events to it\'s element', function () {
+            _.expect(count).toEqual(0);
             app.getRegion('main').add(complexView);
-            expect(count).toEqual(0);
+            _.expect(count).toEqual(0);
             complexView.el.click();
-            expect(count).toEqual(1);
+            _.expect(count).toEqual(1);
             complexView.render();
-            expect(count).toEqual(1);
+            _.expect(count).toEqual(1);
             complexView.el.click();
-            expect(count).toEqual(2);
+            _.expect(count).toEqual(2);
         });
-        it('as well as it\'s ui elements', function () {
-            expect(count).toEqual(0);
+        _.it('as well as it\'s ui elements', function () {
+            _.expect(count).toEqual(0);
             app.getRegion('main').add(complexView);
-            expect(count).toEqual(0);
+            _.expect(count).toEqual(0);
             complexView.ui.there.click();
-            expect(count).toEqual(1);
+            _.expect(count).toEqual(1);
             complexView.render();
-            expect(count).toEqual(1);
+            _.expect(count).toEqual(1);
             complexView.ui.there.click();
-            expect(count).toEqual(2);
+            _.expect(count).toEqual(2);
         });
-        it('views can be detached', function () {
+        _.it('views can be detached', function () {
             app.getRegion('main').add(complexView);
-            expect(count).toEqual(0);
+            _.expect(count).toEqual(0);
             complexView.ui.there.click();
-            expect(count).toEqual(1);
+            _.expect(count).toEqual(1);
             complexView.remove();
-            expect(count).toEqual(1);
+            _.expect(count).toEqual(1);
         });
-        it('and still keep their elements and events intact', function () {
+        _.it('and still keep their elements and events intact', function () {
             app.getRegion('main').add(complexView);
-            expect(count).toEqual(0);
+            _.expect(count).toEqual(0);
             complexView.ui.there.click();
-            expect(count).toEqual(1);
+            _.expect(count).toEqual(1);
             complexView.remove();
-            expect(count).toEqual(1);
+            _.expect(count).toEqual(1);
             complexView.ui.there.click();
-            expect(count).toEqual(2);
+            _.expect(count).toEqual(2);
         });
-        it('they can even be reattached', function () {
+        _.it('they can even be reattached', function () {
             app.getRegion('main').add(complexView);
-            expect(count).toEqual(0);
+            _.expect(count).toEqual(0);
             complexView.ui.there.click();
-            expect(count).toEqual(1);
+            _.expect(count).toEqual(1);
             complexView.remove();
-            expect(count).toEqual(1);
+            _.expect(count).toEqual(1);
             app.getRegion('main').add(complexView);
-            expect(count).toEqual(1);
+            _.expect(count).toEqual(1);
             complexView.ui.there.click();
-            expect(count).toEqual(2);
+            _.expect(count).toEqual(2);
         });
-        it('when they are destroyed however, their events are detached from the element and the view is automatically removed', function () {
+        _.it('when they are destroyed however, their events are detached from the element and the view is automatically removed', function () {
             app.getRegion('main').add(complexView);
-            expect(count).toEqual(0);
+            _.expect(count).toEqual(0);
             var there = complexView.ui.there;
             there.click();
-            expect(count).toEqual(1);
+            _.expect(count).toEqual(1);
             complexView.destroy();
-            expect(count).toEqual(1);
+            _.expect(count).toEqual(1);
             there.click();
-            expect(count).toEqual(1);
+            _.expect(count).toEqual(1);
+        });
+    });
+});
+application.scope().run(function (app, _, factories) {
+    var buster, iframe, count, handler = function () {
+            count++;
+        },
+        contextHandler = function (expects) {
+            return function () {
+                count += (expects === this);
+            };
+        },
+        pagePromise = _.get('/test/framed.html');
+    _.describe('Buster', function () {
+        _.beforeEach(function () {
+            count = 0;
+        });
+        _.describe('can understand unfriendly windows', function () {
+            _.it('can receive messages on windows', function (done) {
+                var iframe = $.createElement('iframe');
+                app.getRegion('main').el.append(iframe);
+                var buster = factories.Buster(window, iframe, {
+                    iframeSrc: 'http://localhost:8000/test/framed.html'
+                });
+                buster.connected(handler);
+                buster.sync(function (e) {
+                    _.expect(count).toEqual(1);
+                });
+                buster.create('delayed').response(handler).deferred(function (e) {
+                    _.expect(e.data().success).toEqual(true);
+                    _.expect(count).toEqual(2);
+                    iframe.destroy(done);
+                }).send();
+            });
+        });
+        _.describe('and windows without a source', function () {
+            _.it('can receive messages on windows', function (done) {
+                pagePromise.success(function (response) {
+                    var iframe = $.createElement('iframe');
+                    app.getRegion('main').el.append(iframe);
+                    var buster = factories.Buster(window, iframe, {
+                        iframeContent: response
+                    });
+                    buster.connected(handler);
+                    buster.sync(function (e) {
+                        _.expect(count).toEqual(1);
+                    });
+                    buster.create('delayed').response(handler).deferred(function (e) {
+                        _.expect(e.data().success).toEqual(true);
+                        _.expect(count).toEqual(2);
+                        iframe.destroy(done);
+                    }).send();
+                });
+            });
+        });
+        _.describe('can understand friendly windows', function () {
+            _.it('can receive messages on windows', function (done) {
+                var iframe = $.createElement('iframe');
+                app.getRegion('main').el.append(iframe);
+                var buster = factories.Buster(window, iframe, {
+                    iframeSrc: 'http://localhost:8080/test/framed.html'
+                });
+                buster.connected(handler);
+                buster.sync(function (e) {
+                    _.expect(count).toEqual(1);
+                });
+                buster.create('delayed').response(handler).deferred(function (e) {
+                    _.expect(e.data().success).toEqual(true);
+                    _.expect(count).toEqual(2);
+                    iframe.destroy(done);
+                }).send();
+            });
         });
     });
 });

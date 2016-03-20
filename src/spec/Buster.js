@@ -8,12 +8,12 @@ application.scope().run(function (app, _, factories) {
             };
         },
         pagePromise = _.get('/test/framed.html');
-    describe('Buster', function () {
-        beforeEach(function () {
+    _.describe('Buster', function () {
+        _.beforeEach(function () {
             count = 0;
         });
-        describe('can understand unfriendly windows', function () {
-            it('can receive messages on windows', function (done) {
+        _.describe('can understand unfriendly windows', function () {
+            _.it('can receive messages on windows', function (done) {
                 var iframe = $.createElement('iframe');
                 app.getRegion('main').el.append(iframe);
                 var buster = factories.Buster(window, iframe, {
@@ -21,29 +21,17 @@ application.scope().run(function (app, _, factories) {
                 });
                 buster.connected(handler);
                 buster.sync(function (e) {
-                    expect(count).toEqual(1);
-                    iframe.destroy(done);
+                    _.expect(count).toEqual(1);
                 });
-            });
-            it('as well as deferred messages', function (done) {
-                var iframe = $.createElement('iframe');
-                app.getRegion('main').el.append(iframe);
-                var buster = factories.Buster(window, iframe, {
-                    iframeSrc: 'http://localhost:8000/test/framed.html'
-                });
-                buster.connected(handler);
                 buster.create('delayed').response(handler).deferred(function (e) {
-                    expect(e.data().success).toEqual(true);
-                    expect(count).toEqual(2);
-                    setTimeout(function () {
-                        iframe.destroy();
-                    });
-                    done();
+                    _.expect(e.data().success).toEqual(true);
+                    _.expect(count).toEqual(2);
+                    iframe.destroy(done);
                 }).send();
             });
         });
-        describe('and windows without a source', function () {
-            it('can receive messages on windows', function (done) {
+        _.describe('and windows without a source', function () {
+            _.it('can receive messages on windows', function (done) {
                 pagePromise.success(function (response) {
                     var iframe = $.createElement('iframe');
                     app.getRegion('main').el.append(iframe);
@@ -52,35 +40,18 @@ application.scope().run(function (app, _, factories) {
                     });
                     buster.connected(handler);
                     buster.sync(function (e) {
-                        expect(count).toEqual(1);
-                        setTimeout(function () {
-                            iframe.destroy();
-                        });
-                        done();
+                        _.expect(count).toEqual(1);
                     });
-                });
-            });
-            it('as well as deferred messages', function (done) {
-                pagePromise.success(function (response) {
-                    var iframe = $.createElement('iframe');
-                    app.getRegion('main').el.append(iframe);
-                    var buster = factories.Buster(window, iframe, {
-                        iframeContent: response
-                    });
-                    buster.connected(handler);
                     buster.create('delayed').response(handler).deferred(function (e) {
-                        expect(e.data().success).toEqual(true);
-                        expect(count).toEqual(2);
-                        setTimeout(function () {
-                            iframe.destroy();
-                        });
-                        done();
+                        _.expect(e.data().success).toEqual(true);
+                        _.expect(count).toEqual(2);
+                        iframe.destroy(done);
                     }).send();
                 });
             });
         });
-        describe('can understand friendly windows', function () {
-            it('can receive messages on windows', function (done) {
+        _.describe('can understand friendly windows', function () {
+            _.it('can receive messages on windows', function (done) {
                 var iframe = $.createElement('iframe');
                 app.getRegion('main').el.append(iframe);
                 var buster = factories.Buster(window, iframe, {
@@ -88,27 +59,12 @@ application.scope().run(function (app, _, factories) {
                 });
                 buster.connected(handler);
                 buster.sync(function (e) {
-                    expect(count).toEqual(1);
-                    setTimeout(function () {
-                        iframe.destroy();
-                    });
-                    done();
+                    _.expect(count).toEqual(1);
                 });
-            });
-            it('as well as deferred messages', function (done) {
-                var iframe = $.createElement('iframe');
-                app.getRegion('main').el.append(iframe);
-                var buster = factories.Buster(window, iframe, {
-                    iframeSrc: 'http://localhost:8080/test/framed.html'
-                });
-                buster.connected(handler);
                 buster.create('delayed').response(handler).deferred(function (e) {
-                    expect(e.data().success).toEqual(true);
-                    expect(count).toEqual(2);
-                    setTimeout(function () {
-                        iframe.destroy();
-                    });
-                    done();
+                    _.expect(e.data().success).toEqual(true);
+                    _.expect(count).toEqual(2);
+                    iframe.destroy(done);
                 }).send();
             });
         });

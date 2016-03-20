@@ -71,7 +71,8 @@ app.scope(function (app) {
                 return resulting;
             };
         },
-        Promise = _.Promise = factories.Model.extend('Promise', {
+        Model = factories.Model,
+        Promise = _.Promise = Model.extend('Promise', {
             addState: addState,
             isFulfilled: stateChecker(SUCCESS),
             isRejected: stateChecker(FAILURE),
@@ -85,13 +86,13 @@ app.scope(function (app) {
                 return {
                     success: ALWAYS,
                     failure: ALWAYS,
-                    error: FAILURE,
+                    error: ALWAYS,
                     always: BOOLEAN_TRUE
                 };
             },
             constructor: function () {
                 var promise = this;
-                factories.Model[CONSTRUCTOR].call(promise);
+                Model[CONSTRUCTOR].call(promise);
                 promise.restart();
                 // cannot have been resolved in any way yet
                 intendedObject(extend({}, result(promise, 'baseStates'), result(promise, 'associativeStates')), NULL, addState, promise);

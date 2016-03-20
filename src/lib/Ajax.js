@@ -1,29 +1,17 @@
 app.scope(function (app) {
     var _ = app._,
         factories = _.factories,
-        gapSplit = _.gapSplit,
-        duff = _.duff,
-        each = _.each,
-        unCamelCase = _.unCamelCase,
         posit = _.posit,
-        result = _.result,
-        wraptry = _.wraptry,
-        BOOLEAN_TRUE = !0,
-        BOOLEAN_FALSE = !1,
+        ERROR = 'error',
         STATUS = 'status',
         FAILURE = 'failure',
         SUCCESS = 'success',
         READY_STATE = 'readyState',
         XDomainRequest = win.XDomainRequest,
-        isObject = _.isObject,
-        isArray = _.isArray,
-        stringify = _.stringify,
-        parse = _.parse,
-        extend = _.extend,
         stringifyQuery = _.stringifyQuery,
         GET = 'GET',
         validTypes = gapSplit(GET + ' POST PUT DELETE'),
-        baseEvents = gapSplit('progress timeout abort error'),
+        baseEvents = gapSplit('progress timeout abort ' + ERROR),
         /**
          * @description helper function to attach a bunch of event listeners to the request object as well as help them trigger the appropriate events on the Ajax object itself
          * @private
@@ -55,7 +43,7 @@ app.scope(function (app) {
                 wraptry(function () {
                     xhrReq.send.apply(xhrReq, args);
                 }, function (e) {
-                    ajax.resolveAs('error', e, e.message);
+                    ajax.resolveAs(ERROR, e, e.message);
                 });
             };
         },
@@ -86,7 +74,8 @@ app.scope(function (app) {
          * @augments Model
          * @classdesc XHR object wrapper Triggers events based on xhr state changes and abstracts many anomalies that have to do with IE
          */
-        Ajax = factories.Promise.extend('Ajax', {
+        Promise = factories.Promise,
+        Ajax = Promise.extend('Ajax', {
             /**
              * @func
              * @name Ajax#constructor
@@ -121,16 +110,16 @@ app.scope(function (app) {
                 str.async = BOOLEAN_TRUE;
                 str.type = (str.type || GET).toUpperCase();
                 str.method = method;
-                factories.Promise.constructor.apply(ajax);
+                Promise[CONSTRUCTOR].call(ajax);
                 ajax.on('change:url', alterurlHandler);
                 extend(ajax, secondary);
                 ajax.requestObject = xhrReq;
                 ajax.set(str);
                 return ajax;
             },
-            status: function (code, handler) {
-                return this.handle(STATUS + ':' + code, handler);
-            },
+            // status: function (code, handler) {
+            //     return this.handle(STATUS + COLON + code, handler);
+            // },
             setHeaders: function (headers) {
                 var ajax = this,
                     xhrReq = ajax.requestObject;
@@ -170,10 +159,10 @@ app.scope(function (app) {
                     'status:404': FAILURE,
                     'status:405': FAILURE,
                     'status:406': FAILURE,
-                    'status:500': FAILURE,
-                    'status:502': FAILURE,
-                    'status:505': FAILURE,
-                    'status:511': FAILURE,
+                    'status:500': ERROR,
+                    'status:502': ERROR,
+                    'status:505': ERROR,
+                    'status:511': ERROR,
                     timeout: FAILURE,
                     abort: FAILURE
                 };
@@ -199,12 +188,12 @@ app.scope(function (app) {
                         if (method === 'onload' || (method === 'onreadystatechange' && readystate === 4)) {
                             ajax.set(STATUS, status);
                             allStates = result(ajax, 'allStates');
-                            if (allStates[STATUS + ':' + xhrReqObj[STATUS]] === SUCCESS) {
+                            if (allStates[STATUS + COLON + xhrReqObj[STATUS]] === SUCCESS) {
                                 rawData = result(ajax, 'parse', rawData);
                             }
                             rawData = parse(rawData);
                             hasFinished = BOOLEAN_TRUE;
-                            ajax.resolveAs(STATUS + ':' + xhrReqObj[STATUS], rawData);
+                            ajax.resolveAs(STATUS + COLON + xhrReqObj[STATUS], rawData);
                         }
                     };
                 if (!xhrReqObj[method]) {

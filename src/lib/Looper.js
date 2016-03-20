@@ -1,27 +1,52 @@
 app.scope(function (app) {
-    var _ = app._,
+    var lastAFId, lastTId, lastOverrideId, _ = app._,
         factories = _.factories,
         x = 0,
         lastTime = 0,
+        frameTime = 0,
         pI = _.pI,
         posit = _.posit,
         nowish = _.now,
         gapSplit = _.gapSplit,
         vendors = gapSplit('ms moz webkit o'),
-        REQUEST_ANIMATION_FRAME = 'requestAnimationFrame',
-        CANCEL_ANIMATION_FRAME = 'cancelAnimationFrame',
+        TIMEOUT = 'Timeout',
+        SET_TIMEOUT = 'set' + TIMEOUT,
+        CLEAR_TIMEOUT = 'clear' + TIMEOUT,
+        ANIMATION_FRAME = 'AnimationFrame',
+        REQUEST_ANIMATION_FRAME = 'request' + ANIMATION_FRAME,
+        CANCEL_ANIMATION_FRAME = 'cancel' + ANIMATION_FRAME,
         allLoopers = [],
         runningLoopers = [],
         eachCall = _.eachCall,
         time = _.time,
         remove = _.remove,
         running = BOOLEAN_FALSE,
+        focused = BOOLEAN_TRUE,
+        request = function (handler) {
+            var nextFrame = Math.max(0, lastTime - frameTime);
+            if (focused) {
+                lastAFId = win[REQUEST_ANIMATION_FRAME](handler);
+            } else {
+                lastTId = win.setTimeout(handler, nextFrame);
+            }
+            if (Looper.playWhileBlurred) {
+                lastOverrideId = win.setTimeout(function () {
+                    focused = BOOLEAN_FALSE;
+                    handler();
+                }, nextFrame + 50);
+            }
+        },
+        basicHandler = function () {
+            win[CANCEL_ANIMATION_FRAME](lastAFId);
+            win[CLEAR_TIMEOUT](lastTId);
+            win[CLEAR_TIMEOUT](lastOverrideId);
+            frameTime = _.now();
+            eachCall(runningLoopers, 'run', frameTime);
+            teardown();
+        },
         setup = function () {
             running = BOOLEAN_TRUE;
-            win[REQUEST_ANIMATION_FRAME](function (time) {
-                eachCall(runningLoopers, 'run', _.now());
-                teardown();
-            });
+            request(basicHandler);
         },
         teardown = function () {
             duffRight(runningLoopers, function (looper, idx) {
@@ -64,7 +89,7 @@ app.scope(function (app) {
             }
             if (!win[CANCEL_ANIMATION_FRAME]) {
                 win[CANCEL_ANIMATION_FRAME] = function (id) {
-                    win.clearTimeout(id);
+                    win[CLEAR_TIMEOUT](id);
                 };
             }
         }()),
@@ -122,6 +147,8 @@ app.scope(function (app) {
                                 running = fnObj;
                                 wraptry(function () {
                                     fnObj.fn(_nowish);
+                                }, function () {
+                                    tween.remove(fnObj.id);
                                 });
                             }
                         });
@@ -212,9 +239,9 @@ app.scope(function (app) {
                 return bind(fn, this);
             },
             once: function (fn) {
-                return this.count(1, fn);
+                return this.frames(1, fn);
             },
-            count: function (timey, fn_) {
+            frames: function (timey, fn_) {
                 var fn, count = 0,
                     times = pI(timey) || 1;
                 if (!fn_ && isFunction(times)) {
@@ -240,7 +267,7 @@ app.scope(function (app) {
             },
             tween: function (time__, fn_) {
                 var fn, added = nowish(),
-                    time_ = _.time(time__);
+                    time_ = time(time__);
                 if (!time_) {
                     time_ = 0;
                 }
@@ -279,7 +306,7 @@ app.scope(function (app) {
                 if (!isFunction(fn_)) {
                     return tween;
                 }
-                fn = this.bind(fn_);
+                fn = tween.bind(fn_);
                 return tween.add(function (ms) {
                     var frameRate = 1000 / (ms - lastDate);
                     if (frameRate > 40) {
@@ -289,22 +316,23 @@ app.scope(function (app) {
                         lastSkip = ms;
                     }
                     if (ms - lastSkip > time_) {
-                        this.remove();
+                        tween.remove();
                         fn(ms);
                     }
                     lastDate = ms;
                 });
             },
             interval: function (time, fn_) {
-                var fn, last = nowish();
+                var fn, tweener = this,
+                    last = nowish();
                 if (!isFunction(fn_)) {
                     return;
                 }
                 if (!time) {
                     time = 0;
                 }
-                fn = this.bind(fn_);
-                return this.add(function (ms) {
+                fn = tweener.bind(fn_);
+                return tweener.add(function (ms) {
                     if (ms - time >= last) {
                         last = ms;
                         fn(ms);
@@ -312,6 +340,8 @@ app.scope(function (app) {
                 });
             }
         }, BOOLEAN_TRUE);
+    Looper.playWhileBlurred = BOOLEAN_TRUE;
+    app.undefine(function () {});
     _.exports({
         AF: Looper()
     });

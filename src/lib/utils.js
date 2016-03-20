@@ -23,45 +23,6 @@ var factories = {},
     /**
      * @func
      */
-    slice = function (obj, one, two) {
-        return stringProto.slice.call(obj, one, two);
-    },
-    listSlice = function (obj, one, two) {
-        return arrayProto.slice.call(obj, one, two);
-    },
-    /**
-     * @func
-     */
-    split = function (obj, str) {
-        return stringProto.split.call(obj, str);
-    },
-    /**
-     * @func
-     */
-    join = function (obj, str) {
-        return arrayProto.join.call(obj, str);
-    },
-    /**
-     * @func
-     */
-    pop = function (obj) {
-        return arrayProto.pop.call(obj);
-    },
-    /**
-     * @func
-     */
-    push = function (obj, list) {
-        return arrayProto.push.apply(obj, list);
-    },
-    /**
-     * @func
-     */
-    shift = function (o) {
-        return arrayProto.shift.call(o);
-    },
-    /**
-     * @func
-     */
     indexOfNaN = function (array, fromIndex, toIndex, fromRight) {
         if (!array) {
             return -1;
@@ -134,16 +95,6 @@ var factories = {},
     /**
      * @func
      */
-    splice = function () {
-        var ctx = shift(arguments);
-        return arrayProto.splice.apply(ctx, arguments);
-    },
-    reverse = function (arr) {
-        return arrayProto.reverse.call(arr);
-    },
-    /**
-     * @func
-     */
     toString = function (obj) {
         return obj == NULL ? EMPTY_STRING : obj + EMPTY_STRING;
     },
@@ -189,15 +140,15 @@ var factories = {},
     previousConstructor = function (instance) {
         return instance && instance[CONSTRUCTOR_KEY] && instance[CONSTRUCTOR_KEY][CONSTRUCTOR] || instance[CONSTRUCTOR];
     },
-    nativeIsInstance = function (instance, constructor) {
-        return instance instanceof constructor;
-    },
+    // nativeIsInstance = function (instance, constructor) {
+    //     return instance instanceof constructor;
+    // },
     isInstance = function (instance, constructor_) {
         var constructor = constructor_;
-        while (has(constructor, CONSTRUCTOR)) {
+        if (has(constructor, CONSTRUCTOR)) {
             constructor = constructor[CONSTRUCTOR];
         }
-        return nativeIsInstance(instance, constructor);
+        return instance instanceof constructor;
     },
     /**
      * @func
@@ -342,6 +293,14 @@ var factories = {},
     now = function () {
         return +(new Date());
     },
+    now_offset = now(),
+    now_shim = function () {
+        return now() - this.offset;
+    },
+    _performance = window.performance,
+    performance = _performance ? (_performance.now = (_performance.now || _performance.webkitNow || _performance.msNow || _performance.oNow || _performance.mozNow || now_shim)) && _performance : {
+        now: now_shim
+    },
     /**
      * @func
      */
@@ -478,7 +437,8 @@ var factories = {},
     find = finder(findIndex),
     findLast = finder(findLastIndex),
     bind = function (func) {
-        return func.bind.apply(func, splice(arguments, 1));
+        var args = toArray(arguments).slice(1);
+        return func.bind.apply(func, args);
     },
     duff = function (values, runner_, context, direction_) {
         var direction, runner, iterations, val, i, leftover, deltaFn;
@@ -705,7 +665,7 @@ var factories = {},
             // from different frames are.
             var aCtor = a[CONSTRUCTOR],
                 bCtor = b[CONSTRUCTOR];
-            if (aCtor !== bCtor && !(isFunction(aCtor) && nativeIsInstance(aCtor, aCtor) && isFunction(bCtor) && nativeIsInstance(bCtor, bCtor)) && (CONSTRUCTOR in a && CONSTRUCTOR in b)) {
+            if (aCtor !== bCtor && !(isFunction(aCtor) && (aCtor instanceof aCtor) && isFunction(bCtor) && (bCtor instanceof bCtor)) && (CONSTRUCTOR in a && CONSTRUCTOR in b)) {
                 return BOOLEAN_FALSE;
             }
         }
@@ -769,7 +729,7 @@ var factories = {},
      */
     // very shallow clone
     clone = function (obj) {
-        return map(obj, function (value, key) {
+        return map(obj, function (value) {
             return value;
         });
     },
@@ -799,9 +759,9 @@ var factories = {},
     /**
      * @func
      */
-    unshift = function (thing, items) {
-        return thing.unshift.apply(thing, items);
-    },
+    // unshift = function (thing, items) {
+    //     return thing.unshift.apply(thing, items);
+    // },
     /**
      * @func
      */
@@ -866,7 +826,7 @@ var factories = {},
         if (isFunction(string_)) {
             split = string.split('{');
             string = split.shift();
-            string = (string = split.join('{')).slice(0, string[LENGTH] - 1)
+            string = (string = split.join('{')).slice(0, string[LENGTH] - 1);
         }
         return new FunctionConstructor('context', 'with(context) {\n' + string + '\n}')(context);
     },
@@ -913,8 +873,8 @@ var factories = {},
             return memo;
         }, []);
     },
-    toArray = function (obj, delimiter) {
-        return isArrayLike(obj) ? isArray(obj) ? obj : arrayLikeToArray(obj) : (isString(obj) ? obj.split(isString(delimiter) ? delimiter : EMPTY_STRING) : objectToArray(obj));
+    toArray = function (object, delimiter) {
+        return isArrayLike(object) ? isArray(object) ? object : arrayLikeToArray(object) : (isString(object) ? object.split(isString(delimiter) ? delimiter : EMPTY_STRING) : (delimiter === BOOLEAN_TRUE ? objectToArray(object) : [object]));
     },
     flattenArray = function (list, deep_) {
         var deep = !!deep_;
@@ -931,6 +891,10 @@ var factories = {},
     },
     flatten = function (list, deep) {
         return flattenArray(isArrayLike(list) ? list : objectToArray(list), deep);
+    },
+    gather = function (list, handler) {
+        var newList = [];
+        return newList.concat.apply(newList, map(list, handler));
     },
     baseClamp = function (number, lower, upper) {
         if (number === number) {
@@ -1177,8 +1141,8 @@ var factories = {},
         exception: function (options) {
             throw new Error(options && options.message || options);
         },
-        validate: function (boolean_, options) {
-            if (boolean_) {
+        assert: function (boolean_, options) {
+            if (!boolean_) {
                 exception(options);
             }
         }
@@ -1226,6 +1190,7 @@ var factories = {},
         };
     },
     _ = app._ = {
+        performance: performance,
         months: gapSplit('january feburary march april may june july august september october november december'),
         weekdays: gapSplit('sunday monday tuesday wednesday thursday friday saturday'),
         constructorWrapper: constructorWrapper,
@@ -1235,12 +1200,13 @@ var factories = {},
         ensureFunction: ensureFunction,
         parseDecimal: parseDecimal,
         flatten: flatten,
+        gather: gather,
         isArrayLike: isArrayLike,
         isInstance: isInstance,
         hasEnumBug: hasEnumBug,
         roundFloat: roundFloat,
         factories: factories,
-        listSlice: listSlice,
+        // listSlice: listSlice,
         fullClone: fullClone,
         toBoolean: toBoolean,
         stringify: stringify,
@@ -1253,7 +1219,7 @@ var factories = {},
         debounce: debounce,
         protoProperty: protoProperty,
         protoProp: protoProperty,
-        reverse: reverse,
+        // reverse: reverse,
         binaryIndexOf: binaryIndexOf,
         indexOfNaN: indexOfNaN,
         toInteger: toInteger,
@@ -1261,11 +1227,11 @@ var factories = {},
         joinGen: joinGen,
         toArray: toArray,
         isEqual: isEqual,
-        unshift: unshift,
+        // unshift: unshift,
         gapJoin: gapJoin,
         isArray: isArray,
         isEmpty: isEmpty,
-        splice: splice,
+        // splice: splice,
         returns: returns,
         isBoolean: isBoolean,
         invert: invert,
@@ -1292,12 +1258,12 @@ var factories = {},
         exports: exports,
         allKeys: allKeys,
         evaluate: evaluate,
-        slice: slice,
+        // slice: slice,
         parse: parse,
-        shift: shift,
+        // shift: shift,
         merge: merge,
         fetch: fetch,
-        split: split,
+        // split: split,
         clone: clone,
         bind: bind,
         duff: duff,
@@ -1305,15 +1271,15 @@ var factories = {},
         eachRight: eachRight,
         iterates: iterates,
         sort: sort,
-        join: join,
+        // join: join,
         wrap: wrap,
         uuid: uuid,
         keys: keys,
         once: once,
         each: each,
-        push: push,
+        // push: push,
         flow: flow,
-        pop: pop,
+        // pop: pop,
         has: has,
         negate: negate,
         pI: pI,

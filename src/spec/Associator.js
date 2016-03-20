@@ -1,20 +1,20 @@
 application.scope().run(function (app, _, factories) {
     var registry = factories.Associator();
-    describe('Registry', function () {
-        beforeEach(function () {});
-        it('is made by the specless object', function () {
-            expect(_.isInstance(registry, factories.Associator)).toEqual(true);
+    _.describe('Registry', function () {
+        _.beforeEach(function () {});
+        _.it('is made by the specless object', function () {
+            _.expect(_.isInstance(registry, factories.Associator)).toEqual(true);
         });
-        it('is not a collection', function () {
-            expect(_.isInstance(registry, factories.Collection)).toEqual(false);
+        _.it('is not a collection', function () {
+            _.expect(_.isInstance(registry, factories.Collection)).toEqual(false);
         });
-        it('can save data against pointers', function () {
+        _.it('can save data against pointers', function () {
             registry.set(window, {
                 some: 'data'
             });
-            expect(registry.get(window).some).toEqual('data');
+            _.expect(registry.get(window).some).toEqual('data');
         });
-        it('can also get any group of data that the same type', function () {
+        _.it('can also get any group of data that the same type', function () {
             var one = {},
                 two = {};
             registry.set(one, {
@@ -23,7 +23,7 @@ application.scope().run(function (app, _, factories) {
             registry.set(two, {
                 two: 2
             });
-            expect(_.keys(registry.sameType(two).__elid__).length).toEqual(2);
+            _.expect(_.keys(registry.sameType(two).__elid__).length).toEqual(2);
         });
     });
 });

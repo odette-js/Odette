@@ -42,11 +42,12 @@ app.scope(function (app) {
         // very useful for componentizing your ui
         // LeafView = factories.
         // regionConstructor = ,
+        Parent = factories.Parent,
         Model = factories.Model,
-        Region = factories.Model.extend('Region', {
+        Region = Parent.extend('Region', {
             constructor: function (secondary) {
                 var model = this;
-                factories.Model[CONSTRUCTOR].call(model, {}, secondary);
+                Parent[CONSTRUCTOR].call(model, secondary);
                 model.directive(CHILDREN);
                 model.setElement();
                 return model;
@@ -165,12 +166,12 @@ app.scope(function (app) {
                 return found;
             },
             constructor: function (secondary) {
-                var model = this;
-                factories.Model[CONSTRUCTOR].call(model, secondary);
-                model.directive(ELEMENT).ensure();
+                var view = this;
+                Parent[CONSTRUCTOR].call(view, secondary);
+                view.directive(ELEMENT).ensure();
                 this.id = uniqueId(BOOLEAN_FALSE, BOOLEAN_TRUE);
                 this.establishRegions();
-                return model;
+                return view;
             },
             establishRegions: function () {
                 var regions = result(this, 'regions');
@@ -191,7 +192,7 @@ app.scope(function (app) {
                 }
                 view.el.destroy();
                 view.directiveDestruction(ELEMENT);
-                Model[CONSTRUCTOR][PROTOTYPE].destroy.call(view);
+                Parent[CONSTRUCTOR][PROTOTYPE].destroy.call(view);
                 return view;
             },
             render: function () {
@@ -320,7 +321,7 @@ app.scope(function (app) {
         };
     app.defineDirective(REGION_MANAGER, function (instance) {
         return {
-            list: new Collection[CONSTRUCTOR](),
+            list: Collection(),
             parent: instance,
             create: createRegion,
             establish: establishRegion,

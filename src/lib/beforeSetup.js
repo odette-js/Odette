@@ -106,12 +106,12 @@ this.Odette = function (global, WHERE, version, fn) {
         definition: function (version, windo, handler) {
             var application = this,
                 app = application.registerVersion(version);
-            if (app.isDefined) {
+            if (app.defined) {
                 application.map(app.missedDefinitions, function (handler) {
                     handler.call(app, windo);
                 });
             } else {
-                app.isDefined = BOOLEAN_TRUE;
+                app.defined = BOOLEAN_TRUE;
                 handler.call(app, app);
             }
             return app;

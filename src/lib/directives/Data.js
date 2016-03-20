@@ -26,6 +26,9 @@ app.scope(function (app) {
             get: function (key) {
                 return this[CURRENT][key];
             },
+            clone: function () {
+                return clone(this[CURRENT]);
+            },
             unset: function (key) {
                 var current = this[CURRENT],
                     previous = current[key];
@@ -34,11 +37,11 @@ app.scope(function (app) {
             reset: function (hash) {
                 this[CURRENT] = hash || {};
             },
-            digest: function (model, fn) {
+            digest: function (model, handler) {
                 var dataDirective = this;
-                dataDirective[CHANGE_COUNTER]++;
-                fn();
-                dataDirective[CHANGE_COUNTER]--;
+                ++dataDirective[CHANGE_COUNTER];
+                handler();
+                --dataDirective[CHANGE_COUNTER];
                 // this event should only ever exist here
                 if (!dataDirective[CHANGE_COUNTER]) {
                     model[DISPATCH_EVENT](CHANGE, dataDirective[CHANGING]);
@@ -55,7 +58,7 @@ app.scope(function (app) {
                     if (!no_more) {
                         current = isObject(current[key]) ? current[key] : {};
                     }
-                }) && isString(lastkey) && current[lastkey];
+                }) && (isString(lastkey) ? UNDEFINED : current[lastkey]);
             },
             has: function (key) {
                 return this[CURRENT][key] != NULL;

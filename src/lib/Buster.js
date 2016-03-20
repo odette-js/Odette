@@ -53,7 +53,7 @@ app.scope(function (app) {
                 return;
             }
             var originalMessage, runCount = data.runCount,
-                children = buster.children;
+                children = buster.directive(CHILDREN);
             if (runCount) {
                 originalMessage = children.get(ID, data.messageId);
                 if (!originalMessage) {
@@ -320,7 +320,7 @@ app.scope(function (app) {
                 disconnected.call(buster);
                 factories.Model[CONSTRUCTOR].call(buster, settings);
                 buster.once('change:connected', function (e) {
-                    buster.connectPromise.resolve(buster.children.first());
+                    buster.connectPromise.resolve(buster.directive(CHILDREN).first());
                 });
                 buster.on({
                     'change:connected change:documentReady': 'flush',

@@ -106,12 +106,12 @@ this.Odette = function (global, WHERE, version, fn) {
         definition: function (version, windo, handler) {
             var application = this,
                 app = application.registerVersion(version);
-            if (app.isDefined) {
+            if (app.defined) {
                 application.map(app.missedDefinitions, function (handler) {
                     handler.call(app, windo);
                 });
             } else {
-                app.isDefined = BOOLEAN_TRUE;
+                app.defined = BOOLEAN_TRUE;
                 handler.call(app, app);
             }
             return app;
@@ -283,7 +283,6 @@ var UNDEFINED, win = window,
     ELEMENT = 'element',
     CURRENT = 'current',
     CHILD = 'child',
-    CHILDREN = CHILD + 'ren',
     COLON = ':',
     BEFORE = 'before',
     CHANGE = 'change',
@@ -364,45 +363,6 @@ var factories = {},
     /**
      * @func
      */
-    slice = function (obj, one, two) {
-        return stringProto.slice.call(obj, one, two);
-    },
-    listSlice = function (obj, one, two) {
-        return arrayProto.slice.call(obj, one, two);
-    },
-    /**
-     * @func
-     */
-    split = function (obj, str) {
-        return stringProto.split.call(obj, str);
-    },
-    /**
-     * @func
-     */
-    join = function (obj, str) {
-        return arrayProto.join.call(obj, str);
-    },
-    /**
-     * @func
-     */
-    pop = function (obj) {
-        return arrayProto.pop.call(obj);
-    },
-    /**
-     * @func
-     */
-    push = function (obj, list) {
-        return arrayProto.push.apply(obj, list);
-    },
-    /**
-     * @func
-     */
-    shift = function (o) {
-        return arrayProto.shift.call(o);
-    },
-    /**
-     * @func
-     */
     indexOfNaN = function (array, fromIndex, toIndex, fromRight) {
         if (!array) {
             return -1;
@@ -475,16 +435,6 @@ var factories = {},
     /**
      * @func
      */
-    splice = function () {
-        var ctx = shift(arguments);
-        return arrayProto.splice.apply(ctx, arguments);
-    },
-    reverse = function (arr) {
-        return arrayProto.reverse.call(arr);
-    },
-    /**
-     * @func
-     */
     toString = function (obj) {
         return obj == NULL ? EMPTY_STRING : obj + EMPTY_STRING;
     },
@@ -530,15 +480,15 @@ var factories = {},
     previousConstructor = function (instance) {
         return instance && instance[CONSTRUCTOR_KEY] && instance[CONSTRUCTOR_KEY][CONSTRUCTOR] || instance[CONSTRUCTOR];
     },
-    nativeIsInstance = function (instance, constructor) {
-        return instance instanceof constructor;
-    },
+    // nativeIsInstance = function (instance, constructor) {
+    //     return instance instanceof constructor;
+    // },
     isInstance = function (instance, constructor_) {
         var constructor = constructor_;
-        while (has(constructor, CONSTRUCTOR)) {
+        if (has(constructor, CONSTRUCTOR)) {
             constructor = constructor[CONSTRUCTOR];
         }
-        return nativeIsInstance(instance, constructor);
+        return instance instanceof constructor;
     },
     /**
      * @func
@@ -683,6 +633,14 @@ var factories = {},
     now = function () {
         return +(new Date());
     },
+    now_offset = now(),
+    now_shim = function () {
+        return now() - this.offset;
+    },
+    _performance = window.performance,
+    performance = _performance ? (_performance.now = (_performance.now || _performance.webkitNow || _performance.msNow || _performance.oNow || _performance.mozNow || now_shim)) && _performance : {
+        now: now_shim
+    },
     /**
      * @func
      */
@@ -819,7 +777,8 @@ var factories = {},
     find = finder(findIndex),
     findLast = finder(findLastIndex),
     bind = function (func) {
-        return func.bind.apply(func, splice(arguments, 1));
+        var args = toArray(arguments).slice(1);
+        return func.bind.apply(func, args);
     },
     duff = function (values, runner_, context, direction_) {
         var direction, runner, iterations, val, i, leftover, deltaFn;
@@ -1046,7 +1005,7 @@ var factories = {},
             // from different frames are.
             var aCtor = a[CONSTRUCTOR],
                 bCtor = b[CONSTRUCTOR];
-            if (aCtor !== bCtor && !(isFunction(aCtor) && nativeIsInstance(aCtor, aCtor) && isFunction(bCtor) && nativeIsInstance(bCtor, bCtor)) && (CONSTRUCTOR in a && CONSTRUCTOR in b)) {
+            if (aCtor !== bCtor && !(isFunction(aCtor) && (aCtor instanceof aCtor) && isFunction(bCtor) && (bCtor instanceof bCtor)) && (CONSTRUCTOR in a && CONSTRUCTOR in b)) {
                 return BOOLEAN_FALSE;
             }
         }
@@ -1110,7 +1069,7 @@ var factories = {},
      */
     // very shallow clone
     clone = function (obj) {
-        return map(obj, function (value, key) {
+        return map(obj, function (value) {
             return value;
         });
     },
@@ -1140,9 +1099,9 @@ var factories = {},
     /**
      * @func
      */
-    unshift = function (thing, items) {
-        return thing.unshift.apply(thing, items);
-    },
+    // unshift = function (thing, items) {
+    //     return thing.unshift.apply(thing, items);
+    // },
     /**
      * @func
      */
@@ -1207,7 +1166,7 @@ var factories = {},
         if (isFunction(string_)) {
             split = string.split('{');
             string = split.shift();
-            string = (string = split.join('{')).slice(0, string[LENGTH] - 1)
+            string = (string = split.join('{')).slice(0, string[LENGTH] - 1);
         }
         return new FunctionConstructor('context', 'with(context) {\n' + string + '\n}')(context);
     },
@@ -1254,8 +1213,8 @@ var factories = {},
             return memo;
         }, []);
     },
-    toArray = function (obj, delimiter) {
-        return isArrayLike(obj) ? isArray(obj) ? obj : arrayLikeToArray(obj) : (isString(obj) ? obj.split(isString(delimiter) ? delimiter : EMPTY_STRING) : objectToArray(obj));
+    toArray = function (object, delimiter) {
+        return isArrayLike(object) ? isArray(object) ? object : arrayLikeToArray(object) : (isString(object) ? object.split(isString(delimiter) ? delimiter : EMPTY_STRING) : (delimiter === BOOLEAN_TRUE ? objectToArray(object) : [object]));
     },
     flattenArray = function (list, deep_) {
         var deep = !!deep_;
@@ -1272,6 +1231,10 @@ var factories = {},
     },
     flatten = function (list, deep) {
         return flattenArray(isArrayLike(list) ? list : objectToArray(list), deep);
+    },
+    gather = function (list, handler) {
+        var newList = [];
+        return newList.concat.apply(newList, map(list, handler));
     },
     baseClamp = function (number, lower, upper) {
         if (number === number) {
@@ -1518,8 +1481,8 @@ var factories = {},
         exception: function (options) {
             throw new Error(options && options.message || options);
         },
-        validate: function (boolean_, options) {
-            if (boolean_) {
+        assert: function (boolean_, options) {
+            if (!boolean_) {
                 exception(options);
             }
         }
@@ -1567,6 +1530,7 @@ var factories = {},
         };
     },
     _ = app._ = {
+        performance: performance,
         months: gapSplit('january feburary march april may june july august september october november december'),
         weekdays: gapSplit('sunday monday tuesday wednesday thursday friday saturday'),
         constructorWrapper: constructorWrapper,
@@ -1576,12 +1540,13 @@ var factories = {},
         ensureFunction: ensureFunction,
         parseDecimal: parseDecimal,
         flatten: flatten,
+        gather: gather,
         isArrayLike: isArrayLike,
         isInstance: isInstance,
         hasEnumBug: hasEnumBug,
         roundFloat: roundFloat,
         factories: factories,
-        listSlice: listSlice,
+        // listSlice: listSlice,
         fullClone: fullClone,
         toBoolean: toBoolean,
         stringify: stringify,
@@ -1594,7 +1559,7 @@ var factories = {},
         debounce: debounce,
         protoProperty: protoProperty,
         protoProp: protoProperty,
-        reverse: reverse,
+        // reverse: reverse,
         binaryIndexOf: binaryIndexOf,
         indexOfNaN: indexOfNaN,
         toInteger: toInteger,
@@ -1602,11 +1567,11 @@ var factories = {},
         joinGen: joinGen,
         toArray: toArray,
         isEqual: isEqual,
-        unshift: unshift,
+        // unshift: unshift,
         gapJoin: gapJoin,
         isArray: isArray,
         isEmpty: isEmpty,
-        splice: splice,
+        // splice: splice,
         returns: returns,
         isBoolean: isBoolean,
         invert: invert,
@@ -1633,12 +1598,12 @@ var factories = {},
         exports: exports,
         allKeys: allKeys,
         evaluate: evaluate,
-        slice: slice,
+        // slice: slice,
         parse: parse,
-        shift: shift,
+        // shift: shift,
         merge: merge,
         fetch: fetch,
-        split: split,
+        // split: split,
         clone: clone,
         bind: bind,
         duff: duff,
@@ -1646,15 +1611,15 @@ var factories = {},
         eachRight: eachRight,
         iterates: iterates,
         sort: sort,
-        join: join,
+        // join: join,
         wrap: wrap,
         uuid: uuid,
         keys: keys,
         once: once,
         each: each,
-        push: push,
+        // push: push,
         flow: flow,
-        pop: pop,
+        // pop: pop,
         has: has,
         negate: negate,
         pI: pI,
@@ -2006,15 +1971,15 @@ var cacheable = function (fn) {
             var i, s, val;
             if (isString(str)) {
                 if (str[0] === splitter) {
-                    str = slice(str, 1);
+                    str = str.slice(1);
                 }
-                s = split(str, splitter);
+                s = str.split(splitter);
                 for (i = s[LENGTH] - 1; i >= 1; i--) {
                     if (s[i]) {
                         s[i] = upCase(s[i]);
                     }
                 }
-                val = join(s, EMPTY_STRING);
+                val = s.join(EMPTY_STRING);
             }
             return val;
         };
@@ -2023,7 +1988,7 @@ var cacheable = function (fn) {
      * @func
      */
     upCase = cacheable(function (s) {
-        return s[0].toUpperCase() + slice(s, 1);
+        return s[0].toUpperCase() + s.slice(1);
     }),
     /**
      * @func
@@ -2348,94 +2313,135 @@ _.exports({
 app.scope(function (app) {
     var _ = app._,
         factories = _.factories,
+        STATUS = 'StatusMarker',
+        STATUSES = 'statuses',
+        directives = {
+            creation: {},
+            destruction: {}
+        },
         returnsNull = returns(NULL),
         returnsObject = function () {
             return {};
-        };
-    factories.Extendable.extend('Directive', {
-        directive: function (name) {
-            var Handler, directive, that = this;
-            if ((directive = that[name])) {
-                return directive;
-            }
-            Handler = (that['directive:creation:' + name] || directives.creation[name] || returnsObject);
-            that[name] = new Handler(that, name);
-            return that[name];
         },
-        directiveDestruction: function (name) {
-            var result = (directives.destruction[name] || returnsNull)(this[name], this, name);
-            delete this[name];
-            return result;
-        }
-    }, BOOLEAN_TRUE);
-    var directives = {
-        creation: {},
-        destruction: {}
-    };
-    app.defineDirective = function (name, creation, destruction_) {
-        var alreadyCreated, err = (!isString(name) && exception({
-            message: 'directives must be registered with a string for a name'
-        })) || (!isFunction(creation)) && exception({
-            message: 'directives must be registered with at least a create function'
+        returnsThird = function (one, two, three) {
+            return three;
+        },
+        parody = function (directive, method) {
+            return function (one, two, three) {
+                return this.directive(directive)[method](one, two, three);
+            };
+        },
+        iterate = function (directive, method) {
+            return function (list) {
+                var instance = this,
+                    dir = instance.directive(directive);
+                duff(list, dir[method], dir);
+                return instance;
+            };
+        },
+        checkParody = function (directive, method, defaultValue) {
+            var defaultIsFunction = isFunction(defaultValue);
+            return function (one, two, three, four, five, six) {
+                var item = this;
+                return item[directive] ? item[directive][method](one, two, three, four, five, six) : (defaultIsFunction ? defaultValue(item) : defaultValue);
+            };
+        },
+        defineDirective = function (name, creation, destruction_) {
+            var alreadyCreated, err = (!isString(name) && exception({
+                message: 'directives must be registered with a string for a name'
+            })) || (!isFunction(creation)) && exception({
+                message: 'directives must be registered with at least a create function'
+            });
+            directives.creation[name] = (alreadyCreated = directives.creation[name]) || creation;
+            directives.destruction[name] = directives.destruction[name] || destruction_;
+            // returns whether or not that directive is new or not
+            return !alreadyCreated;
+        },
+        extendDirective = function (oldName, newName, handler_, destruction_) {
+            var Destruction = destruction_ || returnsThird;
+            var Handler = handler_ || returnsThird;
+            var oldDirective = directives.creation[oldName] || exception({
+                message: 'directives must exist before they can be extended'
+            });
+            return app.defineDirective(newName, function (instance, name, third) {
+                var directive = directives.creation[oldName](instance, name, third);
+                return new Handler(instance, name, directive);
+            }, function (instance, name, third) {
+                var directive = directives.destruction[oldName](instance, name, third);
+                return new Destruction(instance, name, directive);
+            });
+        },
+        Directive = factories.Extendable.extend('Directive', {
+            mark: parody(STATUS, 'mark'),
+            unmark: parody(STATUS, 'unmark'),
+            remark: parody(STATUS, 'remark'),
+            is: checkParody(STATUS, 'is', BOOLEAN_FALSE),
+            directive: function (name) {
+                var Handler, directive, that = this;
+                if ((directive = that[name])) {
+                    return directive;
+                }
+                Handler = (that['directive:creation:' + name] || directives.creation[name] || returnsObject);
+                that[name] = new Handler(that, name);
+                return that[name];
+            },
+            directiveDestruction: function (name) {
+                var result = (directives.destruction[name] || returnsNull)(this[name], this, name);
+                delete this[name];
+                return result;
+            }
+        }, BOOLEAN_TRUE),
+        StatusMarker = factories.Extendable.extend(STATUS, {
+            constructor: function () {
+                this[STATUSES] = {};
+                return this;
+            },
+            has: function (status) {
+                return this[STATUSES][status] !== UNDEFINED;
+            },
+            mark: function (status) {
+                this[STATUSES][status] = BOOLEAN_TRUE;
+            },
+            unmark: function (status) {
+                this[STATUSES][status] = BOOLEAN_FALSE;
+            },
+            remark: function (status, direction) {
+                this[STATUSES][status] = direction === UNDEFINED ? !this[STATUSES][status] : !!direction;
+            },
+            is: function (status) {
+                return this[STATUSES][status];
+            },
+            isNot: function (status) {
+                return !this.is(status);
+            }
         });
-        directives.creation[name] = (alreadyCreated = directives.creation[name]) || creation;
-        directives.destruction[name] = directives.destruction[name] || destruction_;
-        // returns whether or not that directive is new or not
-        return !alreadyCreated;
-    };
-    app.extendDirective = function (oldName, newName, handler_, destruction_) {
-        var Destruction = destruction_ || returnsThird;
-        var Handler = handler_ || returnsThird;
-        var oldDirective = directives.creation[oldName] || exception({
-            message: 'directives must exist before they can be extended'
-        });
-        return app.defineDirective(newName, function (instance, name, third) {
-            var directive = directives.creation[oldName](instance, name, third);
-            return new Handler(instance, name, directive);
-        }, function (instance, name, third) {
-            var directive = directives.destruction[oldName](instance, name, third);
-            return new Destruction(instance, name, directive);
-        });
-    };
-    var returnsThird = function (one, two, three) {
-        return three;
-    };
-    // var directiveMod = function (key, instance, name) {
-    //     var Handler = (instance['directive:' + key + COLON + name] || directives[key][name] || noop);
-    //     return new Handler(instance, name);
-    // };
-    var parody = function (directive, method) {
-        return function (one, two, three) {
-            return this.directive(directive)[method](one, two, three);
-        };
-    };
-    var iterate = function (directive, method) {
-        return function (list) {
-            var instance = this,
-                dir = instance.directive(directive);
-            duff(list, dir[method], dir);
-            return instance;
-        };
-    };
-    var checkParody = function (directive, method, defaultValue) {
-        return function (one, two, three, four, five, six) {
-            return this[directive] ? this[directive][method](one, two, three, four, five, six) : defaultValue;
-        };
-    };
-    // var parodyRead = function (directive, attribute, defaultValue) {
-    //     return function () {
-    //         return this[directive] === UNDEFINED ? defaultValue : this[directive][attribute];
-    //     };
-    // };
+    defineDirective(STATUS, StatusMarker[CONSTRUCTOR]);
+    app.defineDirective = defineDirective;
+    app.extendDirective = extendDirective;
     _.exports({
         directives: {
             parody: parody,
             checkParody: checkParody,
-            // parodyRead: parodyRead,
             iterate: iterate
         }
     });
 });
+var directives = _.directives;
+var eachCall = function (array, method, arg) {
+        return duff(array, function (item) {
+            result(item, method, arg);
+        });
+    },
+    mapCall = function (array, method, arg) {
+        return map(array, function (item) {
+            return result(item, method, arg);
+        });
+    },
+    eachCallRight = function (array, method, arg) {
+        return duff(array, function (item) {
+            result(item, method, arg);
+        }, NULL, -1);
+    };
 app.scope(function (app) {
     var isNullMessage = {
             message: 'object must not be null or undefined'
@@ -2445,22 +2451,6 @@ app.scope(function (app) {
         },
         cannotModifyMessage = {
             message: 'list cannot be modified while it is being iterated over'
-        },
-        // ID = ID,
-        eachCall = function (array, method, arg) {
-            return duff(array, function (item) {
-                result(item, method, arg);
-            });
-        },
-        mapCall = function (array, method, arg) {
-            return map(array, function (item) {
-                return result(item, method, arg);
-            });
-        },
-        eachCallRight = function (array, method, arg) {
-            return duff(array, function (item) {
-                result(item, method, arg);
-            }, NULL, -1);
         },
         /**
          * @func
@@ -2473,7 +2463,7 @@ app.scope(function (app) {
             return !!index;
         },
         removeAt = function (list, index) {
-            return splice(list, index, 1)[0];
+            return list.splice(index, 1)[0];
         },
         add = function (list, item, lookAfter, lookBefore, fromRight) {
             var val = 0,
@@ -2486,7 +2476,7 @@ app.scope(function (app) {
         insertAt = function (list, item, index) {
             var len = list[LENGTH],
                 lastIdx = len || 0;
-            splice(list, index || 0, 0, item);
+            list.splice(index || 0, 0, item);
             return len !== list[LENGTH];
         },
         eq = function (list, num, caller_) {
@@ -2539,19 +2529,21 @@ app.scope(function (app) {
             return range;
         },
         count = function (list, runner_, ctx_, start, end) {
-            var runner, obj, idx, ctx = ctx_ || this;
-            if (start < end && isNumber(start) && isNumber(end) && isFinite(start) && isFinite(end)) {
-                end = Math.abs(end);
-                idx = start;
-                runner = bind(runner_, ctx);
-                while (idx < end) {
-                    obj = NULL;
-                    if (has(list, idx)) {
-                        obj = list[idx];
-                    }
-                    runner(obj, idx, list);
-                    idx++;
+            var runner, obj, idx, ctx;
+            if (start >= end || !isNumber(start) || !isNumber(end) || !isFinite(start) || !isFinite(end)) {
+                return list;
+            }
+            ctx = ctx_ || this;
+            runner = bind(runner_, ctx);
+            end = Math.abs(end);
+            idx = start;
+            while (idx < end) {
+                obj = NULL;
+                if (list[LENGTH] > idx) {
+                    obj = list[idx];
                 }
+                runner(obj, idx, list);
+                idx++;
             }
             return list;
         },
@@ -2564,7 +2556,9 @@ app.scope(function (app) {
         /**
          * @func
          */
-        closest = function (array, searchElement, minIndex_, maxIndex_) {
+        closestIndex = function (array, searchElement, minIndex_, maxIndex_) {
+            // var index;
+            // return (index = smartIndexOf(array, searchElement, minIndex_, maxIndex_)) === -1 ? UNDEFINED : array[index];
             var currentIndex, currentElement, found,
                 minIndex = minIndex_ || 0,
                 maxIndex = maxIndex_ || array[LENGTH] - 1;
@@ -2606,7 +2600,7 @@ app.scope(function (app) {
         concatUnique = function () {
             return foldl(arguments, function (memo, argument) {
                 duff(argument, function (item) {
-                    if (binaryIndexOf(memo, item) === -1) {
+                    if (smartIndexOf(memo, item) === -1) {
                         memo.push(item);
                     }
                 });
@@ -2713,7 +2707,6 @@ app.scope(function (app) {
         unwrapInstance = function (instance_) {
             return isInstance(instance, factories.Collection) ? instance_ : instance.unwrap();
         },
-        directives = _.directives,
         REGISTRY = 'registry',
         Registry = factories.Directive.extend(upCase(REGISTRY), {
             constructor: function () {
@@ -2736,6 +2729,11 @@ app.scope(function (app) {
                 cat[id] = value;
                 return this;
             },
+            group: function (category, setter) {
+                var register = this.register;
+                register[category] = setter || register[category] || {};
+                return register[category];
+            },
             swap: function (category, id, value) {
                 var cached = this.get(category, id);
                 this.keep(category, id, value);
@@ -2751,8 +2749,8 @@ app.scope(function (app) {
                 this.count = count || 0;
                 return [cached, cachedCount];
             }
-        }),
-        recreatingSelfList = gapSplit('eq map mapCall filter pluck where whereNot cycle uncycle flatten'),
+        }, BOOLEAN_TRUE),
+        recreatingSelfList = gapSplit('eq map mapCall filter pluck where whereNot cycle uncycle flatten gather'),
         eachHandlers = {
             each: duff,
             duff: duff,
@@ -2774,18 +2772,17 @@ app.scope(function (app) {
         foldIteration = gapSplit('foldr foldl reduce'),
         findIteration = gapSplit('find findLast findWhere findLastWhere'),
         indexers = gapSplit('indexOf posit'),
-        // indicesIteration = gapSplit('add insertAt remove removeAt'),
         foldFindIteration = foldIteration.concat(findIteration),
         marksIterating = function (fn) {
             return function (one, two, three, four, five, six) {
-                var result, list = this;
-                ++list.iterating;
-                result = fn(list, one, two, three, four, five, six);
-                --list.iterating;
-                return result;
+                return this.iterate(fn.bind(NULL, this, one, two, three, four, five, six));
             };
         },
-        wrappedListMethods = extend(wrap(joinHandlers, function (name) {
+        wrappedListMethods = extend({
+            seeker: function (handler, context) {
+                return _.duffRight(this.items, handler, context);
+            }
+        }, wrap(joinHandlers, function (name) {
             return function (arg) {
                 return this.items[name](arg);
             };
@@ -2795,7 +2792,8 @@ app.scope(function (app) {
                 return _[name](list.items, one, two, three, four, five);
             };
         }), wrap(splatHandlers, function (name) {
-            return function (args) {
+            return function (args_) {
+                var args = isArray(args_) ? args_ : arguments;
                 return this.items[name].apply(this.items, args);
             };
         }), wrap(nativeCannotModify, function (name) {
@@ -2872,8 +2870,18 @@ app.scope(function (app) {
         }),
         LIST = 'list',
         List = factories.Directive.extend(upCase(LIST), extend({
-            constructor: function () {
-                this.reset();
+            constructor: function (items) {
+                this.reset(items);
+                return this;
+            },
+            iterate: function (fn) {
+                ++this.iterating;
+                var result = fn();
+                --this.iterating;
+                return result;
+            },
+            obliteration: function (handler, context) {
+                duffRight(this.items, handlers, context === UNDEFINED ? this : context);
                 return this;
             },
             empty: function () {
@@ -2881,8 +2889,8 @@ app.scope(function (app) {
             },
             reset: function (items) {
                 // can be array like
-                var list = this;
-                var old = list.items || [];
+                var list = this,
+                    old = list.items || [];
                 list.iterating = list.iterating ? exception(cannotModifyMessage) : 0;
                 list.items = items == NULL ? [] : (isArrayLike(items) ? toArray(items) : [items]);
                 list.reversed = BOOLEAN_FALSE;
@@ -2920,19 +2928,11 @@ app.scope(function (app) {
                 });
             }
         }, wrappedListMethods), BOOLEAN_TRUE),
-        directiveResult = app.defineDirective(LIST, List[CONSTRUCTOR]),
+        directiveResult = app.defineDirective(LIST, function () {
+            return new List[CONSTRUCTOR]();
+        }),
         Collection = factories.Directive.extend('Collection', extend({
             empty: _.flow(directives.parody(LIST, 'reset'), directives.parody(REGISTRY, 'reset')),
-            // has: directives.parody(LIST, 'has'),
-            // unwrap: directives.parody(LIST, 'unwrap'),
-            // reset: directives.parody(LIST, 'reset'),
-            // length: directives.parody(LIST, LENGTH),
-            // first: directives.parody(LIST, 'first'),
-            // last: directives.parody(LIST, 'last'),
-            // index: directives.parody(LIST, 'index'),
-            // toString: directives.parody(LIST, 'toString'),
-            // toJSON: directives.parody(LIST, TO_JSON),
-            // sort: directives.parody(LIST, 'sort'),
             get: directives.parody(REGISTRY, 'get'),
             register: directives.parody(REGISTRY, 'keep'),
             unRegister: directives.parody(REGISTRY, 'drop'),
@@ -2968,15 +2968,15 @@ app.scope(function (app) {
              * @name Model#add
              * @func
              */
-        }, wrap(gapSplit('has unwrap reset length first last index toString toJSON sort').concat(abstractedCanModify, abstractedCannotModify, nativeCannotModify, indexers, joinHandlers, splatHandlers), function (key) {
+        }, wrap(gapSplit('has unwrap reset length first last index toString toJSON sort').concat(abstractedCanModify, abstractedCannotModify, nativeCannotModify, indexers, joinHandlers), function (key) {
             return directives.parody(LIST, key);
         }), wrap(recreatingSelfList, function (key) {
             return recreateSelf(function (one) {
                 return this.list[key](one);
             });
         }), wrap(splatHandlers, function (key) {
-            return function () {
-                this.list[key](arguments);
+            return function (items) {
+                this.list[key](items);
                 return this;
             };
         }), wrap(countingList, function (key) {
@@ -3025,14 +3025,18 @@ app.scope(function (app) {
                 sorted.sort();
                 return sorted;
             },
+            closestIndex: function (value) {
+                return closestIndex(this.unwrap(), value);
+            },
             closest: function (value) {
-                return closest(this.unwrap(), value);
+                var index, list = this.unwrap();
+                return (index = closestIndex(list, value)) === -1 ? UNDEFINED : list[index];
             },
             validIDType: function (id) {
                 return isNumber(id) || isString(id);
             },
-            indexOf: function (object) {
-                return smartIndexOf(this.unwrap(), object);
+            indexOf: function (object, min, max) {
+                return smartIndexOf(this.unwrap(), object, min, max);
             },
             load: function (values) {
                 var sm = this;
@@ -3048,21 +3052,24 @@ app.scope(function (app) {
                     isNotNull = object == NULL && exception(isNullMessage),
                     valueOfResult = object && object.valueOf(),
                     retrieved = (registryDirective = sorted[REGISTRY]) && sorted.get(ID, valueOfResult);
-                if (!retrieved) {
-                    ret = !sorted.validIDType(valueOfResult) && exception(validIdMessage);
-                    sorted.insertAt(object, sorted.closest(valueOfResult) + 1);
-                    (registryDirective || sorted.directive(REGISTRY)).keep(ID, valueOfResult, object);
-                    return BOOLEAN_TRUE;
+                if (retrieved) {
+                    return BOOLEAN_FALSE;
                 }
+                ret = !sorted.validIDType(valueOfResult) && exception(validIdMessage);
+                sorted.insertAt(object, sorted.closestIndex(valueOfResult) + 1);
+                (registryDirective || sorted.directive(REGISTRY)).keep(ID, valueOfResult, object);
+                return BOOLEAN_TRUE;
             },
             remove: function (object, index) {
                 var where, sorted = this,
                     isNotNull = object == NULL && exception(isNullMessage),
                     valueOfResult = object && object.valueOf();
-                if (object != NULL && sorted.get(ID, valueOfResult) != NULL) {
-                    sorted.removeAt(index === UNDEFINED ? sorted.indexOf(object) : index);
-                    sorted.unRegister(ID, valueOfResult);
+                if (object == NULL || sorted.get(ID, valueOfResult) == NULL) {
+                    return BOOLEAN_FALSE;
                 }
+                sorted.removeAt(index === UNDEFINED ? sorted.indexOf(object) : index);
+                sorted.unRegister(ID, valueOfResult);
+                return BOOLEAN_TRUE;
             },
             pop: function () {
                 return this.remove(this.last());
@@ -3137,10 +3144,8 @@ app.scope(function (app) {
             remove: function (string) {
                 var sm = this,
                     found = sm.get(ID, string);
-                if (string) {
-                    if (found) {
-                        found.isValid(BOOLEAN_FALSE);
-                    }
+                if (string && found) {
+                    found.isValid(BOOLEAN_FALSE);
                 }
                 return sm;
             },
@@ -3177,6 +3182,7 @@ app.scope(function (app) {
                     });
                 parent.directive(LIST).reset(validResult.items);
                 parent.directive(REGISTRY).reset(validResult.registry);
+                return parent;
             },
             generate: function (delimiter_) {
                 var validResult, string = EMPTY_STRING,
@@ -3211,7 +3217,7 @@ app.scope(function (app) {
                 if (sm.current() === madeString) {
                     return sm;
                 }
-                sm.load(isArrayResult ? value : _.split(value, delimiter));
+                sm.load(isArrayResult ? value : (isString(value) ? value.split(delimiter) : BOOLEAN_FALSE));
                 sm.current(madeString);
                 return sm;
             },
@@ -3244,7 +3250,7 @@ app.scope(function (app) {
             });
             return this;
         };
-    app.defineDirective('messenger', function () {
+    app.defineDirective('Messenger', function () {
         return {
             hash: {},
             reply: reply,
@@ -3253,33 +3259,24 @@ app.scope(function (app) {
     });
 });
 var DISPATCH_EVENT = 'dispatchEvent',
-    EVENTS = 'eventManager',
+    EVENTS = 'EventManager',
     STOP_LISTENING = 'stopListening',
     TALKER_ID = 'talkerId',
     LISTENING_TO = 'listeningTo',
     REGISTERED = 'registered',
     LISTENING_PREFIX = 'l',
     STATE = 'state',
-    STATUS = 'status',
-    STATUSES = STATUS + 'es',
     HANDLERS = 'handlers';
 app.scope(function (app) {
-    var remove = _.remove,
-        iterateOverObject = function (eventer, context, events, handler, iterator, firstArg) {
+    var iterateOverObject = function (eventer, context, events, handler, iterator, firstArg) {
             // only accepts a string or a function
             var fn = isString(handler) ? eventer[handler] : handler,
                 valid = !isFunction(fn) && exception({
-                    message: 'handler must be a function or a string with a method on the prototype of the listener'
-                });
+                    message: 'handler must be a function or a string with a method on the originating object'
+                }),
+                directive = eventer.directive(EVENTS);
             return duff(gapSplit(events), function (eventName) {
-                iterator(eventer, eventName, {
-                    disabled: BOOLEAN_FALSE,
-                    namespace: eventName.split(COLON)[0],
-                    name: eventName,
-                    handler: fn,
-                    context: context,
-                    origin: eventer
-                }, firstArg);
+                iterator(eventer, eventName, directive.make(eventName, fn, eventer, context), firstArg);
             });
         },
         // user friendly version
@@ -3310,13 +3307,19 @@ app.scope(function (app) {
                 return isEqual(original, e[ORIGIN].get(key));
             };
         },
-        turnOff = function (e) {
-            return e && e[ORIGIN] && e[ORIGIN].off && e[ORIGIN].off();
+        makeHandler = function (directive, object) {
+            object.fn = function (e) {
+                if (e && object.comparator(e)) {
+                    if (object.triggersOnce) {
+                        directive.detach(object);
+                    }
+                    object.runner(e);
+                }
+            };
         },
-        setupWatcher = function (iterator, nameOrObjectIndex, triggersOnce) {
-            var after = triggersOnce ? turnOff : noop;
+        setupWatcher = function (nameOrObjectIndex, triggersOnce) {
             return function () {
-                var context, list, args, firstArg, handlersIndex, nameOrObject, original_handler, eventer = this,
+                var context, list, args, firstArg, handlersIndex, nameOrObject, original_handler, directive, eventer = this,
                     ret = {};
                 if (!arguments[0]) {
                     return ret;
@@ -3329,35 +3332,55 @@ app.scope(function (app) {
                 if (nameOrObjectIndex && !args[0]) {
                     return ret;
                 }
+                if (nameOrObjectIndex) {
+                    directive = args[0].directive(EVENTS);
+                } else {
+                    directive = eventer.directive(EVENTS);
+                }
                 intendedObject(nameOrObject, list[1], function (key_, value_, isObject_) {
                     // only allow one to be watched
                     var key = key_.split(SPACE)[0],
                         fun_things = original_handler || bind(list[isObject_ ? 1 : 2], context || eventer),
                         value = isFunction(value_) ? value_ : curriedEquality(key, value_),
-                        handler = function (e) {
-                            if (e && value(e)) {
-                                fun_things(e);
-                                after(e);
-                            }
-                        };
-                    original_handler = fun_things;
-                    iterateOverObject(eventer, context, CHANGE + COLON + key, handler, iterator, args[0]);
-                    ret[key] = handler;
+                        // handler = makeHandler(fun_things, value, triggersOnce, directive),
+                        name = CHANGE + COLON + key,
+                        origin = eventer,
+                        made = directive.make(name, fun_things, eventer, context);
+                    if (nameOrObjectIndex) {
+                        listenToModifier(eventer, name, made, args[0]);
+                        origin = args[0];
+                    }
+                    made.comparator = value;
+                    made.triggersOnce = !!triggersOnce;
+                    made.runner = fun_things;
+                    attachEventObject(origin, name, made, makeHandler);
+                    ret[key] = fun_things;
                 });
                 return ret;
             };
         },
-        seekAndDestroy = function (eventer, list, handler, context) {
-            var events = eventer[EVENTS];
-            return events && list.duffRight(function (obj) {
-                if (obj.disabled || (handler && obj.handler !== handler) || (context && obj.context !== context)) {
-                    return;
-                }
-                events.detach(obj);
+        listenToModifier = function (eventer, name, obj, target) {
+            var valid, targetDirective = target.directive(EVENTS),
+                listeningObject = retreiveListeningObject(eventer, target),
+                eventsDirective = target.directive(EVENTS),
+                handlers = eventsDirective[HANDLERS] = eventsDirective[HANDLERS] || {};
+            listeningObject.count++;
+            obj.listening = listeningObject;
+        },
+        onceModification = function (directive, obj) {
+            var fn = obj.fn || obj.handler;
+            obj.fn = once(function (e) {
+                // much faster than using off
+                directive.detach(obj);
+                // ok with using apply here since it is a one time deal per event
+                return fn.apply(this, arguments);
             });
         },
-        attachEventObject = function (eventer, name, eventObject) {
-            eventer.directive(EVENTS).attach(name, eventObject);
+        attachEventObject = function (eventer, name, eventObject, modifier) {
+            eventer.directive(EVENTS).attach(name, eventObject, modifier);
+        },
+        onceHandler = function (eventer, name, obj) {
+            attachEventObject(eventer, name, obj, onceModification);
         },
         retreiveListeningObject = function (listener, talker) {
             var listenerDirective = listener.directive(EVENTS),
@@ -3376,36 +3399,19 @@ app.scope(function (app) {
                 talkerId: talkerId,
                 id: listenerDirective[TALKER_ID],
                 listeningTo: listeningTo,
-                // context: listener,
                 count: 0
             };
             return listening;
         },
-        onceHandler = function (eventer, name, obj) {
-            var fn = obj.fn || obj.handler;
-            obj.fn = once(function (e) {
-                eventer.off();
-                return fn.apply(this, arguments);
-            });
-            attachEventObject(eventer, name, obj);
-        },
         listenToHandler = function (eventer, name, obj, target) {
-            var valid, targetDirective = target.directive(EVENTS),
-                listeningObject = retreiveListeningObject(eventer, target),
-                eventsDirective = target.directive(EVENTS),
-                handlers = eventsDirective[HANDLERS] = eventsDirective[HANDLERS] || {};
-            listeningObject.count++;
-            obj.listening = listeningObject;
+            listenToModifier(eventer, name, obj, target);
             attachEventObject(target, name, obj);
         },
         listenToOnceHandler = function (eventer, name, obj, extra) {
-            bindOnce(eventer, name, obj);
-            listenToHandler(eventer, name, obj, extra);
+            listenToModifier(eventer, name, obj, target);
+            attachEventObject(target, name, obj, onceModification);
         },
-        secretOffIterator = function (eventer, name, obj) {
-            seekAndDestroy(eventer, !name || eventer.directive(EVENTS)[HANDLERS][name], obj.handler, obj.context);
-        },
-        directives = _.directives,
+        uniqueKey = 'c',
         Events = factories.Directive.extend('Events', {
             /**
              * @description attach event handlers to the Model event loop
@@ -3416,37 +3422,33 @@ app.scope(function (app) {
              * @param {Object} context - context that the handler will run in
              * @returns {Model} instance
              */
-            uniqueKey: 'c',
+            // uniqueKey: 'c',
             initialize: noop,
+            bubble: directives.parody(EVENTS, 'bubble'),
             on: flattenMatrix(attachEventObject, 0),
             once: flattenMatrix(onceHandler, 0),
             listenTo: flattenMatrix(listenToHandler, 1),
             listenToOnce: flattenMatrix(listenToOnceHandler, 1),
-            watch: setupWatcher(attachEventObject, 0),
-            watchOnce: setupWatcher(attachEventObject, 0, 1),
-            watchOther: setupWatcher(listenToHandler, 1),
-            watchOtherOnce: setupWatcher(listenToHandler, 1, 1),
+            watch: setupWatcher(0),
+            watchOnce: setupWatcher(0, 1),
+            watchOther: setupWatcher(1),
+            watchOtherOnce: setupWatcher(1, 1),
             request: directives.parody('messenger', 'request'),
             reply: directives.parody('messenger', 'reply'),
             when: directives.parody('Linguistics', 'when'),
-            mark: directives.parody(STATUS, 'mark'),
-            unmark: directives.parody(STATUS, 'unmark'),
-            remark: directives.parody(STATUS, 'remark'),
-            is: directives.checkParody(STATUS, 'is', BOOLEAN_FALSE),
             constructor: function (opts) {
                 var model = this;
                 extend(model, opts);
-                model[model.uniqueKey + ID] = model[model.uniqueKey + ID] || uniqueId(model.uniqueKey);
+                model[uniqueKey + ID] = model[uniqueKey + ID] || uniqueId(uniqueKey);
                 // reacting to self
                 model.on(model.events);
                 model.initialize(opts);
                 return model;
             },
-            destroy: function () {
-                this[STOP_LISTENING]();
-                // this.directive(EVENTS).reset();
-                return this;
-            },
+            // destroy: function () {
+            //     this[STOP_LISTENING]();
+            //     return this;
+            // },
             /**
              * @description attaches an event handler to the events object, and takes it off as soon as it runs once
              * @func
@@ -3475,11 +3477,13 @@ app.scope(function (app) {
                 if (arguments[LENGTH]) {
                     if (!name) {
                         each(events[HANDLERS], function (list, name) {
-                            seekAndDestroy(eventer, list, fn_, context_);
+                            events.seekAndDestroy(list, fn_, context_);
                         });
                     } else {
                         intendedObject(name, fn_, function (name, fn_) {
-                            iterateOverObject(eventer, context, name, fn_, secretOffIterator);
+                            iterateOverObject(eventer, context, name, fn_, function (eventer, name, obj) {
+                                events.seekAndDestroy(!name || events[HANDLERS][name], obj.handler, obj.context);
+                            });
                         });
                     }
                 } else {
@@ -3533,50 +3537,45 @@ app.scope(function (app) {
                 return this[DISPATCH_EVENT](name);
             },
             dispatchEvent: function (name, data, options) {
-                var hasResult, evnt, eventer = this,
+                var bus, evnt, returnValue, eventer = this,
                     eventsDirective = eventer[EVENTS];
-                if (eventsDirective && !eventsDirective.running[name]) {
-                    evnt = eventsDirective.create(eventer, data, name, options);
-                    eventsDirective.dispatch(name, evnt);
-                    // eventsDirective.dispatch('proxy', evnt);
-                    return evnt.returnValue;
+                if (!eventsDirective || eventsDirective.running[name]) {
+                    return;
                 }
+                evnt = eventsDirective.create(eventer, data, name, options);
+                returnValue = eventsDirective.dispatch(name, evnt);
+                bus = eventsDirective.proxyStack;
+                if (!bus[LENGTH]()) {
+                    return returnValue;
+                }
+                bus.each(function (row) {
+                    if (row.disabled) {
+                        return;
+                    }
+                    row.fn(name, evnt);
+                }, NULL);
+                if (!bus.is('dirty')) {
+                    return returnValue;
+                }
+                bus.obliteration(function (handler, index) {
+                    if (!handler.disabled) {
+                        return;
+                    }
+                    bus.remove(handler.id, index - 1);
+                }, NULL);
+                return returnValue;
             }
-        }, BOOLEAN_TRUE),
-        StatusMarker = factories.Extendable.extend('StatusMarker', {
-            constructor: function () {
-                this[STATUSES] = {};
-                return this;
-            },
-            has: function (status) {
-                return this[STATUSES][status] !== UNDEFINED;
-            },
-            mark: function (status) {
-                this[STATUSES][status] = BOOLEAN_TRUE;
-            },
-            unmark: function (status) {
-                this[STATUSES][status] = BOOLEAN_FALSE;
-            },
-            remark: function (status, direction) {
-                this[STATUSES][status] = direction === UNDEFINED ? !this[STATUSES][status] : !!direction;
-            },
-            is: function (status) {
-                return this[STATUSES][status];
-            },
-            isNot: function (status) {
-                return !this.is(status);
-            }
-        });
-    app.defineDirective(STATUS, StatusMarker[CONSTRUCTOR]);
+        }, BOOLEAN_TRUE);
 });
+var CHILDREN = upCase(CHILD + 'ren');
 app.scope(function (app) {
     var Collection = factories.Collection,
         Events = factories.Events,
+        List = factories.List,
         SORT = 'sort',
         ADDED = 'added',
         UNWRAP = 'unwrap',
         REMOVED = 'removed',
-        // _COUNTER = '_counter',
         DESTROY = 'destroy',
         BEFORE_DESTROY = BEFORE_COLON + DESTROY,
         STOP_LISTENING = 'stopListening',
@@ -3586,14 +3585,14 @@ app.scope(function (app) {
             return Model(attributes, options);
         },
         // registers and actually adds child to hash
-        _addToHash = function (parent, newModel, where) {
-            var children = parent.directive(CHILDREN);
-            // add to collection
-            children.add(newModel);
-            // register with parent
-            children.register(ID, newModel.id, newModel);
-            children.register(newModel.uniqueKey + ID, newModel[newModel.uniqueKey + ID], newModel);
-        },
+        // _addToHash = function (parent, newModel, where) {
+        //     var children = parent.directive(CHILDREN);
+        //     // add to collection
+        //     children.add(newModel);
+        //     // register with parent
+        //     children.register(ID, newModel.id, newModel);
+        //     children.register('cid', newModel.cid, newModel);
+        // },
         // ties child events to new child
         _delegateChildEvents = function (parent, model) {
             var childsEventDirective, childEvents = _.result(parent, CHILD + 'Events');
@@ -3629,32 +3628,231 @@ app.scope(function (app) {
                 childsEventDirective[_DELEGATED_CHILD_EVENTS] = UNDEFINED;
             }
         },
-        _removeFromHash = function (parent, child) {
-            var children = parent.directive(CHILDREN);
-            if (!children || !child) {
-                return;
+        Children = factories.Collection.extend(CHILDREN, {
+            constructor: function (instance) {
+                this[TARGET] = instance;
+                return this;
+            },
+            // this one forcefully adds
+            attach: function (model) {
+                var directive = this,
+                    parent = directive[TARGET],
+                    // children = parent.directive(CHILDREN),
+                    evt = model[DISPATCH_EVENT] && model[DISPATCH_EVENT](BEFORE_COLON + ADDED);
+                // let the child know it's about to be added
+                // (tied to it's parent via events)
+                // unties models
+                directive.detach(model);
+                // explicitly tie to parent
+                // attach events from parent
+                directive.addToHash(model);
+                // ties models together
+                _delegateParentEvents(parent, model);
+                _delegateChildEvents(parent, model);
+                evt = model[DISPATCH_EVENT] && model[DISPATCH_EVENT](ADDED);
+                // notify that you were added
+                return model;
+            },
+            // lots of private events
+            detach: function (model) {
+                // cache the parent
+                var parent, directive = this;
+                // go through the model to get the correct parent
+                if (!(parent = model[PARENT])) {
+                    return model;
+                }
+                // let everyone know that this object is about to be removed
+                model[DISPATCH_EVENT](BEFORE_COLON + REMOVED);
+                // notify the child that the remove pipeline is starting
+                // remove the parent events
+                _unDelegateParentEvents(parent, model);
+                // have parent remove it's child events
+                _unDelegateChildEvents(parent, model);
+                // attach events from parent
+                directive.removeFromHash(model);
+                // void out the parent member tied directly to the model
+                delete model[PARENT];
+                // let everyone know that you've offically separated
+                model[DISPATCH_EVENT](REMOVED);
+                // notify the child that the remove pipeline is done
+                return model;
+            },
+            addToHash: function (newModel) {
+                var children = this,
+                    parent = children[TARGET];
+                newModel[PARENT] = parent;
+                // add to collection
+                children.add(newModel);
+                // register with parent
+                children.register(ID, newModel.id, newModel);
+                children.register('cid', newModel.cid, newModel);
+            },
+            removeFromHash: function (child) {
+                var directive = this;
+                if (!child) {
+                    return;
+                }
+                // remove the child from the children hash
+                directive.remove(child);
+                directive.unRegister(ID, child.id);
+                // unregister from the child hash keys
+                directive.unRegister('cid', child.cid);
+            },
+            /**
+             * @description resets the model's attributes to the object that is passed in
+             * @name Model#reset
+             * @func
+             * @param {Object} attributes - non circular hash that is extended onto what the defaults object produces
+             * @returns {Model} instance the method was called on
+             */
+            reset: function (newChildren) {
+                var length, child, directive = this,
+                    model = directive[TARGET],
+                    arr = directive[UNWRAP]();
+                // this can be made far more efficient
+                while (arr[LENGTH]) {
+                    child = arr[0];
+                    length = arr[LENGTH];
+                    // if (child) {
+                    result(child, DESTROY);
+                    // }
+                    // if it didn't remove itself,
+                    // then you should remove it here
+                    // this gets run if the child is a basic data type
+                    if (arr[0] === child && arr[LENGTH] === length) {
+                        remove(arr, child);
+                    }
+                }
+                model.add(newChildren);
+                return model;
             }
-            // remove the child from the children hash
-            children.remove(child);
-            children.unRegister(ID, child.id);
-            // unregister from the child hash keys
-            children.unRegister(child.uniqueKey + ID, child[child.uniqueKey + ID]);
-        },
+        }, BOOLEAN_TRUE),
+        Parent = factories.Events.extend('Parent', {
+            isChildType: function (child) {
+                return isInstance(child, this.Child);
+            },
+            // public facing version filters
+            add: function (objs_, secondary_) {
+                var childAdded, parent = this,
+                    children = parent.directive(CHILDREN),
+                    secondary = extend(result(parent, CHILD + 'Options'), secondary_ || {}),
+                    list = Collection(objs_);
+                // unwrap it if you were passed a collection
+                if (!parent.Child || !list[LENGTH]()) {
+                    return list[UNWRAP]();
+                }
+                list = list.foldl(function (memo, obj) {
+                    var isChildType = parent.isChildType(obj),
+                        // create a new model
+                        // call it with new in case they use a constructor
+                        newModel = isChildType ? obj : new parent.Child(obj, secondary),
+                        // unfortunately we can only find by the newly created's id
+                        // which we only know for sure after the child has been created ^
+                        foundModel = children.get(ID, newModel.id);
+                    if (foundModel) {
+                        // update the old
+                        foundModel.set(isChildType ? obj[TO_JSON]() : obj);
+                        newModel = foundModel;
+                    } else {
+                        // add the new
+                        childAdded = BOOLEAN_TRUE;
+                        children.attach(newModel);
+                    }
+                    memo.push(newModel);
+                    return memo;
+                }, []);
+                if (childAdded) {
+                    parent[DISPATCH_EVENT](CHILD + COLON + ADDED);
+                }
+                return list;
+            },
+            remove: function (idModel_) {
+                var retList, children, models, parent = this,
+                    idModel = idModel_;
+                if (idModel == NULL) {
+                    parent = parent[PARENT];
+                    return parent.remove(this);
+                }
+                retList = List();
+                if (!isObject(idModel) && (children = parent.directive(CHILDREN))) {
+                    // it's an id
+                    idModel = children.get(ID, idModel);
+                }
+                if (!idModel || !isObject(idModel)) {
+                    return retList;
+                }
+                models = idModel && idModel.unwrap ? idModel.unwrap() : idModel;
+                Collection(models).each(function (model) {
+                    var result, children, parent = model[PARENT];
+                    retList.push(model);
+                    if (!parent) {
+                        return;
+                    }
+                    children = parent[CHILDREN];
+                    result = children && children.detach(model);
+                });
+                if (retList[LENGTH]()) {
+                    parent[DISPATCH_EVENT](CHILD + COLON + REMOVED);
+                }
+                return retList;
+            },
+            /**
+             * @description basic sort function
+             * @param {Function|String} comparator - argument to sort children against
+             * @returns {Model} instance
+             * @func
+             * @name Model#sort
+             */
+            sort: function (comparator_) {
+                var children, comparator, comparingAttribute, isReversed, model = this;
+                if (!(children = model[CHILDREN])) {
+                    return model;
+                }
+                comparator = comparator_ || result(model, 'comparator');
+                if (isString(comparator)) {
+                    isReversed = comparator[0] === '!';
+                    comparingAttribute = comparator;
+                    if (isReversed) {
+                        comparingAttribute = comparator.slice(1);
+                    }
+                    comparator = function (a, b) {
+                        var val_, val_A = a.get(comparingAttribute),
+                            val_B = b.get(comparingAttribute);
+                        if (isReversed) {
+                            val_ = val_B - val_A;
+                        } else {
+                            val_ = val_A - val_B;
+                        }
+                        return val_;
+                    };
+                }
+                children[SORT](comparator);
+                model[DISPATCH_EVENT](SORT);
+                return model;
+            },
+            destroy: function () {
+                var removeRet, model = this;
+                // notify things like parent that it's about to destroy itself
+                model[DISPATCH_EVENT](BEFORE_DESTROY);
+                // actually detach
+                removeRet = model[PARENT] && model[PARENT].remove(model);
+                // stop listening to other views
+                model[DISPATCH_EVENT](DESTROY);
+                // stops listening to everything
+                model.stopListening();
+                return model;
+            }
+        }, BOOLEAN_TRUE),
         /**
          * @class Model
-         * @description event and attribute extensor object that creates the Model Constructor and convenience method at _.Model
-         * @augments Model
+         * @augments Events
          */
-        Model = factories.Events.extend('Model', {
+        uniqueCounter = 0,
+        Model = factories.Parent.extend('Model', {
             // this id prefix is nonsense
             // define the actual key
             idAttribute: ID,
-            constructor: function (attributes, secondary) {
-                var model = this;
-                model.reset(attributes);
-                Events[CONSTRUCTOR].call(this, secondary);
-                return model;
-            },
+            Child: modelMaker,
             /**
              * @description remove attributes from the Model object. Does not completely remove from object with delete, but instead simply sets it to UNDEFINED / undefined
              * @param {String} attr - property string that is on the attributes object
@@ -3662,7 +3860,7 @@ app.scope(function (app) {
              * @func
              * @name Model#unset
              */
-            unset: _.directives.checkParody(DATA, 'unset'),
+            unset: directives.checkParody(DATA, 'unset', BOOLEAN_FALSE),
             /**
              * @description returns attribute passed into
              * @param {String} attr - property string that is being gotten from the attributes object
@@ -3670,7 +3868,7 @@ app.scope(function (app) {
              * @func
              * @name Model#get
              */
-            get: _.directives.checkParody(DATA, 'get'),
+            get: directives.checkParody(DATA, 'get'),
             /**
              * @func
              * @param {String} attr - property string that is being gotten from the attributes object
@@ -3678,14 +3876,21 @@ app.scope(function (app) {
              * @description checks to see if the current attribute is on the attributes object as anything other an undefined
              * @name Model#has
              */
-            has: _.directives.checkParody(DATA, 'has', BOOLEAN_FALSE),
-            setId: function (id) {
+            has: directives.checkParody(DATA, 'has', BOOLEAN_FALSE),
+            constructor: function (attributes, secondary) {
                 var model = this;
-                model.id = id === UNDEFINED ? uniqueId(BOOLEAN_FALSE, BOOLEAN_TRUE) : id;
+                model.reset(attributes);
+                Events[CONSTRUCTOR].call(this, secondary);
                 return model;
             },
+            setId: function (id) {
+                var model = this;
+                ++uniqueCounter;
+                model.id = id === UNDEFINED ? uniqueCounter : id;
+                return uniqueCounter;
+            },
             reset: function (data_) {
-                var dataDirective, keysResult, hadDataDirective, childModel, children, model = this,
+                var childModel, children, model = this,
                     // automatically checks to see if the data is a string
                     passed = parse(data_) || {},
                     // build new data
@@ -3693,22 +3898,21 @@ app.scope(function (app) {
                     newAttributes = extend(defaultsResult, passed),
                     // try to get the id from the attributes
                     idAttributeResult = result(model, 'idAttribute', newAttributes),
-                    idResult = model.setId(newAttributes[idAttributeResult]);
+                    idResult = model.setId(newAttributes[idAttributeResult]),
+                    keysResult = keys(newAttributes),
+                    firstReset = model.is(RESET),
+                    dataDirective = model.directive(DATA);
                 // set id and let parent know what your new id is
                 // setup previous data
-                if (!model[DATA] && !((keysResult = keys(newAttributes))[LENGTH])) {
-                    return model;
+                if (firstReset) {
+                    model[DISPATCH_EVENT](BEFORE_COLON + RESET);
                 }
-                keysResult = keysResult || keys(newAttributes);
-                model[DISPATCH_EVENT](BEFORE_COLON + RESET);
-                dataDirective = model.directive(DATA);
-                if (keysResult[LENGTH]) {
-                    dataDirective.reset(newAttributes);
-                } else {
-                    model.directiveDestruction(DATA);
-                }
+                dataDirective[RESET](newAttributes);
                 // let everything know that it is changing
-                model[DISPATCH_EVENT](RESET);
+                if (firstReset) {
+                    model[DISPATCH_EVENT](RESET, newAttributes);
+                }
+                model.mark(RESET);
                 return model;
             },
             /**
@@ -3719,17 +3923,9 @@ app.scope(function (app) {
              * @returns {Model} instance
              */
             destroy: function () {
-                var removeRet, model = this;
-                // notify things like parent that it's about to destroy itself
-                model[DISPATCH_EVENT](BEFORE_DESTROY);
-                // actually detach
-                removeRet = model[PARENT] && model[PARENT].remove(model);
-                // stop listening to other views
-                model[DISPATCH_EVENT](DESTROY);
-                // stops listening to everything
-                factories.Events[CONSTRUCTOR][PROTOTYPE].destroy.call(model);
-                delete model.id;
-                return model;
+                Parent[CONSTRUCTOR][PROTOTYPE].destroy.call(this);
+                delete this.id;
+                return this;
             },
             set: function (key, value) {
                 var changedList = [],
@@ -3767,11 +3963,11 @@ app.scope(function (app) {
                 // does not prevent circular dependencies.
                 // swap this out for something else if you want
                 // to prevent circular dependencies
-                return clone(this.directive(DATA)[CURRENT]);
+                return this.clone();
             },
-            current: function () {
-                return clone(this.directive(DATA)[CURRENT]);
-            },
+            clone: directives.checkParody(DATA, 'clone', function () {
+                return {};
+            }),
             valueOf: function () {
                 return this.id;
             },
@@ -3783,183 +3979,184 @@ app.scope(function (app) {
              */
             toString: function () {
                 return stringify(this);
-            },
-            Child: modelMaker,
-            /**
-             * @description resets the model's attributes to the object that is passed in
-             * @name Model#reset
-             * @func
-             * @param {Object} attributes - non circular hash that is extended onto what the defaults object produces
-             * @returns {Model} instance the method was called on
-             */
-            resetChildren: function (newChildren) {
-                var length, child, model = this,
-                    children = model.directive(CHILDREN),
-                    arr = children[UNWRAP]();
-                // this can be made far more efficient
-                while (arr[LENGTH]) {
-                    child = arr[0];
-                    length = arr[LENGTH];
-                    if (child) {
-                        result(child, DESTROY);
-                    }
-                    // if it didn't remove itself,
-                    // then you should remove it here
-                    // this gets run if the child is a basic data type
-                    if (arr[0] === child && arr[LENGTH] === length) {
-                        remove(arr, child);
-                    }
-                }
-                model.add(newChildren);
-                return model;
-            },
-            isChildType: function (child) {
-                return isInstance(child, this.Child);
-            },
-            // this one forcefully adds
-            _add: function (model) {
-                var parent = this,
-                    children = parent.directive(CHILDREN),
-                    evt = model[DISPATCH_EVENT] && model[DISPATCH_EVENT](BEFORE_COLON + ADDED);
-                // let the child know it's about to be added
-                // (tied to it's parent via events)
-                // unties models
-                parent._remove(model);
-                // explicitly tie to parent
-                model[PARENT] = parent;
-                // attach events from parent
-                _addToHash(parent, model);
-                // ties models together
-                _delegateParentEvents(parent, model);
-                _delegateChildEvents(parent, model);
-                evt = model[DISPATCH_EVENT] && model[DISPATCH_EVENT](ADDED);
-                // notify that you were added
-                return model;
-            },
-            // public facing version filters
-            add: function (objs_, secondary_) {
-                var childAdded, parent = this,
-                    children = parent.directive(CHILDREN),
-                    secondary = extend(result(parent, CHILD + 'Options'), secondary_ || {}),
-                    list = Collection(objs_);
-                // unwrap it if you were passed a collection
-                if (!parent.Child || !list[LENGTH]()) {
-                    return list[UNWRAP]();
-                }
-                list = list.foldl(function (memo, obj) {
-                    var isChildType = parent.isChildType(obj),
-                        // create a new model
-                        // call it with new in case they use a constructor
-                        newModel = isChildType ? obj : new parent.Child(obj, secondary),
-                        // unfortunately we can only find by the newly created's id
-                        // which we only know for sure after the child has been created ^
-                        foundModel = children.get(ID, newModel.id);
-                    if (foundModel) {
-                        // update the old
-                        foundModel.set(isChildType ? obj[TO_JSON]() : obj);
-                        newModel = foundModel;
-                    } else {
-                        // add the new
-                        childAdded = BOOLEAN_TRUE;
-                        parent._add(newModel);
-                    }
-                    memo.push(newModel);
-                    return memo;
-                }, []);
-                if (childAdded) {
-                    parent[DISPATCH_EVENT](CHILD + COLON + ADDED);
-                }
-                return list;
-            },
-            // lots of private events
-            _remove: function (model) {
-                // cache the parent
-                var parent = this;
-                // let everyone know that this object is about to be removed
-                model[DISPATCH_EVENT](BEFORE_COLON + REMOVED);
-                // notify the child that the remove pipeline is starting
-                // remove the parent events
-                _unDelegateParentEvents(parent, model);
-                // have parent remove it's child events
-                _unDelegateChildEvents(parent, model);
-                // attach events from parent
-                _removeFromHash(parent, model);
-                // void out the parent member tied directly to the model
-                delete model[PARENT];
-                // let everyone know that you've offically separated
-                model[DISPATCH_EVENT](REMOVED);
-                // notify the child that the remove pipeline is done
-                return model;
-            },
-            remove: function (idModel_) {
-                var models, parent = this,
-                    retList = Collection(),
-                    idModel = idModel_;
-                if (idModel_ == NULL) {
-                    parent = this.parent;
-                    retList = parent.remove(this);
-                    return this;
-                }
-                if (!isObject(idModel)) {
-                    // it's an id
-                    idModel = parent.directive(CHILDREN).get(ID, idModel + EMPTY_STRING);
-                }
-                if (!idModel || !isObject(idModel)) {
-                    return retList;
-                }
-                models = idModel && idModel.unwrap ? idModel.unwrap() : idModel;
-                Collection(models).duff(function (model) {
-                    var parent = model[PARENT];
-                    var removeResult = parent && parent._remove(model);
-                    retList.add(model);
-                });
-                if (retList[LENGTH]()) {
-                    parent[DISPATCH_EVENT](CHILD + COLON + REMOVED);
-                }
-                return retList;
-            },
-            /**
-             * @description basic sort function
-             * @param {Function|String} comparator - argument to sort children against
-             * @returns {Model} instance
-             * @func
-             * @name Model#sort
-             */
-            sort: function (comparator_) {
-                var comparingAttribute, isReversed, model = this,
-                    children = model[CHILDREN],
-                    comparator = comparator_ || result(model, 'comparator');
-                if (!children) {
-                    return model;
-                }
-                if (isString(comparator)) {
-                    isReversed = comparator[0] === '!';
-                    comparingAttribute = comparator;
-                    if (isReversed) {
-                        comparingAttribute = comparator.slice(1);
-                    }
-                    comparator = function (a, b) {
-                        var val_, val_A = a.get(comparingAttribute),
-                            val_B = b.get(comparingAttribute);
-                        if (isReversed) {
-                            val_ = val_B - val_A;
-                        } else {
-                            val_ = val_A - val_B;
-                        }
-                        return val_;
-                    };
-                }
-                children[SORT](comparator);
-                model[DISPATCH_EVENT](SORT);
-                return model;
             }
+            // ,
+            // /**
+            //  * @description resets the model's attributes to the object that is passed in
+            //  * @name Model#reset
+            //  * @func
+            //  * @param {Object} attributes - non circular hash that is extended onto what the defaults object produces
+            //  * @returns {Model} instance the method was called on
+            //  */
+            // resetChildren: function (newChildren) {
+            //     var length, child, model = this,
+            //         children = model.directive(CHILDREN),
+            //         arr = children[UNWRAP]();
+            //     // this can be made far more efficient
+            //     while (arr[LENGTH]) {
+            //         child = arr[0];
+            //         length = arr[LENGTH];
+            //         if (child) {
+            //             result(child, DESTROY);
+            //         }
+            //         // if it didn't remove itself,
+            //         // then you should remove it here
+            //         // this gets run if the child is a basic data type
+            //         if (arr[0] === child && arr[LENGTH] === length) {
+            //             remove(arr, child);
+            //         }
+            //     }
+            //     model.add(newChildren);
+            //     return model;
+            // },
+            // isChildType: function (child) {
+            //     return isInstance(child, this.Child);
+            // },
+            // // this one forcefully adds
+            // _add: function (model) {
+            //     var parent = this,
+            //         children = parent.directive(CHILDREN),
+            //         evt = model[DISPATCH_EVENT] && model[DISPATCH_EVENT](BEFORE_COLON + ADDED);
+            //     // let the child know it's about to be added
+            //     // (tied to it's parent via events)
+            //     // unties models
+            //     parent._remove(model);
+            //     // explicitly tie to parent
+            //     model[PARENT] = parent;
+            //     // attach events from parent
+            //     _addToHash(parent, model);
+            //     // ties models together
+            //     _delegateParentEvents(parent, model);
+            //     _delegateChildEvents(parent, model);
+            //     evt = model[DISPATCH_EVENT] && model[DISPATCH_EVENT](ADDED);
+            //     // notify that you were added
+            //     return model;
+            // },
+            // // public facing version filters
+            // add: function (objs_, secondary_) {
+            //     var childAdded, parent = this,
+            //         children = parent.directive(CHILDREN),
+            //         secondary = extend(result(parent, CHILD + 'Options'), secondary_ || {}),
+            //         list = Collection(objs_);
+            //     // unwrap it if you were passed a collection
+            //     if (!parent.Child || !list[LENGTH]()) {
+            //         return list[UNWRAP]();
+            //     }
+            //     list = list.foldl(function (memo, obj) {
+            //         var isChildType = parent.isChildType(obj),
+            //             // create a new model
+            //             // call it with new in case they use a constructor
+            //             newModel = isChildType ? obj : new parent.Child(obj, secondary),
+            //             // unfortunately we can only find by the newly created's id
+            //             // which we only know for sure after the child has been created ^
+            //             foundModel = children.get(ID, newModel.id);
+            //         if (foundModel) {
+            //             // update the old
+            //             foundModel.set(isChildType ? obj[TO_JSON]() : obj);
+            //             newModel = foundModel;
+            //         } else {
+            //             // add the new
+            //             childAdded = BOOLEAN_TRUE;
+            //             parent._add(newModel);
+            //         }
+            //         memo.push(newModel);
+            //         return memo;
+            //     }, []);
+            //     if (childAdded) {
+            //         parent[DISPATCH_EVENT](CHILD + COLON + ADDED);
+            //     }
+            //     return list;
+            // },
+            // // lots of private events
+            // _remove: function (model) {
+            //     // cache the parent
+            //     var parent = this;
+            //     // let everyone know that this object is about to be removed
+            //     model[DISPATCH_EVENT](BEFORE_COLON + REMOVED);
+            //     // notify the child that the remove pipeline is starting
+            //     // remove the parent events
+            //     _unDelegateParentEvents(parent, model);
+            //     // have parent remove it's child events
+            //     _unDelegateChildEvents(parent, model);
+            //     // attach events from parent
+            //     _removeFromHash(parent, model);
+            //     // void out the parent member tied directly to the model
+            //     delete model[PARENT];
+            //     // let everyone know that you've offically separated
+            //     model[DISPATCH_EVENT](REMOVED);
+            //     // notify the child that the remove pipeline is done
+            //     return model;
+            // },
+            // remove: function (idModel_) {
+            //     var models, parent = this,
+            //         retList = Collection(),
+            //         idModel = idModel_;
+            //     if (idModel_ == NULL) {
+            //         parent = this.parent;
+            //         retList = parent.remove(this);
+            //         return this;
+            //     }
+            //     if (!isObject(idModel)) {
+            //         // it's an id
+            //         idModel = parent.directive(CHILDREN).get(ID, idModel + EMPTY_STRING);
+            //     }
+            //     if (!idModel || !isObject(idModel)) {
+            //         return retList;
+            //     }
+            //     models = idModel && idModel.unwrap ? idModel.unwrap() : idModel;
+            //     Collection(models).duff(function (model) {
+            //         var parent = model[PARENT];
+            //         var removeResult = parent && parent._remove(model);
+            //         retList.push(model);
+            //     });
+            //     if (retList[LENGTH]()) {
+            //         parent[DISPATCH_EVENT](CHILD + COLON + REMOVED);
+            //     }
+            //     return retList;
+            // },
+            // /**
+            //  * @description basic sort function
+            //  * @param {Function|String} comparator - argument to sort children against
+            //  * @returns {Model} instance
+            //  * @func
+            //  * @name Model#sort
+            //  */
+            // sort: function (comparator_) {
+            //     var comparingAttribute, isReversed, model = this,
+            //         children = model[CHILDREN],
+            //         comparator = comparator_ || result(model, 'comparator');
+            //     if (!children) {
+            //         return model;
+            //     }
+            //     if (isString(comparator)) {
+            //         isReversed = comparator[0] === '!';
+            //         comparingAttribute = comparator;
+            //         if (isReversed) {
+            //             comparingAttribute = comparator.slice(1);
+            //         }
+            //         comparator = function (a, b) {
+            //             var val_, val_A = a.get(comparingAttribute),
+            //                 val_B = b.get(comparingAttribute);
+            //             if (isReversed) {
+            //                 val_ = val_B - val_A;
+            //             } else {
+            //                 val_ = val_A - val_B;
+            //             }
+            //             return val_;
+            //         };
+            //     }
+            //     children[SORT](comparator);
+            //     model[DISPATCH_EVENT](SORT);
+            //     return model;
+            // }
         }, BOOLEAN_TRUE);
     // children should actually extend from collection.
     // it should require certain things of the children it is tracking
     // and should be able to listen to them
-    app.defineDirective(CHILDREN, function () {
-        return new Collection[CONSTRUCTOR](NULL, BOOLEAN_TRUE);
-    });
+    // app.defineDirective(CHILDREN, function () {
+    //     return new Collection[CONSTRUCTOR](NULL, BOOLEAN_TRUE);
+    // });
+    app.defineDirective(CHILDREN, Children[CONSTRUCTOR]);
     // trick the modelMaker into thinking it is a Model Constructor
     modelMaker[CONSTRUCTOR] = Model[CONSTRUCTOR];
 });
@@ -3976,7 +4173,7 @@ app.scope(function (app) {
         __FN_ID__ = '__fnid__',
         event_incrementer = 1,
         Collection = factories.Collection,
-        SortedCollection = factories.SortedCollection,
+        List = factories.List,
         REMOVE_QUEUE = 'removeQueue',
         listeningCounter = 0,
         returnsId = function () {
@@ -4042,75 +4239,126 @@ app.scope(function (app) {
             }
         }, BOOLEAN_TRUE),
         EventsDirective = factories.Directive.extend('EventsDirective', {
-            constructor: function () {
+            constructor: function (target) {
                 var eventsDirective = this;
+                eventsDirective.target = target;
                 eventsDirective.listenId = 'l' + (++listeningCounter);
                 eventsDirective.handlers = {};
                 eventsDirective.listeningTo = {};
                 eventsDirective.running = {};
-                eventsDirective.stack = Collection();
-                eventsDirective.removeQueue = Collection();
+                eventsDirective.stack = List();
+                eventsDirective.removeQueue = List();
+                eventsDirective.proxyStack = Collection();
+                eventsDirective.proxyStack.unmark('dirty');
                 return eventsDirective;
             },
-            attach: function (name, eventObject) {
+            attach: function (name, eventObject, modifier) {
                 var list, eventsDirective = this,
-                    handlers = eventsDirective[HANDLERS],
-                    ret = !handlers && exception({
-                        message: 'events directive needs a handler object'
-                    });
+                    handlers = eventsDirective[HANDLERS];
                 eventObject.id = ++event_incrementer;
                 eventObject.valueOf = returnsId;
                 eventObject.context = eventObject.context || eventObject.origin;
+                if (modifier && isFunction(modifier)) {
+                    modifier(eventsDirective, eventObject);
+                }
                 eventObject.fn = bind(eventObject.fn || eventObject.handler, eventObject.context);
                 // attach the id to the bound function because that instance is private
-                list = handlers[name] = handlers[name] || SortedCollection();
+                list = handlers[name] = handlers[name] || List();
                 // attaching name so list can remove itself from hash
                 list[NAME] = name;
                 // attached so event can remove itself
                 eventObject.list = list;
                 eventsDirective.add(list, eventObject);
             },
-            names: function (name) {
-                return [name];
-            },
             create: function (target, data, name, options) {
                 return ObjectEvent(target, data, name, options);
             },
+            make: function (name, handler, origin, context) {
+                return {
+                    disabled: BOOLEAN_FALSE,
+                    namespace: name.split(COLON)[0],
+                    name: name,
+                    handler: handler,
+                    context: context,
+                    origin: origin
+                };
+            },
+            seekAndDestroy: function (list, handler, context) {
+                var events = this,
+                    stackLength = events[STACK][LENGTH](),
+                    todo = [];
+                return list.duff(function (obj, idx) {
+                    if (obj.disabled || (handler && obj.handler !== handler) || (context && obj.context !== context)) {
+                        return;
+                    }
+                    if (stackLength) {
+                        events.detach(obj, idx);
+                    } else {
+                        todo.push([obj, idx]);
+                    }
+                }) && todo[LENGTH] && duff(todo, function (tuple) {
+                    events.detach(tuple[0], tuple[1]);
+                });
+            },
+            nextBubble: function (start) {
+                return start.parent;
+            },
+            bubble: function (evnt, data, options) {
+                var previous, events = this,
+                    start = events.target,
+                    list = [start],
+                    next = start;
+                while (next) {
+                    previous = next;
+                    next = events.nextBubble(previous, list);
+                    if (next) {
+                        list.push(next);
+                    }
+                    if (previous === next) {
+                        exception({
+                            message: 'bubbling discerners must return a different object each time it is run'
+                        });
+                    }
+                }
+                duff(list, function (target) {
+                    target[DISPATCH_EVENT](evnt, data, options);
+                });
+                return start;
+            },
             add: function (list, evnt) {
-                list.push(evnt);
+                list.push([evnt]);
             },
-            remove: function (list, evnt) {
-                list.remove(evnt);
+            remove: function (list, evnt, index) {
+                list.removeAt(evnt, index);
             },
-            detach: function (evnt) {
+            detachCurrent: function () {
+                return this.detach(this[STACK].last());
+            },
+            detach: function (evnt, index) {
                 var listeningTo, events = this,
                     listening = evnt.listening,
                     list = evnt.list,
                     disabled = evnt.disabled = BOOLEAN_TRUE;
-                if (events[STACK][LENGTH]()) {
-                    events[REMOVE_QUEUE].push(evnt);
-                    return BOOLEAN_FALSE;
-                } else {
-                    if (evnt.removed) {
-                        return BOOLEAN_TRUE;
-                    }
-                    events.remove(list, evnt);
-                    // disconnect it from the list above it
-                    evnt.list = UNDEFINED;
-                    // check to see if it was a listening type
-                    if (!listening) {
-                        return BOOLEAN_TRUE;
-                    }
-                    // if it was then decrement it
-                    listening.count--;
-                    if (listening.count) {
-                        return BOOLEAN_TRUE;
-                    }
-                    listeningTo = listening.listeningTo;
-                    listeningTo[listening[TALKER_ID]] = UNDEFINED;
-                    this.wipe(list);
+                if (evnt.removed) {
                     return BOOLEAN_TRUE;
                 }
+                evnt.removed = BOOLEAN_TRUE;
+                events.remove(list, evnt, index);
+                // disconnect it from the list above it
+                evnt.list = UNDEFINED;
+                events.wipe(list);
+                // check to see if it was a listening type
+                if (!listening) {
+                    return BOOLEAN_TRUE;
+                }
+                // if it was then decrement it
+                listening.count--;
+                if (listening.count) {
+                    return BOOLEAN_TRUE;
+                }
+                listeningTo = listening.listeningTo;
+                listeningTo[listening[TALKER_ID]] = UNDEFINED;
+                return BOOLEAN_TRUE;
             },
             wipe: function (list) {
                 if (list[LENGTH]()) {
@@ -4127,7 +4375,7 @@ app.scope(function (app) {
                 return each(this.handlers, this.scrub, this);
             },
             queue: function (stack, handler, evnt) {
-                return stack.add(handler);
+                return stack.push([handler]);
             },
             unQueue: function (stack, handler, evnt) {
                 return stack.pop();
@@ -4136,43 +4384,66 @@ app.scope(function (app) {
                 return this.handlers[key] && this.handlers[key][LENGTH]();
             },
             dispatch: function (name, evnt) {
-                var handler, items, listLength, i = 0,
+                var handler, items, listLength, returnValue, i = 0,
                     events = this,
                     stack = events[STACK],
                     handlers = events[HANDLERS],
                     list = handlers[name],
-                    removeList = events[REMOVE_QUEUE],
+                    // removeList = events[REMOVE_QUEUE],
                     running = events.running,
                     cached = running[name],
-                    stopped = evnt[PROPAGATION_IS_STOPPED];
+                    stopped = evnt[PROPAGATION_IS_STOPPED],
+                    bus = events.proxyStack;
                 // make sure setup is proper
                 if (cached || stopped || !list || !list[LENGTH]()) {
                     return;
                 }
                 running[name] = BOOLEAN_TRUE;
-                items = events.subset(list.unwrap(), evnt);
-                listLength = items[LENGTH];
-                for (; i < listLength && !stopped && !list.scrubbed; i++) {
-                    handler = items[i];
+                List(events.subset(list.unwrap(), evnt)).each(function (handler) {
                     if (!handler.disabled && events.queue(stack, handler, evnt)) {
                         handler.fn(evnt);
                         stopped = !!evnt[IMMEDIATE_PROP_IS_STOPPED];
                         events.unQueue(stack, handler, evnt);
                     }
-                }
-                running[name] = !!cached;
-                if (!stack[LENGTH]() && removeList[LENGTH]()) {
-                    removeList.each(events.detach, events);
-                    removeList.reset();
-                }
+                });
                 if (stopped) {
                     events.cancelled(stack, evnt, i);
                 }
                 evnt.finished();
-                return evnt.returnValue;
+                returnValue = evnt.returnValue;
+                running[name] = !!cached;
+                return returnValue;
             },
             subset: function (list) {
-                return list;
+                return list.slice(0);
+            },
+            bus: function (id, handler, context) {
+                var bus = this.proxyStack,
+                    object = {
+                        id: id,
+                        fn: bind(handler, context),
+                        context: context,
+                        disabled: BOOLEAN_FALSE,
+                        handler: handler
+                    };
+                bus.push(object);
+                bus.register(ID, id, object);
+                return this;
+            },
+            unBus: function (id, index) {
+                var handler, directive = this,
+                    bus = directive.proxyStack;
+                if (!(handler = bus.get(ID, id))) {
+                    return directive;
+                }
+                if (bus.list.iterating) {
+                    bus.mark('dirty');
+                    handler.disabled = BOOLEAN_TRUE;
+                } else {
+                    bus.remove(handler, index);
+                    bus.unRegister(ID, id);
+                }
+                return directive;
             }
         }, BOOLEAN_TRUE);
     app.defineDirective(EVENTS, factories.EventsDirective[CONSTRUCTOR]);
@@ -4205,6 +4476,9 @@ app.scope(function (app) {
             get: function (key) {
                 return this[CURRENT][key];
             },
+            clone: function () {
+                return clone(this[CURRENT]);
+            },
             unset: function (key) {
                 var current = this[CURRENT],
                     previous = current[key];
@@ -4213,11 +4487,11 @@ app.scope(function (app) {
             reset: function (hash) {
                 this[CURRENT] = hash || {};
             },
-            digest: function (model, fn) {
+            digest: function (model, handler) {
                 var dataDirective = this;
-                dataDirective[CHANGE_COUNTER]++;
-                fn();
-                dataDirective[CHANGE_COUNTER]--;
+                ++dataDirective[CHANGE_COUNTER];
+                handler();
+                --dataDirective[CHANGE_COUNTER];
                 // this event should only ever exist here
                 if (!dataDirective[CHANGE_COUNTER]) {
                     model[DISPATCH_EVENT](CHANGE, dataDirective[CHANGING]);
@@ -4234,7 +4508,7 @@ app.scope(function (app) {
                     if (!no_more) {
                         current = isObject(current[key]) ? current[key] : {};
                     }
-                }) && isString(lastkey) && current[lastkey];
+                }) && (isString(lastkey) ? UNDEFINED : current[lastkey]);
             },
             has: function (key) {
                 return this[CURRENT][key] != NULL;
@@ -4245,6 +4519,7 @@ app.scope(function (app) {
         }, BOOLEAN_TRUE);
     app.defineDirective(DATA, DataDirective[CONSTRUCTOR]);
 });
+
 app.scope(function (app) {
     var _ = app._,
         factories = _.factories,
@@ -4506,7 +4781,8 @@ app.scope(function (app) {
                 return resulting;
             };
         },
-        Promise = _.Promise = factories.Model.extend('Promise', {
+        Model = factories.Model,
+        Promise = _.Promise = Model.extend('Promise', {
             addState: addState,
             isFulfilled: stateChecker(SUCCESS),
             isRejected: stateChecker(FAILURE),
@@ -4520,13 +4796,13 @@ app.scope(function (app) {
                 return {
                     success: ALWAYS,
                     failure: ALWAYS,
-                    error: FAILURE,
+                    error: ALWAYS,
                     always: BOOLEAN_TRUE
                 };
             },
             constructor: function () {
                 var promise = this;
-                factories.Model[CONSTRUCTOR].call(promise);
+                Model[CONSTRUCTOR].call(promise);
                 promise.restart();
                 // cannot have been resolved in any way yet
                 intendedObject(extend({}, result(promise, 'baseStates'), result(promise, 'associativeStates')), NULL, addState, promise);
@@ -4792,29 +5068,17 @@ app.scope(function (app) {
 app.scope(function (app) {
     var _ = app._,
         factories = _.factories,
-        gapSplit = _.gapSplit,
-        duff = _.duff,
-        each = _.each,
-        unCamelCase = _.unCamelCase,
         posit = _.posit,
-        result = _.result,
-        wraptry = _.wraptry,
-        BOOLEAN_TRUE = !0,
-        BOOLEAN_FALSE = !1,
+        ERROR = 'error',
         STATUS = 'status',
         FAILURE = 'failure',
         SUCCESS = 'success',
         READY_STATE = 'readyState',
         XDomainRequest = win.XDomainRequest,
-        isObject = _.isObject,
-        isArray = _.isArray,
-        stringify = _.stringify,
-        parse = _.parse,
-        extend = _.extend,
         stringifyQuery = _.stringifyQuery,
         GET = 'GET',
         validTypes = gapSplit(GET + ' POST PUT DELETE'),
-        baseEvents = gapSplit('progress timeout abort error'),
+        baseEvents = gapSplit('progress timeout abort ' + ERROR),
         /**
          * @description helper function to attach a bunch of event listeners to the request object as well as help them trigger the appropriate events on the Ajax object itself
          * @private
@@ -4846,7 +5110,7 @@ app.scope(function (app) {
                 wraptry(function () {
                     xhrReq.send.apply(xhrReq, args);
                 }, function (e) {
-                    ajax.resolveAs('error', e, e.message);
+                    ajax.resolveAs(ERROR, e, e.message);
                 });
             };
         },
@@ -4877,7 +5141,8 @@ app.scope(function (app) {
          * @augments Model
          * @classdesc XHR object wrapper Triggers events based on xhr state changes and abstracts many anomalies that have to do with IE
          */
-        Ajax = factories.Promise.extend('Ajax', {
+        Promise = factories.Promise,
+        Ajax = Promise.extend('Ajax', {
             /**
              * @func
              * @name Ajax#constructor
@@ -4912,16 +5177,16 @@ app.scope(function (app) {
                 str.async = BOOLEAN_TRUE;
                 str.type = (str.type || GET).toUpperCase();
                 str.method = method;
-                factories.Promise.constructor.apply(ajax);
+                Promise[CONSTRUCTOR].call(ajax);
                 ajax.on('change:url', alterurlHandler);
                 extend(ajax, secondary);
                 ajax.requestObject = xhrReq;
                 ajax.set(str);
                 return ajax;
             },
-            status: function (code, handler) {
-                return this.handle(STATUS + ':' + code, handler);
-            },
+            // status: function (code, handler) {
+            //     return this.handle(STATUS + COLON + code, handler);
+            // },
             setHeaders: function (headers) {
                 var ajax = this,
                     xhrReq = ajax.requestObject;
@@ -4961,10 +5226,10 @@ app.scope(function (app) {
                     'status:404': FAILURE,
                     'status:405': FAILURE,
                     'status:406': FAILURE,
-                    'status:500': FAILURE,
-                    'status:502': FAILURE,
-                    'status:505': FAILURE,
-                    'status:511': FAILURE,
+                    'status:500': ERROR,
+                    'status:502': ERROR,
+                    'status:505': ERROR,
+                    'status:511': ERROR,
                     timeout: FAILURE,
                     abort: FAILURE
                 };
@@ -4990,12 +5255,12 @@ app.scope(function (app) {
                         if (method === 'onload' || (method === 'onreadystatechange' && readystate === 4)) {
                             ajax.set(STATUS, status);
                             allStates = result(ajax, 'allStates');
-                            if (allStates[STATUS + ':' + xhrReqObj[STATUS]] === SUCCESS) {
+                            if (allStates[STATUS + COLON + xhrReqObj[STATUS]] === SUCCESS) {
                                 rawData = result(ajax, 'parse', rawData);
                             }
                             rawData = parse(rawData);
                             hasFinished = BOOLEAN_TRUE;
-                            ajax.resolveAs(STATUS + ':' + xhrReqObj[STATUS], rawData);
+                            ajax.resolveAs(STATUS + COLON + xhrReqObj[STATUS], rawData);
                         }
                     };
                 if (!xhrReqObj[method]) {
@@ -5232,6 +5497,7 @@ var ATTACHED = 'attached',
     };
 app.scope(function (app) {
     var _ = app._,
+        ATTRIBUTES = 'Attributes',
         factories = _.factories,
         posit = _.posit,
         Collection = factories.Collection,
@@ -5244,8 +5510,10 @@ app.scope(function (app) {
         ACCESSABLE = 'accessable',
         CUSTOM_LISTENER = CUSTOM + 'Listener',
         LOCAL_NAME = 'localName',
-        APPEND_CHILD = 'appendChild',
-        REMOVE_CHILD = 'removeChild',
+        UPPER_CHILD = 'Child',
+        APPEND_CHILD = 'append' + UPPER_CHILD,
+        REMOVE = 'remove',
+        REMOVE_CHILD = REMOVE + UPPER_CHILD,
         PARENT_NODE = 'parentNode',
         INNER_HTML = 'innerHTML',
         INNER_TEXT = 'innerText',
@@ -5315,7 +5583,7 @@ app.scope(function (app) {
                 (settings.escape || noMatch).source, (settings.interpolate || noMatch).source, (settings.evaluate || noMatch).source
             ].join('|') + '|$', 'g');
             var index = 0;
-            var source = "__p+='";
+            var source = "__HTML__+='";
             text.replace(matcher, function (match, escape, interpolate, evaluate, offset) {
                 source += text.slice(index, offset).replace(escapeRegExp, escapeChar);
                 index = offset + match.length;
@@ -5324,7 +5592,7 @@ app.scope(function (app) {
                 } else if (interpolate) {
                     source += "'+\n((__t=(this." + interpolate + "))==null?'':__t)+\n'";
                 } else if (evaluate) {
-                    source += "';\n" + evaluate + "\n__p+='";
+                    source += "';\n" + evaluate + "\n__HTML__+='";
                 }
                 // Adobe VMs need the match returned to produce the correct offset.
                 return match;
@@ -5332,14 +5600,12 @@ app.scope(function (app) {
             source += "';\n";
             // If a variable is not specified, place data values in local scope.
             // if (!settings.variable) source = 'with(this||{}){\n' + source + '}\n';
-            source = "var __t,__p='',__j=Array.prototype.join," + "print=function(){__p+=__j.call(arguments,'');};\n" + source + 'return __p;\n';
-            var render;
-            try {
-                render = new Function.constructor(settings.variable || '_', source);
-            } catch (e) {
-                e.source = source;
-                throw e;
-            }
+            source = "var __t,__HTML__='',__j=Array.prototype.join," + "print=function(){__HTML__+=__j.call(arguments,'');};\n" + source + 'return __HTML__;\n';
+            var render = _.wraptry(function () {
+                return new Function.constructor(settings.variable || '_', source);
+            }, function (e) {
+                _.console.error(e);
+            });
             var template = function (data) {
                 return render.call(data || {}, _);
             };
@@ -5396,16 +5662,17 @@ app.scope(function (app) {
             var countdown = 4,
                 result = BOOLEAN_TRUE,
                 queue = [],
-                emptyqueue = function (fn) {
+                emptyqueue = function (handler) {
                     return function () {
                         countdown--;
-                        fn();
-                        if (!countdown) {
-                            duff(queue, function (item) {
-                                item(result);
-                            });
-                            queue = [];
+                        handler();
+                        if (countdown) {
+                            return;
                         }
+                        duff(queue, function (item) {
+                            item(result);
+                        });
+                        queue = [];
                     };
                 };
             duff(["UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA", "UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==", "UklGRkoAAABXRUJQVlA4WAoAAAAQAAAAAAAAAAAAQUxQSAwAAAARBxAR/Q9ERP8DAABWUDggGAAAABQBAJ0BKgEAAQAAAP4AAA3AAP7mtQAAAA==", "UklGRlIAAABXRUJQVlA4WAoAAAASAAAAAAAAAAAAQU5JTQYAAAD/////AABBTk1GJgAAAAAAAAAAAAAAAAAAAGQAAABWUDhMDQAAAC8AAAAQBxAREYiI/gcA"], function (val) {
@@ -5504,7 +5771,7 @@ app.scope(function (app) {
                 if (isFunction(fn) || isFunction(fn2)) {
                     domm.on(attr, fn, fn2, capturing);
                 } else {
-                    domm.duff(eachHandler);
+                    domm.each(eachHandler);
                 }
                 return domm;
             };
@@ -5539,7 +5806,7 @@ app.scope(function (app) {
         AllEvents = _.concatUnique(Events, SVGEvent, KeyboardEvent, CompositionEvent, GamePadEvent, MouseEvents, TouchEvents, DeviceEvents, FocusEvent, TimeEvent, AnimationEvent, AudioProcessingEvent, UIEvents, ProgressEvent),
         knownPrefixes = gapSplit('-o- -ms- -moz- -webkit- mso- -xv- -atsc- -wap- -khtml- -apple- prince- -ah- -hp- -ro- -rim- -tc-'),
         trustedEvents = gapSplit('load scroll resize orientationchange click dblclick mousedown mouseup mouseover mouseout mouseenter mouseleave mousemove change contextmenu hashchange load mousewheel wheel readystatechange'),
-        validTagNames = gapSplit('a abbr address area article aside audio b base bdi bdo blockquote body br button canvas caption cite code col colgroup data datalist dd del dfn div dl dt em embed fieldset figcaption figure footer form h1 - h6 head header hr html i iframe img input ins kbd keygen label legend li link main map mark meta meter nav noscript object ol optgroup option output p param pre progress q rb rp rt rtc ruby s samp script section select small source span strong style sub sup table tbody td template textarea tfoot th thead time title tr track u ul var video wbr'),
+        validTagNames = gapSplit('a abbr address area article aside audio b base bdi bdo blockquote body br button canvas caption cite code col colgroup data datalist dd del dfn div dl dt em embed fieldset figcaption figure footer form h1 h2 h3 h4 h5 h6 head header hr html i iframe img input ins kbd keygen label legend li link main map mark meta meter nav noscript object ol optgroup option output p param pre progress q rb rp rt rtc ruby s samp script section select small source span strong style sub sup table tbody td template textarea tfoot th thead time title tr track u ul var video wbr'),
         validTagsNamesHash = wrap(validTagNames, BOOLEAN_TRUE),
         ALL_EVENTS_HASH = wrap(AllEvents, BOOLEAN_TRUE),
         knownPrefixesHash = wrap(knownPrefixes, BOOLEAN_TRUE),
@@ -5560,18 +5827,8 @@ app.scope(function (app) {
             remove: removeProperty
         },
         ensureManager = function (manager, attribute, currentValue) {
-            var _attributeManager = manager.get(attribute);
+            var _attributeManager = getStringManager(manager, attribute);
             return _attributeManager.ensure(currentValue === BOOLEAN_TRUE ? EMPTY_STRING : currentValue, SPACE);
-        },
-        DOMIterator = function (fn, key, applies) {
-            return function (one, two) {
-                return fn(this.unwrap(), one, two, key, applies);
-            };
-        },
-        DomManagerIterator = function (fn, key, applies) {
-            return function (one, two) {
-                return fn([this], one, two, key, applies);
-            };
         },
         /**
          * @private
@@ -5919,22 +6176,39 @@ app.scope(function (app) {
          * @private
          * @func
          */
-        createElement = function (str, manager) {
-            var newManager, element = manager && manager.element(),
+        createElement = function (tagName, attributes, children, manager) {
+            var newElement, newManager, documnt = manager && manager.element(),
                 registeredElements = manager && manager.registeredElements,
-                foundElement = registeredElements && registeredElements[str],
-                elementName = foundElement === BOOLEAN_TRUE ? str : foundElement,
-                // native create
-                newElement = elementName ? element.createElement(elementName) : exception({
-                    message: 'tag name must be registered'
-                });
-            if (foundElement && foundElement !== BOOLEAN_TRUE) {
-                attributeApi.write(newElement, CUSTOM_KEY, str);
+                foundElement = registeredElements && registeredElements[tagName],
+                elementName = foundElement === BOOLEAN_TRUE ? tagName : foundElement;
+            // native create
+            if (!elementName) {
+                foundElement = elementName = registeredElements[tagName] = DIV;
             }
-            return manager.returnsManager(newElement);
+            newElement = documnt.createElement(elementName);
+            if (foundElement && foundElement !== BOOLEAN_TRUE) {
+                attributeApi.write(newElement, CUSTOM_KEY, tagName);
+            }
+            newManager = manager.returnsManager(newElement);
+            if (attributes) {
+                newManager.attr(attributes);
+            }
+            if (!children) {
+                return newManager;
+            }
+            if (isString(children)) {
+                newManager.html(children);
+            } else {
+                if (isArrayLike(children)) {
+                    eachCall(toArray(children), 'appendTo', newManager);
+                } else {
+                    newManager.append(children);
+                }
+            }
+            return newManager;
         },
         makeTree = function (str, manager) {
-            var div = createElement(DIV, manager);
+            var div = createElement(DIV, NULL, NULL, manager);
             // collect custom element
             div.html(str);
             return DOMM(div).children().remove().unwrap();
@@ -5958,21 +6232,25 @@ app.scope(function (app) {
             // fall back to performing a selector:
             parent = element[PARENT_NODE];
             if (!parent) {
-                parent = createElement(DIV, ensure(element.ownerDocument, BOOLEAN_TRUE));
+                parent = createElement(DIV, NULL, NULL, ensure(element.ownerDocument, BOOLEAN_TRUE));
                 parent[APPEND_CHILD](element);
             }
             return !!posit(query(selector, parent), element);
         },
         createDocumentFragment = function (nulled, context) {
-            return context.element().createDocumentFragment();
+            return context.isDocument && context.element().createDocumentFragment();
         },
         /**
          * @private
          * @func
          */
+        mappedConcat = function (context, handler, items) {
+            var list = [];
+            return list.concat.apply(list, items ? map(items, handler) : context.map(handler));
+        },
         createElements = function (tagName, context) {
             return DOMM(foldl(gapSplit(tagName), function (memo, name) {
-                memo.push(createElement(name, context));
+                memo.push(createElement(name, NULL, NULL, context));
                 return memo;
             }, []), NULL, NULL, NULL, context);
         },
@@ -6061,20 +6339,6 @@ app.scope(function (app) {
             }
             return val;
         },
-        // styleAttributeMeat = function (manager, key, value, list, hash, handler, isProperty) {
-        //     var finalProp, j, prefixes, cameledKey = camelCase(key),
-        //         element = manager.element();
-        //     list.push(cameledKey);
-        //     if (value != NULL) {
-        //         prefixes = [EMPTY_STRING] || prefixedStyles[cameledKey];
-        //         for (j = 0; j < prefixes[LENGTH]; j++) {
-        //             finalProp = camelCase(prefixes[j] + cameledKey);
-        //             handler(manager, finalProp, modifyFinalStyle(finalProp, value));
-        //         }
-        //     } else {
-        //         hash[key] = getComputed(firstEl)[cameledKey];
-        //     }
-        // },
         DomManagerRunsInstances = function (handler, key, value, list, hash, diffHandler, isProperty) {
             return function (manager) {
                 return handler(manager, key, value, list, hash, diffHandler, isProperty);
@@ -6146,22 +6410,26 @@ app.scope(function (app) {
             if (isString(args[0]) || args[0] == NULL) {
                 selector = args.shift();
             }
-            if (isFunction(args[0])) {
-                fn = bind(fn, domm);
-                fun = args[0];
-                duff(gapSplit(name), function (nme) {
-                    var split = eventToNamespace(nme),
-                        captures = BOOLEAN_FALSE,
-                        groupSplit = nme.split(PERIOD),
-                        nm = groupSplit.shift(),
-                        group = groupSplit.join(PERIOD);
-                    if (nm[0] === '_') {
-                        nm = nm.slice(1);
-                        captures = BOOLEAN_TRUE;
-                    }
-                    fn(nm, group, selector, fun, captures);
-                });
+            if (isString(args[0])) {
+                args[0] = domm[args[0]];
             }
+            if (!isFunction(args[0])) {
+                return this;
+            }
+            fn = bind(fn, domm);
+            fun = args[0];
+            duff(gapSplit(name), function (nme) {
+                var split = eventToNamespace(nme),
+                    captures = BOOLEAN_FALSE,
+                    groupSplit = nme.split(PERIOD),
+                    nm = groupSplit.shift(),
+                    group = groupSplit.join(PERIOD);
+                if (nm[0] === '_') {
+                    nm = nm.slice(1);
+                    captures = BOOLEAN_TRUE;
+                }
+                fn(nm, group, selector, fun, captures);
+            });
             return this;
         },
         expandEventListenerArguments = function (fn) {
@@ -6203,25 +6471,6 @@ app.scope(function (app) {
             }
             return capturing;
         },
-        // findMatch = function (el, target, selector) {
-        //     var parent, found = NULL;
-        //     if (!selector) {
-        //         return found;
-        //     }
-        //     if (isString(selector)) {
-        //         parent = target;
-        //         while (parent && !found && isElement(parent) && parent !== el) {
-        //             if (matches(parent, selector)) {
-        //                 found = parent;
-        //             }
-        //             parent = parent[PARENT_NODE];
-        //         }
-        //     } else {
-        //         found = selector(el, target);
-        //         return isElement(found) ? found : NULL;
-        //     }
-        //     return found;
-        // },
         _eventExpander = wrap({
             ready: 'DOMContentLoaded',
             deviceorientation: 'deviceorientation mozOrientation',
@@ -6324,7 +6573,7 @@ app.scope(function (app) {
             return returnValue;
         },
         setInnard = function (attribute, manager, value) {
-            var win, doc, windo, parentElement;
+            var owner, cachedValue, win, doc, windo, doTheThing, parentElement;
             if (manager.isIframe) {
                 windo = manager.window();
                 testIframe(manager);
@@ -6334,13 +6583,22 @@ app.scope(function (app) {
                     doc.open();
                     doc.write(value);
                     doc.close();
+                    doTheThing = BOOLEAN_TRUE;
                 }
             } else {
                 if (manager.isElement) {
                     parentElement = manager.element();
+                    cachedValue = parentElement[attribute];
                     parentElement[attribute] = value || EMPTY_STRING;
-                    duff(query(CUSTOM_ATTRIBUTE, parentElement), manager.owner.returnsManager, manager.owner);
+                    owner = manager.owner;
+                    duff(owner.$(CUSTOM_ATTRIBUTE, parentElement), owner.returnsManager, owner);
+                    if (cachedValue !== parentElement[attribute]) {
+                        doTheThing = BOOLEAN_TRUE;
+                    }
                 }
+            }
+            if (doTheThing) {
+                manager.bubble('content:changed', value);
             }
         },
         innardManipulator = function (attribute) {
@@ -6359,11 +6617,12 @@ app.scope(function (app) {
          * @func
          */
         testIframe = function (manager) {
-            var contentWindow, contentWindowManager, element = manager.element();
+            var contentWindow, contentWindowManager, element;
             manager.isIframe = manager.tagName === IFRAME;
             if (!manager.isIframe) {
                 return;
             }
+            element = manager.element();
             contentWindow = element.contentWindow;
             manager.remark('windowReady', !!contentWindow);
             if (!contentWindow) {
@@ -6375,6 +6634,7 @@ app.scope(function (app) {
             if (!manager.cachedContent || !contentWindowManager.is(ACCESSABLE)) {
                 return;
             }
+            // must be string
             manager.html(manager.cachedContent);
             manager.cachedContent = NULL;
         },
@@ -6476,24 +6736,21 @@ app.scope(function (app) {
                 if (set === BOOLEAN_FALSE) {
                     attributeManager.isRemoving = BOOLEAN_TRUE;
                 }
-                return attributeManager;
             },
             add: function (attributeManager, add) {
                 duff(add, attributeManager.add, attributeManager);
-                return attributeManager;
             },
             remove: function (attributeManager, remove) {
                 duff(remove, attributeManager.remove, attributeManager);
-                return attributeManager;
             },
             toggle: function (attributeManager, togglers, direction) {
                 duff(togglers, function (toggler) {
                     attributeManager.toggle(toggler, direction);
                 });
-                return attributeManager;
             },
             change: function (attributeManager, remove, add) {
-                return this.add(this.remove(attributeManager, remove), gapSplit(add));
+                this.remove(attributeManager, remove);
+                this.add(attributeManager, gapSplit(add));
             }
         },
         unmarkChange = function (fn) {
@@ -6525,7 +6782,7 @@ app.scope(function (app) {
                 }
                 attributeManager.api = api;
                 intendedObject(second_, third_, function (second, third) {
-                    var currentMerge = merge || (third === BOOLEAN_TRUE ? 'add' : (third === BOOLEAN_FALSE ? 'remove' : 'toggle'));
+                    var currentMerge = merge || (third === BOOLEAN_TRUE ? 'add' : (third === BOOLEAN_FALSE ? REMOVE : 'toggle'));
                     attributeValuesHash[currentMerge](attributeManager, gapSplit(second), third, read);
                 });
                 if (attributeManager._changeCounter) {
@@ -6557,7 +6814,7 @@ app.scope(function (app) {
             var values = gapSplit(values_);
             return function (manager) {
                 var el = manager.element(),
-                    attributeManager = manager.get(property),
+                    attributeManager = getStringManager(manager, property),
                     read = api.read(el, property);
                 attributeManager.ensure(read, SPACE);
                 return find(values, function (value) {
@@ -6568,7 +6825,7 @@ app.scope(function (app) {
         },
         setValue = domAttributeManipulatorExtended(queueAttributeValues, 'set', attributeApi),
         addValue = domAttributeManipulatorExtended(queueAttributeValues, 'add', attributeApi),
-        removeValue = domAttributeManipulatorExtended(queueAttributeValues, 'remove', attributeApi),
+        removeValue = domAttributeManipulatorExtended(queueAttributeValues, REMOVE, attributeApi),
         toggleValue = domAttributeManipulatorExtended(queueAttributeValues, 'toggle', attributeApi),
         changeValue = domAttributeManipulatorExtended(queueAttributeValues, 'change', attributeApi),
         getValue = domAttributeManipulatorExtended(queueAttributeValues, 'get', attributeApi),
@@ -6666,14 +6923,15 @@ app.scope(function (app) {
                 return;
             }
             if (manager.isTop) {
-                // tests do never fail on top window because it always exists otherwise this code would not run
+                // tests do never fail on top window because it always
+                // exists otherwise this code would not run
                 return;
             }
             // more accessable tests
             manager.remark(ACCESSABLE, manager.sameOrigin());
         },
         test = function (manager, owner) {
-            var el = manager.element();
+            var element = manager.element();
             markGlobal(manager);
             markElement(manager);
             manager.isDocument = BOOLEAN_FALSE;
@@ -6683,8 +6941,8 @@ app.scope(function (app) {
                 manager.mark(ATTACHED);
                 return;
             }
-            manager.isDocument = isDocument(el);
-            manager.isFragment = isFragment(el);
+            manager.isDocument = isDocument(element);
+            manager.isFragment = isFragment(element);
             if (manager.isDocument || manager.isFragment) {
                 manager.mark(ATTACHED);
                 return;
@@ -6692,35 +6950,37 @@ app.scope(function (app) {
             manager.remark(ATTACHED, isAttached(manager, owner));
         },
         registeredElementName = function (name, manager) {
-            return ELEMENT + HYPHEN + manager.documentId + HYPHEN + name;
+            return upCase(ELEMENT) + HYPHEN + manager.documentId + HYPHEN + name;
+        },
+        iframeContent = function (head, body) {
+            return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="user-scalable=no,width=device-width,initial-scale=1"><meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">' + head + '</head><body>' + body + '</body></html>';
         },
         query = function (str, ctx) {
             return toArray((ctx || doc_).querySelectorAll(str));
         },
         DOMM_SETUP = factories.DOMM_SETUP = function (doc_) {
-            var registeredElements, setup, query, wrapped, manager = returnsManager(doc_, BOOLEAN_TRUE);
+            var registeredElements, $, setup, wrapped, manager = returnsManager(doc_, BOOLEAN_TRUE),
+                unregisteredElements = factories.Registry();
             if (manager.documentId) {
-                return manager.query;
+                return manager.$;
             }
             registeredElements = clone(validTagsNamesHash);
             setup = function (e) {
                 manager.DOMContentLoadedEvent = e;
                 manager.mark('ready');
             };
-            query = function (sel, ctx) {
+            $ = function (sel, ctx) {
                 var context = ctx || manager;
                 return DOMM(sel, context, BOOLEAN_FALSE, manager === context, manager);
             };
             manager.documentId = uniqueId('doc');
             wrapped = extend(wrap({
+                $: $,
                 makeTree: makeTree,
                 makeBranch: makeBranch,
-                createElement: createElement,
                 createElements: createElements,
                 createDocumentFragment: createDocumentFragment,
                 registeredElementName: registeredElementName,
-                // query: query,
-                $: query,
                 fragment: function () {
                     return returnsManager(fragment(NULL, manager), manager);
                 }
@@ -6732,6 +6992,10 @@ app.scope(function (app) {
                 returnsManager: function (item) {
                     return item === manager || item === manager[TARGET] ? manager : returnsManager(item, manager);
                 },
+                createElement: function (one, two, three) {
+                    return createElement(one, two, three, manager);
+                },
+                iframeContent: iframeContent,
                 orderEventsByHeirarchy: BOOLEAN_TRUE,
                 data: factories.Associator(),
                 documentId: manager.documentId,
@@ -6747,25 +7011,30 @@ app.scope(function (app) {
                     return compile(id, string, manager);
                 },
                 collectTemplates: function () {
-                    query('script[id]').each(function (script) {
+                    return $('script[id]').each(function (script) {
                         compile(script.element().id, script.html(), manager);
-                        script.remove();
-                    });
+                    }).remove();
+                },
+                unregisteredElement: function (manager) {
+                    unregisteredElements.keep(manager.registeredElementName(), manager.id, manager);
                 },
                 registerElement: function (name, options_) {
-                    var generatedTagName, wasDefined, options = options_ || {},
+                    var generatedTagName, group, wasDefined, options = options_ || {},
                         lastKey = [],
+                        events = options.events,
                         prototype = options.prototype,
                         creation = options.onCreate || noop,
                         destruction = options.onDestroy,
                         newName = manager.registeredElementName(name),
                         directiveCreation = function (instance, name, directive) {
                             var extendResult = prototype && extend(instance, prototype);
+                            var eventsResult = events && instance.on(events);
                             var newDirective = directive || {};
                             var createResult = creation(instance, newDirective);
                             if (destruction) {
                                 instance.on('destroy', destruction);
                             }
+                            newDirective.validCustomElement = BOOLEAN_TRUE;
                             return newDirective;
                         },
                         directiveDestruction = function (directive, instance, name) {
@@ -6789,25 +7058,26 @@ app.scope(function (app) {
                         });
                         registeredElements[name] = options.extends ? registeredElements[options.extends] : DIV;
                     }
+                    newName = manager.registeredElementName(name);
+                    if ((group = unregisteredElements.group(newName))) {
+                        each(group, function (manager, id) {
+                            delete manager[newName];
+                            delete manager._lastCustom;
+                            manager.registerAs();
+                            unregisteredElements.drop(newName, id);
+                        });
+                    }
                 }
             });
             extend(manager, wrapped);
-            extend(query, wrapped, {
+            extend($, wrapped, {
                 isWindow: isWindow,
                 isDocument: isDocument,
                 isFragment: isFragment,
                 isElement: isElement
             });
             setupDomContentLoaded(setup, manager);
-            // if (manager.isReady === UNDEFINED) {
-            //     manager.isReady = BOOLEAN_FALSE;
-            //     if (manager.element().readyState === 'complete') {
-            //         setup({});
-            //     } else {
-            //         manager.on('DOMContentLoaded', setup);
-            //     }
-            // }
-            return query;
+            return $;
         },
         styleManipulator = function (one, two) {
             var manager, styles;
@@ -6824,7 +7094,7 @@ app.scope(function (app) {
         },
         getValueCurried = getValue(returnsFirst),
         setValueCurried = setValue(domIterates),
-        classApi = makeValueTarget('class', 'className', propertyApi),
+        classApi = makeValueTarget(CLASS, CLASSNAME, propertyApi),
         manager_query = function (selector) {
             var target = this.element();
             return $(query(selector, target), target);
@@ -7112,10 +7382,10 @@ app.scope(function (app) {
                     if (__delegateCount) {
                         list.insertAt(evnt, __delegateCount);
                     } else {
-                        list.unshift(evnt);
+                        list.unshift([evnt]);
                     }
                 } else {
-                    list.push(evnt);
+                    list.push([evnt]);
                 }
             },
             create: function (origin, original, type, opts) {
@@ -7157,13 +7427,28 @@ app.scope(function (app) {
                 }
                 return events;
             },
+            nextBubble: function (start, collected) {
+                var parent, element = start.element();
+                if (!start.isElement || element[PARENT_NODE]) {
+                    return BOOLEAN_FALSE;
+                }
+                return start.parent(function (element) {
+                    if (element[__ELID__]) {
+                        parent = start.owner.returnsManager(element);
+                        if (parent.is(CUSTOM_LISTENER)) {
+                            return [parent, BOOLEAN_TRUE];
+                        }
+                    }
+                    return [element[PARENT_NODE], BOOLEAN_FALSE];
+                });
+            },
             subset: function (list_, evnt) {
                 var parent, found, target, element, counter, el, afterwards, selector, branch, first, mainHandler, __delegateCount, i = 0,
                     j = 0,
                     list = [],
                     manager = evnt.origin;
                 if (!list_[LENGTH]) {
-                    return list_;
+                    return list_.slice(0);
                 }
                 first = list_[0];
                 mainHandler = first.mainHandler;
@@ -7172,7 +7457,7 @@ app.scope(function (app) {
                 el = manager.element();
                 target = evnt.target;
                 if (!__delegateCount || evnt.target === el) {
-                    return list_;
+                    return list_.slice(0);
                 }
                 afterwards = list_.slice(__delegateCount);
                 while (i < __delegateCount) {
@@ -7221,11 +7506,18 @@ app.scope(function (app) {
             }
             return !notVisible;
         },
+        getStringManager = function (events, where) {
+            var attrs = events.directive(ATTRIBUTES),
+                found = attrs[where] = attrs[where] || StringManager();
+            return found;
+        },
         DomManager = factories.Events.extend(DOM_MANAGER_STRING, extend(classApi, {
-            'directive:creation:eventManager': DomEventsDirective,
+            'directive:creation:EventManager': DomEventsDirective,
             isValidDomManager: BOOLEAN_TRUE,
             $: manager_query,
-            query: manager_query,
+            registeredElementName: function () {
+                return this.owner.registeredElementName(this.registeredAs);
+            },
             getValue: getValueCurried,
             setValue: setValueCurried,
             hasValue: hasValue(domContextFind),
@@ -7234,15 +7526,13 @@ app.scope(function (app) {
             toggleValue: toggleValue(domIterates),
             changeValue: changeValue(domIterates),
             on: addEventListener,
-            addEventListener: addEventListener,
             once: addEventListenerOnce,
             off: removeEventListener,
-            removeEventListener: removeEventListener,
             append: appendChild,
             prepend: prependChild,
             getAttribute: getValueCurried,
             setAttribute: setValueCurried,
-            removeAttribute: attributeParody('remove'),
+            removeAttribute: attributeParody(REMOVE),
             attr: attrApi(domIterates),
             data: dataApi(domIterates),
             prop: propApi(domIterates),
@@ -7255,11 +7545,18 @@ app.scope(function (app) {
             prev: managerHorizontalTraverser('previousElementSibling', -1),
             skip: managerHorizontalTraverser(NULL, 0),
             siblings: function (filtr) {
-                var original = this;
-                var filter = createDomFilter(filtr);
-                return this.parent().children(function (manager, index, list) {
+                var original = this,
+                    filter = createDomFilter(filtr);
+                return original.parent().children(function (manager, index, list) {
                     return manager !== original && filter(manager, index, list);
                 });
+            },
+            render: function (string) {
+                var manager = this;
+                var formerChildren = manager.children(UNDEFINED, manager.owner.returnsManager(manager.owner.createDocumentFragment()));
+                console.log(formerChildren);
+                // var fragment = manager.owner.createDocumentFragment();
+                // var formerChildren =
             },
             constructor: function (el, hash, owner_) {
                 var owner = owner_,
@@ -7269,6 +7566,9 @@ app.scope(function (app) {
                 if (manager.isElement || manager.isFragment) {
                     hash[DOM_MANAGER_STRING] = manager;
                     owner = ensure(el.ownerDocument, BOOLEAN_TRUE);
+                    if (manager.isElement) {
+                        manager.id = el[__ELID__];
+                    }
                 } else {
                     if (manager.isDocument) {
                         owner = manager;
@@ -7283,7 +7583,9 @@ app.scope(function (app) {
                 if (manager.isWindow) {
                     markGlobal(manager);
                 }
-                manager.registerAs(manager.registeredAs);
+                if (manager.isElement) {
+                    manager.registerAs();
+                }
                 return manager;
             },
             clone: function () {
@@ -7310,76 +7612,71 @@ app.scope(function (app) {
             },
             parent: (function () {
                 var finder = function (manager, fn, original) {
-                        var parentElement, rets, found, parentManager = manager,
+                        var rets, found, parentManager = manager,
+                            parentElement = parentManager.element(),
                             next = original;
-                        while (parentManager && parentManager.element() && !found) {
-                            parentElement = parentManager.element();
-                            rets = fn(parentManager, original, next);
-                            parentManager = rets[0] && parentManager.owner.returnsManager(rets[0]);
+                        while (parentElement && !found) {
+                            rets = fn(parentElement, original, next);
+                            parentElement = rets[0];
                             found = rets[1];
                             next = rets[2];
                         }
                         if (found) {
-                            return parentManager;
+                            return parentManager.owner.returnsManager(parentElement);
                         }
                     },
-                    number = function (parent, original, next) {
-                        var element = parent.element();
+                    number = function (element, original, next) {
                         next -= 1;
                         if (next < 0 || !isFinite(next) || isNaN(next)) {
                             next = 0;
                         }
                         return [element[PARENT_NODE], !next, next];
                     },
-                    string = function (parent_, original, next) {
-                        var element = parent_.element();
+                    string = function (element, original, next) {
                         var parent = element[PARENT_NODE];
                         return [parent, matches(parent, original)];
                     },
                     speshal = {
-                        document: function (parent, original, next) {
-                            if (parent.isDocument) {
+                        document: function (element, original, next) {
+                            var parent = element[PARENT_NODE];
+                            if (isDocument(parent)) {
                                 return [parent, BOOLEAN_TRUE];
                             } else {
-                                if (parent.isElement) {
-                                    return [parent.element()[PARENT_NODE], BOOLEAN_FALSE];
+                                if (isElement(parent)) {
+                                    return [parent[PARENT_NODE], BOOLEAN_FALSE];
                                 } else {
-                                    if (parent.isFragment) {
-                                        return [NULL, BOOLEAN_TRUE];
+                                    if (isFragment(parent)) {
+                                        return [NULL, BOOLEAN_FALSE];
                                     }
                                 }
                             }
                         },
-                        window: function (parent_, original, next) {
-                            var element = parent_.element();
-                            var parent = element[DEFAULT_VIEW] || element[PARENT_NODE];
-                            return [parent, isWindow(parent)];
+                        window: function (element, original, next, origin) {
+                            var parent, defaultView = element[DEFAULT_VIEW];
+                            if (defaultView) {
+                                return [defaultView, BOOLEAN_TRUE];
+                            }
+                            if ((parent = element[PARENT_NODE])) {
+                                return [parent, BOOLEAN_FALSE];
+                            } else {
+                                return [BOOLEAN_FALSE, BOOLEAN_FALSE];
+                            }
                         },
-                        iframe: function (parent_, original, next) {
-                            var found, element, parent = parent_;
-                            if (parent.isWindow) {
-                                if (parent.isTop) {
-                                    return [NULL, BOOLEAN_TRUE];
+                        iframe: function (element, original, next) {
+                            var found, parent = element,
+                                elementIsWindow = isWindow(element);
+                            if (elementIsWindow) {
+                                if (parent === parent.top) {
+                                    return [NULL, BOOLEAN_FALSE];
                                 } else {
-                                    if (parent.iframe) {
-                                        return [parent.iframe, BOOLEAN_TRUE];
-                                    } else {
-                                        found = wraptry(function () {
-                                            var element = win.frameElement;
-                                            if (element) {
-                                                return BOOLEAN_TRUE;
-                                            }
-                                            return BOOLEAN_FALSE;
-                                        }, function () {
-                                            return BOOLEAN_FALSE;
-                                        });
-                                    }
+                                    found = wraptry(function () {
+                                        return parent.frameElement;
+                                    });
+                                    return [found, !!found];
                                 }
                             } else {
-                                element = parent.element();
-                                element = element[DEFAULT_VIEW] || element[PARENT_NODE];
+                                return [element[DEFAULT_VIEW]] || element[PARENT_NODE];
                             }
-                            return [element, found];
                         }
                     };
                 return function (original) {
@@ -7396,11 +7693,7 @@ app.scope(function (app) {
                         }
                     }
                     if (doDefault) {
-                        return finder(manager, function (manager) {
-                            var element = manager.element();
-                            var parent = element[PARENT_NODE];
-                            return [parent, !!original(parent)];
-                        });
+                        return finder(manager, original);
                     } else {
                         if (!iterator) {
                             iterator = number;
@@ -7427,8 +7720,9 @@ app.scope(function (app) {
                     return target.window() === manager;
                 }
                 managerElement = manager.element();
-                return !!target.parent(function (parentNode) {
-                    return parentNode === managerElement;
+                return !!target.parent(function (node) {
+                    var parentNode = node[PARENT_NODE];
+                    return [parentNode, parentNode === managerElement];
                 });
             },
             insertAt: function (els, index) {
@@ -7510,9 +7804,9 @@ app.scope(function (app) {
                 }
                 return BOOLEAN_FALSE;
             },
-            registerAs: function () {
+            registerAs: function (registeredAs_) {
                 var newName, oldName, manager = this,
-                    registeredAs = manager.registeredAs;
+                    registeredAs = registeredAs_ || manager.registeredAs;
                 if (!manager.is(CUSTOM) || registeredAs === manager._lastCustom) {
                     return manager;
                 }
@@ -7521,13 +7815,16 @@ app.scope(function (app) {
                 manager._lastCustom = registeredAs;
                 newName = manager.owner.registeredElementName(registeredAs);
                 manager.directive(newName);
+                if (!manager[newName].validCustomElement) {
+                    manager.owner.unregisteredElement(manager);
+                }
                 return manager;
             },
             children: function (eq, memo) {
                 var filter, result, manager = this,
                     children = collectChildren(manager.element());
                 if (eq === UNDEFINED) {
-                    return memo ? (memo.push.apply(memo, map(children, manager.owner.returnsManager, manager.owner)) ? memo : memo) : manager.wrap(children);
+                    return memo ? ((children = map(children, manager.owner.returnsManager, manager.owner)) && memo.isFragment ? memo.append(children) : (memo.push.apply(memo, children) ? memo : memo)) : manager.wrap(children);
                 } else {
                     filter = createDomFilter(eq);
                     result = foldl(children, function (memo, child, idx, children) {
@@ -7572,7 +7869,7 @@ app.scope(function (app) {
                 return this.applyStyle('display', 'block');
             },
             applyStyle: function (key, value, important) {
-                if (applyStyle(key, value, this, important)) {}
+                applyStyle(key, value, this, important);
                 return this;
             },
             getStyle: function (eq) {
@@ -7599,18 +7896,18 @@ app.scope(function (app) {
                 dispatchDetached([el], manager.owner);
                 manager.remark(REMOVING, cachedRemoving);
                 if (manager.isIframe && handler && isFunction(handler)) {
-                    handler(manager);
+                    setTimeout(bind(handler, NULL, manager));
                 }
                 return manager;
             },
             frame: function (head, body) {
                 var manager = this,
-                    content = head;
+                    content = head || '';
                 if (body || content.toLowerCase().split('<!doctype ')[LENGTH] === 1) {
-                    content = '<!DOCTYPE html><html><head>' + content + '</head><body>' + body + '</body></html>';
+                    content = manager.owner.iframeContent(content, body);
                 }
                 if (manager.isIframe) {
-                    if (manager.isAttached) {
+                    if (manager.is(ATTACHED)) {
                         manager.html(content);
                     } else {
                         manager.cachedContent = content;
@@ -7641,26 +7938,21 @@ app.scope(function (app) {
                 manager.directiveDestruction(EVENTS);
                 // remove from global hash
                 manager.owner.data.remove(element);
+                manager[STOP_LISTENING]();
                 return manager;
             },
             index: function () {
                 return this;
             },
             each: function (fn, ctx) {
-                var manager = this;
-                var wrapped = [manager];
-                var result = ctx ? fn.call(ctx, manager, 0, wrapped) : fn(manager, 0, wrapped);
+                var manager = this,
+                    wrapped = [manager],
+                    result = ctx ? fn.call(ctx, manager, 0, wrapped) : fn(manager, 0, wrapped);
                 return wrapped;
             },
             find: function (fn) {
                 var manager = this;
                 return fn(manager, 0, [manager]) ? manager : UNDEFINED;
-            },
-            get: function (where) {
-                var events = this,
-                    attrs = events.directive(ATTRIBUTES),
-                    found = attrs[where] = attrs[where] || StringManager();
-                return found;
             },
             tag: function (str) {
                 return tag(this.element(), str);
@@ -7695,7 +7987,7 @@ app.scope(function (app) {
                         temporaryFragment.insertBefore(element, previous || NULL);
                         previous = element;
                     });
-                    obj.children = children[TO_JSON]().unwrap();
+                    obj.children = children[TO_JSON]();
                 }
                 if (node[INNER_TEXT]) {
                     obj[INNER_TEXT] = node[INNER_TEXT];
@@ -7733,8 +8025,9 @@ app.scope(function (app) {
             var capture = !!capture_,
                 directive = manager.directive(EVENTS),
                 removeFromList = function (list, name) {
-                    return list && list.duffRight(function (obj) {
-                        if ((!name || name === obj[NAME]) && (!handler || obj.handler === handler) && (!group || obj.group === group) && (!selector || obj.selector === selector)) {
+                    var newList = [];
+                    return list && list.seeker(function (obj) {
+                        if ((!name || name === obj.passedName) && (!handler || obj.handler === handler) && (!group || obj.group === group) && (!selector || obj.selector === selector)) {
                             directive.detach(obj);
                         }
                     });
@@ -7818,16 +8111,18 @@ app.scope(function (app) {
             numberToUnit: numberToUnit
         }),
         setupDomContentLoaded = function (handler, documentManager) {
-            var bound = bind(handler, documentManager);
+            var bound = bind(handler, documentManager),
+                windo = documentManager.window(),
+                domHandler = function (e) {
+                    documentManager.off('DOMContentLoaded', domHandler);
+                    windo.off('load', domHandler);
+                    bound($, e);
+                };
             if (documentManager.is('ready')) {
                 bound($, documentManager.DOMContentLoadedEvent);
             } else {
-                documentManager.on('DOMContentLoaded', function (e) {
-                    bound($, e);
-                });
-                documentManager.window().on('load', function (e) {
-                    bound($, e);
-                });
+                documentManager.on('DOMContentLoaded', domHandler);
+                windo.on('load', domHandler);
             }
             return documentManager;
         },
@@ -8118,10 +8413,9 @@ app.scope(function (app) {
              */
             skip: horizontalTraverser('skip', 0),
             siblings: attachPrevious(function (context, filtr) {
-                var list = [];
-                return list.concat.apply(list, context.map(function (manager) {
+                return mappedConcat(context, function (manager) {
                     return manager.siblings(filtr).unwrap();
-                }, []));
+                });
             }),
             /**
              * @func
@@ -8146,10 +8440,10 @@ app.scope(function (app) {
                 if (!(isStringResult = isString(element))) {
                     els = isAppendable(els_) ? owner.returnsManager(els_) : owner.$(els_).fragment();
                 }
-                return context.foldl(function (memo, manager, index) {
-                    var elements;
+                return mappedConcat(context, function (manager, index) {
+                    var elements = els_;
                     if (!manager.isElement) {
-                        return memo;
+                        return [];
                     }
                     if (isStringResult) {
                         elements = context.owner.$(els_);
@@ -8158,15 +8452,15 @@ app.scope(function (app) {
                             elements = els.clone();
                         } else {
                             if (index) {
-                                return memo;
+                                return [];
                             }
                         }
                     }
                     parent = manager.parent();
                     parent.insertAt(elements, parent.children().indexOf(manager));
                     manager.remove();
-                    return memo.concat(elements.unwrap());
-                }, []).unwrap();
+                    return elements.unwrap();
+                });
             }),
             contains: function (els) {
                 return !!this.find(function (manager) {
@@ -8227,62 +8521,16 @@ app.scope(function (app) {
             text: htmlTextManipulator(INNER_TEXT),
             /**
              * @func
-             * @name DOMM#contentRect
-             * @returns {Object} dimensions of the content rectangle
-             */
-            // contentRect: function (num) {
-            //     var box = this.box(num),
-            //         pB = box.paddingBottom,
-            //         pT = box.paddingTop,
-            //         pR = box.paddingRight,
-            //         pL = box.paddingLeft,
-            //         bT = box.borderTop,
-            //         bB = box.borderBottom,
-            //         bR = box.borderRight,
-            //         bL = box.borderLeft;
-            //     return {
-            //         bottom: box[BOTTOM] - pB - bB,
-            //         height: box[HEIGHT] - pT - bT - pB - bB,
-            //         right: box[RIGHT] - pR - bR,
-            //         width: box[WIDTH] - pL - bL - pR - bR,
-            //         left: box[LEFT] + pL - bL,
-            //         top: box[TOP] + pT - bT
-            //     };
-            // },
-            // /**
-            //  * @func
-            //  * @name DOMM#flowRect
-            //  * @returns {Object} dimensions of the flow rectangle: the amount of space the element should take up in the dom
-            //  */
-            // flowRect: function () {
-            //     var box = this.box(0),
-            //         mT = box.marginTop,
-            //         mL = box.marginLeft,
-            //         mB = box.marginBottom,
-            //         mR = box.marginRight;
-            //     return {
-            //         height: box[HEIGHT] + mT + mB,
-            //         bottom: box[BOTTOM] + mB,
-            //         width: box[WIDTH] + mR + mL,
-            //         right: box[RIGHT] + mR,
-            //         left: box[LEFT] + mL,
-            //         top: box[TOP] + mT
-            //     };
-            // },
-            /**
-             * @func
              * @name DOMM#childOf
              */
             map: function (handler, context) {
                 return Collection(map(this.unwrap(), handler, context));
             },
             toJSON: function () {
-                return this.map(function (manager) {
-                    return manager.toJSON();
-                });
+                return this.results(TO_JSON).unwrap();
             },
             toString: function () {
-                return JSON.stringify(this);
+                return stringify(this);
             }
         }, wrap(allEachMethods, applyToEach), wrap(firstMethods, applyToFirst), wrap(readMethods, applyToTarget)), BOOLEAN_TRUE),
         setupWindow = function (windo) {
@@ -8296,41 +8544,63 @@ app.scope(function (app) {
     $.collectTemplates();
     // register all custom elements...
     // everything that's created after this should go through the DomManager to be marked appropriately
-    duff($(CUSTOM_ATTRIBUTE), $.returnsManager);
+    $(CUSTOM_ATTRIBUTE).each($.returnsManager);
     // add $ to module madness
     // app.addModuleArguments([$]);
     // define a hash for attribute caching
-    app.defineDirective('attributes', function () {
+    app.defineDirective(ATTRIBUTES, function () {
         return {};
-    });
-    app.defineDirective('customElement', function (instance) {
-        //
     });
 });
 app.scope(function (app) {
-    var _ = app._,
+    var lastAFId, lastTId, lastOverrideId, _ = app._,
         factories = _.factories,
         x = 0,
         lastTime = 0,
+        frameTime = 0,
         pI = _.pI,
         posit = _.posit,
         nowish = _.now,
         gapSplit = _.gapSplit,
         vendors = gapSplit('ms moz webkit o'),
-        REQUEST_ANIMATION_FRAME = 'requestAnimationFrame',
-        CANCEL_ANIMATION_FRAME = 'cancelAnimationFrame',
+        TIMEOUT = 'Timeout',
+        SET_TIMEOUT = 'set' + TIMEOUT,
+        CLEAR_TIMEOUT = 'clear' + TIMEOUT,
+        ANIMATION_FRAME = 'AnimationFrame',
+        REQUEST_ANIMATION_FRAME = 'request' + ANIMATION_FRAME,
+        CANCEL_ANIMATION_FRAME = 'cancel' + ANIMATION_FRAME,
         allLoopers = [],
         runningLoopers = [],
         eachCall = _.eachCall,
         time = _.time,
         remove = _.remove,
         running = BOOLEAN_FALSE,
+        focused = BOOLEAN_TRUE,
+        request = function (handler) {
+            var nextFrame = Math.max(0, lastTime - frameTime);
+            if (focused) {
+                lastAFId = win[REQUEST_ANIMATION_FRAME](handler);
+            } else {
+                lastTId = win.setTimeout(handler, nextFrame);
+            }
+            if (Looper.playWhileBlurred) {
+                lastOverrideId = win.setTimeout(function () {
+                    focused = BOOLEAN_FALSE;
+                    handler();
+                }, nextFrame + 50);
+            }
+        },
+        basicHandler = function () {
+            win[CANCEL_ANIMATION_FRAME](lastAFId);
+            win[CLEAR_TIMEOUT](lastTId);
+            win[CLEAR_TIMEOUT](lastOverrideId);
+            frameTime = _.now();
+            eachCall(runningLoopers, 'run', frameTime);
+            teardown();
+        },
         setup = function () {
             running = BOOLEAN_TRUE;
-            win[REQUEST_ANIMATION_FRAME](function (time) {
-                eachCall(runningLoopers, 'run', _.now());
-                teardown();
-            });
+            request(basicHandler);
         },
         teardown = function () {
             duffRight(runningLoopers, function (looper, idx) {
@@ -8373,7 +8643,7 @@ app.scope(function (app) {
             }
             if (!win[CANCEL_ANIMATION_FRAME]) {
                 win[CANCEL_ANIMATION_FRAME] = function (id) {
-                    win.clearTimeout(id);
+                    win[CLEAR_TIMEOUT](id);
                 };
             }
         }()),
@@ -8431,6 +8701,8 @@ app.scope(function (app) {
                                 running = fnObj;
                                 wraptry(function () {
                                     fnObj.fn(_nowish);
+                                }, function () {
+                                    tween.remove(fnObj.id);
                                 });
                             }
                         });
@@ -8521,9 +8793,9 @@ app.scope(function (app) {
                 return bind(fn, this);
             },
             once: function (fn) {
-                return this.count(1, fn);
+                return this.frames(1, fn);
             },
-            count: function (timey, fn_) {
+            frames: function (timey, fn_) {
                 var fn, count = 0,
                     times = pI(timey) || 1;
                 if (!fn_ && isFunction(times)) {
@@ -8549,7 +8821,7 @@ app.scope(function (app) {
             },
             tween: function (time__, fn_) {
                 var fn, added = nowish(),
-                    time_ = _.time(time__);
+                    time_ = time(time__);
                 if (!time_) {
                     time_ = 0;
                 }
@@ -8588,7 +8860,7 @@ app.scope(function (app) {
                 if (!isFunction(fn_)) {
                     return tween;
                 }
-                fn = this.bind(fn_);
+                fn = tween.bind(fn_);
                 return tween.add(function (ms) {
                     var frameRate = 1000 / (ms - lastDate);
                     if (frameRate > 40) {
@@ -8598,22 +8870,23 @@ app.scope(function (app) {
                         lastSkip = ms;
                     }
                     if (ms - lastSkip > time_) {
-                        this.remove();
+                        tween.remove();
                         fn(ms);
                     }
                     lastDate = ms;
                 });
             },
             interval: function (time, fn_) {
-                var fn, last = nowish();
+                var fn, tweener = this,
+                    last = nowish();
                 if (!isFunction(fn_)) {
                     return;
                 }
                 if (!time) {
                     time = 0;
                 }
-                fn = this.bind(fn_);
-                return this.add(function (ms) {
+                fn = tweener.bind(fn_);
+                return tweener.add(function (ms) {
                     if (ms - time >= last) {
                         last = ms;
                         fn(ms);
@@ -8621,8 +8894,575 @@ app.scope(function (app) {
                 });
             }
         }, BOOLEAN_TRUE);
+    Looper.playWhileBlurred = BOOLEAN_TRUE;
+    app.undefine(function () {});
     _.exports({
         AF: Looper()
+    });
+});
+app.scope(function (app) {
+    var _ = app._,
+        factories = _.factories,
+        basicViewTrigger = function (name, e) {
+            return this[DISPATCH_EVENT](name, e);
+        },
+        makeDelegateEventKeys = function (cid, bindings, key, namespace_) {
+            var viewNamespace = 'delegateEvents' + cid,
+                namespace = namespace_;
+            if (namespace) {
+                namespace = PERIOD + namespace;
+            } else {
+                namespace = EMPTY_STRING;
+            }
+            return foldl(gapSplit(key), function (memo, _key) {
+                var __key = _key.split(PERIOD);
+                if (__key[0][0] === '@') {
+                    memo[SELECTOR] = normalizeUIString(_key, bindings);
+                } else {
+                    if (__key[1] !== viewNamespace) {
+                        __key.splice(1, 0, viewNamespace);
+                        _key = __key.join(PERIOD);
+                    }
+                    memo.events.push(_key + namespace);
+                }
+                return memo;
+            }, {
+                events: [],
+                selector: ''
+            });
+        },
+        normalizeUIString = function (uiString, ui) {
+            return uiString.replace(/@ui\.[a-zA-Z_$0-9]*/g, function (r) {
+                return ui[r.slice(4)];
+            });
+        },
+        // allows for the use of the @ui. syntax within
+        // a given key for triggers and events
+        // swaps the @ui with the associated selector.
+        // Returns a new, non-mutated, parsed events hash.
+        normalizeUIKeys = function (hash, ui) {
+            return reduce(hash, function (memo, val, key) {
+                var normalizedKey = normalizeUIString(key, ui);
+                memo[normalizedKey] = val;
+                return memo;
+            }, {});
+        },
+        Element = factories.Directive.extend('Element', {
+            constructor: function (view) {
+                this.view = view;
+                return this;
+            },
+            ensure: function () {
+                var el, element = this,
+                    view = element.view,
+                    selector = element[SELECTOR] || result(view, 'el');
+                if (selector) {
+                    element[SELECTOR] = selector;
+                }
+                if (isInstance(selector, factories.DOMM)) {
+                    return;
+                }
+                if (isString(selector)) {
+                    // sets external element
+                    el = selector;
+                } else {
+                    // defauts back to wrapping the element
+                    // creates internal element
+                    el = element.create(result(view, 'tagName'));
+                    // subclassed to expand the attributes that can be used
+                }
+                element.set(el, BOOLEAN_FALSE);
+            },
+            create: function (tag) {
+                return $.createElement(tag);
+            },
+            unset: function () {
+                var element = this;
+                // element.undelegateEvents();
+                // element.undelegateTriggers();
+                delete element.view.el;
+                delete element.el;
+            },
+            set: function (el, render) {
+                var directive = this;
+                directive.view.el = directive.el = el;
+                // directive.degenerateUIBindings();
+                // if (render !== BOOLEAN_FALSE) {
+                //     directive.render(render);
+                //     directive.generateUIBindings();
+                //     directive.bindUI();
+                //     if (newelementisDifferent) {
+                //         directive.delegateEvents();
+                //         directive.delegateTriggers();
+                //     }
+                // }
+            },
+            render: function (html) {
+                var element = this;
+                element.el.html(html || '');
+                return element;
+            },
+            degenerateUIBindings: function () {
+                var directive = this;
+                if (!directive.ui) {
+                    return;
+                }
+                directive.ui = directive.view.ui = directive.uiBindings;
+                delete directive.uiBindings;
+            },
+            generateUIBindings: function () {
+                var directive = this,
+                    uiBindings = directive.uiBindings || result(directive.view, 'ui'),
+                    ui = directive.ui = directive.ui || {};
+                if (directive.uiBindings) {
+                    return directive;
+                }
+                // save it to skip the result call later
+                directive.uiBindings = uiBindings;
+                return directive;
+            },
+            delegateEvents: function () {
+                var key, method, match, directive = this,
+                    view = directive.view,
+                    el = directive.el,
+                    elementBindings = directive.elementBindings || result(view, 'elementEvents'),
+                    __events = [];
+                if (directive.elementBindings) {
+                    directive.elementBindings = elementBindings;
+                }
+                if (!el) {
+                    return directive;
+                }
+                each(elementBindings, function (method, key) {
+                    var object = makeDelegateEventKeys(view.cid, directive.uiBindings, key),
+                        bound = object.fn = bind(view[method] || method, view);
+                    __events.push(object);
+                    el.on(object.events.join(SPACE), object[SELECTOR], bound);
+                });
+                directive.cachedElementBindings = __events;
+                return directive;
+            },
+            undelegateEvents: function () {
+                var key, method, match, directive = this,
+                    view = directive.view,
+                    el = directive.el,
+                    elementBindings = directive.cachedElementBindings;
+                if (!elementBindings || !el) {
+                    return directive;
+                }
+                duff(elementBindings, function (binding) {
+                    el.off(binding.events.join(SPACE), binding[SELECTOR], binding.fn);
+                });
+                directive.cachedElementBindings = UNDEFINED;
+                return directive;
+            },
+            delegateTriggers: function () {
+                var key, method, match, directive = this,
+                    view = directive.view,
+                    el = directive.el,
+                    elementTriggers = directive.elementTriggers || result(view, 'elementTriggers'),
+                    __events = [];
+                if (!directive.elementTriggers) {
+                    directive.elementTriggers = elementTriggers;
+                }
+                if (!el) {
+                    return directive;
+                }
+                each(elementTriggers, function (method, key) {
+                    var object = makeDelegateEventKeys(view.cid, directive.uiBindings, key),
+                        bound = object.fn = basicViewTrigger.bind(view, method);
+                    el.on(object.events.join(SPACE), object[SELECTOR], bound);
+                });
+                directive.cachedElementTriggers = __events;
+            },
+            undelegateTriggers: function () {
+                var key, method, match, directive = this,
+                    view = directive.view,
+                    el = directive.el,
+                    elementBindings = directive.cachedElementTriggers;
+                if (!directive.cachedElementTriggers || !el) {
+                    return directive;
+                }
+                duff(elementBindings, function (binding) {
+                    el.off(binding.events.join(SPACE), binding[SELECTOR], binding.fn);
+                });
+                directive.cachedElementTriggers = UNDEFINED;
+                return directive;
+            },
+            setAttributes: function () {
+                var directive = this,
+                    view = directive.view,
+                    attrs = result(view, 'elementAttributes');
+                if (view[CLASSNAME]) {
+                    attrs = attrs || {};
+                    attrs[CLASS] = result(view, CLASSNAME);
+                }
+                if (attrs) {
+                    directive.el.attr(attrs);
+                }
+                return directive;
+            },
+            bindUI: function () {
+                var directive = this,
+                    uiBindings = directive.uiBindings;
+                directive.ui = directive.view.ui = map(uiBindings, directive.el.$, directive.el);
+                return directive;
+            }
+        });
+    app.defineDirective(ELEMENT, Element[CONSTRUCTOR], function (directive, instance) {
+        directive.el.destroy();
+        directive.unset();
+        var ui = directive.ui;
+        directive.degenerateUIBindings();
+        _.eachCall(ui, 'destroy');
+    });
+});
+app.scope(function (app) {
+    var _ = app._,
+        factories = _.factories,
+        Collection = factories.Collection,
+        protoProp = _.protoProp,
+        isFragment = _.isFragment,
+        isInstance = _.isInstance,
+        isFunction = _.isFunction,
+        isArrayLike = _.isArrayLike,
+        reverseParams = _.reverseParams,
+        intendedObject = _.intendedObject,
+        createDocumentFragment = _.createDocumentFragment,
+        RENDER = 'render',
+        RENDERED = RENDER + 'ed',
+        OPTIONS = 'options',
+        PARENT_NODE = 'parentNode',
+        CONSTRUCTOR = 'constructor',
+        BUFFERED_VIEWS = 'bufferedViews',
+        REGION_MANAGER = 'regionManager',
+        ESTABLISHED_REGIONS = '_establishedRegions',
+        APPEND_CHILD_ELEMENTS = '_appendChildElements',
+        getRegion = function (key) {
+            return this.directive(REGION_MANAGER).list.get(ID, key);
+        },
+        addRegion = function (key, selector) {
+            var regionManagerDirective = this.directive(REGION_MANAGER);
+            intendedObject(key, selector, function (key, selector) {
+                var region = regionManagerDirective.list.get(key);
+                if (!region) {
+                    regionManagerDirective.establish(key, selector);
+                }
+            });
+        },
+        /**
+         * @class View
+         * @augments Model
+         * @augments Model
+         * @classDesc Objects that have one or more element associated with them, such as a template that needs constant updating from the data
+         */
+        // region views are useful if you're constructing different components
+        // from a separate place and just want it to be in the attach pipeline
+        // very useful for componentizing your ui
+        // LeafView = factories.
+        // regionConstructor = ,
+        Parent = factories.Parent,
+        Model = factories.Model,
+        Region = Parent.extend('Region', {
+            constructor: function (secondary) {
+                var model = this;
+                Parent[CONSTRUCTOR].call(model, secondary);
+                model.directive(CHILDREN);
+                model.setElement();
+                return model;
+            },
+            add: function (models_, options_) {
+                var bufferedViewsDirective, region = this,
+                    options = options_ || {},
+                    unwrapped = Collection(models_).each(function (view_) {
+                        var view = isInstance(view_, View) ? view_ : (options.Child || region.Child || factories.View)({
+                                model: isInstance(view_, Model) ? view_ : view_ = Model(view_)
+                            }),
+                            nul = bufferedViewsDirective || ((bufferedViewsDirective = region.directive(BUFFERED_VIEWS)) && bufferedViewsDirective.ensure());
+                        region.adopt(view);
+                        bufferedViewsDirective.views.push(view);
+                    }).unwrap();
+                if (region.el) {
+                    region.render();
+                }
+                return unwrapped;
+            },
+            adopt: function (view) {
+                var region = this,
+                    children = region[CHILDREN];
+                if (view[PARENT]) {
+                    if (view[PARENT] === region) {
+                        return;
+                    } else {
+                        view[PARENT].disown(view);
+                    }
+                }
+                view[PARENT] = region;
+                children.add(view);
+            },
+            disown: function (view) {
+                var region = this,
+                    children = region[CHILDREN];
+                view[PARENT] = NULL;
+                children.remove(view);
+            },
+            attach: function (view) {
+                var parentNode, bufferDirective, el = view.el && view.el.element();
+                if (!el) {
+                    return;
+                }
+                parentNode = el.parentNode;
+                bufferDirective = this.directive(BUFFERED_VIEWS);
+                if (parentNode && parentNode === bufferDirective.region.el.element()) {
+                    return;
+                }
+                bufferDirective.els.appendChild(el);
+            },
+            // this needs to be modified for shared windows
+            setElement: function () {
+                var manager, region = this,
+                    selector = region[SELECTOR],
+                    parent = region[PARENT][PARENT];
+                if (parent !== app) {
+                    if (parent.is(RENDERED)) {
+                        manager = parent.el.$(selector)[INDEX](0);
+                    }
+                } else {
+                    manager = (region._owner$ || $)(selector)[INDEX](0);
+                }
+                if (!manager) {
+                    return;
+                }
+                region.directive(ELEMENT).set(manager);
+            },
+            render: function () {
+                var region = this,
+                    bufferDirective = region.directive(BUFFERED_VIEWS),
+                    elementDirective = region.directive(ELEMENT);
+                region.unmark(RENDERED);
+                // doc frags on regionviews, list of children to trigger events on
+                bufferDirective.ensure();
+                // request extra data or something before rendering: dom is still completely intact
+                region[DISPATCH_EVENT]('before:' + RENDER);
+                // unbinds and rebinds element only if it changes
+                region.setElement();
+                // update new element's attributes
+                elementDirective.setAttributes();
+                // puts children back inside parent
+                region[CHILDREN].eachCall(RENDER);
+                // attach region element
+                // appends child elements
+                elementDirective.el.append(bufferDirective.els);
+                // pass the buffered views up
+                // region.passBuffered(list);
+                // mark the view as rendered
+                region.mark(RENDERED);
+                // reset buffered objects
+                bufferDirective.reset();
+                // dispatch the render event
+                region[DISPATCH_EVENT](RENDER);
+                return region;
+            }
+        }, BOOLEAN_TRUE),
+        // view needs to be pitted against a document
+        View = Region.extend('View', {
+            tagName: 'div',
+            filter: BOOLEAN_TRUE,
+            templateIsElement: BOOLEAN_FALSE,
+            getRegion: getRegion,
+            template: function () {
+                return EMPTY_STRING;
+            },
+            parentView: function () {
+                var found, view = this,
+                    parent = view[PARENT];
+                while (found && parent && !isInstance(parent, View)) {
+                    parent = parent[PARENT];
+                    if (isInstance(parent, View)) {
+                        found = parent;
+                    }
+                }
+                return found;
+            },
+            constructor: function (secondary) {
+                var view = this;
+                Parent[CONSTRUCTOR].call(view, secondary);
+                view.directive(ELEMENT).ensure();
+                this.id = uniqueId(BOOLEAN_FALSE, BOOLEAN_TRUE);
+                this.establishRegions();
+                return view;
+            },
+            establishRegions: function () {
+                var regions = result(this, 'regions');
+                var regionsResult = keys(regions)[LENGTH] && this.directive(REGION_MANAGER).establish(regionsResult);
+                return this;
+            },
+            valueOf: function () {
+                return this.id;
+            },
+            destroy: function () {
+                var view = this;
+                if (view.is('destroying')) {
+                    return view;
+                }
+                view.mark('destroying');
+                if (view[REGION_MANAGER]) {
+                    view[REGION_MANAGER].list.eachCall('destroy');
+                }
+                view.el.destroy();
+                view.directiveDestruction(ELEMENT);
+                Parent[CONSTRUCTOR][PROTOTYPE].destroy.call(view);
+                return view;
+            },
+            render: function () {
+                var newelementisDifferent, element, json, html, renderResult, bufferedDirective, template, settingElement, view = this,
+                    // you might be able to do this a better way
+                    neverRendered = !view.is(RENDERED);
+                view.unmark(RENDERED);
+                if (!result(view, 'filter')) {
+                    return view;
+                }
+                element = view.directive(ELEMENT);
+                // prep the object with extra members (doc frags on regionviews,
+                // list of children to trigger events on)
+                // request extra data or something before rendering: dom is still completely intact
+                view[DISPATCH_EVENT]('before:' + RENDER);
+                // renders the html
+                if (isFunction(view.template)) {
+                    json = view.model && view.model.toJSON();
+                    // try to generate template
+                    html = view.template(json);
+                } else {
+                    html = view.template;
+                }
+                settingElement = view.el;
+                if (result(view, 'templateIsElement')) {
+                    settingElement = view.el.owner.fragment(html).children();
+                    html = BOOLEAN_FALSE;
+                }
+                newelementisDifferent = settingElement !== element.el;
+                if (newelementisDifferent) {
+                    element.unset();
+                }
+                // turns ui into a string
+                element.degenerateUIBindings();
+                // unbinds and rebinds element only if it changes
+                element.set(settingElement);
+                if (html !== BOOLEAN_FALSE) {
+                    element.render(html);
+                }
+                element.generateUIBindings();
+                element.bindUI();
+                if (newelementisDifferent || neverRendered) {
+                    element.delegateEvents();
+                    element.delegateTriggers();
+                }
+                // update new element's attributes
+                element.setAttributes();
+                // mark the view as rendered
+                view.establishRegions();
+                view.mark(RENDERED);
+                // dispatch the render event
+                view[DISPATCH_EVENT](RENDER);
+                // pass buffered views up to region
+                if (view[REGION_MANAGER]) {
+                    view[REGION_MANAGER].list.eachCall(RENDER);
+                }
+                element = view[PARENT] && view[PARENT].attach(view);
+                return view;
+            }
+        }, BOOLEAN_TRUE),
+        _View = factories.View,
+        establishRegion = function (key, selector) {
+            var regionManagerDirective = this,
+                parentView = regionManagerDirective[PARENT];
+            if (!key) {
+                return regionManagerDirective;
+            }
+            intendedObject(key, selector, function (key, selector) {
+                var $selected, region = regionManagerDirective.list.get(key);
+                if (!region) {
+                    region = regionManagerDirective.create(key, selector);
+                }
+                if (parentView !== app) {
+                    $selected = parentView.$(region[SELECTOR])[INDEX](0);
+                } else {
+                    $selected = $(region[SELECTOR])[INDEX](0);
+                }
+                // if ($selected) {
+                region.el = $selected;
+                // }
+            });
+            return regionManagerDirective;
+        },
+        removeRegion = function (region_) {
+            // var regionManager = this;
+            // var region = isString(region_) ? regionManager.get(region_) : region_;
+            // regionManager.remove(region);
+            // regionManager.unRegister(region.id, region);
+        },
+        createRegion = function (where, region_) {
+            var key, regionManagerDirective = this,
+                parent = regionManagerDirective[PARENT],
+                // assume that it is a region
+                selector = region_,
+                region = region_;
+            if (isInstance(region, Region)) {
+                return region;
+            }
+            region = Region(extend({
+                selector: selector || EMPTY_STRING
+            }, isObject(region) ? region : {}, {
+                id: where,
+                parent: regionManagerDirective,
+                isAttached: parent === app ? BOOLEAN_TRUE : parent.isAttached
+            }));
+            regionManagerDirective.list.push(region);
+            regionManagerDirective.list.register(ID, where, region);
+            return region;
+        },
+        bufferedEnsure = function () {
+            var buffers = this,
+                _bufferedViews = isArray(buffers.views) ? 1 : buffers.resetViews(),
+                _bufferedEls = isFragment(buffers.els) ? 1 : buffers.resetEls();
+        },
+        bufferedReset = function () {
+            var cached = this.views;
+            this.resetEls();
+            this.resetViews();
+            return cached;
+        },
+        bufferedElsReset = function () {
+            this.els = document.createDocumentFragment();
+        },
+        bufferedViewsReset = function () {
+            this.views = [];
+        };
+    app.defineDirective(REGION_MANAGER, function (instance) {
+        return {
+            list: Collection(),
+            parent: instance,
+            create: createRegion,
+            establish: establishRegion,
+            remove: removeRegion,
+            add: addRegion
+        };
+    });
+    app.defineDirective(BUFFERED_VIEWS, function (instance) {
+        return {
+            region: instance,
+            els: $.createDocumentFragment(),
+            views: [],
+            reset: bufferedReset,
+            ensure: bufferedEnsure,
+            resetViews: bufferedViewsReset,
+            resetEls: bufferedElsReset
+        };
+    });
+    app.extend({
+        getRegion: getRegion,
+        addRegion: addRegion,
+        removeRegion: removeRegion
     });
 });
 app.scope(function (app) {
@@ -8680,7 +9520,7 @@ app.scope(function (app) {
                 return;
             }
             var originalMessage, runCount = data.runCount,
-                children = buster.children;
+                children = buster.directive(CHILDREN);
             if (runCount) {
                 originalMessage = children.get(ID, data.messageId);
                 if (!originalMessage) {
@@ -8947,7 +9787,7 @@ app.scope(function (app) {
                 disconnected.call(buster);
                 factories.Model[CONSTRUCTOR].call(buster, settings);
                 buster.once('change:connected', function (e) {
-                    buster.connectPromise.resolve(buster.children.first());
+                    buster.connectPromise.resolve(buster.directive(CHILDREN).first());
                 });
                 buster.on({
                     'change:connected change:documentReady': 'flush',
@@ -9132,568 +9972,217 @@ app.scope(function (app) {
         $(win[TOP]).on(MESSAGE, receive);
     }
 });
-app.scope(function (app) {
-    var _ = app._,
-        factories = _.factories,
-        basicViewTrigger = function (name, e) {
-            return this[DISPATCH_EVENT](name, e);
+application.scope().run(function (app, _, factories) {
+    var currentTest, current, pollerTimeout, failedTests = 0,
+        testisrunning = BOOLEAN_FALSE,
+        console = _.console,
+        stringify = _.stringify,
+        negate = _.negate,
+        allIts = [],
+        successfulIts = [],
+        failedIts = [],
+        stack = [],
+        queue = [],
+        allExpectations = [],
+        successful = [],
+        failures = [],
+        successfulExpectations = [],
+        failedExpectations = [],
+        globalBeforeEachStack = [],
+        globalAfterEachStack = [],
+        errIfFalse = function (handler, makemessage) {
+            return function () {
+                var err, expectation = {};
+                if (handler.apply(this, arguments)) {
+                    successfulExpectations.push(expectation);
+                } else {
+                    ++failedTests;
+                    expectation = new Error(makemessage.apply(this, arguments));
+                    console.error(expectation);
+                    failedExpectations.push(expectation);
+                }
+                allExpectations.push(expectation);
+                return this;
+            };
         },
-        makeDelegateEventKeys = function (cid, bindings, key, namespace_) {
-            var viewNamespace = 'delegateEvents' + cid,
-                namespace = namespace_;
-            if (namespace) {
-                namespace = PERIOD + namespace;
+        internalToThrow = function (handler) {
+            var errRan = false;
+            return _.wraptry(handler, function () {
+                errRan = true;
+            }, function () {
+                return errRan;
+            });
+        },
+        toThrow = function () {
+            errIfFalse(internalToThrow, function () {
+                return 'expected an error to be thrown';
+            });
+        },
+        notToThrow = function () {
+            errIfFalse(negate(internalToThrow), function () {
+                return 'expected an error not to be thrown';
+            });
+        },
+        internalToEqual = function (comparison) {
+            return _.isEqual(current, comparison);
+        },
+        toEqual = errIfFalse(internalToEqual, function (comparison) {
+            return 'expected ' + current + ' to equal ' + comparison;
+        }),
+        notToEqual = errIfFalse(negate(internalToEqual), function (comparison) {
+            return 'expected ' + stringify(current) + ' not to equal ' + stringify(comparison);
+        }),
+        internalToBe = function (comparison) {
+            return current === comparison;
+        },
+        toBe = errIfFalse(internalToBe, function (comparison) {
+            return 'expected ' + stringify(current) + ' to be strictly equal to ' + stringify(comparison);
+        }),
+        notToBe = errIfFalse(negate(internalToBe), function (comparison) {
+            return 'expected ' + stringify(current) + ' to be strictly equal to ' + stringify(comparison);
+        }),
+        expect = function (start) {
+            current = start;
+            return {
+                toEqual: toEqual,
+                toThrow: toThrow,
+                not: {
+                    toEqual: notToEqual,
+                    toThrow: notToThrow,
+                    toBe: notToBe
+                }
+            };
+        },
+        errHandler = function (e) {
+            console.error(e);
+        },
+        executedone = function (expectation) {
+            var queued;
+            expectation.endTime = _.performance.now();
+            stack.pop();
+            if (failedTests) {
+                failedIts.push(expectation);
             } else {
-                namespace = EMPTY_STRING;
+                successfulIts.push(expectation);
             }
-            return foldl(gapSplit(key), function (memo, _key) {
-                var __key = _key.split(PERIOD);
-                if (__key[0][0] === '@') {
-                    memo[SELECTOR] = normalizeUIString(_key, bindings);
-                } else {
-                    if (__key[1] !== viewNamespace) {
-                        __key.splice(1, 0, viewNamespace);
-                        _key = __key.join(PERIOD);
-                    }
-                    memo.events.push(_key + namespace);
-                }
-                return memo;
-            }, {
-                events: [],
-                selector: ''
+            failedTests = 0;
+            runningEach(expectation.afterStack);
+            testisrunning = BOOLEAN_FALSE;
+            if (queue[0]) {
+                queued = queue.shift();
+                setup(queued);
+            }
+            setupPoller();
+        },
+        describe = function (string, handler) {
+            stack.push(string);
+            globalBeforeEachStack.push([]);
+            globalAfterEachStack.push([]);
+            _.wraptry(handler, errHandler, function () {
+                globalAfterEachStack.pop();
+                globalBeforeEachStack.pop();
+                stack.pop();
             });
         },
-        normalizeUIString = function (uiString, ui) {
-            return uiString.replace(/@ui\.[a-zA-Z_$0-9]*/g, function (r) {
-                return ui[r.slice(4)];
+        makesOwnCallback = function (handler) {
+            var stringHandler = handler.toString();
+            var split = stringHandler.split('(');
+            var shifted = split.shift();
+            var sliced = split.join('(');
+            split = sliced.split(')');
+            var target = split.shift();
+            return target.trim().length;
+        },
+        timeoutErr = function (stack) {
+            console.error('timeout:\n' + stack.join('\n'));
+        },
+        setup = function (expectation) {
+            testisrunning = BOOLEAN_TRUE;
+            expectation.runId = setTimeout(function () {
+                var doThis, errThis, finallyThis;
+                currentTest = expectation;
+                runningEach(expectation.beforeStack);
+                if (makesOwnCallback(expectation.handler)) {
+                    expectation.timeoutId = setTimeout(function () {
+                        timeoutErr(expectation.current);
+                        executedone(expectation);
+                    }, 5000);
+                    doThis = function () {
+                        expectation.handler(function () {
+                            clearTimeout(expectation.timeoutId);
+                            executedone(expectation);
+                        });
+                    };
+                    errThis = function () {
+                        console.error(stack);
+                        executedone(expectation);
+                    };
+                    finallyThis = _.noop;
+                } else {
+                    doThis = expectation.handler;
+                    errThis = errHandler;
+                    finallyThis = function () {
+                        executedone(expectation);
+                    };
+                }
+                expectation.startTime = _.performance.now();
+                _.wraptry(doThis, errThis, finallyThis);
             });
         },
-        // allows for the use of the @ui. syntax within
-        // a given key for triggers and events
-        // swaps the @ui with the associated selector.
-        // Returns a new, non-mutated, parsed events hash.
-        normalizeUIKeys = function (hash, ui) {
-            return reduce(hash, function (memo, val, key) {
-                var normalizedKey = normalizeUIString(key, ui);
-                memo[normalizedKey] = val;
-                return memo;
-            }, {});
-        },
-        Element = factories.Directive.extend('Element', {
-            constructor: function (view) {
-                this.view = view;
-                return this;
-            },
-            ensure: function () {
-                var el, element = this,
-                    view = element.view,
-                    selector = element[SELECTOR] || result(view, 'el');
-                if (selector) {
-                    element[SELECTOR] = selector;
-                }
-                if (isInstance(selector, factories.DOMM)) {
-                    return;
-                }
-                if (isString(selector)) {
-                    // sets external element
-                    el = selector;
-                } else {
-                    // defauts back to wrapping the element
-                    // creates internal element
-                    el = element.create(result(view, 'tagName'));
-                    // subclassed to expand the attributes that can be used
-                }
-                element.set(el, BOOLEAN_FALSE);
-            },
-            create: function (tag) {
-                return $.createElement(tag);
-            },
-            unset: function () {
-                var element = this;
-                // element.undelegateEvents();
-                // element.undelegateTriggers();
-                delete element.view.el;
-                delete element.el;
-            },
-            set: function (el, render) {
-                var directive = this;
-                directive.view.el = directive.el = el;
-                // directive.degenerateUIBindings();
-                // if (render !== BOOLEAN_FALSE) {
-                //     directive.render(render);
-                //     directive.generateUIBindings();
-                //     directive.bindUI();
-                //     if (newelementisDifferent) {
-                //         directive.delegateEvents();
-                //         directive.delegateTriggers();
-                //     }
-                // }
-            },
-            render: function (html) {
-                var element = this;
-                element.el.html(html || '');
-                return element;
-            },
-            degenerateUIBindings: function () {
-                var directive = this;
-                if (!directive.ui) {
-                    return;
-                }
-                directive.ui = directive.view.ui = directive.uiBindings;
-                delete directive.uiBindings;
-            },
-            generateUIBindings: function () {
-                var directive = this,
-                    uiBindings = directive.uiBindings || result(directive.view, 'ui'),
-                    ui = directive.ui = directive.ui || {};
-                if (directive.uiBindings) {
-                    return directive;
-                }
-                // save it to skip the result call later
-                directive.uiBindings = uiBindings;
-                return directive;
-            },
-            delegateEvents: function () {
-                var key, method, match, directive = this,
-                    view = directive.view,
-                    el = directive.el,
-                    elementBindings = directive.elementBindings || result(view, 'elementEvents'),
-                    __events = [];
-                if (directive.elementBindings) {
-                    directive.elementBindings = elementBindings;
-                }
-                if (!el) {
-                    return directive;
-                }
-                each(elementBindings, function (method, key) {
-                    var object = makeDelegateEventKeys(view.cid, directive.uiBindings, key),
-                        bound = object.fn = bind(view[method] || method, view);
-                    __events.push(object);
-                    el.on(object.events.join(SPACE), object[SELECTOR], bound);
-                });
-                directive.cachedElementBindings = __events;
-                return directive;
-            },
-            undelegateEvents: function () {
-                var key, method, match, directive = this,
-                    view = directive.view,
-                    el = directive.el,
-                    elementBindings = directive.cachedElementBindings;
-                if (!elementBindings || !el) {
-                    return directive;
-                }
-                duff(elementBindings, function (binding) {
-                    el.off(binding.events.join(SPACE), binding[SELECTOR], binding.fn);
-                });
-                directive.cachedElementBindings = UNDEFINED;
-                return directive;
-            },
-            delegateTriggers: function () {
-                var key, method, match, directive = this,
-                    view = directive.view,
-                    el = directive.el,
-                    elementTriggers = directive.elementTriggers || result(view, 'elementTriggers'),
-                    __events = [];
-                if (!directive.elementTriggers) {
-                    directive.elementTriggers = elementTriggers;
-                }
-                if (!el) {
-                    return directive;
-                }
-                each(elementTriggers, function (method, key) {
-                    var object = makeDelegateEventKeys(view.cid, directive.uiBindings, key),
-                        bound = object.fn = basicViewTrigger.bind(view, method);
-                    el.on(object.events.join(SPACE), object[SELECTOR], bound);
-                });
-                directive.cachedElementTriggers = __events;
-            },
-            undelegateTriggers: function () {
-                var key, method, match, directive = this,
-                    view = directive.view,
-                    el = directive.el,
-                    elementBindings = directive.cachedElementTriggers;
-                if (!directive.cachedElementTriggers || !el) {
-                    return directive;
-                }
-                duff(elementBindings, function (binding) {
-                    el.off(binding.events.join(SPACE), binding[SELECTOR], binding.fn);
-                });
-                directive.cachedElementTriggers = UNDEFINED;
-                return directive;
-            },
-            setAttributes: function () {
-                var directive = this,
-                    view = directive.view,
-                    attrs = result(view, 'elementAttributes');
-                if (view[CLASSNAME]) {
-                    attrs = attrs || {};
-                    attrs[CLASS] = result(view, CLASSNAME);
-                }
-                if (attrs) {
-                    directive.el.attr(attrs);
-                }
-                return directive;
-            },
-            bindUI: function () {
-                var directive = this,
-                    uiBindings = directive.uiBindings;
-                directive.ui = directive.view.ui = map(uiBindings, directive.el.$, directive.el);
-                return directive;
+        it = function (string, handler) {
+            var copy, expectation;
+            stack.push(string);
+            copy = stack.slice(0);
+            stack.pop();
+            expectation = {
+                string: string,
+                handler: handler,
+                current: copy,
+                beforeStack: globalBeforeEachStack.slice(0),
+                afterStack: globalAfterEachStack.slice(0)
+            };
+            allIts.push(expectation);
+            if (testisrunning) {
+                queue.push(expectation);
+                return;
             }
-        });
-    app.defineDirective(ELEMENT, Element[CONSTRUCTOR], function (directive, instance) {
-        directive.el.destroy();
-        directive.unset();
-        var ui = directive.ui;
-        directive.degenerateUIBindings();
-        _.eachCall(ui, 'destroy');
-    });
-});
-app.scope(function (app) {
-    var _ = app._,
-        factories = _.factories,
-        Collection = factories.Collection,
-        protoProp = _.protoProp,
-        isFragment = _.isFragment,
-        isInstance = _.isInstance,
-        isFunction = _.isFunction,
-        isArrayLike = _.isArrayLike,
-        reverseParams = _.reverseParams,
-        intendedObject = _.intendedObject,
-        createDocumentFragment = _.createDocumentFragment,
-        RENDER = 'render',
-        RENDERED = RENDER + 'ed',
-        OPTIONS = 'options',
-        PARENT_NODE = 'parentNode',
-        CONSTRUCTOR = 'constructor',
-        BUFFERED_VIEWS = 'bufferedViews',
-        REGION_MANAGER = 'regionManager',
-        ESTABLISHED_REGIONS = '_establishedRegions',
-        APPEND_CHILD_ELEMENTS = '_appendChildElements',
-        getRegion = function (key) {
-            return this.directive(REGION_MANAGER).list.get(ID, key);
+            setup(expectation);
         },
-        addRegion = function (key, selector) {
-            var regionManagerDirective = this.directive(REGION_MANAGER);
-            intendedObject(key, selector, function (key, selector) {
-                var region = regionManagerDirective.list.get(key);
-                if (!region) {
-                    regionManagerDirective.establish(key, selector);
+        runningEach = function (globalStack) {
+            for (var i = 0; i < globalStack[LENGTH]; i++) {
+                var itemized = globalStack[i];
+                for (var j = 0; j < itemized[LENGTH]; j++) {
+                    itemized[j]();
                 }
-            });
+            }
         },
-        /**
-         * @class View
-         * @augments Model
-         * @augments Model
-         * @classDesc Objects that have one or more element associated with them, such as a template that needs constant updating from the data
-         */
-        // region views are useful if you're constructing different components
-        // from a separate place and just want it to be in the attach pipeline
-        // very useful for componentizing your ui
-        // LeafView = factories.
-        // regionConstructor = ,
-        Model = factories.Model,
-        Region = factories.Model.extend('Region', {
-            constructor: function (secondary) {
-                var model = this;
-                factories.Model[CONSTRUCTOR].call(model, {}, secondary);
-                model.directive(CHILDREN);
-                model.setElement();
-                return model;
-            },
-            add: function (models_, options_) {
-                var bufferedViewsDirective, region = this,
-                    options = options_ || {},
-                    unwrapped = Collection(models_).each(function (view_) {
-                        var view = isInstance(view_, View) ? view_ : (options.Child || region.Child || factories.View)({
-                                model: isInstance(view_, Model) ? view_ : view_ = Model(view_)
-                            }),
-                            nul = bufferedViewsDirective || ((bufferedViewsDirective = region.directive(BUFFERED_VIEWS)) && bufferedViewsDirective.ensure());
-                        region.adopt(view);
-                        bufferedViewsDirective.views.push(view);
-                    }).unwrap();
-                if (region.el) {
-                    region.render();
-                }
-                return unwrapped;
-            },
-            adopt: function (view) {
-                var region = this,
-                    children = region[CHILDREN];
-                if (view[PARENT]) {
-                    if (view[PARENT] === region) {
-                        return;
-                    } else {
-                        view[PARENT].disown(view);
+        beforeEach = function (handler) {
+            globalBeforeEachStack[globalBeforeEachStack[LENGTH] - 1].push(handler);
+        },
+        afterEach = function (handler) {
+            globalAfterEachStack[globalAfterEachStack[LENGTH] - 1].push(handler);
+        },
+        setupPoller = function () {
+            pollerTimeout = pollerTimeout === void 0 ? setTimeout(function loops() {
+                var theIt, i = 0,
+                    totalTime = 0;
+                if (!testisrunning) {
+                    for (; i < allIts[LENGTH]; i++) {
+                        theIt = allIts[i];
+                        totalTime += (theIt.endTime - theIt.startTime);
                     }
-                }
-                view[PARENT] = region;
-                children.add(view);
-            },
-            disown: function (view) {
-                var region = this,
-                    children = region[CHILDREN];
-                view[PARENT] = NULL;
-                children.remove(view);
-            },
-            attach: function (view) {
-                var parentNode, bufferDirective, el = view.el && view.el.element();
-                if (!el) {
-                    return;
-                }
-                parentNode = el.parentNode;
-                bufferDirective = this.directive(BUFFERED_VIEWS);
-                if (parentNode && parentNode === bufferDirective.region.el.element()) {
-                    return;
-                }
-                bufferDirective.els.appendChild(el);
-            },
-            // this needs to be modified for shared windows
-            setElement: function () {
-                var manager, region = this,
-                    selector = region[SELECTOR],
-                    parent = region[PARENT][PARENT];
-                if (parent !== app) {
-                    if (parent.is(RENDERED)) {
-                        manager = parent.el.$(selector)[INDEX](0);
-                    }
+                    console.log(successfulExpectations.length + ' successful expectations\n' + failedExpectations.length + ' failed expectations\n' + allExpectations.length + ' expectations ran\n' + allIts.length + ' out of ' + allIts.length + ' tests passed\nin ' + totalTime + 'ms');
                 } else {
-                    manager = (region._owner$ || $)(selector)[INDEX](0);
+                    pollerTimeout = setTimeout(loops, 100);
                 }
-                if (!manager) {
-                    return;
-                }
-                region.directive(ELEMENT).set(manager);
-            },
-            render: function () {
-                var region = this,
-                    bufferDirective = region.directive(BUFFERED_VIEWS),
-                    elementDirective = region.directive(ELEMENT);
-                region.unmark(RENDERED);
-                // doc frags on regionviews, list of children to trigger events on
-                bufferDirective.ensure();
-                // request extra data or something before rendering: dom is still completely intact
-                region[DISPATCH_EVENT]('before:' + RENDER);
-                // unbinds and rebinds element only if it changes
-                region.setElement();
-                // update new element's attributes
-                elementDirective.setAttributes();
-                // puts children back inside parent
-                region[CHILDREN].eachCall(RENDER);
-                // attach region element
-                // appends child elements
-                elementDirective.el.append(bufferDirective.els);
-                // pass the buffered views up
-                // region.passBuffered(list);
-                // mark the view as rendered
-                region.mark(RENDERED);
-                // reset buffered objects
-                bufferDirective.reset();
-                // dispatch the render event
-                region[DISPATCH_EVENT](RENDER);
-                return region;
-            }
-        }, BOOLEAN_TRUE),
-        // view needs to be pitted against a document
-        View = Region.extend('View', {
-            tagName: 'div',
-            filter: BOOLEAN_TRUE,
-            templateIsElement: BOOLEAN_FALSE,
-            getRegion: getRegion,
-            template: function () {
-                return EMPTY_STRING;
-            },
-            parentView: function () {
-                var found, view = this,
-                    parent = view[PARENT];
-                while (found && parent && !isInstance(parent, View)) {
-                    parent = parent[PARENT];
-                    if (isInstance(parent, View)) {
-                        found = parent;
-                    }
-                }
-                return found;
-            },
-            constructor: function (secondary) {
-                var model = this;
-                factories.Model[CONSTRUCTOR].call(model, secondary);
-                model.directive(ELEMENT).ensure();
-                this.id = uniqueId(BOOLEAN_FALSE, BOOLEAN_TRUE);
-                this.establishRegions();
-                return model;
-            },
-            establishRegions: function () {
-                var regions = result(this, 'regions');
-                var regionsResult = keys(regions)[LENGTH] && this.directive(REGION_MANAGER).establish(regionsResult);
-                return this;
-            },
-            valueOf: function () {
-                return this.id;
-            },
-            destroy: function () {
-                var view = this;
-                if (view.is('destroying')) {
-                    return view;
-                }
-                view.mark('destroying');
-                if (view[REGION_MANAGER]) {
-                    view[REGION_MANAGER].list.eachCall('destroy');
-                }
-                view.el.destroy();
-                view.directiveDestruction(ELEMENT);
-                Model[CONSTRUCTOR][PROTOTYPE].destroy.call(view);
-                return view;
-            },
-            render: function () {
-                var newelementisDifferent, element, json, html, renderResult, bufferedDirective, template, settingElement, view = this,
-                    // you might be able to do this a better way
-                    neverRendered = !view.is(RENDERED);
-                view.unmark(RENDERED);
-                if (!result(view, 'filter')) {
-                    return view;
-                }
-                element = view.directive(ELEMENT);
-                // prep the object with extra members (doc frags on regionviews,
-                // list of children to trigger events on)
-                // request extra data or something before rendering: dom is still completely intact
-                view[DISPATCH_EVENT]('before:' + RENDER);
-                // renders the html
-                if (isFunction(view.template)) {
-                    json = view.model && view.model.toJSON();
-                    // try to generate template
-                    html = view.template(json);
-                } else {
-                    html = view.template;
-                }
-                settingElement = view.el;
-                if (result(view, 'templateIsElement')) {
-                    settingElement = view.el.owner.fragment(html).children();
-                    html = BOOLEAN_FALSE;
-                }
-                newelementisDifferent = settingElement !== element.el;
-                if (newelementisDifferent) {
-                    element.unset();
-                }
-                // turns ui into a string
-                element.degenerateUIBindings();
-                // unbinds and rebinds element only if it changes
-                element.set(settingElement);
-                if (html !== BOOLEAN_FALSE) {
-                    element.render(html);
-                }
-                element.generateUIBindings();
-                element.bindUI();
-                if (newelementisDifferent || neverRendered) {
-                    element.delegateEvents();
-                    element.delegateTriggers();
-                }
-                // update new element's attributes
-                element.setAttributes();
-                // mark the view as rendered
-                view.establishRegions();
-                view.mark(RENDERED);
-                // dispatch the render event
-                view[DISPATCH_EVENT](RENDER);
-                // pass buffered views up to region
-                if (view[REGION_MANAGER]) {
-                    view[REGION_MANAGER].list.eachCall(RENDER);
-                }
-                element = view[PARENT] && view[PARENT].attach(view);
-                return view;
-            }
-        }, BOOLEAN_TRUE),
-        _View = factories.View,
-        establishRegion = function (key, selector) {
-            var regionManagerDirective = this,
-                parentView = regionManagerDirective[PARENT];
-            if (!key) {
-                return regionManagerDirective;
-            }
-            intendedObject(key, selector, function (key, selector) {
-                var $selected, region = regionManagerDirective.list.get(key);
-                if (!region) {
-                    region = regionManagerDirective.create(key, selector);
-                }
-                if (parentView !== app) {
-                    $selected = parentView.$(region[SELECTOR])[INDEX](0);
-                } else {
-                    $selected = $(region[SELECTOR])[INDEX](0);
-                }
-                // if ($selected) {
-                region.el = $selected;
-                // }
-            });
-            return regionManagerDirective;
-        },
-        removeRegion = function (region_) {
-            // var regionManager = this;
-            // var region = isString(region_) ? regionManager.get(region_) : region_;
-            // regionManager.remove(region);
-            // regionManager.unRegister(region.id, region);
-        },
-        createRegion = function (where, region_) {
-            var key, regionManagerDirective = this,
-                parent = regionManagerDirective[PARENT],
-                // assume that it is a region
-                selector = region_,
-                region = region_;
-            if (isInstance(region, Region)) {
-                return region;
-            }
-            region = Region(extend({
-                selector: selector || EMPTY_STRING
-            }, isObject(region) ? region : {}, {
-                id: where,
-                parent: regionManagerDirective,
-                isAttached: parent === app ? BOOLEAN_TRUE : parent.isAttached
-            }));
-            regionManagerDirective.list.push(region);
-            regionManagerDirective.list.register(ID, where, region);
-            return region;
-        },
-        bufferedEnsure = function () {
-            var buffers = this,
-                _bufferedViews = isArray(buffers.views) ? 1 : buffers.resetViews(),
-                _bufferedEls = isFragment(buffers.els) ? 1 : buffers.resetEls();
-        },
-        bufferedReset = function () {
-            var cached = this.views;
-            this.resetEls();
-            this.resetViews();
-            return cached;
-        },
-        bufferedElsReset = function () {
-            this.els = document.createDocumentFragment();
-        },
-        bufferedViewsReset = function () {
-            this.views = [];
+            }, 100) : pollerTimeout;
         };
-    app.defineDirective(REGION_MANAGER, function (instance) {
-        return {
-            list: new Collection[CONSTRUCTOR](),
-            parent: instance,
-            create: createRegion,
-            establish: establishRegion,
-            remove: removeRegion,
-            add: addRegion
-        };
-    });
-    app.defineDirective(BUFFERED_VIEWS, function (instance) {
-        return {
-            region: instance,
-            els: $.createDocumentFragment(),
-            views: [],
-            reset: bufferedReset,
-            ensure: bufferedEnsure,
-            resetViews: bufferedViewsReset,
-            resetEls: bufferedElsReset
-        };
-    });
-    app.extend({
-        getRegion: getRegion,
-        addRegion: addRegion,
-        removeRegion: removeRegion
+    _.exports({
+        afterEach: afterEach,
+        beforeEach: beforeEach,
+        expect: expect,
+        describe: describe,
+        it: it
     });
 });
 });

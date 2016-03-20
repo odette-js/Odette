@@ -1,3 +1,18 @@
+var eachCall = function (array, method, arg) {
+        return duff(array, function (item) {
+            result(item, method, arg);
+        });
+    },
+    mapCall = function (array, method, arg) {
+        return map(array, function (item) {
+            return result(item, method, arg);
+        });
+    },
+    eachCallRight = function (array, method, arg) {
+        return duff(array, function (item) {
+            result(item, method, arg);
+        }, NULL, -1);
+    };
 app.scope(function (app) {
     var isNullMessage = {
             message: 'object must not be null or undefined'
@@ -7,22 +22,6 @@ app.scope(function (app) {
         },
         cannotModifyMessage = {
             message: 'list cannot be modified while it is being iterated over'
-        },
-        // ID = ID,
-        eachCall = function (array, method, arg) {
-            return duff(array, function (item) {
-                result(item, method, arg);
-            });
-        },
-        mapCall = function (array, method, arg) {
-            return map(array, function (item) {
-                return result(item, method, arg);
-            });
-        },
-        eachCallRight = function (array, method, arg) {
-            return duff(array, function (item) {
-                result(item, method, arg);
-            }, NULL, -1);
         },
         /**
          * @func
@@ -35,7 +34,7 @@ app.scope(function (app) {
             return !!index;
         },
         removeAt = function (list, index) {
-            return splice(list, index, 1)[0];
+            return list.splice(index, 1)[0];
         },
         add = function (list, item, lookAfter, lookBefore, fromRight) {
             var val = 0,
@@ -48,7 +47,7 @@ app.scope(function (app) {
         insertAt = function (list, item, index) {
             var len = list[LENGTH],
                 lastIdx = len || 0;
-            splice(list, index || 0, 0, item);
+            list.splice(index || 0, 0, item);
             return len !== list[LENGTH];
         },
         eq = function (list, num, caller_) {
@@ -101,19 +100,21 @@ app.scope(function (app) {
             return range;
         },
         count = function (list, runner_, ctx_, start, end) {
-            var runner, obj, idx, ctx = ctx_ || this;
-            if (start < end && isNumber(start) && isNumber(end) && isFinite(start) && isFinite(end)) {
-                end = Math.abs(end);
-                idx = start;
-                runner = bind(runner_, ctx);
-                while (idx < end) {
-                    obj = NULL;
-                    if (has(list, idx)) {
-                        obj = list[idx];
-                    }
-                    runner(obj, idx, list);
-                    idx++;
+            var runner, obj, idx, ctx;
+            if (start >= end || !isNumber(start) || !isNumber(end) || !isFinite(start) || !isFinite(end)) {
+                return list;
+            }
+            ctx = ctx_ || this;
+            runner = bind(runner_, ctx);
+            end = Math.abs(end);
+            idx = start;
+            while (idx < end) {
+                obj = NULL;
+                if (list[LENGTH] > idx) {
+                    obj = list[idx];
                 }
+                runner(obj, idx, list);
+                idx++;
             }
             return list;
         },
@@ -126,7 +127,9 @@ app.scope(function (app) {
         /**
          * @func
          */
-        closest = function (array, searchElement, minIndex_, maxIndex_) {
+        closestIndex = function (array, searchElement, minIndex_, maxIndex_) {
+            // var index;
+            // return (index = smartIndexOf(array, searchElement, minIndex_, maxIndex_)) === -1 ? UNDEFINED : array[index];
             var currentIndex, currentElement, found,
                 minIndex = minIndex_ || 0,
                 maxIndex = maxIndex_ || array[LENGTH] - 1;
@@ -168,7 +171,7 @@ app.scope(function (app) {
         concatUnique = function () {
             return foldl(arguments, function (memo, argument) {
                 duff(argument, function (item) {
-                    if (binaryIndexOf(memo, item) === -1) {
+                    if (smartIndexOf(memo, item) === -1) {
                         memo.push(item);
                     }
                 });
@@ -275,7 +278,6 @@ app.scope(function (app) {
         unwrapInstance = function (instance_) {
             return isInstance(instance, factories.Collection) ? instance_ : instance.unwrap();
         },
-        directives = _.directives,
         REGISTRY = 'registry',
         Registry = factories.Directive.extend(upCase(REGISTRY), {
             constructor: function () {
@@ -298,6 +300,11 @@ app.scope(function (app) {
                 cat[id] = value;
                 return this;
             },
+            group: function (category, setter) {
+                var register = this.register;
+                register[category] = setter || register[category] || {};
+                return register[category];
+            },
             swap: function (category, id, value) {
                 var cached = this.get(category, id);
                 this.keep(category, id, value);
@@ -313,8 +320,8 @@ app.scope(function (app) {
                 this.count = count || 0;
                 return [cached, cachedCount];
             }
-        }),
-        recreatingSelfList = gapSplit('eq map mapCall filter pluck where whereNot cycle uncycle flatten'),
+        }, BOOLEAN_TRUE),
+        recreatingSelfList = gapSplit('eq map mapCall filter pluck where whereNot cycle uncycle flatten gather'),
         eachHandlers = {
             each: duff,
             duff: duff,
@@ -336,18 +343,17 @@ app.scope(function (app) {
         foldIteration = gapSplit('foldr foldl reduce'),
         findIteration = gapSplit('find findLast findWhere findLastWhere'),
         indexers = gapSplit('indexOf posit'),
-        // indicesIteration = gapSplit('add insertAt remove removeAt'),
         foldFindIteration = foldIteration.concat(findIteration),
         marksIterating = function (fn) {
             return function (one, two, three, four, five, six) {
-                var result, list = this;
-                ++list.iterating;
-                result = fn(list, one, two, three, four, five, six);
-                --list.iterating;
-                return result;
+                return this.iterate(fn.bind(NULL, this, one, two, three, four, five, six));
             };
         },
-        wrappedListMethods = extend(wrap(joinHandlers, function (name) {
+        wrappedListMethods = extend({
+            seeker: function (handler, context) {
+                return _.duffRight(this.items, handler, context);
+            }
+        }, wrap(joinHandlers, function (name) {
             return function (arg) {
                 return this.items[name](arg);
             };
@@ -357,7 +363,8 @@ app.scope(function (app) {
                 return _[name](list.items, one, two, three, four, five);
             };
         }), wrap(splatHandlers, function (name) {
-            return function (args) {
+            return function (args_) {
+                var args = isArray(args_) ? args_ : arguments;
                 return this.items[name].apply(this.items, args);
             };
         }), wrap(nativeCannotModify, function (name) {
@@ -434,8 +441,18 @@ app.scope(function (app) {
         }),
         LIST = 'list',
         List = factories.Directive.extend(upCase(LIST), extend({
-            constructor: function () {
-                this.reset();
+            constructor: function (items) {
+                this.reset(items);
+                return this;
+            },
+            iterate: function (fn) {
+                ++this.iterating;
+                var result = fn();
+                --this.iterating;
+                return result;
+            },
+            obliteration: function (handler, context) {
+                duffRight(this.items, handlers, context === UNDEFINED ? this : context);
                 return this;
             },
             empty: function () {
@@ -443,8 +460,8 @@ app.scope(function (app) {
             },
             reset: function (items) {
                 // can be array like
-                var list = this;
-                var old = list.items || [];
+                var list = this,
+                    old = list.items || [];
                 list.iterating = list.iterating ? exception(cannotModifyMessage) : 0;
                 list.items = items == NULL ? [] : (isArrayLike(items) ? toArray(items) : [items]);
                 list.reversed = BOOLEAN_FALSE;
@@ -482,19 +499,11 @@ app.scope(function (app) {
                 });
             }
         }, wrappedListMethods), BOOLEAN_TRUE),
-        directiveResult = app.defineDirective(LIST, List[CONSTRUCTOR]),
+        directiveResult = app.defineDirective(LIST, function () {
+            return new List[CONSTRUCTOR]();
+        }),
         Collection = factories.Directive.extend('Collection', extend({
             empty: _.flow(directives.parody(LIST, 'reset'), directives.parody(REGISTRY, 'reset')),
-            // has: directives.parody(LIST, 'has'),
-            // unwrap: directives.parody(LIST, 'unwrap'),
-            // reset: directives.parody(LIST, 'reset'),
-            // length: directives.parody(LIST, LENGTH),
-            // first: directives.parody(LIST, 'first'),
-            // last: directives.parody(LIST, 'last'),
-            // index: directives.parody(LIST, 'index'),
-            // toString: directives.parody(LIST, 'toString'),
-            // toJSON: directives.parody(LIST, TO_JSON),
-            // sort: directives.parody(LIST, 'sort'),
             get: directives.parody(REGISTRY, 'get'),
             register: directives.parody(REGISTRY, 'keep'),
             unRegister: directives.parody(REGISTRY, 'drop'),
@@ -530,15 +539,15 @@ app.scope(function (app) {
              * @name Model#add
              * @func
              */
-        }, wrap(gapSplit('has unwrap reset length first last index toString toJSON sort').concat(abstractedCanModify, abstractedCannotModify, nativeCannotModify, indexers, joinHandlers, splatHandlers), function (key) {
+        }, wrap(gapSplit('has unwrap reset length first last index toString toJSON sort').concat(abstractedCanModify, abstractedCannotModify, nativeCannotModify, indexers, joinHandlers), function (key) {
             return directives.parody(LIST, key);
         }), wrap(recreatingSelfList, function (key) {
             return recreateSelf(function (one) {
                 return this.list[key](one);
             });
         }), wrap(splatHandlers, function (key) {
-            return function () {
-                this.list[key](arguments);
+            return function (items) {
+                this.list[key](items);
                 return this;
             };
         }), wrap(countingList, function (key) {
@@ -587,14 +596,18 @@ app.scope(function (app) {
                 sorted.sort();
                 return sorted;
             },
+            closestIndex: function (value) {
+                return closestIndex(this.unwrap(), value);
+            },
             closest: function (value) {
-                return closest(this.unwrap(), value);
+                var index, list = this.unwrap();
+                return (index = closestIndex(list, value)) === -1 ? UNDEFINED : list[index];
             },
             validIDType: function (id) {
                 return isNumber(id) || isString(id);
             },
-            indexOf: function (object) {
-                return smartIndexOf(this.unwrap(), object);
+            indexOf: function (object, min, max) {
+                return smartIndexOf(this.unwrap(), object, min, max);
             },
             load: function (values) {
                 var sm = this;
@@ -610,21 +623,24 @@ app.scope(function (app) {
                     isNotNull = object == NULL && exception(isNullMessage),
                     valueOfResult = object && object.valueOf(),
                     retrieved = (registryDirective = sorted[REGISTRY]) && sorted.get(ID, valueOfResult);
-                if (!retrieved) {
-                    ret = !sorted.validIDType(valueOfResult) && exception(validIdMessage);
-                    sorted.insertAt(object, sorted.closest(valueOfResult) + 1);
-                    (registryDirective || sorted.directive(REGISTRY)).keep(ID, valueOfResult, object);
-                    return BOOLEAN_TRUE;
+                if (retrieved) {
+                    return BOOLEAN_FALSE;
                 }
+                ret = !sorted.validIDType(valueOfResult) && exception(validIdMessage);
+                sorted.insertAt(object, sorted.closestIndex(valueOfResult) + 1);
+                (registryDirective || sorted.directive(REGISTRY)).keep(ID, valueOfResult, object);
+                return BOOLEAN_TRUE;
             },
             remove: function (object, index) {
                 var where, sorted = this,
                     isNotNull = object == NULL && exception(isNullMessage),
                     valueOfResult = object && object.valueOf();
-                if (object != NULL && sorted.get(ID, valueOfResult) != NULL) {
-                    sorted.removeAt(index === UNDEFINED ? sorted.indexOf(object) : index);
-                    sorted.unRegister(ID, valueOfResult);
+                if (object == NULL || sorted.get(ID, valueOfResult) == NULL) {
+                    return BOOLEAN_FALSE;
                 }
+                sorted.removeAt(index === UNDEFINED ? sorted.indexOf(object) : index);
+                sorted.unRegister(ID, valueOfResult);
+                return BOOLEAN_TRUE;
             },
             pop: function () {
                 return this.remove(this.last());
@@ -699,10 +715,8 @@ app.scope(function (app) {
             remove: function (string) {
                 var sm = this,
                     found = sm.get(ID, string);
-                if (string) {
-                    if (found) {
-                        found.isValid(BOOLEAN_FALSE);
-                    }
+                if (string && found) {
+                    found.isValid(BOOLEAN_FALSE);
                 }
                 return sm;
             },
@@ -739,6 +753,7 @@ app.scope(function (app) {
                     });
                 parent.directive(LIST).reset(validResult.items);
                 parent.directive(REGISTRY).reset(validResult.registry);
+                return parent;
             },
             generate: function (delimiter_) {
                 var validResult, string = EMPTY_STRING,
@@ -773,7 +788,7 @@ app.scope(function (app) {
                 if (sm.current() === madeString) {
                     return sm;
                 }
-                sm.load(isArrayResult ? value : _.split(value, delimiter));
+                sm.load(isArrayResult ? value : (isString(value) ? value.split(delimiter) : BOOLEAN_FALSE));
                 sm.current(madeString);
                 return sm;
             },

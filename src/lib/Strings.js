@@ -97,15 +97,15 @@ var cacheable = function (fn) {
             var i, s, val;
             if (isString(str)) {
                 if (str[0] === splitter) {
-                    str = slice(str, 1);
+                    str = str.slice(1);
                 }
-                s = split(str, splitter);
+                s = str.split(splitter);
                 for (i = s[LENGTH] - 1; i >= 1; i--) {
                     if (s[i]) {
                         s[i] = upCase(s[i]);
                     }
                 }
-                val = join(s, EMPTY_STRING);
+                val = s.join(EMPTY_STRING);
             }
             return val;
         };
@@ -114,7 +114,7 @@ var cacheable = function (fn) {
      * @func
      */
     upCase = cacheable(function (s) {
-        return s[0].toUpperCase() + slice(s, 1);
+        return s[0].toUpperCase() + s.slice(1);
     }),
     /**
      * @func

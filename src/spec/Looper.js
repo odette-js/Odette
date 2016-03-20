@@ -1,5 +1,5 @@
 application.scope().run(function (app, _, factories) {
-    describe('Looper', function () {
+    _.describe('Looper', function () {
         //
     });
 });

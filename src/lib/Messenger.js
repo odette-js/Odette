@@ -14,7 +14,7 @@ app.scope(function (app) {
             });
             return this;
         };
-    app.defineDirective('messenger', function () {
+    app.defineDirective('Messenger', function () {
         return {
             hash: {},
             reply: reply,

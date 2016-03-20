@@ -1,61 +1,61 @@
 application.scope().run(function (app, _, factories) {
-    describe('Modules', function () {
+    _.describe('Modules', function () {
         var level = app.module('level');
         var lower = app.module('level.lower');
         var lowered = app.module('level.lower.lowered');
-        it('can have children', function () {
-            expect(lower.parent === level).toEqual(true);
-            expect(lower === lowered.parent).toEqual(true);
+        _.it('can have children', function () {
+            _.expect(lower.parent === level).toEqual(true);
+            _.expect(lower === lowered.parent).toEqual(true);
         });
-        it('can access it\'s children through the exact same api', function () {
-            expect(lower.module('lowered') === lowered).toEqual(true);
-            expect(lower === level.module('lower')).toEqual(true);
+        _.it('can access it\'s children through the exact same api', function () {
+            _.expect(lower.module('lowered') === lowered).toEqual(true);
+            _.expect(lower === level.module('lower')).toEqual(true);
         });
-        it('can be initialized after it is created', function () {
+        _.it('can be initialized after it is created', function () {
             var count = 0;
             app.module('level.lower', function () {
                 count++;
             });
-            expect(count).toEqual(1);
+            _.expect(count).toEqual(1);
         });
-        it('passes itself into it\'s initializing functions', function () {
+        _.it('passes itself into it\'s initializing functions', function () {
             var count = 0;
             app.module('lower', function (module, app_, _, factories) {
                 count = 1;
-                expect(module).toEqual(app.module('lower'));
-                expect(app_).toEqual(app);
-                expect(_).toEqual(app._);
-                expect(factories).toEqual(_.factories);
+                _.expect(module).toEqual(app.module('lower'));
+                _.expect(app_).toEqual(app);
+                _.expect(_).toEqual(app._);
+                _.expect(factories).toEqual(_.factories);
             });
-            expect(count).toEqual(1);
+            _.expect(count).toEqual(1);
         });
-        it('can have multiple generation handlers', function () {
+        _.it('can have multiple generation handlers', function () {
             var count = 0;
             app.module('level', function () {
                 count++;
             });
-            expect(count).toEqual(1);
+            _.expect(count).toEqual(1);
             app.module('level', function () {
                 count += 2;
             });
-            expect(count).toEqual(3);
+            _.expect(count).toEqual(3);
         });
-        it('can have exports (can hold data)', function () {
+        _.it('can have exports (can hold data)', function () {
             level.exports({
                 one: 1,
                 two: 2
             });
-            expect(level.get('exports').one).toEqual(1);
-            expect(level.get('exports').two).toEqual(2);
+            _.expect(level.get('exports').one).toEqual(1);
+            _.expect(level.get('exports').two).toEqual(2);
         });
-        it('which is like giving public data', function () {
+        _.it('which is like giving public data', function () {
             var mod = app.module('newmodule', function () {
                 this.exports({
                     here: 'there'
                 });
             });
-            expect(app.require('newmodule').here).toEqual('there');
-            expect(function () {
+            _.expect(app.require('newmodule').here).toEqual('there');
+            _.expect(function () {
                 app.require('somenonexistantmodule');
             }).toThrow();
         });

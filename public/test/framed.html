@@ -17,15 +17,13 @@
             <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
         <![endif]-->
         <div class="test-div"></div>
-        <script src="/js/all.js"></script>
+        <script src="/js/odette.js"></script>
         <script type="text/javascript">
-            var script = document.createElement('script');
-            script.type = 'text/javascript';
+            var script = $.createElement('script');
+            script.prop('type', 'text/javascript');
             $(function () {
-                setTimeout(function () {
-                    document.body.appendChild(script);
-                    script.src = '/js/framed.js';
-                });
+                $('body').append(script);
+                script.prop('src', '/js/framed.js');
             });
         </script>
     </body>
