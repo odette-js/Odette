@@ -41,16 +41,16 @@ application.scope().run(function (app, _, factories) {
             _.expect(count).toEqual(3);
         });
         _.it('can have exports (can hold data)', function () {
-            level.exports({
+            level.publicize({
                 one: 1,
                 two: 2
             });
-            _.expect(level.get('exports').one).toEqual(1);
-            _.expect(level.get('exports').two).toEqual(2);
+            _.expect(level.exports.one).toEqual(1);
+            _.expect(level.exports.two).toEqual(2);
         });
         _.it('which is like giving public data', function () {
             var mod = app.module('newmodule', function () {
-                this.exports({
+                this.publicize({
                     here: 'there'
                 });
             });

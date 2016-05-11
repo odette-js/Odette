@@ -1,8 +1,4 @@
 app.scope(function (app) {
-    /**
-     * @class Associator
-     * @augments Model
-     */
     var _ = app._,
         factories = _.factories,
         ITEMS = 'items',
@@ -12,13 +8,7 @@ app.scope(function (app) {
         isObject = _.isObject,
         removeAt = _.removeAt,
         objectToString = {}.toString,
-        Associator = factories.Directive.extend('Associator', {
-            /**
-             * @func
-             * @name Associator#get
-             * @param {Object} obj - object that data is being gotten against in the Associator
-             * @param {String} [type] - toString version of the object being passed in
-             */
+        Associator = factories.Associator = factories.Directive.extend('Associator', {
             get: function (obj, type) {
                 var returnData, idxOf, dataset, n, key, instance = this,
                     canRead = 0,
@@ -96,5 +86,5 @@ app.scope(function (app) {
                 }
                 return current;
             }
-        }, BOOLEAN_TRUE);
+        });
 });

@@ -52,18 +52,18 @@ app.scope(function (app) {
                 message: 'directives must exist before they can be extended'
             });
             return app.defineDirective(newName, function (instance, name, third) {
-                var directive = directives.creation[oldName](instance, name, third);
+                var directive = new directives.creation[oldName](instance, name, third);
                 return new Handler(instance, name, directive);
             }, function (instance, name, third) {
                 var directive = directives.destruction[oldName](instance, name, third);
-                return new Destruction(instance, name, directive);
+                return Destruction(instance, name, directive);
             });
         },
-        Directive = factories.Extendable.extend('Directive', {
+        Directive = factories.Directive = factories.Extendable.extend('Directive', {
             mark: parody(STATUS, 'mark'),
             unmark: parody(STATUS, 'unmark'),
             remark: parody(STATUS, 'remark'),
-            is: checkParody(STATUS, 'is', BOOLEAN_FALSE),
+            is: checkParody(STATUS, 'is'),
             directive: function (name) {
                 var Handler, directive, that = this;
                 if ((directive = that[name])) {
@@ -78,7 +78,7 @@ app.scope(function (app) {
                 delete this[name];
                 return result;
             }
-        }, BOOLEAN_TRUE),
+        }),
         StatusMarker = factories.Extendable.extend(STATUS, {
             constructor: function () {
                 this[STATUSES] = {};
@@ -88,19 +88,25 @@ app.scope(function (app) {
                 return this[STATUSES][status] !== UNDEFINED;
             },
             mark: function (status) {
+                var previous = this[STATUSES][status];
                 this[STATUSES][status] = BOOLEAN_TRUE;
+                return previous !== BOOLEAN_TRUE;
             },
             unmark: function (status) {
+                var previous = this[STATUSES][status];
                 this[STATUSES][status] = BOOLEAN_FALSE;
+                return previous !== BOOLEAN_FALSE;
             },
             remark: function (status, direction) {
-                this[STATUSES][status] = direction === UNDEFINED ? !this[STATUSES][status] : !!direction;
+                var previous = this[STATUSES][status];
+                var result = this[STATUSES][status] = direction === UNDEFINED ? !this[STATUSES][status] : !!direction;
+                return previous !== result;
             },
             is: function (status) {
-                return this[STATUSES][status];
+                return !!this[STATUSES][status];
             },
             isNot: function (status) {
-                return !this.is(status);
+                return !this[STATUSES][status];
             }
         });
     defineDirective(STATUS, StatusMarker[CONSTRUCTOR]);

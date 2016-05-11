@@ -15,11 +15,21 @@ var content = ['browserify'],
             }
         });
     },
-    modules = 'beforeSetup setup scopeStart constants utils shims Strings Directives Collection Messenger Events Model directives/Events directives/Data directives/Children directives/Linguistics Promise Associator Ajax Module DOMM Looper directives/Element View Buster tests scopeEnd'.split(' '),
+    // setup = ,
+    modules = 'scopeStart constants utils shims Strings Directives Collection Messenger Events Model directives/Events directives/Data directives/Children directives/Linguistics Promise Associator HTTP Module DOMA Looper directives/Element View Buster directives/swipe tests scopeEnd'.split(' '),
     extraModules = 'Socket Router LocalStorage NoSock'.split(' '),
     framedModules = 'index'.split(' '),
     paths = makePath({
+        // watch path
         jsAll: './src/**/*.js',
+        jsDocOutput: './docs',
+        // build list
+        jsApplication: _.map('application'.split(' '), function (name) {
+            return './src/lib/' + name + '.js';
+        }),
+        jsSetup: _.map('odette'.split(' '), function (name) {
+            return './src/lib/' + name + '.js';
+        }),
         jsList: _.map(modules, function (name) {
             return './src/lib/' + name + '.js';
         }),
@@ -36,14 +46,18 @@ var content = ['browserify'],
             return './src/framed/' + name + '.js';
         }),
         jspublic: './public/js/',
+        jsTestsPublic: './public/js/',
         serverIndex: './index.js',
         ignoreFiles: ['.git/', 'node_modules/', './gulp', 'gulpfile.js', './public']
     });
+// paths.jsTestsOutput = '../_test/js/';
 paths.jsTestOutput = 'spec.js';
-paths.jsOutput = 'odette.js';
+paths.jsOutput = 'library.js';
+paths.jsApplicationOutput = 'application.js';
+paths.jsOdetteOutput = 'odette.js';
 paths.jsExtraOutput = 'extra.js';
 paths.jsFramedOutput = 'framed.js';
 gulpTasker(allTasks, [require('./settings'), paths]);
 gulp.task('build', content);
 gulp.task('dev', devTasks);
-gulp.task('default', server);
+gulp.task('default', allTasks);

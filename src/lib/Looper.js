@@ -5,10 +5,13 @@ app.scope(function (app) {
         lastTime = 0,
         frameTime = 0,
         pI = _.pI,
-        posit = _.posit,
         nowish = _.now,
         gapSplit = _.gapSplit,
         vendors = gapSplit('ms moz webkit o'),
+        RUNNING = 'running',
+        HALTED = 'halted',
+        STOPPED = 'stopped',
+        DESTROYED = 'destroyed',
         TIMEOUT = 'Timeout',
         SET_TIMEOUT = 'set' + TIMEOUT,
         CLEAR_TIMEOUT = 'clear' + TIMEOUT,
@@ -24,12 +27,17 @@ app.scope(function (app) {
         focused = BOOLEAN_TRUE,
         request = function (handler) {
             var nextFrame = Math.max(0, lastTime - frameTime);
-            if (focused) {
-                lastAFId = win[REQUEST_ANIMATION_FRAME](handler);
-            } else {
-                lastTId = win.setTimeout(handler, nextFrame);
+            lastAFId = win[REQUEST_ANIMATION_FRAME](function () {
+                // if this handler ever gets called, then you can call it focused
+                focused = BOOLEAN_TRUE;
+                handler();
+            });
+            if (!focused) {
+                win[CLEAR_TIMEOUT](lastTId);
+                lastTId = win.setTimeout(handler, nextFrame + 1);
             }
             if (Looper.playWhileBlurred) {
+                win[CLEAR_TIMEOUT](lastOverrideId);
                 lastOverrideId = win.setTimeout(function () {
                     focused = BOOLEAN_FALSE;
                     handler();
@@ -37,11 +45,15 @@ app.scope(function (app) {
             }
         },
         basicHandler = function () {
+            // snapshot the time
+            frameTime = _.now();
+            // clear all the things
             win[CANCEL_ANIMATION_FRAME](lastAFId);
             win[CLEAR_TIMEOUT](lastTId);
             win[CLEAR_TIMEOUT](lastOverrideId);
-            frameTime = _.now();
+            // run the handlers
             eachCall(runningLoopers, 'run', frameTime);
+            // do it all over again
             teardown();
         },
         setup = function () {
@@ -50,7 +62,7 @@ app.scope(function (app) {
         },
         teardown = function () {
             duffRight(runningLoopers, function (looper, idx) {
-                if (looper.halted() || looper.stopped() || looper.destroyed() || !looper.length()) {
+                if (looper.is(HALTED) || looper.is(STOPPED) || looper.is(DESTROYED) || !looper[LENGTH]()) {
                     looper.stop();
                     runningLoopers.splice(idx, 1);
                 }
@@ -64,7 +76,7 @@ app.scope(function (app) {
             allLoopers.push(looper);
         },
         start = function (looper) {
-            if (!posit(runningLoopers, looper)) {
+            if (!has(runningLoopers, looper)) {
                 runningLoopers.push(looper);
             }
             if (!running) {
@@ -74,7 +86,7 @@ app.scope(function (app) {
         shim = (function () {
             for (; x < vendors[LENGTH] && !win[REQUEST_ANIMATION_FRAME]; ++x) {
                 win[REQUEST_ANIMATION_FRAME] = win[vendors[x] + 'RequestAnimationFrame'];
-                win[CANCEL_ANIMATION_FRAME] = win[vendors[x] + _.upCase(CANCEL_ANIMATION_FRAME)] || win[vendors[x] + 'CancelRequestAnimationFrame'];
+                win[CANCEL_ANIMATION_FRAME] = win[vendors[x] + upCase(CANCEL_ANIMATION_FRAME)] || win[vendors[x] + 'CancelRequestAnimationFrame'];
             }
             if (!win[REQUEST_ANIMATION_FRAME]) {
                 win[REQUEST_ANIMATION_FRAME] = function (callback) {
@@ -93,152 +105,116 @@ app.scope(function (app) {
                 };
             }
         }()),
-        Looper = factories.Directive.extend('Looper', {
+        LOOPER = 'Looper',
+        Collection = factories.Collection,
+        runner = function (tween, obj) {
+            tween.current = obj;
+            if (obj.disabled) {
+                tween.dequeue(obj.id);
+                return;
+            }
+            if (tween.is(HALTED)) {
+                // stops early
+                return BOOLEAN_TRUE;
+            }
+            wraptry(function () {
+                obj.fn(tween.lastRun);
+            }, function (e) {
+                console.error(e);
+                tween.dequeue(obj.id);
+            });
+        },
+        Looper = factories[LOOPER] = Collection.extend(LOOPER, {
             constructor: function (_runner) {
-                var fns, stopped = BOOLEAN_TRUE,
-                    halted = BOOLEAN_FALSE,
-                    destroyed = BOOLEAN_FALSE,
-                    running = BOOLEAN_FALSE,
-                    looper = this,
-                    counter = 0,
-                    fnList = [],
-                    addList = [],
-                    removeList = [],
-                    combineAdd = function () {
-                        if (addList[LENGTH]) {
-                            fnList = fnList.concat(addList);
-                            addList = [];
-                        }
-                    };
-                // keeps things private
-                extend(looper, {
-                    length: function () {
-                        return fnList[LENGTH];
-                    },
-                    destroy: function () {
-                        destroyed = BOOLEAN_TRUE;
-                        // remove(allLoopers, this);
-                        return this.halt();
-                    },
-                    destroyed: function () {
-                        return destroyed;
-                    },
-                    running: function () {
-                        // actual object that is currently being run
-                        return !!running;
-                    },
-                    started: function () {
-                        return !stopped;
-                    },
-                    run: function (_nowish) {
-                        var tween = this,
-                            removeLater = [];
-                        if (halted || stopped) {
-                            return;
-                        }
-                        combineAdd();
-                        duff(fnList, function (fnObj) {
-                            if (indexOf(removeList, fnObj) !== -1) {
-                                removeLater.push(fnObj);
-                            } else {
-                                if (fnObj.disabled || halted) {
-                                    return;
-                                }
-                                running = fnObj;
-                                wraptry(function () {
-                                    fnObj.fn(_nowish);
-                                }, function () {
-                                    tween.remove(fnObj.id);
-                                });
-                            }
-                        });
-                        running = BOOLEAN_FALSE;
-                        combineAdd();
-                        duff(removeList.concat(removeLater), function (item) {
-                            remove(fnList, item);
-                        });
-                        removeList = [];
-                    },
-                    remove: function (id) {
-                        var fnObj, i = 0,
-                            ret = BOOLEAN_FALSE;
-                        if (!arguments[LENGTH]) {
-                            if (running) {
-                                removeList.push(running);
-                                return BOOLEAN_TRUE;
-                            }
-                        }
-                        if (isNumber(id)) {
-                            for (; i < fnList[LENGTH] && !ret; i++) {
-                                fnObj = fnList[i];
-                                if (fnObj.id === id) {
-                                    if (!posit(removeList, fnObj)) {
-                                        removeList.push(fnObj);
-                                        ret = BOOLEAN_TRUE;
-                                    }
-                                }
-                            }
-                        }
-                        return !!ret;
-                    },
-                    stop: function () {
-                        stopped = BOOLEAN_TRUE;
-                        return this;
-                    },
-                    start: function () {
-                        var looper = this;
-                        stopped = BOOLEAN_FALSE;
-                        halted = BOOLEAN_FALSE;
-                        return looper;
-                    },
-                    halt: function () {
-                        halted = BOOLEAN_TRUE;
-                        return this.stop();
-                    },
-                    halted: function () {
-                        return halted;
-                    },
-                    stopped: function () {
-                        return stopped;
-                    },
-                    reset: function () {
-                        fnList = [];
-                        removeList = [];
-                        addList = [];
-                        return this;
-                    },
-                    add: function (fn) {
-                        var obj, id = counter,
-                            tween = this;
-                        if (!isFunction(fn)) {
-                            return;
-                        }
-                        if (!fnList[LENGTH]) {
-                            tween.start();
-                        }
-                        start(tween);
-                        obj = {
-                            fn: tween.bind(fn),
-                            id: id,
-                            disabled: BOOLEAN_FALSE,
-                            bound: tween
-                        };
-                        if (tween.running()) {
-                            addList.push(obj);
-                        } else {
-                            fnList.push(obj);
-                        }
-                        counter++;
-                        return id;
-                    }
-                });
+                var looper = this;
+                looper.mark(STOPPED);
+                looper.unmark(HALTED);
+                looper.unmark(DESTROYED);
+                looper.unmark(RUNNING);
+                Collection[CONSTRUCTOR].call(looper);
                 add(looper);
                 return looper;
+            },
+            destroy: function () {
+                this.mark(DESTROYED);
+                return this.halt();
+            },
+            run: function (_nowish) {
+                var sliced, finished, i = 0,
+                    tween = this;
+                if (tween.is(HALTED) || tween.is(STOPPED) || !tween.length()) {
+                    return;
+                }
+                sliced = factories.Collection(tween.unwrap().slice(0));
+                tween.lastRun = _nowish;
+                for (; i < tween[LENGTH]() && !finished; i++) {
+                    finished = runner(tween, tween.item(i), i);
+                }
+                // sliced.find(runner, tween);
+                tween.current = NULL;
+                tween.unmark(RUNNING);
+            },
+            dequeue: function (id_) {
+                var fnObj, found, i = 0,
+                    tween = this,
+                    id = id_,
+                    ret = BOOLEAN_FALSE;
+                if (id === UNDEFINED && !arguments[LENGTH]) {
+                    if (tween.current) {
+                        tween.drop(ID, tween.current.id);
+                        id = tween.remove(tween.current);
+                    }
+                    return !!id;
+                }
+                if (!isNumber(id)) {
+                    return BOOLEAN_FALSE;
+                }
+                found = tween.get(ID, id);
+                if (found) {
+                    tween.drop(ID, id);
+                    return tween.remove(found);
+                }
+            },
+            stop: function () {
+                this.mark(STOPPED);
+                return this;
+            },
+            start: function () {
+                var looper = this;
+                if (looper.is(STOPPED)) {
+                    looper.unmark(STOPPED);
+                    looper.unmark(HALTED);
+                }
+                return looper;
+            },
+            halt: function () {
+                this.mark(HALTED);
+                return this.stop();
+            },
+            queue: function (fn) {
+                var obj, id = uniqueId(BOOLEAN_FALSE),
+                    tween = this;
+                if (!isFunction(fn)) {
+                    return;
+                }
+                if (!tween[LENGTH]()) {
+                    tween.start();
+                }
+                obj = {
+                    fn: tween.bind(fn),
+                    id: id,
+                    disabled: BOOLEAN_FALSE,
+                    bound: tween
+                };
+                tween.push(obj);
+                tween.keep(ID, obj.id, obj);
+                start(tween);
+                return id;
             },
             bind: function (fn) {
                 return bind(fn, this);
             },
-            once: function (fn) {
+            once: function (fn, time_) {
                 return this.frames(1, fn);
             },
             frames: function (timey, fn_) {
@@ -255,14 +231,14 @@ app.scope(function (app) {
                 if (times < 1 || !isNumber(times)) {
                     times = 1;
                 }
-                return this.add(function (ms) {
-                    var last = 1;
+                return this.queue(function (ms) {
+                    var last = BOOLEAN_FALSE;
                     count++;
                     if (count >= times) {
-                        this.remove();
-                        last = 0;
+                        this.dequeue();
+                        last = BOOLEAN_TRUE;
                     }
-                    fn(ms, !last, count);
+                    fn(ms, last, count);
                 });
             },
             tween: function (time__, fn_) {
@@ -280,7 +256,7 @@ app.scope(function (app) {
                         diff = ms - added;
                     if (diff >= time_) {
                         tween = 0;
-                        this.remove();
+                        this.dequeue();
                     }
                     fn(ms, Math.min(1, (diff / time_)), !tween);
                 });
@@ -292,7 +268,7 @@ app.scope(function (app) {
                 }
                 fn = this.bind(fn_);
                 return this.interval(time(time_), function (ms) {
-                    this.remove();
+                    this.dequeue();
                     fn(ms);
                 });
             },
@@ -307,7 +283,7 @@ app.scope(function (app) {
                     return tween;
                 }
                 fn = tween.bind(fn_);
-                return tween.add(function (ms) {
+                return tween.queue(function (ms) {
                     var frameRate = 1000 / (ms - lastDate);
                     if (frameRate > 40) {
                         expectedFrameRate = 60 * minimum;
@@ -316,7 +292,7 @@ app.scope(function (app) {
                         lastSkip = ms;
                     }
                     if (ms - lastSkip > time_) {
-                        tween.remove();
+                        tween.dequeue();
                         fn(ms);
                     }
                     lastDate = ms;
@@ -332,16 +308,43 @@ app.scope(function (app) {
                     time = 0;
                 }
                 fn = tweener.bind(fn_);
-                return tweener.add(function (ms) {
+                return tweener.queue(function (ms) {
                     if (ms - time >= last) {
                         last = ms;
                         fn(ms);
                     }
                 });
+            },
+            onceInterval: function (handler, time_) {
+                var fn = handler,
+                    tweener = this,
+                    timey = time(time_);
+                if (!isFunction(fn)) {
+                    return;
+                }
+                if (!isNumber(timey)) {
+                    return;
+                }
+                return this.interval(timey, handler);
+            },
+            defer: function (handler, time) {
+                var id, tweener = this;
+                return function () {
+                    var args = toArray(arguments);
+                    var context = this || tweener;
+                    tweener.dequeue(id);
+                    id = tweener.time(time, function () {
+                        handler.apply(context, args);
+                    });
+                    return id;
+                };
             }
-        }, BOOLEAN_TRUE);
+        }),
+        Scheduler = factories.Scheduler = factories.Directive.extend('Scheduler', {
+            //
+        });
     Looper.playWhileBlurred = BOOLEAN_TRUE;
-    app.undefine(function () {});
+    app.defineDirective('Scheduler', Scheduler[CONSTRUCTOR]);
     _.exports({
         AF: Looper()
     });

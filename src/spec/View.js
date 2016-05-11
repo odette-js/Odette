@@ -14,7 +14,7 @@ application.scope().run(function (app, _, factories) {
                 return '<span></span><div class="here"></div>';
             }
         });
-        app.addRegion('main', '.test-div');
+        app.RegionManager.add('main', '.test-div');
         _.beforeEach(function () {
             count = 0;
             view = factories.View();
@@ -36,7 +36,7 @@ application.scope().run(function (app, _, factories) {
         _.it('can even have extra elements tied to it... but only when it is rendered', function () {
             _.expect(_.isString(complexView.ui.there)).toEqual(true);
             complexView.render();
-            _.expect(_.isInstance(complexView.ui.there, factories.DOMM)).toEqual(true);
+            _.expect(_.isInstance(complexView.ui.there, factories.DOMA)).toEqual(true);
         });
         _.it('can be rendered', function () {
             _.expect(complexView.el.html()).toEqual('');
@@ -45,25 +45,27 @@ application.scope().run(function (app, _, factories) {
         });
         _.it('can be attached to a region', function () {
             _.expect(complexView.el.element().parentNode).toEqual(null);
-            app.getRegion('main').add(complexView);
+            app.RegionManager.get('main').add(complexView);
             _.expect(complexView.el.element().parentNode).not.toEqual(null);
         });
         _.it('can be filtered', function () {
             _.expect(complexView.el.element().parentNode).toEqual(null);
-            complexView.filter = false;
-            app.getRegion('main').add(complexView);
+            complexView.filter = function () {
+                return false;
+            };
+            app.RegionManager.get('main').add(complexView);
             _.expect(complexView.el.element().parentNode).toEqual(null);
         });
         _.it('can have extra elements', function () {
             _.expect(_.isObject(complexView.ui)).toEqual(true);
             _.expect(_.isString(complexView.ui.there)).toEqual(true);
             complexView.render();
-            _.expect(_.isInstance(complexView.ui.there, factories.DOMM)).toEqual(true);
+            _.expect(_.isInstance(complexView.ui.there, factories.DOMA)).toEqual(true);
             _.expect(complexView.ui.there.length()).toEqual(1);
         });
         _.it('can also attach events to it\'s element', function () {
             _.expect(count).toEqual(0);
-            app.getRegion('main').add(complexView);
+            app.RegionManager.get('main').add(complexView);
             _.expect(count).toEqual(0);
             complexView.el.click();
             _.expect(count).toEqual(1);
@@ -74,7 +76,7 @@ application.scope().run(function (app, _, factories) {
         });
         _.it('as well as it\'s ui elements', function () {
             _.expect(count).toEqual(0);
-            app.getRegion('main').add(complexView);
+            app.RegionManager.get('main').add(complexView);
             _.expect(count).toEqual(0);
             complexView.ui.there.click();
             _.expect(count).toEqual(1);
@@ -84,7 +86,7 @@ application.scope().run(function (app, _, factories) {
             _.expect(count).toEqual(2);
         });
         _.it('views can be detached', function () {
-            app.getRegion('main').add(complexView);
+            app.RegionManager.get('main').add(complexView);
             _.expect(count).toEqual(0);
             complexView.ui.there.click();
             _.expect(count).toEqual(1);
@@ -92,7 +94,7 @@ application.scope().run(function (app, _, factories) {
             _.expect(count).toEqual(1);
         });
         _.it('and still keep their elements and events intact', function () {
-            app.getRegion('main').add(complexView);
+            app.RegionManager.get('main').add(complexView);
             _.expect(count).toEqual(0);
             complexView.ui.there.click();
             _.expect(count).toEqual(1);
@@ -102,19 +104,19 @@ application.scope().run(function (app, _, factories) {
             _.expect(count).toEqual(2);
         });
         _.it('they can even be reattached', function () {
-            app.getRegion('main').add(complexView);
+            app.RegionManager.get('main').add(complexView);
             _.expect(count).toEqual(0);
             complexView.ui.there.click();
             _.expect(count).toEqual(1);
             complexView.remove();
             _.expect(count).toEqual(1);
-            app.getRegion('main').add(complexView);
+            app.RegionManager.get('main').add(complexView);
             _.expect(count).toEqual(1);
             complexView.ui.there.click();
             _.expect(count).toEqual(2);
         });
         _.it('when they are destroyed however, their events are detached from the element and the view is automatically removed', function () {
-            app.getRegion('main').add(complexView);
+            app.RegionManager.get('main').add(complexView);
             _.expect(count).toEqual(0);
             var there = complexView.ui.there;
             there.click();

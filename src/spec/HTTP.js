@@ -1,17 +1,17 @@
 application.scope().run(function (app, _, factories) {
     var BOOLEAN_TRUE = true,
         isObject = _.isObject;
-    _.describe('Ajax', function () {
+    _.describe('HTTP', function () {
         var ajax, allstates;
         _.beforeEach(function () {
-            ajax = factories.Ajax();
+            ajax = factories.HTTP();
             allstates = ajax.allStates();
         });
         _.it('is an object', function () {
             _.expect(isObject(ajax)).toEqual(BOOLEAN_TRUE);
         });
         _.it('can accept an object as a first argument', function (done) {
-            factories.Ajax({
+            factories.HTTP({
                 url: '/json/reporting.json'
             }).success(function (json) {
                 _.expect(isObject(json)).toEqual(BOOLEAN_TRUE);
@@ -20,7 +20,7 @@ application.scope().run(function (app, _, factories) {
         });
         _.it('can accept a string as a first argument', function (done) {
             var original, handlerCounter = 0;
-            factories.Ajax('/json/reporting.json').handle('status:200', function (json) {
+            factories.HTTP('/json/reporting.json').handle('status:200', function (json) {
                 handlerCounter++;
                 original = json;
             }).success(function (json) {
@@ -35,7 +35,7 @@ application.scope().run(function (app, _, factories) {
         _.describe('can handle', function () {
             _.it('failures', function (done) {
                 var handlerCounter = 0;
-                var prom = factories.Ajax().failure(function () {
+                var prom = factories.HTTP().failure(function () {
                     handlerCounter++;
                 }).always(function () {
                     handlerCounter++;
@@ -46,7 +46,7 @@ application.scope().run(function (app, _, factories) {
             });
             _.it('errors', function (done) {
                 var handlerCounter = 0;
-                factories.Ajax('/json/reporting.json').success(function (json) {
+                factories.HTTP('/json/reporting.json').success(function (json) {
                     handlerCounter++;
                     _.expect(handlerCounter).toEqual(1);
                     throw new Error('some message here');
@@ -61,7 +61,7 @@ application.scope().run(function (app, _, factories) {
             _.describe('status codes (more than the ones listed here)', function () {
                 _.it('200', function (done) {
                     var handlerCounter = 0;
-                    factories.Ajax('/gibberish/200').handle('status:200', function () {
+                    factories.HTTP('/gibberish/200').handle('status:200', function () {
                         handlerCounter++;
                     }).success(function () {
                         handlerCounter++;
@@ -75,7 +75,7 @@ application.scope().run(function (app, _, factories) {
                 });
                 _.it('404', function (done) {
                     var handlerCounter = 0;
-                    factories.Ajax('/gibberish/404').handle('status:404', function () {
+                    factories.HTTP('/gibberish/404').handle('status:404', function () {
                         handlerCounter++;
                     }).failure(function () {
                         handlerCounter++;
@@ -87,7 +87,7 @@ application.scope().run(function (app, _, factories) {
                 });
                 _.it('500', function (done) {
                     var handlerCounter = 0;
-                    factories.Ajax('/gibberish/500').handle('status:500', function () {
+                    factories.HTTP('/gibberish/500').handle('status:500', function () {
                         handlerCounter++;
                     }).error(function () {
                         handlerCounter++;

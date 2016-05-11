@@ -4,30 +4,15 @@ app.scope(function (app) {
         basicViewTrigger = function (name, e) {
             return this[DISPATCH_EVENT](name, e);
         },
-        makeDelegateEventKeys = function (cid, bindings, key, namespace_) {
+        makeDelegateEventKeys = function (cid, bindings, key) {
             var viewNamespace = 'delegateEvents' + cid,
-                namespace = namespace_;
-            if (namespace) {
-                namespace = PERIOD + namespace;
-            } else {
-                namespace = EMPTY_STRING;
-            }
-            return foldl(gapSplit(key), function (memo, _key) {
-                var __key = _key.split(PERIOD);
-                if (__key[0][0] === '@') {
-                    memo[SELECTOR] = normalizeUIString(_key, bindings);
-                } else {
-                    if (__key[1] !== viewNamespace) {
-                        __key.splice(1, 0, viewNamespace);
-                        _key = __key.join(PERIOD);
-                    }
-                    memo.events.push(_key + namespace);
-                }
-                return memo;
-            }, {
-                events: [],
-                selector: ''
-            });
+                indexOfAt = indexOf(key, '@'),
+                hasAt = indexOfAt !== -1;
+            return {
+                selector: hasAt ? normalizeUIString(key.slice(indexOfAt), bindings) : EMPTY_STRING,
+                group: viewNamespace,
+                events: hasAt ? key.slice(0, indexOfAt) : key
+            };
         },
         normalizeUIString = function (uiString, ui) {
             return uiString.replace(/@ui\.[a-zA-Z_$0-9]*/g, function (r) {
@@ -57,7 +42,7 @@ app.scope(function (app) {
                 if (selector) {
                     element[SELECTOR] = selector;
                 }
-                if (isInstance(selector, factories.DOMM)) {
+                if (isInstance(selector, factories.DOMA)) {
                     return;
                 }
                 if (isString(selector)) {
@@ -76,24 +61,12 @@ app.scope(function (app) {
             },
             unset: function () {
                 var element = this;
-                // element.undelegateEvents();
-                // element.undelegateTriggers();
                 delete element.view.el;
                 delete element.el;
             },
             set: function (el, render) {
                 var directive = this;
                 directive.view.el = directive.el = el;
-                // directive.degenerateUIBindings();
-                // if (render !== BOOLEAN_FALSE) {
-                //     directive.render(render);
-                //     directive.generateUIBindings();
-                //     directive.bindUI();
-                //     if (newelementisDifferent) {
-                //         directive.delegateEvents();
-                //         directive.delegateTriggers();
-                //     }
-                // }
             },
             render: function (html) {
                 var element = this;
@@ -131,11 +104,11 @@ app.scope(function (app) {
                 if (!el) {
                     return directive;
                 }
-                each(elementBindings, function (method, key) {
+                directive.cachedElementBindings = map(elementBindings, function (method, key) {
                     var object = makeDelegateEventKeys(view.cid, directive.uiBindings, key),
-                        bound = object.fn = bind(view[method] || method, view);
+                        bound = object.fn = bindTo(isString(method) ? view[method] : method, view);
                     __events.push(object);
-                    el.on(object.events.join(SPACE), object[SELECTOR], bound);
+                    el.on(object.events, object[SELECTOR], bound, object.capture, object.group);
                 });
                 directive.cachedElementBindings = __events;
                 return directive;
@@ -168,8 +141,8 @@ app.scope(function (app) {
                 }
                 each(elementTriggers, function (method, key) {
                     var object = makeDelegateEventKeys(view.cid, directive.uiBindings, key),
-                        bound = object.fn = basicViewTrigger.bind(view, method);
-                    el.on(object.events.join(SPACE), object[SELECTOR], bound);
+                        bound = object.fn = bindWith(basicViewTrigger, view, method);
+                    el.on(object.events, object[SELECTOR], bound, object.capture, object.group);
                 });
                 directive.cachedElementTriggers = __events;
             },

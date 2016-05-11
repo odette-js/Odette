@@ -3,11 +3,17 @@ app.scope(function (app) {
         factories = _.factories,
         FAILURE = 'failure',
         SUCCESS = 'success',
+        PENDING = 'pending',
         STATE = 'state',
+        ERROR = 'error',
         ALWAYS = 'always',
-        IS_EMPTYING = 'isEmptying',
+        FULFILLED = 'fulfilled',
+        SETTLED = 'settled',
+        REJECTED = 'rejected',
+        EMPTYING = 'emptying',
         ALL_STATES = 'allStates',
         STASHED_ARGUMENT = 'stashedArgument',
+        STASHED_HANDLERS = 'stashedHandlers',
         flatten = _.flatten,
         bind = _.bind,
         isString = _.isString,
@@ -21,237 +27,226 @@ app.scope(function (app) {
         result = _.result,
         wraptry = _.wraptry,
         indexOf = _.indexOf,
-        when = function () {
-            var promise = Promise();
-            return promise.when.apply(promise, arguments);
+        executeHandlers = function (name) {
+            var handler, countLimit, promise = this,
+                arg = promise[STASHED_ARGUMENT],
+                handlers = promise[STASHED_HANDLERS][name];
+            if (handlers && handlers[LENGTH]) {
+                countLimit = handlers[LENGTH];
+                promise.mark(EMPTYING);
+                while (handlers[0] && --countLimit >= 0) {
+                    handler = handlers.shift();
+                    // should already be bound
+                    handler(arg);
+                }
+                promise.unmark(EMPTYING);
+            }
+            return promise;
         },
-        dispatch = function (promise, name, opts) {
+        dispatch = function (promise, name) {
             var shouldstop, finalName = name,
                 allstates = result(promise, ALL_STATES),
                 collected = [];
             while (!shouldstop) {
-                if (_.posit(collected, finalName)) {
+                if (_.indexOf(collected, finalName) !== -1) {
                     finalName = BOOLEAN_FALSE;
                 } else {
-                    collected.push(finalName);
-                    promise.executeHandlers(finalName);
-                    finalName = allstates[finalName];
+                    if (finalName === SUCCESS) {
+                        promise.mark(FULFILLED);
+                        promise.unmark(REJECTED);
+                    }
+                    if (finalName === FAILURE) {
+                        promise.unmark(FULFILLED);
+                        promise.mark(REJECTED);
+                    }
+                    finalName = allstates[finalName] && _.add(collected, finalName) ? allstates[finalName] : BOOLEAN_FALSE;
                 }
                 shouldstop = !isString(finalName);
             }
+            return collected[LENGTH] ? duff(collected, executeHandlers, promise) : exception({
+                message: 'promise cannot resolve to an unknown state'
+            });
         },
-        executeIfNeeded = function (promise, name) {
-            return function () {
-                each(flatten(arguments), function (fn) {
-                    if (isFunction(fn)) {
-                        promise.executeHandler(name, fn, BOOLEAN_TRUE);
-                    }
-                });
-                return promise;
-            };
-        },
-        addState = function (key) {
-            var promise = this;
+        addHandler = function (key) {
             // if you haven't already attached a method, then do so now
-            if (!promise[key]) {
-                promise[key] = executeIfNeeded(promise, key);
+            if (!this[key]) {
+                this[key] = function () {
+                    return this.handle(key, toArray(arguments));
+                };
             }
-            return promise;
-        },
-        stateChecker = function (lookingfor) {
-            return function () {
-                var resulting = BOOLEAN_FALSE,
-                    allstates = result(this, ALL_STATES),
-                    next = this.get(STATE);
-                while (isString(next) && !resulting) {
-                    if (next === lookingfor) {
-                        resulting = BOOLEAN_TRUE;
-                    }
-                }
-                return resulting;
-            };
+            return this;
         },
         Model = factories.Model,
-        Promise = _.Promise = Model.extend('Promise', {
-            addState: addState,
-            isFulfilled: stateChecker(SUCCESS),
-            isRejected: stateChecker(FAILURE),
-            childEvents: {
-                always: 'check'
-            },
-            events: {
-                'child:added': 'check'
-            },
-            baseStates: function () {
-                return {
-                    success: ALWAYS,
-                    failure: ALWAYS,
-                    error: ALWAYS,
-                    always: BOOLEAN_TRUE
-                };
-            },
+        checkAll = function () {
+            var notSuccessful, allSettled = BOOLEAN_TRUE,
+                parent = this,
+                collection = parent.directive(COLLECTION),
+                argumentAggregate = [],
+                found = collection.find(function (child) {
+                    notSuccessful = notSuccessful || child.is(REJECTED);
+                    allSettled = allSettled && child.is(SETTLED);
+                    argumentAggregate.push(child[STASHED_ARGUMENT]);
+                    return notSuccessful;
+                });
+            if (notSuccessful) {
+                parent.resolveAs(FAILURE, found[STASHED_ARGUMENT]);
+            } else {
+                // none were found that were not resolved
+                if (allSettled) {
+                    parent.resolveAs(SUCCESS, argumentAggregate);
+                }
+            }
+            return parent;
+        },
+        checkAny = function () {
+            var first, parent = this,
+                collection = parent.directive(COLLECTION);
+            if ((first = collection.find(function (child) {
+                return child.is(SETTLED);
+            }))) {
+                parent.resolveAs(first[STATE], first[STASHED_ARGUMENT]);
+            }
+            return parent;
+        },
+        baseStates = {
+            success: ALWAYS,
+            failure: ALWAYS,
+            error: ALWAYS,
+            always: BOOLEAN_TRUE
+        },
+        collect = function (promise, list) {
+            var collection = promise.directive(COLLECTION);
+            flatten(list, BOOLEAN_TRUE, function (pro) {
+                if (promise.isChildType(pro)) {
+                    collection.add(pro);
+                    collection.keep('cid', pro.cid, pro);
+                }
+            });
+        },
+        listen = function (promise, unbound) {
+            var bound = bind(unbound, promise),
+                collection = promise.directive(COLLECTION);
+            collection.each(function (pro) {
+                if (collection.get('listening', pro.cid)) {
+                    return;
+                }
+                collection.keep('listening', pro.cid, BOOLEAN_TRUE);
+                pro.always(function () {
+                    bound();
+                });
+            });
+        },
+        Promise = factories.Promise = _.Promise = Model.extend('Promise', {
+            addHandler: addHandler,
+            'constructor:Model': Model[CONSTRUCTOR],
             constructor: function () {
                 var promise = this;
-                Model[CONSTRUCTOR].call(promise);
-                promise.restart();
+                promise.state = PENDING;
+                promise[STASHED_ARGUMENT] = NULL;
+                promise[STASHED_HANDLERS] = {};
+                promise.reason = BOOLEAN_FALSE;
+                promise[CONSTRUCTOR + ':Model']();
                 // cannot have been resolved in any way yet
-                intendedObject(extend({}, result(promise, 'baseStates'), result(promise, 'associativeStates')), NULL, addState, promise);
+                intendedObject(extend({}, baseStates, result(promise, 'associativeStates')), NULL, addHandler, promise);
                 // add passed in success handlers
                 promise.success(arguments);
                 return promise;
             },
-            check: function () {
-                var notSuccessful, resolveAs, parent = this,
-                    children = parent.directive(CHILDREN),
-                    argumentAggregate = [];
-                if (children.length() && !children.find(function (child) {
-                    notSuccessful = notSuccessful || child.state() !== SUCCESS;
-                    argumentAggregate.push(child.get(STASHED_ARGUMENT));
-                    return !child.resolved();
-                })) {
-                    parent.resolveAs(notSuccessful ? FAILURE : SUCCESS, argumentAggregate);
-                }
-            },
             isChildType: function (promise) {
-                return promise[SUCCESS] && promise[FAILURE] && promise[ALWAYS];
+                return promise[SUCCESS] && promise[FAILURE] && promise[ALWAYS] && promise[ERROR];
             },
-            defaults: function () {
-                return {
-                    state: 'pending',
-                    resolved: BOOLEAN_FALSE,
-                    stashedArgument: NULL,
-                    stashedHandlers: {},
-                    reason: BOOLEAN_FALSE
-                };
-            },
-            restart: function () {
-                return this.set(this.defaults());
-            },
-            state: function () {
-                return this.get(STATE);
-            },
-            auxilaryStates: function () {
+            auxiliaryStates: function () {
                 return BOOLEAN_FALSE;
             },
             allStates: function () {
-                var resultResult = this._allStates = this._allStates || extend({}, result(this, 'baseStates'), result(this, 'auxilaryStates') || {});
-                return resultResult;
-            },
-            fullfillments: function () {
-                var allstates = result(this, ALL_STATES);
-                var results = this._fullfillments = this._fullfillments || wrap(allstates, function (value, key_) {
-                    var key = key_;
-                    while (isString(key)) {
-                        key = allstates[key];
-                    }
-                    // has to end in a boolean
-                    return key;
-                });
-                return results;
-            },
-            resolved: function () {
-                // allows resolved to be defined in a different way
-                return this.get('resolved');
-            },
-            isPending: function () {
-                return this.get(STATE) === 'pending';
+                return extend({}, baseStates, result(this, 'auxiliaryStates') || {});
             },
             resolveAs: function (resolveAs_, opts_, reason_) {
                 var opts = opts_,
                     resolveAs = resolveAs_,
                     promise = this;
-                if (promise.resolved()) {
+                if (promise.is(SETTLED)) {
                     return promise;
                 }
-                if (!isString(resolveAs)) {
-                    opts = resolveAs;
-                    resolveAs = BOOLEAN_FALSE;
-                }
-                promise.set({
-                    resolved: BOOLEAN_TRUE,
-                    // default state if none is given, is to have it succeed
-                    state: resolveAs || FAILURE,
-                    stashedArgument: opts,
-                    reason: reason_ ? reason_ : BOOLEAN_FALSE
-                });
-                resolveAs = promise.get(STATE);
-                wraptry(function () {
-                    dispatch(promise, resolveAs);
-                }, function () {
-                    promise.set(STASHED_ARGUMENT, {
-                        // nest the sucker again in case it's an array or something else
-                        options: opts,
-                        message: 'javascript execution error'
-                    });
-                    dispatch(promise, 'error');
-                });
+                promise.mark(SETTLED);
+                promise.state = resolveAs || FAILURE;
+                promise[STASHED_ARGUMENT] = opts;
+                promise.reason = reason_ ? reason_ : BOOLEAN_FALSE;
+                resolveAs = promise.state;
+                promise.dispatchEvent('before:resolve');
+                promise.dispatchEvents(wraptry(function () {
+                    return dispatch(promise, resolveAs);
+                }, function (e) {
+                    promise.unmark(FULFILLED);
+                    e.options = opts;
+                    promise[STASHED_ARGUMENT] = e;
+                    return dispatch(promise, ERROR);
+                }, function (err, returnValue) {
+                    return returnValue || [];
+                }));
                 return promise;
             },
-            // convenience functions
-            resolve: function (opts) {
+            fulfill: function (opts) {
                 return this.resolveAs(SUCCESS, opts);
             },
-            reject: function (opts) {
-                return this.resolveAs(FAILURE, opts);
+            resolve: function (opts) {
+                return this.fulfill(opts);
             },
-            executeHandlers: function (name) {
-                var handler, countLimit, promise = this,
-                    arg = promise.get(STASHED_ARGUMENT),
-                    handlers = promise.get('stashedHandlers')[name];
-                if (handlers && handlers[LENGTH]) {
-                    countLimit = handlers[LENGTH];
-                    promise.set(IS_EMPTYING, BOOLEAN_TRUE);
-                    while (handlers[0] && --countLimit >= 0) {
-                        handler = handlers.shift();
-                        // should already be bound
-                        handler(arg);
-                    }
-                    promise.set(IS_EMPTYING, BOOLEAN_FALSE);
-                }
-                promise.dispatchEvent(name);
+            reject: function (opts, reason) {
+                return this.resolveAs(FAILURE, opts, reason);
+            },
+            stash: function (name, list) {
+                var promise = this,
+                    stashedHandlers = promise[STASHED_HANDLERS];
+                intendedObject(name, list, function (name, list) {
+                    var byName = stashedHandlers[name] = stashedHandlers[name] || [];
+                    flatten(isFunction(list) ? [list] : list, BOOLEAN_TRUE, function (fn) {
+                        if (isFunction(fn)) {
+                            byName.push(bind(fn, promise));
+                        }
+                    });
+                });
                 return promise;
             },
-            executeHandler: function (name, fn_, needsbinding) {
+            handle: function (name, fn_) {
                 var promise = this,
-                    arg = promise.get(STASHED_ARGUMENT),
+                    arg = promise[STASHED_ARGUMENT],
                     fn = fn_;
-                promise.stashHandler(name, fn);
-                if (promise.resolved() && !promise.get(IS_EMPTYING)) {
-                    promise.executeHandlers(name);
+                promise.stash(name, fn);
+                if (promise.is(SETTLED)) {
+                    dispatch(promise, promise[STATE]);
                 }
                 return promise;
-            },
-            stashHandler: function (name, fn, needsbinding) {
-                var promise = this,
-                    stashedHandlers = promise.get('stashedHandlers'),
-                    byName = stashedHandlers[name] = stashedHandlers[name] || [];
-                if (isFunction(fn)) {
-                    byName.push(bind(fn, this));
-                }
-            },
-            handle: function (resolutionstate, fun) {
-                this.addState(resolutionstate);
-                this.executeHandler(resolutionstate, fun, BOOLEAN_TRUE);
-                return this;
             },
             when: function () {
+                return this.all(arguments);
+            },
+            all: function () {
                 var promise = this;
-                promise.add(foldl(flatten(arguments), function (memo, pro) {
-                    if (promise.isChildType(pro)) {
-                        memo.push(pro);
-                    }
-                    return memo;
-                }, []));
+                if (promise[STATE] !== PENDING) {
+                    return promise;
+                }
+                collect(promise, arguments);
+                listen(promise, checkAll);
                 return promise;
+            },
+            race: function () {
+                var promise = this;
+                if (promise[STATE] !== PENDING) {
+                    return promise;
+                }
+                collect(promise, arguments);
+                listen(promise, checkAny);
+                return promise;
+            },
+            then: function (handlers) {
+                return this.handle(ALWAYS, handlers);
             }
-        }, BOOLEAN_TRUE),
+        }),
+        PromisePrototype = Promise[CONSTRUCTOR][PROTOTYPE],
+        resulting = PromisePrototype.addHandler(SUCCESS).addHandler(FAILURE).addHandler(ALWAYS).addHandler(ERROR),
         appPromise = Promise();
     app.extend({
-        dependency: function (promise) {
-            return appPromise.when.apply(appPromise, arguments);
-        }
-    });
-    _.exports({
-        when: when
+        dependency: bind(appPromise.all, appPromise)
     });
 });

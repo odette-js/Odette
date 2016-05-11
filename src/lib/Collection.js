@@ -1,9 +1,11 @@
-var eachCall = function (array, method, arg) {
+var COLLECTION = 'Collection',
+    REVERSED = 'reversed',
+    eachCall = function (array, method, arg) {
         return duff(array, function (item) {
             result(item, method, arg);
         });
     },
-    mapCall = function (array, method, arg) {
+    results = function (array, method, arg) {
         return map(array, function (item) {
             return result(item, method, arg);
         });
@@ -26,24 +28,36 @@ app.scope(function (app) {
         /**
          * @func
          */
+        doToAll = function (handler) {
+            return function (list, items, lookAfter, lookBefore, fromRight) {
+                var count = 0;
+                duff(items, function (item) {
+                    count += remove(list, item, lookAfter, lookBefore, fromRight);
+                });
+                return count === list[LENGTH];
+            };
+        },
         remove = function (list, item, lookAfter, lookBefore, fromRight) {
-            var index = posit(list, item, lookAfter, lookBefore, fromRight);
-            if (index) {
-                removeAt(list, index - 1);
+            var index = indexOf(list, item, lookAfter, lookBefore, fromRight);
+            if (index + 1) {
+                removeAt(list, index);
             }
+            index = index + 1;
             return !!index;
         },
+        removeAll = doToAll(remove),
         removeAt = function (list, index) {
             return list.splice(index, 1)[0];
         },
         add = function (list, item, lookAfter, lookBefore, fromRight) {
-            var val = 0,
-                index = posit(list, item, lookAfter, lookBefore, fromRight);
-            if (!index) {
-                val = list.push(item);
+            var value = 0,
+                index = indexOf(list, item, lookAfter, lookBefore, fromRight);
+            if (index === -1) {
+                value = list.push(item);
             }
-            return !!val;
+            return !!value;
         },
+        addAll = doToAll(add),
         insertAt = function (list, item, index) {
             var len = list[LENGTH],
                 lastIdx = len || 0;
@@ -105,7 +119,7 @@ app.scope(function (app) {
                 return list;
             }
             ctx = ctx_ || this;
-            runner = bind(runner_, ctx);
+            runner = bindTo(runner_, ctx);
             end = Math.abs(end);
             idx = start;
             while (idx < end) {
@@ -128,8 +142,6 @@ app.scope(function (app) {
          * @func
          */
         closestIndex = function (array, searchElement, minIndex_, maxIndex_) {
-            // var index;
-            // return (index = smartIndexOf(array, searchElement, minIndex_, maxIndex_)) === -1 ? UNDEFINED : array[index];
             var currentIndex, currentElement, found,
                 minIndex = minIndex_ || 0,
                 maxIndex = maxIndex_ || array[LENGTH] - 1;
@@ -151,106 +163,9 @@ app.scope(function (app) {
         /**
          * @func
          */
-        posit = function (list, item, lookAfter, lookBefore, fromRight) {
-            return indexOf(list, item, lookAfter, lookBefore, fromRight) + 1;
-        },
         /**
          * @func
          */
-        concat = function () {
-            return foldl(arguments, function (memo, arg) {
-                duff(arg, function (item) {
-                    memo.push(item);
-                });
-                return memo;
-            }, []);
-        },
-        /**
-         * @func
-         */
-        concatUnique = function () {
-            return foldl(arguments, function (memo, argument) {
-                duff(argument, function (item) {
-                    if (smartIndexOf(memo, item) === -1) {
-                        memo.push(item);
-                    }
-                });
-                return memo;
-            }, []);
-        },
-        cycle = function (arr, num_) {
-            var num, piece, length = arr[LENGTH];
-            if (isNumber(length)) {
-                num = num_ % length;
-                piece = arr.splice(num);
-                arr.unshift.apply(arr, piece);
-            }
-            return arr;
-        },
-        internalMambo = function (fn) {
-            return function (arr) {
-                arr.reverse();
-                fn.apply(this, arguments);
-                arr.reverse();
-                return arr;
-            };
-        },
-        // Returns whether an object has a given set of `key:value` pairs.
-        isMatch = function (object, attrs) {
-            var key, i = 0,
-                keysResult = keys(attrs),
-                obj = Object(object);
-            return !find(keysResult, function (val) {
-                if (attrs[val] !== obj[val] || !(val in obj)) {
-                    return BOOLEAN_TRUE;
-                }
-            });
-        },
-        // Returns a predicate for checking whether an object has a given set of
-        // `key:value` pairs.
-        matches = function (obj1) {
-            return function (obj2) {
-                return isMatch(obj2, obj1);
-            };
-        },
-        uncycle = internalMambo(cycle),
-        externalMambo = internalMambo(function (list, fn) {
-            return fn.apply(this, arguments);
-        }),
-        pluck = function (arr, key) {
-            return map(arr, function (item) {
-                return result(item, key);
-            });
-        },
-        // Convenience version of a common use case of `filter`: selecting only objects
-        // containing specific `key:value` pairs.
-        where = function (obj, attrs) {
-            return filter(obj, matches(attrs));
-        },
-        // Convenience version of a common use case of `find`: getting the first object
-        // containing specific `key:value` pairs.
-        findWhere = function (obj, attrs) {
-            return find(obj, matches(attrs));
-        },
-        // Convenience version of a common use case of `find`: getting the first object
-        // containing specific `key:value` pairs.
-        findLastWhere = function (obj, attrs) {
-            return findLast(obj, matches(attrs));
-        },
-        whereNot = function (obj, attrs) {
-            return filter(obj, negate(matches(attrs)));
-        },
-        splat = function (fn, spliceat) {
-            spliceat = spliceat || 0;
-            return function () {
-                var ctx = this,
-                    arr = toArray(arguments),
-                    args = splice(arr, spliceat);
-                duff(args, function (idx, item, list) {
-                    fn.apply(ctx, arr.concat([idx, item, list]));
-                });
-            };
-        },
         recreateSelf = function (fn, ctx) {
             return function () {
                 return new this.__constructor__(fn.apply(ctx || this, arguments));
@@ -259,27 +174,8 @@ app.scope(function (app) {
         /**
          * @func
          */
-        filter = function (obj, iteratee, context) {
-            var isArrayResult = isArrayLike(obj),
-                bound = bind(iteratee, context),
-                runCount = 0;
-            return foldl(obj, function (memo, item, key, all) {
-                runCount++;
-                if (bound(item, key, all)) {
-                    if (isArrayResult) {
-                        memo.push(item);
-                    } else {
-                        memo[key] = item;
-                    }
-                }
-                return memo;
-            }, isArrayResult ? [] : {});
-        },
-        unwrapInstance = function (instance_) {
-            return isInstance(instance, factories.Collection) ? instance_ : instance.unwrap();
-        },
-        REGISTRY = 'registry',
-        Registry = factories.Directive.extend(upCase(REGISTRY), {
+        REGISTRY = 'Registry',
+        Registry = factories[REGISTRY] = factories.Directive.extend(REGISTRY, {
             constructor: function () {
                 this.reset();
                 return this;
@@ -292,13 +188,14 @@ app.scope(function (app) {
                 var register = this.register,
                     cat = register[category] = register[category] || {};
                 if (value === UNDEFINED) {
-                    this.count--;
+                    delete cat[id];
+                } else {
+                    cat[id] = value;
                 }
-                if (cat[id] === UNDEFINED) {
-                    this.count++;
-                }
-                cat[id] = value;
                 return this;
+            },
+            ungroup: function (category) {
+                return this.group(category, {});
             },
             group: function (category, setter) {
                 var register = this.register;
@@ -315,13 +212,11 @@ app.scope(function (app) {
             },
             reset: function (registry, count) {
                 var cached = this.register;
-                var cachedCount = this.count;
                 this.register = registry || {};
-                this.count = count || 0;
-                return [cached, cachedCount];
+                return cached;
             }
-        }, BOOLEAN_TRUE),
-        recreatingSelfList = gapSplit('eq map mapCall filter pluck where whereNot cycle uncycle flatten gather'),
+        }),
+        recreatingSelfCollection = gapSplit('eq pluck where whereNot map results filter cycle uncycle flatten gather'),
         eachHandlers = {
             each: duff,
             duff: duff,
@@ -336,36 +231,50 @@ app.scope(function (app) {
         abstractedCanModify = gapSplit('add'),
         abstractedCannotModify = gapSplit('insertAt remove removeAt'),
         nativeCannotModify = gapSplit('pop shift splice'),
-        reverseList = gapSplit('reverse'),
+        reverseCollection = gapSplit('reverse'),
         splatHandlers = gapSplit('push unshift'),
         joinHandlers = gapSplit('join'),
-        countingList = gapSplit('count countTo countFrom merge'),
+        countingCollection = gapSplit('count countTo countFrom merge'),
         foldIteration = gapSplit('foldr foldl reduce'),
         findIteration = gapSplit('find findLast findWhere findLastWhere'),
-        indexers = gapSplit('indexOf posit'),
+        indexers = gapSplit('indexOf'),
         foldFindIteration = foldIteration.concat(findIteration),
         marksIterating = function (fn) {
             return function (one, two, three, four, five, six) {
-                return this.iterate(fn.bind(NULL, this, one, two, three, four, five, six));
+                var result, list = this;
+                ++list.iterating;
+                result = fn(list, one, two, three, four, five, six);
+                --list.iterating;
+                return result;
             };
         },
-        wrappedListMethods = extend({
+        wrappedCollectionMethods = extend({
             seeker: function (handler, context) {
-                return _.duffRight(this.items, handler, context);
+                var list = this,
+                    bound = bindTo(handler, context);
+                return _.duffRight(list.unwrap(), function (one, two, three) {
+                    if (bound(one, two, three)) {
+                        list.removeAt(two);
+                    }
+                });
+            },
+            slice: function (one, two) {
+                return new Collection(this.unwrap().slice(one, two));
             }
         }, wrap(joinHandlers, function (name) {
             return function (arg) {
-                return this.items[name](arg);
+                return this.unwrap()[name](arg);
             };
         }), wrap(indexers.concat(abstractedCanModify), function (name) {
             return function (one, two, three, four, five) {
                 var list = this;
-                return _[name](list.items, one, two, three, four, five);
+                return _[name](list.unwrap(), one, two, three, four, five);
             };
         }), wrap(splatHandlers, function (name) {
             return function (args_) {
-                var args = isArray(args_) ? args_ : arguments;
-                return this.items[name].apply(this.items, args);
+                var args = isArray(args_) ? args_ : arguments,
+                    items = this.unwrap();
+                return items[name].apply(items, args);
             };
         }), wrap(nativeCannotModify, function (name) {
             return function (one, two, three, four, five, six) {
@@ -373,7 +282,7 @@ app.scope(function (app) {
                 if (list.iterating) {
                     return exception(cannotModifyMessage);
                 }
-                return list.items[name](one, two, three, four, five, six);
+                return list.unwrap()[name](one, two, three, four, five, six);
             };
         }), wrap(abstractedCannotModify, function (name) {
             return function (one, two, three, four, five) {
@@ -381,31 +290,35 @@ app.scope(function (app) {
                 if (list.iterating) {
                     return exception(cannotModifyMessage);
                 }
-                return _[name](list.items, one, two, three, four, five);
+                return _[name](list.unwrap(), one, two, three, four, five);
             };
-        }), wrap(reverseList, function (name) {
+        }), wrap(reverseCollection, function (name) {
             return function () {
                 var list = this;
-                list.directive('status').toggle('reversed');
-                list.items[name]();
+                list.remark(REVERSED, !list.is(REVERSED));
+                list.unwrap()[name]();
                 return list;
             };
         }), wrap(eachHandlers, function (fn) {
             return marksIterating(function (list, handler, context) {
-                var args0 = list.items,
+                var args0 = list.unwrap(),
                     args1 = handler,
                     args2 = arguments[LENGTH] > 1 ? context : list;
                 fn(args0, args1, args2);
                 return list;
             });
-        }), wrap(countingList, function (name) {
-            return function (runner, context, fromHere, toThere) {
-                _[name](this.items, runner, context, fromHere, toThere);
-                return this;
-            };
-        }), wrap(foldFindIteration.concat(recreatingSelfList), function (name) {
+        }), wrap(countingCollection, function (name) {
+            return marksIterating(function (list, runner, fromHere, toThere) {
+                _[name](list.unwrap(), runner, list, fromHere, toThere);
+                return list;
+            });
+        }), wrap(recreatingSelfCollection, function (name) {
             return marksIterating(function (list, one, two, three) {
-                return _[name](list.items, one, two, three);
+                return new Collection[CONSTRUCTOR](_[name](list.unwrap(), one, two, three));
+            });
+        }), wrap(foldFindIteration, function (name) {
+            return marksIterating(function (list, one, two, three) {
+                return _[name](list.unwrap(), one, two, three);
             });
         })),
         ret = _.exports({
@@ -413,22 +326,20 @@ app.scope(function (app) {
             eachCallRight: eachCallRight,
             filter: filter,
             matches: matches,
-            mapCall: mapCall,
+            results: results,
             add: add,
+            removeAll: removeAll,
+            addAll: addAll,
             insertAt: insertAt,
-            concatUnique: concatUnique,
             removeAt: removeAt,
             remove: remove,
             cycle: cycle,
             uncycle: uncycle,
-            mamboWrap: internalMambo,
-            mambo: externalMambo,
             concat: concat,
             pluck: pluck,
             where: where,
             findWhere: findWhere,
             findLastWhere: findLastWhere,
-            posit: posit,
             range: range,
             count: count,
             countTo: countTo,
@@ -439,78 +350,77 @@ app.scope(function (app) {
             flatten: flatten,
             eq: eq
         }),
-        LIST = 'list',
-        List = factories.Directive.extend(upCase(LIST), extend({
+        COLLECTION = 'Collection',
+        Collection = factories.Collection = factories.Directive.extend(upCase(COLLECTION), extend({
+            get: directives.parody(REGISTRY, 'get'),
+            keep: directives.parody(REGISTRY, 'keep'),
+            drop: directives.parody(REGISTRY, 'drop'),
+            swap: directives.parody(REGISTRY, 'swap'),
             constructor: function (items) {
                 this.reset(items);
                 return this;
             },
-            iterate: function (fn) {
-                ++this.iterating;
-                var result = fn();
-                --this.iterating;
-                return result;
-            },
-            obliteration: function (handler, context) {
-                duffRight(this.items, handlers, context === UNDEFINED ? this : context);
+            call: function (arg) {
+                this.each(function (fn) {
+                    fn(arg);
+                });
                 return this;
             },
+            obliteration: function (handler, context) {
+                duffRight(this.unwrap(), handler, context === UNDEFINED ? this : context);
+                return this;
+            },
+            // good for overwriting and extending
             empty: function () {
-                return this.reset();
+                this.reset();
+                this.directive(REGISTRY).reset();
+                return this;
+                // return this.reset();
             },
             reset: function (items) {
                 // can be array like
                 var list = this,
-                    old = list.items || [];
+                    old = list.unwrap() || [];
                 list.iterating = list.iterating ? exception(cannotModifyMessage) : 0;
-                list.items = items == NULL ? [] : (isArrayLike(items) ? toArray(items) : [items]);
-                list.reversed = BOOLEAN_FALSE;
+                list.items = items == NULL ? [] : (Collection.isInstance(items) ? items.unwrap().slice(0) : toArray(items));
+                list.unmark(REVERSED);
                 return list;
             },
             unwrap: function () {
                 return this.items;
             },
             length: function () {
-                return this.items.length;
+                return this.unwrap()[LENGTH];
             },
             first: function () {
-                return this.items[0];
+                return this.unwrap()[0];
             },
             last: function () {
-                return this.items[this.items.length - 1];
+                var items = this.unwrap();
+                return items[items[LENGTH] - 1];
             },
-            index: function (number) {
-                return this.items[number || 0];
+            item: function (number) {
+                return this.unwrap()[number || 0];
             },
             has: function (object) {
                 return this.indexOf(object) !== -1;
             },
             sort: function (fn_) {
                 // normalization sort function for cross browsers
-                sort(this.items, fn_);
-                return this;
+                var list = this;
+                sort(list.unwrap(), fn_, list.is(REVERSED), list);
+                return list;
             },
             toString: function () {
-                return stringify(this.items);
+                return stringify(this.unwrap());
             },
             toJSON: function () {
-                return map(this.items, function (item) {
+                return map(this.unwrap(), function (item) {
                     return result(item, TO_JSON);
                 });
-            }
-        }, wrappedListMethods), BOOLEAN_TRUE),
-        directiveResult = app.defineDirective(LIST, function () {
-            return new List[CONSTRUCTOR]();
-        }),
-        Collection = factories.Directive.extend('Collection', extend({
-            empty: _.flow(directives.parody(LIST, 'reset'), directives.parody(REGISTRY, 'reset')),
-            get: directives.parody(REGISTRY, 'get'),
-            register: directives.parody(REGISTRY, 'keep'),
-            unRegister: directives.parody(REGISTRY, 'drop'),
-            swapRegister: directives.parody(REGISTRY, 'swap'),
-            constructor: function (arr) {
-                this.directive(LIST).reset(arr);
-                return this;
+            },
+            copy: function () {
+                return this.items.slice(0);
             },
             range: recreateSelf(range),
             concat: recreateSelf(function () {
@@ -519,59 +429,35 @@ app.scope(function (app) {
                 return base.concat.apply(base, map(arguments, function (arg) {
                     return Collection(arg).unwrap();
                 }));
-            }),
-            call: function (arg) {
-                this.each(function (fn) {
-                    fn(arg);
-                });
-                return this;
-            },
-            results: function (key, arg) {
-                return this.map(function (obj) {
-                    return result(obj, key, arg);
-                });
-            }
-            /**
-             * @description adds models to the children array
-             * @param {Object|Object[]} objs - object or array of objects to be passed through the model factory and pushed onto the children array
-             * @param {Object} [secondary] - secondary hash that is common among all of the objects being created. The parent property is automatically overwritten as the object that the add method was called on
-             * @returns {Object|Model} the object that was just created, or the object that the method was called on
-             * @name Model#add
-             * @func
-             */
-        }, wrap(gapSplit('has unwrap reset length first last index toString toJSON sort').concat(abstractedCanModify, abstractedCannotModify, nativeCannotModify, indexers, joinHandlers), function (key) {
-            return directives.parody(LIST, key);
-        }), wrap(recreatingSelfList, function (key) {
-            return recreateSelf(function (one) {
-                return this.list[key](one);
-            });
-        }), wrap(splatHandlers, function (key) {
-            return function (items) {
-                this.list[key](items);
-                return this;
-            };
-        }), wrap(countingList, function (key) {
-            return function (runner, countFrom, countTo) {
-                var context = this;
-                context.list[key](runner, context, countFrom, countTo);
-                return context;
-            };
-        }), wrap(reverseList.concat(eachHandlerKeys), function (key) {
-            return function (one, two, three, four) {
-                var context = this;
-                context.list[key](one, two || context);
-                return context;
-            };
-        }), wrap(foldIteration, function (key) {
-            return function (handler, memo, context) {
-                return this.list[key](handler, memo, context || this);
-            };
-        }), wrap(findIteration, function (key) {
-            return function (handler, context) {
-                return this.list[key](handler, context || this);
-            };
-        })), BOOLEAN_TRUE),
-        SortedCollection = Collection.extend('SortedCollection', {
+            })
+            // ,
+            // results: function (key, arg) {
+            //     return this.map(function (obj) {
+            //         return result(obj, key, arg);
+            //     });
+            // }
+        }, wrappedCollectionMethods)),
+        directiveResult = app.defineDirective(COLLECTION, function () {
+            return new Collection[CONSTRUCTOR]();
+        }),
+        // just combining two directives here.
+        // One is being extended,
+        // the other is being used on the parent
+        // Collection = factories[COLLECTION] = factories.Collection.extend(COLLECTION, extend({
+        //     get: directives.parody(REGISTRY, 'get'),
+        //     register: directives.parody(REGISTRY, 'keep'),
+        //     unRegister: directives.parody(REGISTRY, 'drop'),
+        //     swapRegister: directives.parody(REGISTRY, 'swap'),
+        //     empty: function (one, two, three) {
+        //         this.reset(one);
+        //         this.directive(REGISTRY).reset(two, three);
+        //         return this;
+        //     }
+        // })),
+        appDirectiveResult = app.defineDirective(COLLECTION, function () {
+            return Collection();
+        }),
+        SortedCollection = factories.SortedCollection = Collection.extend('Sorted' + COLLECTION, {
             constructor: function (list_, skip) {
                 var sorted = this;
                 Collection[CONSTRUCTOR].call(sorted);
@@ -580,19 +466,9 @@ app.scope(function (app) {
                 }
                 return sorted;
             },
-            sort: function () {
-                // does not take a function because it relies on ids / valueOf results
-                var sorted = this;
-                sort(sorted.unwrap(), sorted.reversed ? function (a, b) {
-                    return a < b;
-                } : function (a, b) {
-                    return a > b;
-                });
-                return sorted;
-            },
             reverse: function () {
                 var sorted = this;
-                sorted.reversed = !sorted.reversed;
+                sorted.remark(REVERSED, !sorted.is(REVERSED));
                 sorted.sort();
                 return sorted;
             },
@@ -607,7 +483,7 @@ app.scope(function (app) {
                 return isNumber(id) || isString(id);
             },
             indexOf: function (object, min, max) {
-                return smartIndexOf(this.unwrap(), object, min, max);
+                return smartIndexOf(this.unwrap(), object, BOOLEAN_TRUE);
             },
             load: function (values) {
                 var sm = this;
@@ -639,17 +515,20 @@ app.scope(function (app) {
                     return BOOLEAN_FALSE;
                 }
                 sorted.removeAt(index === UNDEFINED ? sorted.indexOf(object) : index);
-                sorted.unRegister(ID, valueOfResult);
+                sorted.drop(ID, valueOfResult);
                 return BOOLEAN_TRUE;
             },
             pop: function () {
-                return this.remove(this.last());
+                var length = this.length();
+                if (length) {
+                    return this.remove(this.last(), length - 1);
+                }
             },
             shift: function () {
-                return this.remove(this.first());
+                return this.remove(this.first(), 0);
             }
-        }, BOOLEAN_TRUE),
-        StringObject = factories.Extendable.extend('StringObject', {
+        }),
+        StringObject = factories.StringObject = factories.Extendable.extend('StringObject', {
             constructor: function (value, parent) {
                 var string = this;
                 string.value = value;
@@ -676,13 +555,26 @@ app.scope(function (app) {
                 return this.value;
             },
             toString: function () {
-                return this.value;
-            },
-            generate: function () {
-                return this.isValid() ? this.valueOf() : EMPTY_STRING;
+                var string = this,
+                    value = string.value,
+                    parent = string.parent;
+                if (parent.indexer === UNDEFINED) {
+                    return value;
+                }
+                if (!string.isValid()) {
+                    // canibalize the list as you join
+                    string.parent.drop(ID, value);
+                    string.parent.removeAt(parent.indexer);
+                    return EMPTY_STRING;
+                }
+                // is it the first
+                value = parent.indexer ? parent.delimiter + value : value;
+                ++parent.indexer;
+                return value;
             }
-        }, BOOLEAN_TRUE),
-        StringManager = SortedCollection.extend('StringManager', {
+        }),
+        DELIMITED = 'delimited',
+        StringManager = factories.StringManager = SortedCollection.extend('StringManager', {
             Child: StringObject,
             add: function (string) {
                 var sm = this,
@@ -693,24 +585,29 @@ app.scope(function (app) {
                     } else {
                         found = new sm.Child(string, sm);
                         sm.unwrap().push(found);
-                        sm.register(ID, string, found);
+                        sm.keep(ID, string, found);
                     }
                 }
                 return found;
             },
+            emptyCollection: Collection[CONSTRUCTOR][PROTOTYPE].empty,
             empty: function () {
                 var sm = this;
                 // wipes array and id hash
-                Collection[CONSTRUCTOR][PROTOTYPE].empty.call(sm);
+                sm.emptyCollection();
                 // resets change counter
                 sm.current(EMPTY_STRING);
                 return sm;
             },
             increment: function () {
-                this._changeCounter++;
+                this.changeCounter = this.changeCounter || 0;
+                this.changeCounter++;
+                return this;
             },
             decrement: function () {
-                this._changeCounter--;
+                this.changeCounter = this.changeCounter || 0;
+                this.changeCounter--;
+                return this;
             },
             remove: function (string) {
                 var sm = this,
@@ -736,47 +633,48 @@ app.scope(function (app) {
                     found.toggle(direction);
                 }
             },
-            rebuild: function () {
-                // rebuilds the registry
-                var parent = this,
-                    validResult = parent.foldl(function (memo, stringInstance) {
-                        if (stringInstance.isValid()) {
-                            memo.items.push(stringInstance);
-                            memo.registry.id[stringInstance.value] = stringInstance;
-                        }
-                        return memo;
-                    }, {
-                        items: [],
-                        registry: {
-                            id: {}
-                        }
-                    });
-                parent.directive(LIST).reset(validResult.items);
-                parent.directive(REGISTRY).reset(validResult.registry);
-                return parent;
+            join: function (delimiter_) {
+                var sliced, result, cachedValue, parent = this,
+                    delimiter = (delimiter_ || EMPTY_STRING) + EMPTY_STRING,
+                    parentRegistry = parent.directive(REGISTRY);
+                // slice as a base array
+                // set the delimiter used to join
+                parent.changeCounter = parent.changeCounter || 0;
+                if (parent.changeCounter) {
+                    parent.changeCounter = 0;
+                    parentRegistry.group(DELIMITED, {});
+                }
+                if ((cachedValue = parentRegistry.get(DELIMITED, delimiter)) !== UNDEFINED) {
+                    return cachedValue;
+                }
+                sliced = parent.unwrap().slice(0);
+                parent.indexer = 0;
+                parent.delimiter = delimiter;
+                // sliced is thrown away, leaving the invalidated ones to be collected
+                result = sliced.join(EMPTY_STRING);
+                parent.current(delimiter, result);
+                delete parent.indexer;
+                delete parent.delimiter;
+                return result;
             },
             generate: function (delimiter_) {
-                var validResult, string = EMPTY_STRING,
+                var validResult, currentDelimited, string = EMPTY_STRING,
                     parent = this,
-                    previousDelimiter = parent.delimiter,
                     delimiter = delimiter_;
-                if (!parent._changeCounter && delimiter === previousDelimiter) {
-                    return parent.current();
+                parent.changeCounter = parent.changeCounter || 0;
+                if (!parent.changeCounter && (currentDelimited = parent.current(delimiter))) {
+                    return currentDelimited;
                 }
-                parent.delimiter = delimiter;
-                parent.rebuild();
-                string = parent.join(delimiter);
-                parent.current(string);
+                parent.current(delimiter, (string = parent.join(delimiter)));
                 return string;
             },
-            current: function (current_) {
-                var sm = this;
-                if (arguments[LENGTH]) {
-                    sm._changeCounter = 0;
-                    sm._currentValue = current_;
-                    return sm;
+            current: function (delimiter, current) {
+                var value, sm = this;
+                if (arguments[LENGTH] === 1) {
+                    return (value = sm.get(DELIMITED, delimiter)) === UNDEFINED ? sm.join(delimiter) : value;
                 } else {
-                    return sm._currentValue;
+                    sm.keep(DELIMITED, delimiter, current);
+                    return sm;
                 }
             },
             ensure: function (value_, splitter) {
@@ -785,11 +683,11 @@ app.scope(function (app) {
                     delimiter = splitter === UNDEFINED ? SPACE : splitter,
                     isArrayResult = isArray(value),
                     madeString = (isArrayResult ? value.join(delimiter) : value);
-                if (sm.current() === madeString) {
+                if (sm.current(delimiter) === madeString) {
                     return sm;
                 }
                 sm.load(isArrayResult ? value : (isString(value) ? value.split(delimiter) : BOOLEAN_FALSE));
-                sm.current(madeString);
+                sm.current(delimiter, madeString);
                 return sm;
             },
             refill: function (array_) {
@@ -802,6 +700,6 @@ app.scope(function (app) {
                 sm.increment();
                 return sm;
             }
-        }, BOOLEAN_TRUE);
+        });
     app.defineDirective(REGISTRY, Registry[CONSTRUCTOR]);
 });

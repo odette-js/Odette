@@ -1,7 +1,7 @@
 app.scope(function (app) {
     var _ = app._,
         factories = _.factories,
-        posit = _.posit,
+        PROMISE = 'Promise',
         ERROR = 'error',
         STATUS = 'status',
         FAILURE = 'failure',
@@ -10,15 +10,8 @@ app.scope(function (app) {
         XDomainRequest = win.XDomainRequest,
         stringifyQuery = _.stringifyQuery,
         GET = 'GET',
-        validTypes = gapSplit(GET + ' POST PUT DELETE'),
+        validTypes = gapSplit(GET + ' POST PUT DELETE HEAD TRACE OPTIONS CONNECT'),
         baseEvents = gapSplit('progress timeout abort ' + ERROR),
-        /**
-         * @description helper function to attach a bunch of event listeners to the request object as well as help them trigger the appropriate events on the Ajax object itself
-         * @private
-         * @arg {Ajax} instance to listen to
-         * @arg {Xhr} instance to place event handlers to trigger events on the Ajax instance
-         * @arg {string} event name
-         */
         attachBaseListeners = function (ajax) {
             var prog = 0,
                 req = ajax.requestObject;
@@ -26,9 +19,11 @@ app.scope(function (app) {
                 if (evnt === 'progress') {
                     req['on' + evnt] = function (e) {
                         prog++;
-                        ajax.executeHandlers(evnt, {
+                        ajax.dispatchEvent('progress', {
                             percent: (e.loaded / e.total) || (prog / (prog + 1)),
                             counter: prog
+                        }, {
+                            originalEvent: e
                         });
                     };
                 } else {
@@ -62,26 +57,25 @@ app.scope(function (app) {
             if (data) {
                 args.push(stringify(data));
             }
-            ajax.setHeaders(ajax.get('headers'));
+            ajax.headers(ajax.get('headers'));
             attachBaseListeners(ajax);
             // have to wrap in set timeout for ie
             setTimeout(sendthething(xhrReq, args, ajax));
         },
         /**
-         * @class Ajax
-         * @alias factories.Ajax
-         * @augments Model
+         * @class HTTP
+         * @alias factories.HTTP
          * @augments Model
          * @classdesc XHR object wrapper Triggers events based on xhr state changes and abstracts many anomalies that have to do with IE
          */
-        Promise = factories.Promise,
-        Ajax = Promise.extend('Ajax', {
+        HTTP = factories.HTTP = factories.Promise.extend('HTTP', {
             /**
              * @func
-             * @name Ajax#constructor
+             * @name HTTP#constructor
              * @param {string} str - url to get from
-             * @returns {Ajax} new ajax object
+             * @returns {HTTP} new ajax object
              */
+            parse: parse,
             constructor: function (str, secondary) {
                 var promise, url, thingToDo, typeThing, type, xhrReq, ajax = this,
                     method = 'onreadystatechange';
@@ -97,7 +91,7 @@ app.scope(function (app) {
                     str = str || EMPTY_STRING;
                     type = GET;
                     typeThing = str.toUpperCase();
-                    if (posit(validTypes, typeThing)) {
+                    if (indexOf(validTypes, typeThing) !== -1) {
                         type = typeThing;
                     } else {
                         url = str;
@@ -110,28 +104,28 @@ app.scope(function (app) {
                 str.async = BOOLEAN_TRUE;
                 str.type = (str.type || GET).toUpperCase();
                 str.method = method;
-                Promise[CONSTRUCTOR].call(ajax);
+                factories.Promise[CONSTRUCTOR].call(ajax);
                 ajax.on('change:url', alterurlHandler);
                 extend(ajax, secondary);
                 ajax.requestObject = xhrReq;
                 ajax.set(str);
                 return ajax;
             },
-            // status: function (code, handler) {
-            //     return this.handle(STATUS + COLON + code, handler);
-            // },
-            setHeaders: function (headers) {
+            status: function (code, handler) {
+                return this.handle(STATUS + COLON + code, handler);
+            },
+            headers: function (headers) {
                 var ajax = this,
                     xhrReq = ajax.requestObject;
                 each(headers, function (val, key) {
-                    xhrReq.setRequestHeader(unCamelCase(key), val);
+                    xhrReq.setRequestHeader(key, val);
                 });
                 return ajax;
             },
             /**
              * @description specialized function to stringify url if it is an object
              * @returns {string} returns the completed string that will be fetched / posted / put / or deleted against
-             * @name Ajax#getUrl
+             * @name HTTP#getUrl
              */
             getUrl: function () {
                 var url = this.get('url');
@@ -144,12 +138,14 @@ app.scope(function (app) {
              * @description makes public the ability to attach a response handler if one has not already been attached. We recommend not passing a function in and instead just listening to the various events that the xhr object will trigger directly, or indirectly on the ajax object
              * @param {function} [fn=handler] - pass in a function to have a custom onload, onreadystatechange handler
              * @returns {ajax}
-             * @name Ajax#attachResponseHandler
+             * @name HTTP#attachResponseHandler
              */
-            auxilaryStates: function () {
+            auxiliaryStates: function () {
                 return {
+                    'status:0': FAILURE,
                     'status:200': SUCCESS,
                     'status:202': SUCCESS,
+                    'status:204': SUCCESS,
                     'status:205': SUCCESS,
                     'status:302': SUCCESS,
                     'status:304': SUCCESS,
@@ -163,12 +159,9 @@ app.scope(function (app) {
                     'status:502': ERROR,
                     'status:505': ERROR,
                     'status:511': ERROR,
-                    timeout: FAILURE,
-                    abort: FAILURE
+                    'timeout': FAILURE,
+                    'abort': FAILURE
                 };
-            },
-            parse: function (rawData) {
-                return parse(rawData);
             },
             attachResponseHandler: function () {
                 var ajax = this,
@@ -176,22 +169,16 @@ app.scope(function (app) {
                     hasFinished = BOOLEAN_FALSE,
                     method = ajax.get('method'),
                     handler = function (evnt) {
-                        var status, doIt, allStates, rawData, readystate, xhrReqObj = this;
+                        var status, doIt, allStates, rawData, xhrReqObj = this;
                         if (!xhrReqObj || hasFinished) {
                             return;
                         }
                         status = xhrReqObj[STATUS];
-                        readystate = xhrReqObj[READY_STATE];
                         rawData = xhrReqObj.responseText;
-                        ajax.currentEvent = evnt;
-                        ajax.set('readystate', readystate);
-                        if (method === 'onload' || (method === 'onreadystatechange' && readystate === 4)) {
+                        if (method === 'onload' || (method === 'onreadystatechange' && xhrReqObj[READY_STATE] === 4)) {
                             ajax.set(STATUS, status);
                             allStates = result(ajax, 'allStates');
-                            if (allStates[STATUS + COLON + xhrReqObj[STATUS]] === SUCCESS) {
-                                rawData = result(ajax, 'parse', rawData);
-                            }
-                            rawData = parse(rawData);
+                            rawData = result(ajax, 'parse', rawData);
                             hasFinished = BOOLEAN_TRUE;
                             ajax.resolveAs(STATUS + COLON + xhrReqObj[STATUS], rawData);
                         }
@@ -201,16 +188,16 @@ app.scope(function (app) {
                 }
                 return ajax;
             }
-        }, BOOLEAN_TRUE);
-    _.exports(_.foldl(validTypes, function (memo, key_) {
+        });
+    _.foldl(validTypes, function (memo, key_) {
         var key = key_;
         key = key.toLowerCase();
         memo[key] = function (url, options) {
-            return Ajax(_.extend({
+            return HTTP(_.extend({
                 type: key_,
                 url: url
             }, options));
         };
         return memo;
-    }, {}));
+    }, HTTP);
 });

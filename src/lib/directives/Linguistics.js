@@ -52,7 +52,10 @@ app.scope(function (app) {
                 fn: negative_bound
             };
         },
-        Linguistics = factories.Events.extend(LINGUISTICS, {
+        abstractedStopListening = function () {
+            this.stopListening();
+        },
+        Linguistics = factories.Linguistics = factories.Events.extend(LINGUISTICS, {
             then: push(SUCCESS),
             always: push(EVERY),
             otherwise: push(FAILURES),
@@ -75,8 +78,8 @@ app.scope(function (app) {
                 sequencer[EVERY] = new Collection[CONSTRUCTOR]();
                 sequencer.group();
                 sequencer.listenTo(sequencer.origin, {
-                    change: sequencer.apply,
-                    destroy: sequencer.stopListening
+                    change: 'apply',
+                    destroy: abstractedStopListening
                 });
                 return this;
             },
@@ -132,7 +135,7 @@ app.scope(function (app) {
                 var current = sequencer[CURRENT];
                 var value = sequencer.value(value_, defaultFn || curriedEquivalence);
                 var made = makeLogic(sequencer, current, value, negate);
-                sequencer.logic.index(sequencer[GROUP_INDEX]).list.push(made);
+                sequencer.logic.item(sequencer[GROUP_INDEX]).list.push(made);
                 return sequencer;
             },
             check: function () {
@@ -171,8 +174,9 @@ app.scope(function (app) {
                 }
                 return sequencer;
             }
-        }, BOOLEAN_TRUE),
-        LinguisticsManager = factories.Model.extend(LINGUISTICS + 'Manager', {
+        }),
+        LINGUISTICS_MANAGER = LINGUISTICS + 'Manager',
+        LinguisticsManager = factories[LINGUISTICS_MANAGER] = factories.Model.extend(LINGUISTICS_MANAGER, {
             when: function (key) {
                 var newish = new Linguistics[CONSTRUCTOR](this.target);
                 this.add(newish);
@@ -183,6 +187,6 @@ app.scope(function (app) {
                 this.target = target;
                 return this;
             }
-        }, BOOLEAN_TRUE);
+        });
     app.defineDirective(LINGUISTICS, LinguisticsManager[CONSTRUCTOR]);
 });

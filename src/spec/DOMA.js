@@ -1,6 +1,6 @@
 application.scope().run(function (app, _, factories) {
     var elementData = _.associator;
-    _.describe('DOMM', function () {
+    _.describe('DOMA', function () {
         var divs, count, $empty = $(),
             $win = $(window),
             $doc = $(document),
@@ -12,6 +12,7 @@ application.scope().run(function (app, _, factories) {
             handler2 = function () {
                 return false;
             },
+            $con,
             create = function () {
                 count = 0;
                 var _divs = divs && divs.remove();
@@ -26,22 +27,19 @@ application.scope().run(function (app, _, factories) {
                     div.addClass(className);
                     this.push(div);
                 }, 0, 5);
+                $con = $.createElement('div').css({
+                    height: '100%',
+                    width: '100%'
+                });
                 $con.append(divs);
-                // done();
-                // return divs;
-            },
-            $con = $.createElement('div').style({
-                height: '100%',
-                width: '100%'
-            });
-        $(document.body).append($con);
+                $(document.body).append($con);
+            };
         _.beforeEach(create);
         _.afterEach(function () {
-            divs.destroy();
-            // done();
+            $con.destroy();
         });
         _.it('is essentially a collection', function () {
-            _.expect(_.isInstance($empty, factories.DOMM)).toEqual(true);
+            _.expect(_.isInstance($empty, factories.DOMA)).toEqual(true);
             _.expect(_.isInstance($empty, factories.Collection)).toEqual(true);
         });
         _.it('it knows it\'s own client rect', function () {
@@ -53,7 +51,7 @@ application.scope().run(function (app, _, factories) {
                 bottom: rect.bottom,
                 right: rect.right,
                 left: rect.left,
-                top: rect.top,
+                top: rect.top
             });
         });
         _.it('can show and hide elements', function () {
@@ -86,7 +84,7 @@ application.scope().run(function (app, _, factories) {
             div.children().remove();
             _.expect(div.children().length()).toEqual(0);
         });
-        _.describe('except it has some methods that are highly pertinant to DOM manipulation... ergo: DOMM', function () {
+        _.describe('except it has some methods that are highly pertinant to DOM manipulation... ergo: DOMA', function () {
             _.it('can check if its items are windows', function () {
                 _.expect($win.isWindow()).toEqual(true);
                 _.expect($doc.isWindow()).toEqual(false);
@@ -253,13 +251,13 @@ application.scope().run(function (app, _, factories) {
             });
             _.describe('also capture handlers', function () {
                 _.it('one at a time', function () {
-                    divs.on('_click', handler);
+                    divs.on('click', handler, true);
                     _.expect(count).toEqual(0);
                     divs.dispatchEvent('click', {}, true);
                     _.expect(count).toEqual(5);
                 });
                 _.it('many at a time', function () {
-                    divs.on('_click _mouseover _mouseout', handler);
+                    divs.on('click mouseover mouseout', handler, true);
                     _.expect(count).toEqual(0);
                     divs.dispatchEvent('click', {}, true);
                     divs.dispatchEvent('mouseover', {}, true);
@@ -293,9 +291,9 @@ application.scope().run(function (app, _, factories) {
             });
         });
         _.describe('the each function is special because', function () {
-            _.it('it wraps each element in a DOMM object before passing it through your iterator', function () {
+            _.it('it wraps each element in a DOMA object before passing it through your iterator', function () {
                 divs.each(function (el, idx) {
-                    _.expect(_.isInstance(el, factories.DOMM)).toEqual(false);
+                    _.expect(_.isInstance(el, factories.DOMA)).toEqual(false);
                     _.expect(factories.DomManager.isInstance(el)).toEqual(true);
                     _.expect(divs.element(idx) === el.element());
                 });
@@ -457,7 +455,7 @@ application.scope().run(function (app, _, factories) {
             _.describe('there are also special handlers', function () {
                 _.it('like create', function () {
                     $.registerElement('test0', {
-                        onCreate: handler
+                        creation: handler
                     });
                     _.expect(count).toEqual(0);
                     $.createElement('test0');
@@ -465,21 +463,21 @@ application.scope().run(function (app, _, factories) {
                 });
                 _.it('and destroy', function () {
                     $.registerElement('test1', {
-                        onDestroy: handler
+                        destruction: handler
                     });
                     var div = $.createElement('test1');
                     _.expect(count).toEqual(0);
                     div.destroy();
                     _.expect(count).toEqual(1);
                 });
-                _.it('can even apply to elements that have already been created', function () {
-                    $.createElement('test2');
-                    _.expect(count).toEqual(0);
-                    $.registerElement('test2', {
-                        onCreate: handler
-                    });
-                    _.expect(count).toEqual(1);
-                });
+                // _.it('can even apply to elements that have already been created', function () {
+                //     $.createElement('test2');
+                //     _.expect(count).toEqual(0);
+                //     $.registerElement('test2', {
+                //         creation: handler
+                //     });
+                //     _.expect(count).toEqual(1);
+                // });
             });
         });
         _.it('tags cannot be created without being registered first', function () {

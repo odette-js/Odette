@@ -528,17 +528,17 @@ application.scope().run(function (app, _, factories) {
             _.expect(numberCollection.length()).toEqual(10);
         });
         _.it('can give you all of it\'s values at once', function () {
-            _.expect(collection.unwrap()).toEqual(collection.directive('list').items);
+            _.expect(collection.unwrap()).toEqual(collection.items);
         });
         _.it('or one at a time', function () {
             numberCollection.duff(function (item, idx) {
-                _.expect(numberCollection.index(idx)).toEqual(numberCollection.directive('list').items[idx]);
+                _.expect(numberCollection.item(idx)).toEqual(numberCollection.items[idx]);
             });
         });
         _.it('as well as in reverse order', function () {
             var list = [];
             numberCollection.duffRight(function (item, idx) {
-                _.expect(numberCollection.index(idx)).toEqual(numberCollection.directive('list').items[idx]);
+                _.expect(numberCollection.item(idx)).toEqual(numberCollection.items[idx]);
                 list.push(item);
             });
             _.expect(list).toEqual([9, 8, 7, 6, 5, 4, 3, 2, 1, 0]);
@@ -575,17 +575,22 @@ application.scope().run(function (app, _, factories) {
                 }).unwrap()).toEqual([0, 3, 6, 9, 1, 4, 7, 2, 5, 8]);
             });
             _.it('unshift', function () {
-                _.expect(numberCollection.unshift(-1).unwrap()).toEqual([-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+                numberCollection.unshift(-1);
+                _.expect(numberCollection.unwrap()).toEqual([-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
             });
             _.it('push', function () {
-                _.expect(numberCollection.push(10).unwrap()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
-                _.expect(numberCollection.push([11, 12, 13]).unwrap()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]);
+                numberCollection.push(10);
+                _.expect(numberCollection.unwrap()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+                numberCollection.push([11, 12, 13]);
+                _.expect(numberCollection.unwrap()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]);
             });
             _.it('cycle', function () {
-                _.expect(numberCollection.cycle(3).unwrap()).toEqual([3, 4, 5, 6, 7, 8, 9, 0, 1, 2]);
+                numberCollection.cycle(3);
+                _.expect(numberCollection.unwrap()).toEqual([3, 4, 5, 6, 7, 8, 9, 0, 1, 2]);
             });
             _.it('uncycle', function () {
-                _.expect(numberCollection.uncycle(3).unwrap()).toEqual([7, 8, 9, 0, 1, 2, 3, 4, 5, 6]);
+                numberCollection.uncycle(3);
+                _.expect(numberCollection.unwrap()).toEqual([7, 8, 9, 0, 1, 2, 3, 4, 5, 6]);
             });
             _.it('count', function () {
                 _.expect(numberCollection.count(function (item, idx, list) {
@@ -684,10 +689,6 @@ application.scope().run(function (app, _, factories) {
                     two: 2
                 })).toEqual(secondFindObj);
             });
-            _.it('posit', function () {
-                _.expect(numberCollection.posit(5)).toEqual(6);
-                _.expect(numberCollection.posit(11)).toEqual(0);
-            });
             _.it('foldr', function () {
                 _.expect(numberCollection.foldr(function (memo, idx, item) {
                     memo.push(item);
@@ -781,20 +782,20 @@ application.scope().run(function (app, _, factories) {
             sorted.add(1);
             sorted.add(5);
             sorted.add(3);
-            _.expect(sorted.index(0)).toEqual(0);
-            _.expect(sorted.index(1)).toEqual(1);
-            _.expect(sorted.index(2)).toEqual(2);
-            _.expect(sorted.index(3)).toEqual(3);
-            _.expect(sorted.index(4)).toEqual(4);
-            _.expect(sorted.index(5)).toEqual(5);
+            _.expect(sorted.item(0)).toEqual(0);
+            _.expect(sorted.item(1)).toEqual(1);
+            _.expect(sorted.item(2)).toEqual(2);
+            _.expect(sorted.item(3)).toEqual(3);
+            _.expect(sorted.item(4)).toEqual(4);
+            _.expect(sorted.item(5)).toEqual(5);
         });
         _.it('can remove values from the correct place', function () {
             var sorted = SortedCollection(evenNumberList);
             sorted.remove(4);
             sorted.remove(2);
-            _.expect(sorted.index(0)).toEqual(0);
-            _.expect(sorted.index(1)).toEqual(6);
-            _.expect(sorted.index(2)).toEqual(8);
+            _.expect(sorted.item(0)).toEqual(0);
+            _.expect(sorted.item(1)).toEqual(6);
+            _.expect(sorted.item(2)).toEqual(8);
         });
     });
 });
@@ -1341,7 +1342,7 @@ application.scope().run(function (app, _, factories) {
                     myObj: 1
                 };
                 _.expect(box.directive('Children').get('id', 'key')).toEqual(void 0);
-                box.directive('Children').register('id', 'key', data);
+                box.directive('Children').keep('id', 'key', data);
                 _.expect(box.directive('Children').get('id', 'key')).toEqual(data);
             });
             _.it('and retreive information', function () {
@@ -1349,7 +1350,7 @@ application.scope().run(function (app, _, factories) {
                     myObj: 1
                 };
                 _.expect(box.directive('Children').get('id', 'key')).toEqual(void 0);
-                box.directive('Children').register('id', 'key', data);
+                box.directive('Children').keep('id', 'key', data);
                 _.expect(box.directive('Children').get('id', 'key') === data).toEqual(true);
             });
         });
@@ -1391,7 +1392,7 @@ application.scope().run(function (app, _, factories) {
                     one: 4
                 }]);
                 _.expect(children.length()).toEqual(4);
-                box.remove([children.index(1), children.index(3)]);
+                box.remove([children.item(1), children.item(3)]);
                 _.expect(children.length()).toEqual(2);
             });
         });
@@ -1407,7 +1408,7 @@ application.scope().run(function (app, _, factories) {
                 }, {
                     one: 4
                 }]);
-                var destroyer = box.directive('Children').index(2);
+                var destroyer = box.directive('Children').item(2);
                 _.expect(box.directive('Children').get('cid', destroyer.cid) === destroyer).toEqual(true);
                 _.expect(box.directive('Children').get('id', destroyer.id) === destroyer).toEqual(true);
                 destroyer.destroy();
@@ -1430,14 +1431,14 @@ application.scope().run(function (app, _, factories) {
                 }]);
                 box.comparator = 'two';
                 box.sort();
-                _.expect(box.directive('Children').list.map(function (model) {
+                _.expect(box.directive('Children').map(function (model) {
                     return model.get('two');
-                })).toEqual([1, 2, 8]);
+                }).unwrap()).toEqual([1, 2, 8]);
                 box.comparator = '!two';
                 box.sort();
-                _.expect(box.directive('Children').list.map(function (model) {
+                _.expect(box.directive('Children').map(function (model) {
                     return model.get('two');
-                })).toEqual([8, 2, 1]);
+                }).unwrap()).toEqual([8, 2, 1]);
             });
             _.it('set up events on their children', function () {
                 var counter = 0;
@@ -1642,52 +1643,49 @@ application.scope().run(function (app, _, factories) {
             // make sure promise is an object
             _.expect(_.isObject(promise)).toEqual(true);
             // make sure it has the right "state"
-            _.expect(promise.state()).toEqual('pending');
-            // resolve the promise
-            promise.resolve();
+            _.expect(promise.state).toEqual('pending');
+            // fulfill the promise
+            promise.fulfill();
             // make sure that it hit the function once and only once
             _.expect(madeit).toEqual(1);
             // make sure it has the correct state after resolution
-            _.expect(promise.state()).toEqual('success');
+            _.expect(promise.state).toEqual('success');
         });
-        _.it('can tell you if it has resolved or not', function () {
-            _.expect(promise.resolved()).toEqual(false);
-            promise.resolve();
-            _.expect(promise.resolved()).toEqual(true);
+        _.it('can tell you if it has fulfilled or not', function () {
+            _.expect(promise.is('fulfilled')).toEqual(false);
+            promise.fulfill();
+            _.expect(promise.is('fulfilled')).toEqual(true);
         });
         _.describe('can tell you what state it is in such as', function () {
             _.it('pending', function () {
-                _.expect(promise.state()).toEqual('pending');
+                _.expect(promise.state).toEqual('pending');
             });
             _.it('success', function () {
-                promise.resolve();
-                _.expect(promise.state()).toEqual('success');
+                promise.fulfill();
+                _.expect(promise.state).toEqual('success');
             });
             _.it('failure', function () {
                 promise.reject();
-                _.expect(promise.state()).toEqual('failure');
+                _.expect(promise.state).toEqual('failure');
             });
         });
         _.describe('or it can give you a boolean value for resolutions like', function () {
-            _.it('pending', function () {
-                _.expect(promise.isPending()).toEqual(true);
-            });
             _.it('success', function () {
-                promise.resolve();
-                _.expect(promise.isFulfilled()).toEqual(true);
+                promise.fulfill();
+                _.expect(promise.is('fulfilled')).toEqual(true);
             });
             _.it('failure', function () {
                 promise.reject();
-                _.expect(promise.isRejected()).toEqual(true);
+                _.expect(promise.is('rejected')).toEqual(true);
             });
         });
-        _.describe('can resolve to different states such as', function () {
+        _.describe('can fulfill to different states such as', function () {
             _.it('success', function (done) {
                 // attach handler
                 promise.success(handler);
                 setTimeout(function () {
-                    // resolve promise for success
-                    promise.resolve();
+                    // fulfill promise for success
+                    promise.fulfill();
                     // expect madeit to increase
                     _.expect(madeit).toEqual(1);
                     // let jasmine know we're all good
@@ -1698,7 +1696,7 @@ application.scope().run(function (app, _, factories) {
                 // attach failure handler
                 promise.failure(handler);
                 setTimeout(function () {
-                    // resolve promise for failure
+                    // fulfill promise for failure
                     promise.reject();
                     // expect madeit to increase
                     _.expect(madeit).toEqual(1);
@@ -1708,13 +1706,13 @@ application.scope().run(function (app, _, factories) {
             });
         });
         _.describe('but it also can trigger functions on any resolution with the always method such as', function () {
-            _.it('resolve', function (done) {
+            _.it('fulfill', function (done) {
                 // attach always handler
                 promise.success(handler);
                 promise.always(handler);
                 setTimeout(function () {
-                    // resolve promise for failure
-                    promise.resolve();
+                    // fulfill promise for failure
+                    promise.fulfill();
                     // expect madeit to increase
                     _.expect(madeit).toEqual(2);
                     // let jasmine know we're all good
@@ -1789,17 +1787,17 @@ application.scope().run(function (app, _, factories) {
 application.scope().run(function (app, _, factories) {
     var BOOLEAN_TRUE = true,
         isObject = _.isObject;
-    _.describe('Ajax', function () {
+    _.describe('HTTP', function () {
         var ajax, allstates;
         _.beforeEach(function () {
-            ajax = factories.Ajax();
+            ajax = factories.HTTP();
             allstates = ajax.allStates();
         });
         _.it('is an object', function () {
             _.expect(isObject(ajax)).toEqual(BOOLEAN_TRUE);
         });
         _.it('can accept an object as a first argument', function (done) {
-            factories.Ajax({
+            factories.HTTP({
                 url: '/json/reporting.json'
             }).success(function (json) {
                 _.expect(isObject(json)).toEqual(BOOLEAN_TRUE);
@@ -1808,7 +1806,7 @@ application.scope().run(function (app, _, factories) {
         });
         _.it('can accept a string as a first argument', function (done) {
             var original, handlerCounter = 0;
-            factories.Ajax('/json/reporting.json').handle('status:200', function (json) {
+            factories.HTTP('/json/reporting.json').handle('status:200', function (json) {
                 handlerCounter++;
                 original = json;
             }).success(function (json) {
@@ -1823,7 +1821,7 @@ application.scope().run(function (app, _, factories) {
         _.describe('can handle', function () {
             _.it('failures', function (done) {
                 var handlerCounter = 0;
-                var prom = factories.Ajax().failure(function () {
+                var prom = factories.HTTP().failure(function () {
                     handlerCounter++;
                 }).always(function () {
                     handlerCounter++;
@@ -1834,7 +1832,7 @@ application.scope().run(function (app, _, factories) {
             });
             _.it('errors', function (done) {
                 var handlerCounter = 0;
-                factories.Ajax('/json/reporting.json').success(function (json) {
+                factories.HTTP('/json/reporting.json').success(function (json) {
                     handlerCounter++;
                     _.expect(handlerCounter).toEqual(1);
                     throw new Error('some message here');
@@ -1849,7 +1847,7 @@ application.scope().run(function (app, _, factories) {
             _.describe('status codes (more than the ones listed here)', function () {
                 _.it('200', function (done) {
                     var handlerCounter = 0;
-                    factories.Ajax('/gibberish/200').handle('status:200', function () {
+                    factories.HTTP('/gibberish/200').handle('status:200', function () {
                         handlerCounter++;
                     }).success(function () {
                         handlerCounter++;
@@ -1863,7 +1861,7 @@ application.scope().run(function (app, _, factories) {
                 });
                 _.it('404', function (done) {
                     var handlerCounter = 0;
-                    factories.Ajax('/gibberish/404').handle('status:404', function () {
+                    factories.HTTP('/gibberish/404').handle('status:404', function () {
                         handlerCounter++;
                     }).failure(function () {
                         handlerCounter++;
@@ -1875,7 +1873,7 @@ application.scope().run(function (app, _, factories) {
                 });
                 _.it('500', function (done) {
                     var handlerCounter = 0;
-                    factories.Ajax('/gibberish/500').handle('status:500', function () {
+                    factories.HTTP('/gibberish/500').handle('status:500', function () {
                         handlerCounter++;
                     }).error(function () {
                         handlerCounter++;
@@ -1979,16 +1977,16 @@ application.scope().run(function (app, _, factories) {
             _.expect(count).toEqual(3);
         });
         _.it('can have exports (can hold data)', function () {
-            level.exports({
+            level.publicize({
                 one: 1,
                 two: 2
             });
-            _.expect(level.get('exports').one).toEqual(1);
-            _.expect(level.get('exports').two).toEqual(2);
+            _.expect(level.exports.one).toEqual(1);
+            _.expect(level.exports.two).toEqual(2);
         });
         _.it('which is like giving public data', function () {
             var mod = app.module('newmodule', function () {
-                this.exports({
+                this.publicize({
                     here: 'there'
                 });
             });
@@ -2001,7 +1999,7 @@ application.scope().run(function (app, _, factories) {
 });
 application.scope().run(function (app, _, factories) {
     var elementData = _.associator;
-    _.describe('DOMM', function () {
+    _.describe('DOMA', function () {
         var divs, count, $empty = $(),
             $win = $(window),
             $doc = $(document),
@@ -2013,6 +2011,7 @@ application.scope().run(function (app, _, factories) {
             handler2 = function () {
                 return false;
             },
+            $con,
             create = function () {
                 count = 0;
                 var _divs = divs && divs.remove();
@@ -2027,22 +2026,19 @@ application.scope().run(function (app, _, factories) {
                     div.addClass(className);
                     this.push(div);
                 }, 0, 5);
+                $con = $.createElement('div').css({
+                    height: '100%',
+                    width: '100%'
+                });
                 $con.append(divs);
-                // done();
-                // return divs;
-            },
-            $con = $.createElement('div').style({
-                height: '100%',
-                width: '100%'
-            });
-        $(document.body).append($con);
+                $(document.body).append($con);
+            };
         _.beforeEach(create);
         _.afterEach(function () {
-            divs.destroy();
-            // done();
+            $con.destroy();
         });
         _.it('is essentially a collection', function () {
-            _.expect(_.isInstance($empty, factories.DOMM)).toEqual(true);
+            _.expect(_.isInstance($empty, factories.DOMA)).toEqual(true);
             _.expect(_.isInstance($empty, factories.Collection)).toEqual(true);
         });
         _.it('it knows it\'s own client rect', function () {
@@ -2054,7 +2050,7 @@ application.scope().run(function (app, _, factories) {
                 bottom: rect.bottom,
                 right: rect.right,
                 left: rect.left,
-                top: rect.top,
+                top: rect.top
             });
         });
         _.it('can show and hide elements', function () {
@@ -2087,7 +2083,7 @@ application.scope().run(function (app, _, factories) {
             div.children().remove();
             _.expect(div.children().length()).toEqual(0);
         });
-        _.describe('except it has some methods that are highly pertinant to DOM manipulation... ergo: DOMM', function () {
+        _.describe('except it has some methods that are highly pertinant to DOM manipulation... ergo: DOMA', function () {
             _.it('can check if its items are windows', function () {
                 _.expect($win.isWindow()).toEqual(true);
                 _.expect($doc.isWindow()).toEqual(false);
@@ -2254,13 +2250,13 @@ application.scope().run(function (app, _, factories) {
             });
             _.describe('also capture handlers', function () {
                 _.it('one at a time', function () {
-                    divs.on('_click', handler);
+                    divs.on('click', handler, true);
                     _.expect(count).toEqual(0);
                     divs.dispatchEvent('click', {}, true);
                     _.expect(count).toEqual(5);
                 });
                 _.it('many at a time', function () {
-                    divs.on('_click _mouseover _mouseout', handler);
+                    divs.on('click mouseover mouseout', handler, true);
                     _.expect(count).toEqual(0);
                     divs.dispatchEvent('click', {}, true);
                     divs.dispatchEvent('mouseover', {}, true);
@@ -2294,9 +2290,9 @@ application.scope().run(function (app, _, factories) {
             });
         });
         _.describe('the each function is special because', function () {
-            _.it('it wraps each element in a DOMM object before passing it through your iterator', function () {
+            _.it('it wraps each element in a DOMA object before passing it through your iterator', function () {
                 divs.each(function (el, idx) {
-                    _.expect(_.isInstance(el, factories.DOMM)).toEqual(false);
+                    _.expect(_.isInstance(el, factories.DOMA)).toEqual(false);
                     _.expect(factories.DomManager.isInstance(el)).toEqual(true);
                     _.expect(divs.element(idx) === el.element());
                 });
@@ -2458,7 +2454,7 @@ application.scope().run(function (app, _, factories) {
             _.describe('there are also special handlers', function () {
                 _.it('like create', function () {
                     $.registerElement('test0', {
-                        onCreate: handler
+                        creation: handler
                     });
                     _.expect(count).toEqual(0);
                     $.createElement('test0');
@@ -2466,21 +2462,21 @@ application.scope().run(function (app, _, factories) {
                 });
                 _.it('and destroy', function () {
                     $.registerElement('test1', {
-                        onDestroy: handler
+                        destruction: handler
                     });
                     var div = $.createElement('test1');
                     _.expect(count).toEqual(0);
                     div.destroy();
                     _.expect(count).toEqual(1);
                 });
-                _.it('can even apply to elements that have already been created', function () {
-                    $.createElement('test2');
-                    _.expect(count).toEqual(0);
-                    $.registerElement('test2', {
-                        onCreate: handler
-                    });
-                    _.expect(count).toEqual(1);
-                });
+                // _.it('can even apply to elements that have already been created', function () {
+                //     $.createElement('test2');
+                //     _.expect(count).toEqual(0);
+                //     $.registerElement('test2', {
+                //         creation: handler
+                //     });
+                //     _.expect(count).toEqual(1);
+                // });
             });
         });
         _.it('tags cannot be created without being registered first', function () {
@@ -2511,7 +2507,7 @@ application.scope().run(function (app, _, factories) {
                 return '<span></span><div class="here"></div>';
             }
         });
-        app.addRegion('main', '.test-div');
+        app.RegionManager.add('main', '.test-div');
         _.beforeEach(function () {
             count = 0;
             view = factories.View();
@@ -2533,7 +2529,7 @@ application.scope().run(function (app, _, factories) {
         _.it('can even have extra elements tied to it... but only when it is rendered', function () {
             _.expect(_.isString(complexView.ui.there)).toEqual(true);
             complexView.render();
-            _.expect(_.isInstance(complexView.ui.there, factories.DOMM)).toEqual(true);
+            _.expect(_.isInstance(complexView.ui.there, factories.DOMA)).toEqual(true);
         });
         _.it('can be rendered', function () {
             _.expect(complexView.el.html()).toEqual('');
@@ -2542,25 +2538,27 @@ application.scope().run(function (app, _, factories) {
         });
         _.it('can be attached to a region', function () {
             _.expect(complexView.el.element().parentNode).toEqual(null);
-            app.getRegion('main').add(complexView);
+            app.RegionManager.get('main').add(complexView);
             _.expect(complexView.el.element().parentNode).not.toEqual(null);
         });
         _.it('can be filtered', function () {
             _.expect(complexView.el.element().parentNode).toEqual(null);
-            complexView.filter = false;
-            app.getRegion('main').add(complexView);
+            complexView.filter = function () {
+                return false;
+            };
+            app.RegionManager.get('main').add(complexView);
             _.expect(complexView.el.element().parentNode).toEqual(null);
         });
         _.it('can have extra elements', function () {
             _.expect(_.isObject(complexView.ui)).toEqual(true);
             _.expect(_.isString(complexView.ui.there)).toEqual(true);
             complexView.render();
-            _.expect(_.isInstance(complexView.ui.there, factories.DOMM)).toEqual(true);
+            _.expect(_.isInstance(complexView.ui.there, factories.DOMA)).toEqual(true);
             _.expect(complexView.ui.there.length()).toEqual(1);
         });
         _.it('can also attach events to it\'s element', function () {
             _.expect(count).toEqual(0);
-            app.getRegion('main').add(complexView);
+            app.RegionManager.get('main').add(complexView);
             _.expect(count).toEqual(0);
             complexView.el.click();
             _.expect(count).toEqual(1);
@@ -2571,7 +2569,7 @@ application.scope().run(function (app, _, factories) {
         });
         _.it('as well as it\'s ui elements', function () {
             _.expect(count).toEqual(0);
-            app.getRegion('main').add(complexView);
+            app.RegionManager.get('main').add(complexView);
             _.expect(count).toEqual(0);
             complexView.ui.there.click();
             _.expect(count).toEqual(1);
@@ -2581,7 +2579,7 @@ application.scope().run(function (app, _, factories) {
             _.expect(count).toEqual(2);
         });
         _.it('views can be detached', function () {
-            app.getRegion('main').add(complexView);
+            app.RegionManager.get('main').add(complexView);
             _.expect(count).toEqual(0);
             complexView.ui.there.click();
             _.expect(count).toEqual(1);
@@ -2589,7 +2587,7 @@ application.scope().run(function (app, _, factories) {
             _.expect(count).toEqual(1);
         });
         _.it('and still keep their elements and events intact', function () {
-            app.getRegion('main').add(complexView);
+            app.RegionManager.get('main').add(complexView);
             _.expect(count).toEqual(0);
             complexView.ui.there.click();
             _.expect(count).toEqual(1);
@@ -2599,19 +2597,19 @@ application.scope().run(function (app, _, factories) {
             _.expect(count).toEqual(2);
         });
         _.it('they can even be reattached', function () {
-            app.getRegion('main').add(complexView);
+            app.RegionManager.get('main').add(complexView);
             _.expect(count).toEqual(0);
             complexView.ui.there.click();
             _.expect(count).toEqual(1);
             complexView.remove();
             _.expect(count).toEqual(1);
-            app.getRegion('main').add(complexView);
+            app.RegionManager.get('main').add(complexView);
             _.expect(count).toEqual(1);
             complexView.ui.there.click();
             _.expect(count).toEqual(2);
         });
         _.it('when they are destroyed however, their events are detached from the element and the view is automatically removed', function () {
-            app.getRegion('main').add(complexView);
+            app.RegionManager.get('main').add(complexView);
             _.expect(count).toEqual(0);
             var there = complexView.ui.there;
             there.click();
@@ -2632,7 +2630,7 @@ application.scope().run(function (app, _, factories) {
                 count += (expects === this);
             };
         },
-        pagePromise = _.get('/test/framed.html');
+        pagePromise = factories.HTTP.get('/test/framed.html');
     _.describe('Buster', function () {
         _.beforeEach(function () {
             count = 0;
@@ -2640,7 +2638,7 @@ application.scope().run(function (app, _, factories) {
         _.describe('can understand unfriendly windows', function () {
             _.it('can receive messages on windows', function (done) {
                 var iframe = $.createElement('iframe');
-                app.getRegion('main').el.append(iframe);
+                app.RegionManager.get('main').el.append(iframe);
                 var buster = factories.Buster(window, iframe, {
                     iframeSrc: 'http://localhost:8000/test/framed.html'
                 });
@@ -2658,8 +2656,9 @@ application.scope().run(function (app, _, factories) {
         _.describe('and windows without a source', function () {
             _.it('can receive messages on windows', function (done) {
                 pagePromise.success(function (response) {
+                    console.log('time to stop');
                     var iframe = $.createElement('iframe');
-                    app.getRegion('main').el.append(iframe);
+                    app.RegionManager.get('main').el.append(iframe);
                     var buster = factories.Buster(window, iframe, {
                         iframeContent: response
                     });
@@ -2678,7 +2677,7 @@ application.scope().run(function (app, _, factories) {
         _.describe('can understand friendly windows', function () {
             _.it('can receive messages on windows', function (done) {
                 var iframe = $.createElement('iframe');
-                app.getRegion('main').el.append(iframe);
+                app.RegionManager.get('main').el.append(iframe);
                 var buster = factories.Buster(window, iframe, {
                     iframeSrc: 'http://localhost:8080/test/framed.html'
                 });

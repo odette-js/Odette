@@ -1,5 +1,5 @@
 var factories = {},
-    object = Object,
+    // object = Object,
     fn = Function,
     FunctionConstructor = fn[CONSTRUCTOR],
     array = Array,
@@ -7,10 +7,10 @@ var factories = {},
     number = Number,
     BRACKET_OBJECT_SPACE = '[object ',
     stringProto = string[PROTOTYPE],
-    objectProto = object[PROTOTYPE],
+    objectProto = Object[PROTOTYPE],
     arrayProto = array[PROTOTYPE],
     funcProto = fn[PROTOTYPE],
-    nativeKeys = object.keys,
+    nativeKeys = Object.keys,
     hasEnumBug = !{
         toString: NULL
     }.propertyIsEnumerable(TO_STRING),
@@ -38,6 +38,11 @@ var factories = {},
         }
         return -1;
     },
+    property = function (string) {
+        return function (object) {
+            return object[string];
+        };
+    },
     indexOf = function (array, value, fromIndex, toIndex, fromRight) {
         var index, limit, incrementor;
         if (!array) {
@@ -56,10 +61,13 @@ var factories = {},
         }
         return -1;
     },
-    binaryIndexOf = function (list, item, minIndex_, maxIndex_) {
+    sortedIndexOf = function (list, item, minIndex_, maxIndex_, fromRight) {
         var guess, min = minIndex_ || 0,
             max = maxIndex_ || list[LENGTH] - 1,
             bitwise = (max <= TWO_TO_THE_31) ? BOOLEAN_TRUE : BOOLEAN_FALSE;
+        if (item !== item) {
+            return indexOfNaN(list, min, max, fromRight);
+        }
         if (bitwise) {
             while (min <= max) {
                 guess = (min + max) >> 1;
@@ -90,7 +98,7 @@ var factories = {},
         return -1;
     },
     smartIndexOf = function (array, item, _from, _to, _rtl) {
-        return (array && array[LENGTH] > 100 ? binaryIndexOf : indexOf)(array, item, _from, _to, _rtl);
+        return (_from === BOOLEAN_TRUE && array && array[LENGTH] > 100 ? sortedIndexOf : indexOf)(array, item, _from, _to, _rtl);
     },
     /**
      * @func
@@ -104,31 +112,63 @@ var factories = {},
     /**
      * @func
      */
-    sort = function (obj, fn_) {
+    sort = function (obj, fn_, reversed, context) {
         var fn = fn_ || function (a, b) {
             return a > b;
         };
+        // if (context) {
+        fn = bindTo(fn, context);
+        // }
         // normalize sort function handling for safari
-        return arrayProto.sort.call(obj, function () {
-            var result = fn.apply(this, arguments),
-                numericResult = +result;
-            if (isNaN(numericResult)) {
-                numericResult = 0;
+        return obj.sort(function (a, b) {
+            var result = fn(a, b);
+            if (isNaN(result)) {
+                result = INFINITY;
             }
-            if (numericResult > 1) {
-                numericResult = 1;
+            if (result === BOOLEAN_TRUE) {
+                result = 1;
             }
-            if (result === BOOLEAN_FALSE || numericResult < -1) {
-                numericResult = -1;
+            if (result === BOOLEAN_FALSE) {
+                result = 0;
             }
-            return numericResult;
+            return reversed ? result * -1 : result;
         });
     },
+    normalizeToFunction = function (value, context, argCount) {
+        if (value == NULL) return returns.first;
+        if (isFunction(value)) return bindTo(value, context);
+        // has not been created yet
+        if (isObject(value)) return _.matcher(value);
+        return property(value);
+    },
+    // Sort the object's values by a criterion produced by an iteratee.
+    // _.sortBy = function(obj, iteratee, context) {
+    //   iteratee = cb(iteratee, context);
+    //   return _.pluck(_.map(obj, function(value, index, list) {
+    //     return {
+    //       value: value,
+    //       index: index,
+    //       criteria: iteratee(value, index, list)
+    //     };
+    //   }).sort(function(left, right) {
+    //     var a = left.criteria;
+    //     var b = right.criteria;
+    //     if (a !== b) {
+    //       if (a > b || a === void 0) return 1;
+    //       if (a < b || b === void 0) return -1;
+    //     }
+    //     return left.index - right.index;
+    //   }), 'value');
+    // };
+    sortBy = function (list, string) {},
     /**
      * @func
      */
-    has = function (obj, prop) {
+    has = function (obj, prop, useArrayCheck) {
         var val = BOOLEAN_FALSE;
+        if (useArrayCheck) {
+            return indexOf(obj, prop) !== -1;
+        }
         if (obj && isFunction(obj.hasOwnProperty)) {
             val = obj.hasOwnProperty(prop);
         }
@@ -180,13 +220,13 @@ var factories = {},
     isWrap = function (type, fn) {
         if (!fn) {
             fn = function () {
-                return 1;
+                return BOOLEAN_TRUE;
             };
         }
         return function (thing) {
             var ret = 0;
             if (typeof thing === type && fn(thing)) {
-                ret = 1;
+                ret = BOOLEAN_TRUE;
             }
             return !!ret;
         };
@@ -242,7 +282,10 @@ var factories = {},
     /**
      * @func
      */
-    isArray = Array.isArray,
+    // isArray = Array.isArray,
+    isArray = function (obj) {
+        return isObject(obj) && objectProto.toString.call(obj) === '[object Array]';
+    },
     /**
      * @func
      */
@@ -295,11 +338,12 @@ var factories = {},
     },
     now_offset = now(),
     now_shim = function () {
-        return now() - this.offset;
+        return now() - now_offset;
     },
     _performance = window.performance,
     performance = _performance ? (_performance.now = (_performance.now || _performance.webkitNow || _performance.msNow || _performance.oNow || _performance.mozNow || now_shim)) && _performance : {
-        now: now_shim
+        now: now_shim,
+        offset: now_offset
     },
     /**
      * @func
@@ -324,10 +368,10 @@ var factories = {},
     },
     merge = function (obj1, obj2, deep) {
         var key, val, i = 0,
-            keys = allKeys(obj2),
-            l = keys[LENGTH];
+            instanceKeys = keys(obj2),
+            l = instanceKeys[LENGTH];
         for (; i < l; i++) {
-            key = keys[i];
+            key = instanceKeys[i];
             // ignore undefined
             if (obj2[key] !== UNDEFINED) {
                 val = obj2[key];
@@ -347,6 +391,40 @@ var factories = {},
         }
         return obj1;
     },
+    values = function (object) {
+        var collected = [];
+        each(object, function (value) {
+            collected.push(value);
+        });
+        return collected;
+    },
+    zip = function (lists) {
+        var aggregator = [];
+        duff(lists, function (list, listCount) {
+            // var zipped = aggregator
+            duff(list, function (item, index) {
+                var destination = aggregator[index];
+                if (!aggregator[index]) {
+                    destination = aggregator[index] = [];
+                }
+                destination[listCount] = item;
+            });
+        });
+        return aggregator;
+    },
+    object = function (keys, values) {
+        var obj = {};
+        if (values) {
+            duff(keys, function (key, index) {
+                obj[key] = values[index];
+            });
+        } else {
+            duff(keys, function (key, index) {
+                obj[key[0]] = key[1];
+            });
+        }
+        return obj;
+    },
     /**
      * @func
      */
@@ -364,7 +442,7 @@ var factories = {},
     },
     iterates = function (obj, iterator, context) {
         var list = keys(obj),
-            iteratee = bind(iterator, context);
+            iteratee = bindTo(iterator, context);
         return {
             keys: list,
             handler: function (key, idx, list) {
@@ -388,6 +466,7 @@ var factories = {},
                 ret = iterates(list, iteratee, context);
                 iterator = ret.handler;
                 list = ret.keys;
+                // prevent duff from binding again
                 context = NULL;
             }
             return fn(list, iterator, context, direction);
@@ -399,7 +478,7 @@ var factories = {},
     createPredicateIndexFinder = function (dir) {
         return eachProxy(function (array, predicate, context, index_) {
             var length = array[LENGTH],
-                callback = bind(predicate, context),
+                callback = bindTo(predicate, context),
                 index = index_ || (dir > 0 ? 0 : length - 1);
             for (; index >= 0 && index < length; index += dir) {
                 if (callback(array[index], index, array)) {
@@ -436,8 +515,14 @@ var factories = {},
     },
     find = finder(findIndex),
     findLast = finder(findLastIndex),
-    bind = function (func) {
-        var args = toArray(arguments).slice(1);
+    bind = function (func, context) {
+        return arguments[LENGTH] < 3 ? bindTo(func, context) : bindWith(func, toArray(arguments).slice(1));
+    },
+    bindTo = function (func, context) {
+        return context ? func.bind(context) : func;
+    },
+    bindWith = function (func, args) {
+        // var args = toArray(arguments).slice(1);
         return func.bind.apply(func, args);
     },
     duff = function (values, runner_, context, direction_) {
@@ -453,7 +538,7 @@ var factories = {},
             i = val - 1;
         }
         direction = direction_ || 1;
-        runner = bind(runner_, context);
+        runner = bindTo(runner_, context);
         if (leftover > 0) {
             do {
                 runner(values[i], i, values);
@@ -502,6 +587,7 @@ var factories = {},
         if (thingMod === BOOLEAN_TRUE + EMPTY_STRING) {
             ret = BOOLEAN_TRUE;
         }
+        // if failed to convert, revert
         if (ret === UNDEFINED) {
             ret = thing;
         }
@@ -549,9 +635,13 @@ var factories = {},
     /**
      * @func
      */
-    constructorExtend = function (name, protoProps, attach) {
-        var nameString, child, passedParent, hasConstructor, constructor, parent = this,
+    constructorExtend = function (parent_, name, protoProps) {
+        var nameString, child, passedParent, hasConstructor, constructor, parent = parent_,
             nameIsStr = isString(name);
+        if (name === BOOLEAN_FALSE) {
+            extend(parent[PROTOTYPE], protoProps);
+            return parent;
+        }
         if (!nameIsStr) {
             protoProps = name;
         }
@@ -582,24 +672,18 @@ var factories = {},
         child = constructorWrapper(constructor);
         child.__super__ = parent;
         constructor[PROTOTYPE][CONSTRUCTOR_KEY] = child;
-        if (nameIsStr && attach && !_._preventConstructorAttach) {
-            factories[name] = child;
-        }
         return child;
     },
     constructorWrapper = function (Constructor) {
         var __ = function (one, two, three, four, five, six) {
-            if (isInstance(one, Constructor)) {
-                return one;
-            }
-            return new Constructor(one, two, three, four, five, six);
+            return one instanceof Constructor ? one : new Constructor(one, two, three, four, five, six);
         };
         __.isInstance = Constructor.isInstance = function (instance) {
             return isInstance(instance, Constructor);
         };
         __[CONSTRUCTOR] = Constructor;
-        __[EXTEND] = Constructor[EXTEND] = function () {
-            return constructorExtend.apply(Constructor, arguments);
+        __[EXTEND] = Constructor[EXTEND] = function (name, protoprops) {
+            return constructorExtend(Constructor, name, protoprops);
         };
         return __;
     },
@@ -784,78 +868,144 @@ var factories = {},
         img.src = url;
         return img;
     },
-    parse = function (val_) {
-        var coerced, val = val_;
-        if (isString(val)) {
-            val = val.trim();
-            if ((val[0] === '{' && val[val[LENGTH] - 1] === '}') || (val[0] === '[' && val[val[LENGTH] - 1] === ']')) {
-                wraptry(function () {
-                    val = JSON.parse(val);
-                }, console.error);
-            } else {
-                if (val === 'true') {
-                    val = BOOLEAN_TRUE;
+    passesFirstArgument = function (fn) {
+        return function (first) {
+            return fn(first);
+        };
+    },
+    passes = {
+        first: passesFirstArgument
+    },
+    concat = function () {
+        var base = [];
+        return base.concat.apply(base, map(arguments, passesFirstArgument(toArray)));
+    },
+    /**
+     * @func
+     */
+    concatUnique = function () {
+        return foldl(arguments, function (memo, argument) {
+            duff(argument, function (item) {
+                if (smartIndexOf(memo, item) === -1) {
+                    memo.push(item);
+                }
+            });
+            return memo;
+        }, []);
+    },
+    cycle = function (arr, num_) {
+        var length = arr[LENGTH],
+            num = num_ % length,
+            piece = arr.splice(num);
+        arr.unshift.apply(arr, piece);
+        return arr;
+    },
+    uncycle = function (arr, num_) {
+        var length = arr[LENGTH],
+            num = num_ % length,
+            piece = arr.splice(0, length - num);
+        arr.push.apply(arr, piece);
+        return arr;
+    },
+    isMatch = function (object, attrs) {
+        var key, i = 0,
+            keysResult = keys(attrs),
+            obj = Object(object);
+        return !find(keysResult, function (val) {
+            if (attrs[val] !== obj[val] || !(val in obj)) {
+                return BOOLEAN_TRUE;
+            }
+        });
+    },
+    matches = function (obj1) {
+        return function (obj2) {
+            return isMatch(obj2, obj1);
+        };
+    },
+    // uncycle = internalMambo(cycle),
+    pluck = function (arr, key) {
+        return map(arr, function (item) {
+            return result(item, key);
+        });
+    },
+    filter = function (obj, iteratee, context) {
+        var isArrayResult = isArrayLike(obj),
+            bound = bindTo(iteratee, context),
+            runCount = 0;
+        return foldl(obj, function (memo, item, key, all) {
+            runCount++;
+            if (bound(item, key, all)) {
+                if (isArrayResult) {
+                    memo.push(item);
                 } else {
-                    coerced = +val;
-                    if (coerced === coerced) {
-                        val = coerced;
-                    } else {
-                        if (val === 'false') {
-                            val = BOOLEAN_FALSE;
-                        } else {
-                            if (val === 'null') {
-                                val = NULL;
-                            } else {
-                                if (val === 'undefined') {
-                                    val = UNDEFINED;
-                                } else {
-                                    if (val.slice(0, 8) === 'function') {
-                                        val = new FunctionConstructor('return ' + val)();
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    memo[key] = item;
                 }
             }
+            return memo;
+        }, isArrayResult ? [] : {});
+    },
+    where = function (obj, attrs) {
+        return filter(obj, matches(attrs));
+    },
+    findWhere = function (obj, attrs) {
+        return find(obj, matches(attrs));
+    },
+    findLastWhere = function (obj, attrs) {
+        return findLast(obj, matches(attrs));
+    },
+    whereNot = function (obj, attrs) {
+        return filter(obj, negate(matches(attrs)));
+    },
+    baseDataTypes = {
+        true: BOOLEAN_TRUE,
+        false: BOOLEAN_FALSE,
+        null: NULL,
+        undefined: UNDEFINED
+    },
+    parse = function (val_) {
+        var coerced, val = val_;
+        if (!isString(val)) {
+            return val;
+        }
+        val = val.trim();
+        if (!val[LENGTH]) {
+            return val;
+        }
+        if ((val[0] === '{' && val[val[LENGTH] - 1] === '}') || (val[0] === '[' && val[val[LENGTH] - 1] === ']')) {
+            return wraptry(function () {
+                return JSON.parse(val);
+            }, console.error);
+        }
+        coerced = +val;
+        if (!isNaN(coerced)) {
+            return coerced;
+        }
+        if (has(baseDataTypes, val)) {
+            return baseDataTypes[val];
+        }
+        if (val.slice(0, 8) === 'function') {
+            return new FunctionConstructor('return ' + val)();
         }
         return val;
     },
     evaluate = function (context, string_) {
-        var split, string = string_.toString();
+        var split, bound, handler, string = string_.toString();
         if (isFunction(string_)) {
             split = string.split('{');
             string = split.shift();
             string = (string = split.join('{')).slice(0, string[LENGTH] - 1);
         }
-        return new FunctionConstructor('context', 'with(context) {\n' + string + '\n}')(context);
-    },
-    debounce = function (func, wait, immediate) {
-        var timeout;
-        return function () {
-            var context = this,
-                args = arguments,
-                callNow = immediate && !timeout,
-                later = function () {
-                    timeout = NULL;
-                    if (!immediate) {
-                        func.apply(context, args);
-                    }
-                };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-            if (callNow) {
-                func.apply(context, args);
-            }
-            return timeout;
-        };
+        bound = FunctionConstructor.bind(context);
+        handler = new bound('return ' + string);
+        bound = bindTo(handler, context);
+        return bound();
     },
     returnDysmorphicBase = function (obj) {
         return isArrayLike(obj) ? [] : {};
     },
     map = function (objs, iteratee, context) {
         var collection = returnDysmorphicBase(objs),
-            bound = bind(iteratee, context);
+            bound = bindTo(iteratee, context);
         return !objs ? collection : each(objs, function (item, index) {
             collection[index] = bound(item, index, objs);
         }) && collection;
@@ -876,21 +1026,24 @@ var factories = {},
     toArray = function (object, delimiter) {
         return isArrayLike(object) ? isArray(object) ? object : arrayLikeToArray(object) : (isString(object) ? object.split(isString(delimiter) ? delimiter : EMPTY_STRING) : (delimiter === BOOLEAN_TRUE ? objectToArray(object) : [object]));
     },
-    flattenArray = function (list, deep_) {
+    flattenArray = function (list, deep_, handle) {
         var deep = !!deep_;
         return foldl(list, function (memo, item_) {
             var item;
             if (isArrayLike(item_)) {
-                item = deep ? flattenArray.call(NULL, item_, deep) : item_;
+                item = deep ? flattenArray(item_, deep, handle) : item_;
                 return memo.concat(item);
             } else {
+                if (handle) {
+                    handle(item_);
+                }
                 memo.push(item_);
                 return memo;
             }
         }, []);
     },
-    flatten = function (list, deep) {
-        return flattenArray(isArrayLike(list) ? list : objectToArray(list), deep);
+    flatten = function (list, deep, handler) {
+        return flattenArray(isArrayLike(list) ? list : objectToArray(list), deep, handler);
     },
     gather = function (list, handler) {
         var newList = [];
@@ -933,6 +1086,26 @@ var factories = {},
     /**
      * @func
      */
+    debounce = function (func, wait, immediate) {
+        var timeout;
+        return function () {
+            var context = this,
+                args = arguments,
+                callNow = immediate && !timeout,
+                later = function () {
+                    timeout = NULL;
+                    if (!immediate) {
+                        func.apply(context, args);
+                    }
+                };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+            if (callNow) {
+                func.apply(context, args);
+            }
+            return timeout;
+        };
+    },
     throttle = function (fn, threshold, scope) {
         var last,
             deferTimer;
@@ -956,6 +1129,18 @@ var factories = {},
             }
         };
     },
+    defer = function (fn, time, ctx) {
+        var id;
+        return function () {
+            var context = ctx || this,
+                args = toArray(arguments);
+            clearTimeout(id);
+            id = setTimeout(function () {
+                fn.apply(context, args);
+            });
+            return id;
+        };
+    },
     /**
      * @func
      */
@@ -963,13 +1148,12 @@ var factories = {},
         var val, n, base = obj.url,
             query = [];
         if (isObject(obj)) {
-            for (n in obj.query) {
-                val = obj.query[n];
+            each(obj.query, function (val, n) {
                 if (val !== UNDEFINED) {
                     val = encodeURIComponent(stringify(val));
                     query.push(n + '=' + val);
                 }
-            }
+            });
             if (query[LENGTH]) {
                 base += '?';
             }
@@ -1062,7 +1246,7 @@ var factories = {},
         return (parseInt((mult * val), 10) / mult);
     },
     result = function (obj, str, arg, knows) {
-        return isObject(obj) ? (knows || isFunction(obj[str]) ? obj[str](arg) : obj[str]) : obj;
+        return obj == NULL ? obj : (isFunction(obj[str]) ? obj[str](arg) : (isObject(obj) ? obj[str] : obj));
     },
     maths = Math,
     mathArray = function (method) {
@@ -1070,18 +1254,12 @@ var factories = {},
             return maths[method].apply(maths, args);
         };
     },
-    ensureFunction = function (fn) {
-        return function (_fn) {
-            _fn = _fn || noop;
-            return fn.call(this, _fn);
-        };
-    },
-    matchesOneToOne = function (key, value) {
-        this[key] = value;
-    },
-    wipeKey = function (key) {
-        this[key] = UNDEFINED;
-    },
+    // ensureFunction = function (fn) {
+    //     return function (_fn) {
+    //         _fn = _fn || noop;
+    //         return fn.call(this, _fn);
+    //     };
+    // },
     /**
      * @func
      */
@@ -1098,7 +1276,6 @@ var factories = {},
             return memo;
         };
         return function (obj, iteratee, memo, context) {
-            // iteratee = optimizeCb(iteratee, context, 4);
             var actualKeys = !isArrayLike(obj) && keys(obj),
                 length = (actualKeys || obj)[LENGTH],
                 index = dir > 0 ? 0 : length - 1;
@@ -1132,7 +1309,7 @@ var factories = {},
     _console = win.console || {},
     _log = _console.log || noop,
     // use same name so that we can ensure browser compatability
-    console = extend(wrap(gapSplit('trace log dir error'), function (key) {
+    console = extend(wrap(gapSplit('trace log dir error clear'), function (key) {
         var method = _console[key] || _log;
         return function () {
             return method.apply(_console, arguments);
@@ -1158,7 +1335,7 @@ var factories = {},
             err = e;
             returnValue = errthat ? errthat(e) : returnValue;
         } finally {
-            returnValue = finalfunction ? finalfunction(err) : returnValue;
+            returnValue = finalfunction ? finalfunction(err, returnValue) : returnValue;
         }
         return returnValue;
     },
@@ -1175,29 +1352,37 @@ var factories = {},
             return thing;
         };
     },
-    flow = function (bool, list_) {
-        var list = bool === BOOLEAN_TRUE ? list_ : arguments,
-            length = list[LENGTH];
+    returnsFirstArgument = returns.first = function (value) {
+        return value;
+    },
+    flows = function (fromHere, toHere) {
         return function () {
-            var start = 1,
-                args = arguments,
-                arg = list[0].apply(this, args);
-            while (start < length) {
-                arg = list[start].call(this, arg);
-                ++start;
-            }
-            return arg;
+            return toHere.call(this, fromHere.apply(this, arguments));
         };
     },
+    is = {
+        number: isNumber,
+        string: isString,
+        object: isObject,
+        nan: isNaN,
+        array: isArray,
+        'function': isFunction,
+        boolean: isBoolean,
+        'null': isNull,
+        length: isLength,
+        validInteger: isValidInteger,
+        arrayLike: isArrayLike,
+        instance: isInstance
+    },
     _ = app._ = {
+        is: is,
+        constructorExtend: constructorExtend,
+        passes: passes,
         performance: performance,
-        months: gapSplit('january feburary march april may june july august september october november december'),
-        weekdays: gapSplit('sunday monday tuesday wednesday thursday friday saturday'),
         constructorWrapper: constructorWrapper,
         stringifyQuery: stringifyQuery,
         intendedObject: intendedObject,
         intendedIteration: intendedIteration,
-        ensureFunction: ensureFunction,
         parseDecimal: parseDecimal,
         flatten: flatten,
         gather: gather,
@@ -1206,32 +1391,31 @@ var factories = {},
         hasEnumBug: hasEnumBug,
         roundFloat: roundFloat,
         factories: factories,
-        // listSlice: listSlice,
         fullClone: fullClone,
         toBoolean: toBoolean,
         stringify: stringify,
         splitGen: splitGen,
         gapSplit: gapSplit,
-        // uniqueId: uniqueId,
+        values: values,
+        zip: zip,
+        object: object,
         wraptry: wraptry,
         toString: toString,
         throttle: throttle,
         debounce: debounce,
+        defer: defer,
         protoProperty: protoProperty,
         protoProp: protoProperty,
-        // reverse: reverse,
-        binaryIndexOf: binaryIndexOf,
+        sortedIndexOf: sortedIndexOf,
         indexOfNaN: indexOfNaN,
         toInteger: toInteger,
         indexOf: indexOf,
         joinGen: joinGen,
         toArray: toArray,
         isEqual: isEqual,
-        // unshift: unshift,
         gapJoin: gapJoin,
         isArray: isArray,
         isEmpty: isEmpty,
-        // splice: splice,
         returns: returns,
         isBoolean: isBoolean,
         invert: invert,
@@ -1258,28 +1442,25 @@ var factories = {},
         exports: exports,
         allKeys: allKeys,
         evaluate: evaluate,
-        // slice: slice,
         parse: parse,
-        // shift: shift,
         merge: merge,
         fetch: fetch,
-        // split: split,
         clone: clone,
         bind: bind,
+        bindTo: bindTo,
+        bindWith: bindWith,
         duff: duff,
         duffRight: duffRight,
         eachRight: eachRight,
         iterates: iterates,
         sort: sort,
-        // join: join,
         wrap: wrap,
         uuid: uuid,
         keys: keys,
         once: once,
         each: each,
-        // push: push,
-        flow: flow,
-        // pop: pop,
+        flows: flows,
+        baseClamp: baseClamp,
         has: has,
         negate: negate,
         pI: pI,

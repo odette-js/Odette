@@ -65,28 +65,25 @@ var cacheable = function (fn) {
         return function (string) {
             var found = cache[string];
             if (!found) {
-                cache[string] = found = new Function.constructor('return ' + string);
+                cache[string] = found = new Function[CONSTRUCTOR]('return ' + string);
             }
             return found();
         };
     }()),
     uniqueId = (function () {
-        var cache = {};
-        return function (prefix, isInt) {
-            var val;
-            if (!prefix) {
-                prefix = EMPTY_STRING;
+        var stash = {};
+        var globalPrefix = 0;
+        return function (prefix) {
+            var value;
+            if (prefix) {
+                stash[prefix] = stash[prefix] || 0;
+                ++stash[prefix];
+                value = stash[prefix];
+            } else {
+                ++globalPrefix;
+                value = globalPrefix;
             }
-            prefix += EMPTY_STRING;
-            val = cache[prefix];
-            if (!val) {
-                val = cache[prefix] = 0;
-            }
-            cache[prefix]++;
-            if (!isInt) {
-                val = prefix + val;
-            }
-            return val;
+            return prefix ? prefix + value : value;
         };
     }()),
     /**
@@ -128,6 +125,9 @@ var cacheable = function (fn) {
     }, HYPHEN),
     snakeCase = function (string) {
         return unCamelCase(string, '_');
+    },
+    kebabCase = function (string) {
+        return unCamelCase(string, HYPHEN);
     },
     /**
      * @func
@@ -295,7 +295,7 @@ var cacheable = function (fn) {
             url = url.slice(0, searchIdx - 1);
         }
         if (url[0] === SLASH && url[1] === SLASH) {
-            protocol = win.location.protocol;
+            protocol = windo.location.protocol;
         } else {
             while (protocolLength-- && !protocol) {
                 if (url.slice(0, protocols[protocolLength][LENGTH]) === protocols[protocolLength]) {
