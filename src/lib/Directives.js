@@ -112,7 +112,7 @@ app.scope(function (app) {
     defineDirective(STATUS, StatusMarker[CONSTRUCTOR]);
     app.defineDirective = defineDirective;
     app.extendDirective = extendDirective;
-    _.exports({
+    _.publicize({
         directives: {
             parody: parody,
             checkParody: checkParody,

@@ -398,7 +398,7 @@ app.scope(function (app) {
             resetEls: bufferedElsReset
         };
     });
-    app.extend(foldl(gapSplit('add remove get'), function (memo, key) {
+    app.extend(foldl(toArray('add,remove,get'), function (memo, key) {
         memo[key + 'Region'] = directives.parody(REGION_MANAGER, key);
         return memo;
     }, {

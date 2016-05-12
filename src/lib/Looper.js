@@ -6,8 +6,7 @@ app.scope(function (app) {
         frameTime = 0,
         pI = _.pI,
         nowish = _.now,
-        gapSplit = _.gapSplit,
-        vendors = gapSplit('ms moz webkit o'),
+        vendors = toArray('ms,moz,webkit,o'),
         RUNNING = 'running',
         HALTED = 'halted',
         STOPPED = 'stopped',
@@ -345,7 +344,7 @@ app.scope(function (app) {
         });
     Looper.playWhileBlurred = BOOLEAN_TRUE;
     app.defineDirective('Scheduler', Scheduler[CONSTRUCTOR]);
-    _.exports({
+    _.publicize({
         AF: Looper()
     });
 });

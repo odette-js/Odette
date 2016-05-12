@@ -5,7 +5,7 @@ app.scope(function (app) {
         SUCCESS = 'success',
         PENDING = 'pending',
         STATE = 'state',
-        ERROR = 'error',
+        CATCH = 'catch',
         ALWAYS = 'always',
         FULFILLED = 'fulfilled',
         SETTLED = 'settled',
@@ -14,6 +14,7 @@ app.scope(function (app) {
         ALL_STATES = 'allStates',
         STASHED_ARGUMENT = 'stashedArgument',
         STASHED_HANDLERS = 'stashedHandlers',
+        LISTENING = 'listening',
         flatten = _.flatten,
         bind = _.bind,
         isString = _.isString,
@@ -48,7 +49,7 @@ app.scope(function (app) {
                 allstates = result(promise, ALL_STATES),
                 collected = [];
             while (!shouldstop) {
-                if (_.indexOf(collected, finalName) !== -1) {
+                if (indexOf(collected, finalName) !== -1) {
                     finalName = BOOLEAN_FALSE;
                 } else {
                     if (finalName === SUCCESS) {
@@ -111,7 +112,7 @@ app.scope(function (app) {
         baseStates = {
             success: ALWAYS,
             failure: ALWAYS,
-            error: ALWAYS,
+            catch: ALWAYS,
             always: BOOLEAN_TRUE
         },
         collect = function (promise, list) {
@@ -127,10 +128,10 @@ app.scope(function (app) {
             var bound = bind(unbound, promise),
                 collection = promise.directive(COLLECTION);
             collection.each(function (pro) {
-                if (collection.get('listening', pro.cid)) {
+                if (collection.get(LISTENING, pro.cid)) {
                     return;
                 }
-                collection.keep('listening', pro.cid, BOOLEAN_TRUE);
+                collection.keep(LISTENING, pro.cid, BOOLEAN_TRUE);
                 pro.always(function () {
                     bound();
                 });
@@ -138,14 +139,13 @@ app.scope(function (app) {
         },
         Promise = factories.Promise = _.Promise = Model.extend('Promise', {
             addHandler: addHandler,
-            'constructor:Model': Model[CONSTRUCTOR],
             constructor: function () {
                 var promise = this;
                 promise.state = PENDING;
                 promise[STASHED_ARGUMENT] = NULL;
                 promise[STASHED_HANDLERS] = {};
                 promise.reason = BOOLEAN_FALSE;
-                promise[CONSTRUCTOR + ':Model']();
+                Model[CONSTRUCTOR].call(promise);
                 // cannot have been resolved in any way yet
                 intendedObject(extend({}, baseStates, result(promise, 'associativeStates')), NULL, addHandler, promise);
                 // add passed in success handlers
@@ -153,7 +153,7 @@ app.scope(function (app) {
                 return promise;
             },
             isChildType: function (promise) {
-                return promise[SUCCESS] && promise[FAILURE] && promise[ALWAYS] && promise[ERROR];
+                return promise[SUCCESS] && promise[FAILURE] && promise[ALWAYS] && promise[CATCH];
             },
             auxiliaryStates: function () {
                 return BOOLEAN_FALSE;
@@ -180,7 +180,7 @@ app.scope(function (app) {
                     promise.unmark(FULFILLED);
                     e.options = opts;
                     promise[STASHED_ARGUMENT] = e;
-                    return dispatch(promise, ERROR);
+                    return dispatch(promise, CATCH);
                 }, function (err, returnValue) {
                     return returnValue || [];
                 }));
@@ -244,9 +244,10 @@ app.scope(function (app) {
             }
         }),
         PromisePrototype = Promise[CONSTRUCTOR][PROTOTYPE],
-        resulting = PromisePrototype.addHandler(SUCCESS).addHandler(FAILURE).addHandler(ALWAYS).addHandler(ERROR),
+        resulting = PromisePrototype.addHandler(SUCCESS).addHandler(FAILURE).addHandler(ALWAYS).addHandler(CATCH),
         appPromise = Promise();
     app.extend({
         dependency: bind(appPromise.all, appPromise)
     });
 });
+Promise = _.Promise;

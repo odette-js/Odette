@@ -7,10 +7,11 @@ var factories = {},
     number = Number,
     BRACKET_OBJECT_SPACE = '[object ',
     stringProto = string[PROTOTYPE],
-    objectProto = Object[PROTOTYPE],
+    // objectProto = object[PROTOTYPE],
     arrayProto = array[PROTOTYPE],
     funcProto = fn[PROTOTYPE],
     nativeKeys = Object.keys,
+    objectToString = Object[PROTOTYPE].toString,
     hasEnumBug = !{
         toString: NULL
     }.propertyIsEnumerable(TO_STRING),
@@ -160,7 +161,7 @@ var factories = {},
     //     return left.index - right.index;
     //   }), 'value');
     // };
-    sortBy = function (list, string) {},
+    // sortBy = function (list, string) {},
     /**
      * @func
      */
@@ -198,22 +199,6 @@ var factories = {},
             return isString(list) ? list.split(delimiter) : list;
         };
     },
-    /**
-     * @func
-     */
-    joinGen = function (delimiter) {
-        return function (arr) {
-            return arr.join(delimiter);
-        };
-    },
-    /**
-     * @func
-     */
-    gapJoin = joinGen(SPACE),
-    /**
-     * @func
-     */
-    gapSplit = splitGen(SPACE),
     /**
      * @func
      */
@@ -282,17 +267,13 @@ var factories = {},
     /**
      * @func
      */
-    // isArray = Array.isArray,
-    isArray = function (obj) {
-        return isObject(obj) && objectProto.toString.call(obj) === '[object Array]';
-    },
+    isArray = Array.isArray,
     /**
      * @func
      */
     isEmpty = function (obj) {
         return !keys(obj)[LENGTH];
     },
-    nonEnumerableProps = gapSplit('valueOf isPrototypeOf ' + TO_STRING + ' propertyIsEnumerable hasOwnProperty toLocaleString'),
     /**
      * @func
      */
@@ -522,7 +503,6 @@ var factories = {},
         return context ? func.bind(context) : func;
     },
     bindWith = function (func, args) {
-        // var args = toArray(arguments).slice(1);
         return func.bind.apply(func, args);
     },
     duff = function (values, runner_, context, direction_) {
@@ -635,8 +615,8 @@ var factories = {},
     /**
      * @func
      */
-    constructorExtend = function (parent_, name, protoProps) {
-        var nameString, child, passedParent, hasConstructor, constructor, parent = parent_,
+    constructorExtend = function (name, protoProps, attach) {
+        var nameString, child, passedParent, hasConstructor, constructor, parent = this,
             nameIsStr = isString(name);
         if (name === BOOLEAN_FALSE) {
             extend(parent[PROTOTYPE], protoProps);
@@ -672,6 +652,9 @@ var factories = {},
         child = constructorWrapper(constructor);
         child.__super__ = parent;
         constructor[PROTOTYPE][CONSTRUCTOR_KEY] = child;
+        // if (nameIsStr && attach && !_._preventConstructorAttach) {
+        //     factories[name] = child;
+        // }
         return child;
     },
     constructorWrapper = function (Constructor) {
@@ -682,8 +665,8 @@ var factories = {},
             return isInstance(instance, Constructor);
         };
         __[CONSTRUCTOR] = Constructor;
-        __[EXTEND] = Constructor[EXTEND] = function (name, protoprops) {
-            return constructorExtend(Constructor, name, protoprops);
+        __[EXTEND] = Constructor[EXTEND] = function () {
+            return constructorExtend.apply(Constructor, arguments);
         };
         return __;
     },
@@ -717,8 +700,8 @@ var factories = {},
         // if (a instanceof _) a = a._wrapped;
         // if (b instanceof _) b = b._wrapped;
         // Compare `[[Class]]` names.
-        var className = toString.call(a);
-        if (className !== toString.call(b)) return BOOLEAN_FALSE;
+        var className = objectToString.call(a);
+        if (className !== objectToString.call(b)) return BOOLEAN_FALSE;
         switch (className) {
             // Strings, numbers, regular expressions, dates, and booleans are compared by value.
         case BRACKET_OBJECT_SPACE + 'RegExp]':
@@ -832,7 +815,7 @@ var factories = {},
                 if (!wasfunction || noExecute) {
                     newObj[value] = fn;
                 } else {
-                    newObj[value] = fn(value);
+                    newObj[value] = fn(value, key);
                 }
             } else {
                 newObj[key] = fn(obj[key], key);
@@ -849,7 +832,7 @@ var factories = {},
     /**
      * @func
      */
-    exports = function (obj) {
+    publicize = function (obj) {
         return extend(_, obj);
     },
     /**
@@ -1024,8 +1007,9 @@ var factories = {},
         }, []);
     },
     toArray = function (object, delimiter) {
-        return isArrayLike(object) ? isArray(object) ? object : arrayLikeToArray(object) : (isString(object) ? object.split(isString(delimiter) ? delimiter : EMPTY_STRING) : (delimiter === BOOLEAN_TRUE ? objectToArray(object) : [object]));
+        return isArrayLike(object) ? isArray(object) ? object : arrayLikeToArray(object) : (isString(object) ? object.split(isString(delimiter) ? delimiter : COMMA) : (delimiter === BOOLEAN_TRUE ? objectToArray(object) : [object]));
     },
+    nonEnumerableProps = toArray('valueOf,isPrototypeOf,' + TO_STRING + ',propertyIsEnumerable,hasOwnProperty,toLocaleString'),
     flattenArray = function (list, deep_, handle) {
         var deep = !!deep_;
         return foldl(list, function (memo, item_) {
@@ -1309,7 +1293,7 @@ var factories = {},
     _console = win.console || {},
     _log = _console.log || noop,
     // use same name so that we can ensure browser compatability
-    console = extend(wrap(gapSplit('trace log dir error clear'), function (key) {
+    console = extend(wrap(toArray('trace,warn,log,dir,error,clear,table,profile,profileEnd,time,timeEnd,timeStamp'), function (key) {
         var method = _console[key] || _log;
         return function () {
             return method.apply(_console, arguments);
@@ -1376,7 +1360,6 @@ var factories = {},
     },
     _ = app._ = {
         is: is,
-        constructorExtend: constructorExtend,
         passes: passes,
         performance: performance,
         constructorWrapper: constructorWrapper,
@@ -1394,8 +1377,6 @@ var factories = {},
         fullClone: fullClone,
         toBoolean: toBoolean,
         stringify: stringify,
-        splitGen: splitGen,
-        gapSplit: gapSplit,
         values: values,
         zip: zip,
         object: object,
@@ -1410,10 +1391,8 @@ var factories = {},
         indexOfNaN: indexOfNaN,
         toInteger: toInteger,
         indexOf: indexOf,
-        joinGen: joinGen,
         toArray: toArray,
         isEqual: isEqual,
-        gapJoin: gapJoin,
         isArray: isArray,
         isEmpty: isEmpty,
         returns: returns,
@@ -1439,7 +1418,7 @@ var factories = {},
         isNull: isNull,
         isNaN: isNaN,
         eachProxy: eachProxy,
-        exports: exports,
+        publicize: publicize,
         allKeys: allKeys,
         evaluate: evaluate,
         parse: parse,
@@ -1476,7 +1455,7 @@ var factories = {},
         max: mathArray('max'),
         arrayLikeToArray: arrayLikeToArray,
         objectToArray: objectToArray,
-        math: wrap(gapSplit('E LN2 LN10 LOG2E LOG10E PI SQRT1_2 SQRT2 abs acos acosh asin asinh atan atan2 atanh cbrt ceil clz32 cos cosh exp expm1 floor fround hypot imul log log1p log2 log10 pow random round sign sin sinh sqrt tan tanh trunc'), function (key) {
+        math: wrap(toArray('E,LN2,LN10,LOG2E,LOG10E,PI,SQRT1_2,SQRT2,abs,acos,acosh,asin,asinh,atan,atan2,atanh,cbrt,ceil,clz32,cos,cosh,exp,expm1,floor,fround,hypot,imul,log,log1p,log2,log10,pow,random,round,sign,sin,sinh,sqrt,tan,tanh,trunc'), function (key) {
             return Math[key];
         })
     };

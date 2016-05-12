@@ -12,7 +12,6 @@ application.scope().run(function (app, _, factories) {
             handler2 = function () {
                 return false;
             },
-            $con,
             create = function () {
                 count = 0;
                 var _divs = divs && divs.remove();
@@ -27,16 +26,16 @@ application.scope().run(function (app, _, factories) {
                     div.addClass(className);
                     this.push(div);
                 }, 0, 5);
-                $con = $.createElement('div').css({
-                    height: '100%',
-                    width: '100%'
-                });
                 $con.append(divs);
-                $(document.body).append($con);
-            };
+            },
+            $con = $.createElement('div').css({
+                height: '100%',
+                width: '100%'
+            });
+        $(document.body).append($con);
         _.beforeEach(create);
         _.afterEach(function () {
-            $con.destroy();
+            divs.destroy();
         });
         _.it('is essentially a collection', function () {
             _.expect(_.isInstance($empty, factories.DOMA)).toEqual(true);
@@ -51,7 +50,7 @@ application.scope().run(function (app, _, factories) {
                 bottom: rect.bottom,
                 right: rect.right,
                 left: rect.left,
-                top: rect.top
+                top: rect.top,
             });
         });
         _.it('can show and hide elements', function () {

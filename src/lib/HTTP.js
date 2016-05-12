@@ -2,6 +2,7 @@ app.scope(function (app) {
     var _ = app._,
         factories = _.factories,
         PROMISE = 'Promise',
+        CATCH = 'catch',
         ERROR = 'error',
         STATUS = 'status',
         FAILURE = 'failure',
@@ -10,8 +11,8 @@ app.scope(function (app) {
         XDomainRequest = win.XDomainRequest,
         stringifyQuery = _.stringifyQuery,
         GET = 'GET',
-        validTypes = gapSplit(GET + ' POST PUT DELETE HEAD TRACE OPTIONS CONNECT'),
-        baseEvents = gapSplit('progress timeout abort ' + ERROR),
+        validTypes = toArray(GET + ',POST,PUT,DELETE,HEAD,TRACE,OPTIONS,CONNECT'),
+        baseEvents = toArray('progress,timeout,abort,' + ERROR),
         attachBaseListeners = function (ajax) {
             var prog = 0,
                 req = ajax.requestObject;
@@ -35,10 +36,10 @@ app.scope(function (app) {
         },
         sendthething = function (xhrReq, args, ajax) {
             return function () {
-                wraptry(function () {
-                    xhrReq.send.apply(xhrReq, args);
+                return wraptry(function () {
+                    return xhrReq.send.apply(xhrReq, args);
                 }, function (e) {
-                    ajax.resolveAs(ERROR, e, e.message);
+                    ajax.resolveAs(CATCH, e, e.message);
                 });
             };
         },
@@ -155,10 +156,10 @@ app.scope(function (app) {
                     'status:404': FAILURE,
                     'status:405': FAILURE,
                     'status:406': FAILURE,
-                    'status:500': ERROR,
-                    'status:502': ERROR,
-                    'status:505': ERROR,
-                    'status:511': ERROR,
+                    'status:500': FAILURE,
+                    'status:502': FAILURE,
+                    'status:505': FAILURE,
+                    'status:511': FAILURE,
                     'timeout': FAILURE,
                     'abort': FAILURE
                 };

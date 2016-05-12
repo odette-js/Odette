@@ -15,22 +15,16 @@ var content = ['browserify'],
             }
         });
     },
-    // setup = ,
     modules = 'scopeStart constants utils shims Strings Directives Collection Messenger Events Model directives/Events directives/Data directives/Children directives/Linguistics Promise Associator HTTP Module DOMA Looper directives/Element View Buster directives/swipe tests scopeEnd'.split(' '),
     extraModules = 'Socket Router LocalStorage NoSock'.split(' '),
     framedModules = 'index'.split(' '),
-    paths = makePath({
+    paths = _.extend(makePath({
         // watch path
         jsAll: './src/**/*.js',
-        jsDocOutput: './docs',
         // build list
-        jsApplication: _.map('application'.split(' '), function (name) {
-            return './src/lib/' + name + '.js';
-        }),
-        jsSetup: _.map('odette'.split(' '), function (name) {
-            return './src/lib/' + name + '.js';
-        }),
-        jsList: _.map(modules, function (name) {
+        jsOdette: ['./src/lib/odette.js'],
+        jsApplication: ['./src/lib/application.js'],
+        jsLibraryList: _.map(modules, function (name) {
             return './src/lib/' + name + '.js';
         }),
         jsExtra: _.map(extraModules, function (name) {
@@ -49,14 +43,16 @@ var content = ['browserify'],
         jsTestsPublic: './public/js/',
         serverIndex: './index.js',
         ignoreFiles: ['.git/', 'node_modules/', './gulp', 'gulpfile.js', './public']
+    }), {
+        publicized: './src/static/**/*',
+        publicizedOutput: './public',
+        jsLibraryOutput: 'library.js',
+        jsOdetteOutput: 'odette.js',
+        jsApplicationOutput: 'application.js',
+        jsTestOutput: 'spec.js',
+        jsExtraOutput: 'extra.js',
+        jsFramedOutput: 'framed.js'
     });
-// paths.jsTestsOutput = '../_test/js/';
-paths.jsTestOutput = 'spec.js';
-paths.jsOutput = 'library.js';
-paths.jsApplicationOutput = 'application.js';
-paths.jsOdetteOutput = 'odette.js';
-paths.jsExtraOutput = 'extra.js';
-paths.jsFramedOutput = 'framed.js';
 gulpTasker(allTasks, [require('./settings'), paths]);
 gulp.task('build', content);
 gulp.task('dev', devTasks);

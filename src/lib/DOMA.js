@@ -1,6 +1,5 @@
 var ATTACHED = 'attached',
     IFRAME = 'iframe',
-    //  = uuid(),
     isWindow = function (obj) {
         return obj && obj === obj[WINDOW];
     };
@@ -238,11 +237,20 @@ app.scope(function (app) {
                 if (!isArrayResult) {
                     value += EMPTY_STRING;
                 }
-                stringManager.refill(gapSplit(value));
+                stringManager.refill(toArray(value, SPACE));
             }
             return stringManager;
         },
         DO_NOT_TRUST = BOOLEAN_FALSE,
+        // cannotTrust = function (fn) {
+        //     return function () {
+        //         var ret, cachedTrust = DO_NOT_TRUST;
+        //         DO_NOT_TRUST = BOOLEAN_TRUE;
+        //         ret = fn.apply(this, arguments);
+        //         DO_NOT_TRUST = cachedTrust;
+        //         return ret;
+        //     };
+        // },
         makeEachTrigger = function (attr, api) {
             var whichever = api || attr;
             return function (manager) {
@@ -283,24 +291,23 @@ app.scope(function (app) {
                 return manager;
             };
         },
-        Events = gapSplit('abort afterprint beforeprint blocked cached canplay canplaythrough change chargingchange chargingtimechange checking close complete dischargingtimechange DOMContentLoaded downloading durationchange emptied ended error fullscreenchange fullscreenerror input invalid languagechange levelchange loadeddata loadedmetadata message noupdate obsolete offline online open pagehide pageshow paste pause pointerlockchange pointerlockerror play playing ratechange reset seeked seeking stalled storage submit success suspend timeupdate updateready upgradeneeded versionchange visibilitychange'),
-        SVGEvent = gapSplit('SVGAbort SVGError SVGLoad SVGResize SVGScroll SVGUnload SVGZoom volumechange waiting'),
-        KeyboardEvent = gapSplit('keydown keypress keyup'),
-        GamePadEvent = gapSplit('gamepadconnected gamepadisconnected'),
-        CompositionEvent = gapSplit('compositionend compositionstart compositionupdate drag dragend dragenter dragleave dragover dragstart drop'),
-        MouseEvents = gapSplit('click contextmenu dblclick mousedown mouseenter mouseleave mousemove mouseout mouseover mouseup show wheel'),
-        TouchEvents = gapSplit('touchcancel touchend touchenter touchleave touchmove touchstart'),
-        DeviceEvents = gapSplit('devicemotion deviceorientation deviceproximity devicelight'),
-        FocusEvent = gapSplit('blur focus'),
-        TimeEvent = gapSplit('beginEvent endEvent repeatEvent'),
-        AnimationEvent = gapSplit('animationend animationiteration animationstart transitionend'),
-        AudioProcessingEvent = gapSplit('audioprocess complete'),
-        UIEvents = gapSplit('abort error hashchange load orientationchange readystatechange resize scroll select unload beforeunload'),
-        ProgressEvent = gapSplit('abort error load loadend loadstart popstate progress timeout'),
+        Events = toArray('abort,afterprint,beforeprint,blocked,cached,canplay,canplaythrough,change,chargingchange,chargingtimechange,checking,close,complete,dischargingtimechange,DOMContentLoaded,downloading,durationchange,emptied,ended,error,fullscreenchange,fullscreenerror,input,invalid,languagechange,levelchange,loadeddata,loadedmetadata,message,noupdate,obsolete,offline,online,open,pagehide,pageshow,paste,pause,pointerlockchange,pointerlockerror,play,playing,ratechange,reset,seeked,seeking,stalled,storage,submit,success,suspend,timeupdate,updateready,upgradeneeded,versionchange,visibilitychange'),
+        SVGEvent = toArray('SVGAbort,SVGError,SVGLoad,SVGResize,SVGScroll,SVGUnload,SVGZoom,volumechange,waiting'),
+        KeyboardEvent = toArray('keydown,keypress,keyup'),
+        GamePadEvent = toArray('gamepadconnected,gamepadisconnected'),
+        CompositionEvent = toArray('compositionend,compositionstart,compositionupdate,drag,dragend,dragenter,dragleave,dragover,dragstart,drop'),
+        MouseEvents = toArray('click,contextmenu,dblclick,mousedown,mouseenter,mouseleave,mousemove,mouseout,mouseover,mouseup,show,wheel'),
+        TouchEvents = toArray('touchcancel,touchend,touchenter,touchleave,touchmove,touchstart'),
+        DeviceEvents = toArray('devicemotion,deviceorientation,deviceproximity,devicelight'),
+        FocusEvent = toArray('blur,focus'),
+        TimeEvent = toArray('beginEvent,endEvent,repeatEvent'),
+        AnimationEvent = toArray('animationend,animationiteration,animationstart,transitionend'),
+        AudioProcessingEvent = toArray('audioprocess,complete'),
+        UIEvents = toArray('abort,error,hashchange,load,orientationchange,readystatechange,resize,scroll,select,unload,beforeunload'),
+        ProgressEvent = toArray('abort,error,load,loadend,loadstart,popstate,progress,timeout'),
         AllEvents = concatUnique(Events, SVGEvent, KeyboardEvent, CompositionEvent, GamePadEvent, MouseEvents, TouchEvents, DeviceEvents, FocusEvent, TimeEvent, AnimationEvent, AudioProcessingEvent, UIEvents, ProgressEvent),
-        knownPrefixes = gapSplit('-o- -ms- -moz- -webkit- mso- -xv- -atsc- -wap- -khtml- -apple- prince- -ah- -hp- -ro- -rim- -tc-'),
-        // trustedEvents = gapSplit('load scroll resize orientationchange click dblclick mousedown mouseup mouseover mouseout mouseenter mouseleave mousemove change contextmenu hashchange load mousewheel wheel readystatechange'),
-        validTagNames = gapSplit('a abbr address area article aside audio b base bdi bdo blockquote body br button canvas caption cite code col colgroup data datalist dd del dfn div dl dt em embed fieldset figcaption figure footer form h1 h2 h3 h4 h5 h6 head header hr html i iframe img input ins kbd keygen label legend li link main map mark meta meter nav noscript object ol optgroup option output p param pre progress q rb rp rt rtc ruby s samp script section select small source span strong style sub sup table tbody td template textarea tfoot th thead time title tr track u ul var video wbr'),
+        knownPrefixes = toArray('-o-,-ms-,-moz-,-webkit-,mso-,-xv-,-atsc-,-wap-,-khtml-,-apple-,prince-,-ah-,-hp-,-ro-,-rim-,-tc-'),
+        validTagNames = toArray('a,abbr,address,area,article,aside,audio,b,base,bdi,bdo,blockquote,body,br,button,canvas,caption,cite,code,col,colgroup,data,datalist,dd,del,dfn,div,dl,dt,em,embed,fieldset,figcaption,figure,footer,form,h1,h2,h3,h4,h5,h6,head,header,hr,html,i,iframe,img,input,ins,kbd,keygen,label,legend,li,link,main,map,mark,meta,meter,nav,noscript,object,ol,optgroup,option,output,p,param,pre,progress,q,rb,rp,rt,rtc,ruby,s,samp,script,section,select,small,source,span,strong,style,sub,sup,table,tbody,td,template,textarea,tfoot,th,thead,time,title,tr,track,u,ul,var,video,wbr'),
         validTagsNamesHash = wrap(validTagNames, BOOLEAN_TRUE),
         ALL_EVENTS_HASH = wrap(AllEvents, BOOLEAN_TRUE),
         knownPrefixesHash = wrap(knownPrefixes, BOOLEAN_TRUE),
@@ -748,7 +755,7 @@ app.scope(function (app) {
             return list.concat.apply(list, items ? map(items, handler) : context.map(handler));
         },
         createElements = function (tagName, context) {
-            return DOMA(foldl(gapSplit(tagName), function (memo, name) {
+            return DOMA(foldl(toArray(tagName, SPACE), function (memo, name) {
                 memo.push(createElement(name, NULL, NULL, context));
                 return memo;
             }, []), NULL, NULL, NULL, context);
@@ -969,18 +976,18 @@ app.scope(function (app) {
             return capturing;
         },
         _eventExpander = wrap({
-            resize: 'resize orientationchange',
+            resize: 'resize,orientationchange',
             ready: 'DOMContentLoaded',
-            wheel: 'wheel mousewheel',
-            deviceorientation: 'deviceorientation mozOrientation',
-            fullscreenalter: 'webkitfullscreenchange mozfullscreenchange fullscreenchange MSFullscreenChange',
-            hover: 'mouseenter mouseleave',
-            forcewillbegin: 'mouseforcewillbegin webkitmouseforcewillbegin',
-            forcechange: 'mouseforcechange webkitmouseforcechange',
-            forcedown: 'mouseforcedown webkitmouseforcedown',
-            forceup: 'mouseforceup webkitmouseforceup',
-            force: 'mouseforcewillbegin webkitmouseforcewillbegin mouseforcechange webkitmouseforcechange mouseforcedown webkitmouseforcedown mouseforceup webkitmouseforceup'
-        }, gapSplit),
+            wheel: 'wheel,mousewheel',
+            deviceorientation: 'deviceorientation,mozOrientation',
+            fullscreenalter: 'webkitfullscreenchange,mozfullscreenchange,fullscreenchange,MSFullscreenChange',
+            hover: 'mouseenter,mouseleave',
+            forcewillbegin: 'mouseforcewillbegin,webkitmouseforcewillbegin',
+            forcechange: 'mouseforcechange,webkitmouseforcechange',
+            forcedown: 'mouseforcedown,webkitmouseforcedown',
+            forceup: 'mouseforceup,webkitmouseforceup',
+            force: 'mouseforcewillbegin,webkitmouseforcewillbegin,mouseforcechange,webkitmouseforcechange,mouseforcedown,webkitmouseforcedown,mouseforceup,webkitmouseforceup'
+        }, toArray),
         distilledEventName = foldl(_eventExpander, function (memo, arr, key) {
             duff(arr, function (item) {
                 memo[item] = key;
@@ -1020,7 +1027,7 @@ app.scope(function (app) {
         }),
         _addEventListener = function (manager, eventNames, group, selector, handler, capture) {
             var events, wasCustom = manager.is(CUSTOM);
-            duff(gapSplit(eventNames), eventExpander(manager.owner.events.expanders, function (name, passedName, nameStack) {
+            duff(toArray(eventNames, SPACE), eventExpander(manager.owner.events.expanders, function (name, passedName, nameStack) {
                 events = events || manager.directive(EVENTS);
                 if (!ALL_EVENTS_HASH[name]) {
                     manager.mark(CUSTOM_LISTENER);
@@ -1181,7 +1188,7 @@ app.scope(function (app) {
             play: 'playing',
             pause: 'paused'
         },
-        directEvents = gapSplit('blur focus focusin focusout load resize scroll unload click dblclick mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave change select submit keydown keypress keyup error contextmenu'),
+        directEvents = toArray('blur,focus,focusin,focusout,load,resize,scroll,unload,click,dblclick,mousedown,mouseup,mousemove,mouseover,mouseout,mouseenter,mouseleave,change,select,submit,keydown,keypress,keyup,error,contextmenu'),
         // collected here so DOMA can do what it wants
         allDirectMethods = directEvents.concat(_.keys(videoDirectEvents), _.keys(directAttributes)),
         isAttached = function (element_, owner) {
@@ -1276,7 +1283,7 @@ app.scope(function (app) {
             },
             change: function (attributeManager, remove, add) {
                 this.remove(attributeManager, remove);
-                this.add(attributeManager, gapSplit(add));
+                this.add(attributeManager, toArray(add, SPACE));
             }
         },
         unmarkChange = function (fn) {
@@ -1308,7 +1315,7 @@ app.scope(function (app) {
                 }
                 intendedObject(second_, third_, function (second, third) {
                     var currentMerge = merge || (third === BOOLEAN_TRUE ? 'add' : (third === BOOLEAN_FALSE ? REMOVE : 'toggle'));
-                    attributeValuesHash[currentMerge](attributeManager, gapSplit(second), third, read);
+                    attributeValuesHash[currentMerge](attributeManager, isString(second) ? second.split(SPACE) : second, third, read);
                 });
                 if (attributeManager.changeCounter) {
                     if (attributeManager.is(REMOVING)) {
@@ -1348,7 +1355,7 @@ app.scope(function (app) {
             };
         },
         hasAttributeValue = function (property, values_, third, api) {
-            var values = gapSplit(values_);
+            var values = toArray(values_, SPACE);
             return function (manager) {
                 var el = manager.element(),
                     attributeManager = getStringManager(manager, property),
@@ -1408,7 +1415,7 @@ app.scope(function (app) {
         },
         makeValueTarget = function (target, passed_, api, domaHappy) {
             var passed = passed_ || target;
-            return _.foldl(gapSplit('add remove toggle change has set'), function (memo, method_) {
+            return _.foldl(toArray('add,remove,toggle,change,has,set'), function (memo, method_) {
                 var method = method_ + 'Value';
                 memo[method_ + upCase(target)] = function (one, two) {
                     return this[method](passed, one, two, api, domaHappy, target);
@@ -1421,7 +1428,7 @@ app.scope(function (app) {
                 if (element.classList && element.classList[key]) {
                     return hasList(element, list, second);
                 } else {
-                    return noList(element, gapSplit(element[CLASSNAME]), list, second);
+                    return noList(element, toArray(element[CLASSNAME], SPACE), list, second);
                 }
             };
         },
@@ -1470,10 +1477,10 @@ app.scope(function (app) {
             }),
             change: classApplicationWrapper('add', function (element, list, second) {
                 element.classList.remove.apply(element.classList, list);
-                element.classList.add.apply(element.classList, gapSplit(second));
+                element.classList.add.apply(element.classList, toArray(second, SPACE));
             }, function (element, current, list, second) {
                 duff(list, passesFirstArgument(bind(remove, NULL, current)));
-                duff(second, passesFirstArgument(bind(add, NULL, gapSplit(current))));
+                duff(second, passesFirstArgument(bind(add, NULL, toArray(current, SPACE))));
             })
         },
         passer = function (key) {
@@ -1483,10 +1490,10 @@ app.scope(function (app) {
                 };
             };
         },
-        classApi = foldl(foldl(gapSplit('add remove toggle change'), function (memo, key) {
+        classApi = foldl(foldl(toArray('add,remove,toggle,change'), function (memo, key) {
             memo[key] = function (manipulator) {
                 return function (classes, second) {
-                    this.each(manipulator(gapSplit(classes), gapSplit(second)));
+                    this.each(manipulator(toArray(classes, SPACE), second ? toArray(second, SPACE) : UNDEFINED));
                     return this;
                 };
             };
@@ -1494,7 +1501,7 @@ app.scope(function (app) {
         }, {
             has: function (manipulator) {
                 return function (classes) {
-                    return !this.find(manipulator(gapSplit(classes)));
+                    return !this.find(manipulator(toArray(classes, SPACE)));
                 };
             }
         }), function (memo, handler, key) {
@@ -1681,15 +1688,15 @@ app.scope(function (app) {
                 registeredConstructors: registeredConstructors,
                 registeredElementOptions: registeredElementOptions,
                 returnsManager: function (item) {
-                    return item === manager || item === manager.element() ? manager : returnsManager(item, manager);
+                    return item === manager || item === manager[TARGET] ? manager : returnsManager(item, manager);
                 },
                 createElement: function (one, two, three) {
                     return createElement(one, two, three, manager);
                 },
                 expandEvent: function (passedEvent, actualEvent) {
                     var expanders = manager.events.expanders;
-                    duff(gapSplit(actualEvent), function (actualEvent) {
-                        duff(gapSplit(passedEvent), function (passedEvent) {
+                    duff(toArray(actualEvent, SPACE), function (actualEvent) {
+                        duff(toArray(passedEvent, SPACE), function (passedEvent) {
                             expanders[passedEvent] = expanders[passedEvent] || [];
                             if (indexOf(expanders[passedEvent], actualEvent) === -1) {
                                 expanders[passedEvent].push(actualEvent);
@@ -1699,7 +1706,7 @@ app.scope(function (app) {
                     return manager;
                 },
                 customEvent: function (key, value) {
-                    duff(gapSplit(key), function (key) {
+                    duff(toArray(key, SPACE), function (key) {
                         manager.events.custom[key] = value;
                     });
                     return manager;
@@ -1709,7 +1716,6 @@ app.scope(function (app) {
                 data: factories.Associator(),
                 documentId: manager.documentId,
                 document: manager,
-                rendersAsync: BOOLEAN_TRUE,
                 devicePixelRatio: devicePixelRatio,
                 constructor: DOMA[CONSTRUCTOR],
                 registeredElements: registeredElements,
@@ -1809,7 +1815,7 @@ app.scope(function (app) {
             return $;
         },
         testWithHandler = function (win, evntname, handler, failure) {
-            duff(gapSplit(evntname), function (evntname) {
+            duff(toArray(evntname, SPACE), function (evntname) {
                 if (win.addEventListener) {
                     win.addEventListener(evntname, handler);
                     win.removeEventListener(evntname, handler);
@@ -1917,10 +1923,10 @@ app.scope(function (app) {
         FULLSCREEN = 'fullscreen',
         fixHooks = {
             // Includes some event props shared by KeyEvent and MouseEvent
-            props: gapSplit("altKey bubbles cancelable ctrlKey currentTarget eventPhase metaKey relatedTarget shiftKey target timeStamp view which x y deltaX deltaY"),
+            props: toArray("altKey,bubbles,cancelable,ctrlKey,currentTarget,eventPhase,metaKey,relatedTarget,shiftKey,target,timeStamp,view,which,x,y,deltaX,deltaY"),
             fixedHooks: {},
             keyHooks: {
-                props: gapSplit("char charCode key keyCode"),
+                props: toArray("char,charCode,key,keyCode"),
                 filter: function (evnt, original) {
                     var charCode;
                     // Add which for key evnts
@@ -1945,7 +1951,7 @@ app.scope(function (app) {
                 }
             },
             mouseHooks: {
-                props: gapSplit("button buttons clientX clientY offsetX offsetY pageX pageY screenX screenY toElement"),
+                props: toArray("button,buttons,clientX,clientY,offsetX,offsetY,pageX,pageY,screenX,screenY,toElement"),
                 filter: function (evnt, original) {
                     var eventDoc, doc, body,
                         button = original.button;
@@ -2019,12 +2025,10 @@ app.scope(function (app) {
                 }
                 evnt[IS_TRUSTED] = _.has(originalEvent, IS_TRUSTED) ? originalEvent[IS_TRUSTED] : !DO_NOT_TRUST;
                 (fixHook.reaction || noop)(evnt, originalEvent);
-                evnt.target = origin.owner.returnsManager(evnt.target);
-                evnt.currentTarget = origin.owner.returnsManager(evnt.currentTarget);
             }
         },
         cachedObjectEventConstructor = factories.ObjectEvent[CONSTRUCTOR],
-        DomEvent = factories.ObjectEvent.extend('DomEvent', {
+        DomEvent = factories.DomEvent = factories.ObjectEvent.extend('DomEvent', {
             AT_TARGET: 1,
             constructor: function (evnt, opts) {
                 var e = this;
@@ -2038,14 +2042,6 @@ app.scope(function (app) {
                     e.delegateTarget = opts.origin.owner.returnsManager(opts.target);
                 }
                 fixHooks.make(e, evnt, opts);
-                // e.original = function (super_secret_dom_key) {
-                //     if (super_secret_dom_key !== ) {
-                //         exception({
-                //             message: 'I don\'t trust you'
-                //         });
-                //     }
-                //     return e;
-                // };
                 e.capturing = opts.capturing === UNDEFINED ? isCapturing(e) : opts.capturing;
                 return e;
             },
@@ -2252,9 +2248,9 @@ app.scope(function (app) {
                 manager = evnt.origin;
                 el = manager.element();
                 // only take the target so we don't try to make managers for everyone
-                target = evnt.target.element();
+                target = evnt.target;
                 // there are no delegated events, so just return everything after capture
-                if (!delegateCount || target === el) {
+                if (!delegateCount || evnt.target === el) {
                     return list_.slice(captureCount);
                 }
                 sumCount = captureCount + delegateCount;
@@ -2401,7 +2397,7 @@ app.scope(function (app) {
                 });
             },
             constructor: function (el, hash, owner_) {
-                var registeredOptions, ownerWindo, owner = owner_,
+                var registeredOptions, owner = owner_,
                     manager = this;
                 if (DomManager.isInstance(el)) {
                     // extend what we already know
@@ -2415,16 +2411,6 @@ app.scope(function (app) {
                     return manager;
                 }
                 manager[TARGET] = el;
-                // manager.element = function (super_secret_dom_key) {
-                //     if (ownerWindo && !ownerWindo.) {
-                //         if (super_secret_dom_key !== ) {
-                //             exception({
-                //                 message: 'I don\'t trust you.'
-                //             });
-                //         }
-                //     }
-                //     return el;
-                // };
                 test(manager, owner);
                 if (manager[IS_ELEMENT] || manager.isFragment) {
                     hash[DOM_MANAGER_STRING] = manager;
@@ -2468,8 +2454,8 @@ app.scope(function (app) {
             element: function () {
                 return this[TARGET];
             },
-            elements: function (key) {
-                return [this.element(key)];
+            elements: function () {
+                return [this[TARGET]];
             },
             length: function () {
                 return 1;
@@ -2746,9 +2732,7 @@ app.scope(function (app) {
                 }
                 manager.mark(REMOVING);
                 if (manager.isIframe && handler && isFunction(handler)) {
-                    setTimeout(function () {
-                        handler.call(NULL, manager);
-                    });
+                    setTimeout(bind(handler, NULL, manager));
                 }
                 if (fragment) {
                     fragment.appendChild(el);
@@ -2837,7 +2821,32 @@ app.scope(function (app) {
                 if (manager.isWindow || manager.isDocument) {
                     return {};
                 }
-                return fromJSON(node, preventDeep);
+                obj = {
+                    tag: manager.isFragment ? DIV : tag(node)
+                };
+                if (!preventDeep) {
+                    children = manager.children();
+                    if ((childrenLength = children[LENGTH]())) {
+                        temporaryFragment = owner.element().createDocumentFragment();
+                        duffRight(children.unwrap(), function (manager) {
+                            var element = manager.element();
+                            temporaryFragment.insertBefore(element, previous || NULL);
+                            previous = element;
+                        });
+                        obj.children = children[TO_JSON]();
+                    }
+                    if (node[INNER_TEXT]) {
+                        obj[INNER_TEXT] = node[INNER_TEXT];
+                    }
+                    if (childrenLength) {
+                        node.appendChild(temporaryFragment);
+                    }
+                }
+                duff(node.attributes, function (attr) {
+                    var attributes = obj.attributes = obj.attributes || {};
+                    attributes[camelCase(attr[LOCAL_NAME])] = attr.nodeValue;
+                });
+                return obj;
             }
         }, wrap(directAttributes, function (attr, api) {
             if (!attr) {
@@ -2852,39 +2861,11 @@ app.scope(function (app) {
             };
         }), wrap(videoDirectEvents, triggerEventWrapperManager), wrap(directEvents, function (attr) {
             return triggerEventWrapperManager(attr);
-        }), wrap(gapSplit('add addBack elements push fragment'), function (key) {
+        }), wrap(toArray('add,addBack,elements,push,fragment'), function (key) {
             return function (one, two, three) {
                 return this.wrap()[key](one, two, three);
             };
         }))),
-        fromJSON = function (node, preventDeep) {
-            var children, childrenLength, obj = {
-                tag: tag(node)
-            };
-            duff(node.attributes, function (attr) {
-                var attributes = obj.attributes = obj.attributes || {};
-                attributes[camelCase(attr[LOCAL_NAME])] = attr.nodeValue;
-            });
-            if (preventDeep) {
-                return obj;
-            }
-            children = node.childNodes;
-            if (!(childrenLength = children[LENGTH])) {
-                return;
-            }
-            obj.children = map(children, function (child) {
-                if (isElement(child)) {
-                    return fromJSON(child, preventDeep);
-                }
-                if (child.nodeType === 3) {
-                    return child.textContent;
-                }
-                if (child.nodeType === 8) {
-                    return '<!--' + child.textContent + '-->';
-                }
-            });
-            return obj;
-        },
         _removeEventListener = function (manager, name, group, selector, handler, capture_) {
             var capture = !!capture_,
                 directive = manager.directive(EVENTS),
@@ -2895,7 +2876,7 @@ app.scope(function (app) {
                         }
                     });
                 };
-            return name ? duff(gapSplit(name), eventExpander(manager.owner.events.expanders, function (name, passedName) {
+            return name ? duff(toArray(name, SPACE), eventExpander(manager.owner.events.expanders, function (name, passedName) {
                 removeFromList(directive[HANDLERS][name], passedName);
             })) : each(directive[HANDLERS], passesFirstArgument(removeFromList));
         },
@@ -2941,7 +2922,7 @@ app.scope(function (app) {
         returnsManager = function (element, owner) {
             return element && !isWindow(element) && element.isValidDomManager ? element : ensure(element, owner);
         },
-        exportResult = _.exports({
+        exportResult = _.publicize({
             covers: covers,
             center: center,
             closer: closer,
@@ -2983,8 +2964,8 @@ app.scope(function (app) {
                 });
             };
         },
-        allEachMethods = gapSplit('show hide style remove on off once addEventListener removeEventListener dispatchEvent').concat(allDirectMethods),
-        firstMethods = gapSplit('tag element client box flow'),
+        allEachMethods = toArray('show,hide,style,remove,on,off,once,addEventListener,removeEventListener,dispatchEvent').concat(allDirectMethods),
+        firstMethods = toArray('tag,element,client,box,flow'),
         applyToFirst = function (method) {
             var shouldBeContext = method !== 'tag';
             return function (one, two) {
@@ -2992,7 +2973,7 @@ app.scope(function (app) {
                 return element && element[method](shouldBeContext ? this.context : two);
             };
         },
-        readMethods = gapSplit('isWindow isElement isDocument isFragment'),
+        readMethods = toArray('isWindow,isElement,isDocument,isFragment'),
         applyToTarget = function (property) {
             return function (one) {
                 var element = this.item(one);
@@ -3092,9 +3073,9 @@ app.scope(function (app) {
                 }, [], owner));
                 return this;
             },
-            elements: function (key) {
+            elements: function () {
                 // to array of DOMAanagers
-                return this.mapCall('element', key);
+                return this.mapCall('element');
             },
             /**
              * @func
@@ -3339,8 +3320,8 @@ app.scope(function (app) {
                 var hash = {};
                 return context.foldl(function (memo, manager) {
                     var parent;
-                    if ((parent = manager.parent(original)) && !hash[parent.element()[__ELID__]]) {
-                        hash[parent.element()[__ELID__]] = parent;
+                    if ((parent = manager.parent(original)) && !hash[parent[TARGET][__ELID__]]) {
+                        hash[parent[TARGET][__ELID__]] = parent;
                         memo.push(parent);
                     }
                     return memo;
@@ -3392,7 +3373,6 @@ app.scope(function (app) {
             allSetups.push(setup);
             windo.DOMA = windo.DOMA || setup;
             windo.$ = has(windo, '$') ? windo.$ : setup;
-            // windo. = ;
             duff(plugins, function (plugin) {
                 plugin(setup);
             });
@@ -3406,6 +3386,8 @@ app.scope(function (app) {
     $.collectTemplates();
     // register all custom elements...
     // everything that's created after this should go through the DomManager to be marked appropriately
+    // add $ to module madness
+    // app.addModuleArguments([$]);
     // define a hash for attribute caching
     app.defineDirective(ATTRIBUTES, function () {
         return {};

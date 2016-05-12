@@ -7,36 +7,12 @@ application.scope().run(function (app, _) {
                 return baseString.split(' ');
             };
         _.describe('base array methods', function () {
-            // _.it('_.listSlice', function () {
-            //     var actual = [1, 2, 3, 4, 5];
-            //     _.expect(_.listSlice(actual, 0)).toEqual(actual.slice(0));
-            // });
-            // _.it('_.join', function () {
-            //     var myList = baseString.split(' ');
-            //     _.expect(_.join(myList, ' ')).toEqual(myList.join(' '));
-            // });
-            // _.it('_.pop', function () {
-            //     _.expect(_.pop(baseString.split(' '))).toEqual(baseString.split(' ').pop());
-            // });
-            // _.it('_.push', function () {
-            //     _.expect(_.push(baseString.split(' '), ['string'])).toEqual(baseString.split(' ').push('string'));
-            // });
-            // _.it('_.shift', function () {
-            //     _.expect(_.shift(baseString.split(' '))).toEqual(baseString.split(' ').shift());
-            // });
             _.it('_.indexOf', function () {
                 _.expect(_.indexOf(makeArray(), 'is')).toEqual(makeArray().indexOf('is'));
             });
-            // _.it('_.splice', function () {
-            //     var actual = [1, 2, 3, 4, 5];
-            //     _.expect(_.listSlice(actual, 2)).toEqual(actual.slice(2));
-            // });
             _.it('_.sort', function () {
                 _.expect(_.sort(makeArray())).toEqual(makeArray().sort());
             });
-            // _.it('_.reverse', function () {
-            //     _.expect(_.reverse(makeArray())).toEqual(makeArray().reverse());
-            // });
         });
         _.describe('base object methods', function () {
             _.it('_.has', function () {
@@ -44,34 +20,6 @@ application.scope().run(function (app, _) {
                     one: null
                 };
                 _.expect(_.has(baseObj, 'one')).toEqual(baseObj.hasOwnProperty('one'));
-            });
-            _.it('_.splitGen', function () {
-                var ampSplit = _.splitGen('&'),
-                    qSplit = _.splitGen('?');
-                _.expect(ampSplit(baseString)).toEqual(baseString.split('&'));
-                _.expect(ampSplit(specialString)).toEqual(specialString.split('&'));
-                _.expect(qSplit(baseString)).toEqual(baseString.split('?'));
-                _.expect(qSplit(specialString)).toEqual(specialString.split('?'));
-            });
-            _.it('_.joinGen', function () {
-                var ampJoin = _.joinGen('&'),
-                    qJoin = _.joinGen('?'),
-                    baseArray = baseString.split(' '),
-                    specialArray = baseString.split(' ');
-                _.expect(ampJoin(baseArray)).toEqual(baseArray.join('&'));
-                _.expect(ampJoin(specialArray)).toEqual(specialArray.join('&'));
-                _.expect(qJoin(baseArray)).toEqual(baseArray.join('?'));
-                _.expect(qJoin(specialArray)).toEqual(specialArray.join('?'));
-            });
-            _.it('_.gapJoin', function () {
-                var baseArray = baseString.split(' '),
-                    specialArray = baseString.split(' ');
-                _.expect(_.gapJoin(baseArray)).toEqual(baseArray.join(' '));
-                _.expect(_.gapJoin(specialArray)).toEqual(specialArray.join(' '));
-            });
-            _.it('_.gapSplit', function () {
-                _.expect(_.gapSplit(baseString)).toEqual(baseString.split(' '));
-                _.expect(_.gapSplit(specialString)).toEqual(specialString.split(' '));
             });
             _.it('_.isFunction', function () {
                 _.expect(_.isFunction(true)).toEqual(false);
@@ -503,8 +451,27 @@ application.scope().run(function (app, _) {
             _.expect(_.unCamelCase(thatIsCamelCased, '_')).toEqual('this_is_un_camel_cased');
             _.expect(_.unCamelCase(thatIsCamelCased, '1')).toEqual('this1is1un1camel1cased');
         });
+        _.describe('_.customUnits', function () {
+            _.expect(_.customUnits('1000whats', ['evers', 'whats'])).toEqual('whats');
+            _.it('does not use any root, or base units', function () {
+                _.expect(_.customUnits('1000px', [])).toEqual(false);
+            });
+        });
+        _.it('_.reference', function () {
+            var expectation = _.expect(_.reference(document));
+            if (app.global.touch(window, window.top)) {
+                expectation.toEqual('');
+            } else {
+                expectation.not.toEqual('');
+            }
+        });
+        _.it('_.string.match', function () {
+            _.expect(_.string.match('strings', 'string')).toEqual(['string']);
+        });
     });
 });
+window._ = application.scope()._;
+window.factories = application.scope()._.factories;
 application.scope().run(function (app, _, factories) {
     _.describe('Collection', function () {
         var collection, numberCollection, complexCollection, evenNumberList;
@@ -1748,10 +1715,10 @@ application.scope().run(function (app, _, factories) {
                 var allstates = promise.allStates();
                 _.expect(allstates.failure).toEqual('always');
             });
-            _.it('error is set to always', function () {
-                var allstates = promise.allStates();
-                _.expect(allstates.error).toEqual('always');
-            });
+            // _.it('error is set to always', function () {
+            //     var allstates = promise.allStates();
+            //     _.expect(allstates.error).toEqual('always');
+            // });
         });
     });
 });
@@ -1836,7 +1803,7 @@ application.scope().run(function (app, _, factories) {
                     handlerCounter++;
                     _.expect(handlerCounter).toEqual(1);
                     throw new Error('some message here');
-                }).error(function () {
+                }).catch(function () {
                     handlerCounter++;
                 }).always(function () {
                     handlerCounter++;
@@ -1875,7 +1842,7 @@ application.scope().run(function (app, _, factories) {
                     var handlerCounter = 0;
                     factories.HTTP('/gibberish/500').handle('status:500', function () {
                         handlerCounter++;
-                    }).error(function () {
+                    }).failure(function () {
                         handlerCounter++;
                     }).always(function () {
                         handlerCounter++;
@@ -1891,6 +1858,9 @@ application.scope().run(function (app, _, factories) {
             });
             _.it('202 is success', function () {
                 _.expect(allstates['status:202']).toEqual('success');
+            });
+            _.it('204 is success', function () {
+                _.expect(allstates['status:204']).toEqual('success');
             });
             _.it('205 is success', function () {
                 _.expect(allstates['status:205']).toEqual('success');
@@ -1919,17 +1889,17 @@ application.scope().run(function (app, _, factories) {
             _.it('406 is failure', function () {
                 _.expect(allstates['status:406']).toEqual('failure');
             });
-            _.it('500 is error', function () {
-                _.expect(allstates['status:500']).toEqual('error');
+            _.it('500 is failure', function () {
+                _.expect(allstates['status:500']).toEqual('failure');
             });
-            _.it('502 is error', function () {
-                _.expect(allstates['status:502']).toEqual('error');
+            _.it('502 is failure', function () {
+                _.expect(allstates['status:502']).toEqual('failure');
             });
-            _.it('505 is error', function () {
-                _.expect(allstates['status:505']).toEqual('error');
+            _.it('505 is failure', function () {
+                _.expect(allstates['status:505']).toEqual('failure');
             });
-            _.it('511 is error', function () {
-                _.expect(allstates['status:511']).toEqual('error');
+            _.it('511 is failure', function () {
+                _.expect(allstates['status:511']).toEqual('failure');
             });
         });
     });
@@ -2011,7 +1981,6 @@ application.scope().run(function (app, _, factories) {
             handler2 = function () {
                 return false;
             },
-            $con,
             create = function () {
                 count = 0;
                 var _divs = divs && divs.remove();
@@ -2026,16 +1995,16 @@ application.scope().run(function (app, _, factories) {
                     div.addClass(className);
                     this.push(div);
                 }, 0, 5);
-                $con = $.createElement('div').css({
-                    height: '100%',
-                    width: '100%'
-                });
                 $con.append(divs);
-                $(document.body).append($con);
-            };
+            },
+            $con = $.createElement('div').css({
+                height: '100%',
+                width: '100%'
+            });
+        $(document.body).append($con);
         _.beforeEach(create);
         _.afterEach(function () {
-            $con.destroy();
+            divs.destroy();
         });
         _.it('is essentially a collection', function () {
             _.expect(_.isInstance($empty, factories.DOMA)).toEqual(true);
@@ -2050,7 +2019,7 @@ application.scope().run(function (app, _, factories) {
                 bottom: rect.bottom,
                 right: rect.right,
                 left: rect.left,
-                top: rect.top
+                top: rect.top,
             });
         });
         _.it('can show and hide elements', function () {
@@ -2656,7 +2625,6 @@ application.scope().run(function (app, _, factories) {
         _.describe('and windows without a source', function () {
             _.it('can receive messages on windows', function (done) {
                 pagePromise.success(function (response) {
-                    console.log('time to stop');
                     var iframe = $.createElement('iframe');
                     app.RegionManager.get('main').el.append(iframe);
                     var buster = factories.Buster(window, iframe, {

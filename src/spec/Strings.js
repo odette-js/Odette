@@ -23,5 +23,24 @@ application.scope().run(function (app, _) {
             _.expect(_.unCamelCase(thatIsCamelCased, '_')).toEqual('this_is_un_camel_cased');
             _.expect(_.unCamelCase(thatIsCamelCased, '1')).toEqual('this1is1un1camel1cased');
         });
+        _.describe('_.customUnits', function () {
+            _.expect(_.customUnits('1000whats', ['evers', 'whats'])).toEqual('whats');
+            _.it('does not use any root, or base units', function () {
+                _.expect(_.customUnits('1000px', [])).toEqual(false);
+            });
+        });
+        _.it('_.reference', function () {
+            var expectation = _.expect(_.reference(document));
+            if (app.global.touch(window, window.top)) {
+                expectation.toEqual('');
+            } else {
+                expectation.not.toEqual('');
+            }
+        });
+        _.it('_.string.match', function () {
+            _.expect(_.string.match('strings', 'string')).toEqual(['string']);
+        });
     });
 });
+window._ = application.scope()._;
+window.factories = application.scope()._.factories;

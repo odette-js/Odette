@@ -17,7 +17,7 @@ app.scope(function (app) {
         },
         iterateOverList = function (eventer, directive, names, handler, args, iterator) {
             // only accepts a string or a function
-            return duff(gapSplit(names), function (eventName) {
+            return duff(toArray(names, SPACE), function (eventName) {
                 iterator(eventer, directive, directive.make(eventName, handler, eventer), args);
             });
         },
@@ -287,7 +287,7 @@ app.scope(function (app) {
              */
             dispatchEvents: function (names) {
                 var eventer = this;
-                return duff(gapSplit(names), eventer.dispatchStack, eventer) && eventer;
+                return duff(toArray(names, SPACE), eventer.dispatchStack, eventer) && eventer;
             },
             dispatchStack: function (name) {
                 return this[DISPATCH_EVENT](name);

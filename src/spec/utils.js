@@ -7,36 +7,12 @@ application.scope().run(function (app, _) {
                 return baseString.split(' ');
             };
         _.describe('base array methods', function () {
-            // _.it('_.listSlice', function () {
-            //     var actual = [1, 2, 3, 4, 5];
-            //     _.expect(_.listSlice(actual, 0)).toEqual(actual.slice(0));
-            // });
-            // _.it('_.join', function () {
-            //     var myList = baseString.split(' ');
-            //     _.expect(_.join(myList, ' ')).toEqual(myList.join(' '));
-            // });
-            // _.it('_.pop', function () {
-            //     _.expect(_.pop(baseString.split(' '))).toEqual(baseString.split(' ').pop());
-            // });
-            // _.it('_.push', function () {
-            //     _.expect(_.push(baseString.split(' '), ['string'])).toEqual(baseString.split(' ').push('string'));
-            // });
-            // _.it('_.shift', function () {
-            //     _.expect(_.shift(baseString.split(' '))).toEqual(baseString.split(' ').shift());
-            // });
             _.it('_.indexOf', function () {
                 _.expect(_.indexOf(makeArray(), 'is')).toEqual(makeArray().indexOf('is'));
             });
-            // _.it('_.splice', function () {
-            //     var actual = [1, 2, 3, 4, 5];
-            //     _.expect(_.listSlice(actual, 2)).toEqual(actual.slice(2));
-            // });
             _.it('_.sort', function () {
                 _.expect(_.sort(makeArray())).toEqual(makeArray().sort());
             });
-            // _.it('_.reverse', function () {
-            //     _.expect(_.reverse(makeArray())).toEqual(makeArray().reverse());
-            // });
         });
         _.describe('base object methods', function () {
             _.it('_.has', function () {
@@ -44,34 +20,6 @@ application.scope().run(function (app, _) {
                     one: null
                 };
                 _.expect(_.has(baseObj, 'one')).toEqual(baseObj.hasOwnProperty('one'));
-            });
-            _.it('_.splitGen', function () {
-                var ampSplit = _.splitGen('&'),
-                    qSplit = _.splitGen('?');
-                _.expect(ampSplit(baseString)).toEqual(baseString.split('&'));
-                _.expect(ampSplit(specialString)).toEqual(specialString.split('&'));
-                _.expect(qSplit(baseString)).toEqual(baseString.split('?'));
-                _.expect(qSplit(specialString)).toEqual(specialString.split('?'));
-            });
-            _.it('_.joinGen', function () {
-                var ampJoin = _.joinGen('&'),
-                    qJoin = _.joinGen('?'),
-                    baseArray = baseString.split(' '),
-                    specialArray = baseString.split(' ');
-                _.expect(ampJoin(baseArray)).toEqual(baseArray.join('&'));
-                _.expect(ampJoin(specialArray)).toEqual(specialArray.join('&'));
-                _.expect(qJoin(baseArray)).toEqual(baseArray.join('?'));
-                _.expect(qJoin(specialArray)).toEqual(specialArray.join('?'));
-            });
-            _.it('_.gapJoin', function () {
-                var baseArray = baseString.split(' '),
-                    specialArray = baseString.split(' ');
-                _.expect(_.gapJoin(baseArray)).toEqual(baseArray.join(' '));
-                _.expect(_.gapJoin(specialArray)).toEqual(specialArray.join(' '));
-            });
-            _.it('_.gapSplit', function () {
-                _.expect(_.gapSplit(baseString)).toEqual(baseString.split(' '));
-                _.expect(_.gapSplit(specialString)).toEqual(specialString.split(' '));
             });
             _.it('_.isFunction', function () {
                 _.expect(_.isFunction(true)).toEqual(false);

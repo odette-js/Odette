@@ -7,7 +7,7 @@ module.exports = function (settings) {
     var path = require('path');
     var favicon = require('serve-favicon');
     var logger = require('morgan');
-    var bodyParser = require("body-parser");
+    var bodyParser = require('body-parser');
     var expressive = require('../expressive');
     var app = express();
     var expressWs = require('express-ws')(app);
@@ -38,6 +38,9 @@ module.exports = function (settings) {
     app.get('/gibberish/:status', function (req, res, next) {
         res.status(req.params.status).send('');
     });
+    // app.get('/json/reporting.json', function (req, res) {
+    //     res.send('{}');
+    // });
     app.use(expressive(publicroot));
     app.use(express.static(publicroot));
     app.use(function (req, res, next) {
@@ -71,5 +74,7 @@ module.exports = function (settings) {
         }
     });
     app.listen(settings.http.port);
-    console.log("\nListening on :".concat(settings.http.port)); // Was going to have node automatically open default browser to proper location, but it requires an external package, so not worth it.
+    console.log('\nListening on :'.concat(settings.http.port));
+    // Was going to have node automatically open default browser to proper location,
+    // but it requires an external package, so not worth it.
 };

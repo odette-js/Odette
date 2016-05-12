@@ -33,7 +33,6 @@ application.scope().run(function (app, _, factories) {
         _.describe('and windows without a source', function () {
             _.it('can receive messages on windows', function (done) {
                 pagePromise.success(function (response) {
-                    console.log('time to stop');
                     var iframe = $.createElement('iframe');
                     app.RegionManager.get('main').el.append(iframe);
                     var buster = factories.Buster(window, iframe, {

@@ -216,7 +216,7 @@ app.scope(function (app) {
                 return cached;
             }
         }),
-        recreatingSelfCollection = gapSplit('eq pluck where whereNot map results filter cycle uncycle flatten gather'),
+        recreatingSelfCollection = toArray('eq,pluck,where,whereNot,map,results,filter,cycle,uncycle,flatten,gather'),
         eachHandlers = {
             each: duff,
             duff: duff,
@@ -228,16 +228,16 @@ app.scope(function (app) {
             eachCallRight: eachCallRight
         },
         eachHandlerKeys = keys(eachHandlers),
-        abstractedCanModify = gapSplit('add'),
-        abstractedCannotModify = gapSplit('insertAt remove removeAt'),
-        nativeCannotModify = gapSplit('pop shift splice'),
-        reverseCollection = gapSplit('reverse'),
-        splatHandlers = gapSplit('push unshift'),
-        joinHandlers = gapSplit('join'),
-        countingCollection = gapSplit('count countTo countFrom merge'),
-        foldIteration = gapSplit('foldr foldl reduce'),
-        findIteration = gapSplit('find findLast findWhere findLastWhere'),
-        indexers = gapSplit('indexOf'),
+        abstractedCanModify = toArray('add'),
+        abstractedCannotModify = toArray('insertAt,remove,removeAt'),
+        nativeCannotModify = toArray('pop,shift,splice'),
+        reverseCollection = toArray('reverse'),
+        splatHandlers = toArray('push,unshift'),
+        joinHandlers = toArray('join'),
+        countingCollection = toArray('count,countTo,countFrom,merge'),
+        foldIteration = toArray('foldr,foldl,reduce'),
+        findIteration = toArray('find,findLast,findWhere,findLastWhere'),
+        indexers = toArray('indexOf'),
         foldFindIteration = foldIteration.concat(findIteration),
         marksIterating = function (fn) {
             return function (one, two, three, four, five, six) {
@@ -321,7 +321,7 @@ app.scope(function (app) {
                 return _[name](list.unwrap(), one, two, three);
             });
         })),
-        ret = _.exports({
+        ret = _.publicize({
             eachCall: eachCall,
             eachCallRight: eachCallRight,
             filter: filter,

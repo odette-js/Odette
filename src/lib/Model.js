@@ -168,7 +168,7 @@ app.scope(function (app) {
         Parent = factories.Parent = factories.Events.extend('Parent', {
             Child: BOOLEAN_TRUE,
             childConstructor: function () {
-                return this.Child === BOOLEAN_TRUE ? this.__constructor__[CONSTRUCTOR] : (this.Child || Parent);
+                return this.Child === BOOLEAN_TRUE ? this.__constructor__ : (this.Child || Parent);
             },
             isChildType: function (child) {
                 return isInstance(child, this.childConstructor());

@@ -16,11 +16,11 @@ var cacheable = function (fn) {
             return cacher(string);
         };
     },
-    string = _.extend(wrap(gapSplit('toLowerCase toUpperCase trim'), function (method) {
+    string = _.extend(wrap(toArray('toLowerCase,toUpperCase,trim'), function (method) {
         return cacheable(function (item) {
             return item[method]();
         });
-    }), wrap(gapSplit('match search'), function (method) {
+    }), wrap(toArray('match,search'), function (method) {
         return categoricallyCacheable(function (input) {
             return function (item) {
                 return item[method](input);
@@ -136,7 +136,7 @@ var cacheable = function (fn) {
         var lengthHash = {},
             hash = {},
             lengths = [],
-            unitList = gapSplit(unitList_),
+            unitList = toArray(unitList_),
             sortedUnitList = unitList.sort(function (a, b) {
                 var aLength = a[LENGTH],
                     bLength = b[LENGTH],
@@ -172,7 +172,7 @@ var cacheable = function (fn) {
             return BOOLEAN_FALSE;
         };
     }),
-    baseUnitList = gapSplit('px em rem ex in cm % vh vw pc pt mm vmax vmin'),
+    baseUnitList = toArray('px,em,rem,ex,in,cm,%,vh,vw,pc,pt,mm,vmax,vmin'),
     units = function (str) {
         return customUnits(str, baseUnitList);
     },
@@ -244,22 +244,23 @@ var cacheable = function (fn) {
     },
     reference = cacheable(function (str) {
         var match;
-        if (str) {
-            if (!isString(str)) {
-                str = str.referrer;
-            }
-            if (isString(str)) {
-                // gives it a chance to match
-                str += SLASH;
-                match = str.match(/^http?:\/\/.*?\//);
-                if (match) {
-                    match = match[0].slice(0, match[0][LENGTH] - 1);
-                }
+        if (!str) {
+            return EMPTY_STRING;
+        }
+        if (!isString(str)) {
+            str = str.referrer;
+        }
+        if (isString(str)) {
+            // gives it a chance to match
+            str += SLASH;
+            match = str.match(/^http?:\/\/.*?\//);
+            if (match) {
+                match = match[0].slice(0, match[0][LENGTH] - 1);
             }
         }
         return match || EMPTY_STRING;
     }),
-    protocols = [HTTP, HTTPS, 'file', 'about', 'javascript'],
+    protocols = [HTTP, HTTPS].concat(toArray('file,about,javascript,ws,tel')),
     extraslashes = {
         'http:': BOOLEAN_TRUE,
         'https:': BOOLEAN_TRUE
@@ -345,8 +346,7 @@ var cacheable = function (fn) {
             host: host,
             hash: hash.slice(1),
             href: href,
-            protocol: protocol.slice(0, protocol[LENGTH] - 1),
-            friendlyProtocol: !extraslashes[protocol],
+            protocol: protocol.slice(0, protocol[LENGTH]),
             origin: origin,
             searchObject: searchObject
         });
@@ -362,7 +362,7 @@ var cacheable = function (fn) {
     EIGHTY_SIX_MILLION_FOUR_HUNDRED_THOUSAND = THREE_HUNDRED_SIXTY_THOUSAND * TWENTY_FOUR,
     SIX_HUNDRED_FOUR_MILLION_EIGHT_HUNDRED_THOUSAND = THREE_HUNDRED_SIXTY_THOUSAND * SEVEN,
     TWO_BILLION_FIVE_HUNDRED_NINETY_TWO_MILLION = THREE_HUNDRED_SIXTY_THOUSAND * THIRTY,
-    THIRTY_ONE_BILLION_FIVE_HUNDRED_THIRTY_SIX_MILLION = THREE_HUNDRED_SIXTY_THOUSAND * THREE_HUNDRED_SIXTY_FIVE,
+    THIRTY_ONE_BILLION_FIVE_HUNDRED_THIRTY_SIX_MILLION = EIGHTY_SIX_MILLION_FOUR_HUNDRED_THOUSAND * THREE_HUNDRED_SIXTY_FIVE,
     NUMBERS_LENGTH = {
         ms: 1,
         secs: ONE_THOUSAND,
@@ -382,13 +382,15 @@ var cacheable = function (fn) {
         };
         return memo;
     }, {}),
-    commaSplit = splitGen(','),
-    weekdays = gapSplit('sunday monday tuesday wednesday thursday friday saturday'),
-    months = gapSplit('january feburary march april may june july august september october november december'),
+    weekdays = toArray('sunday,monday,tuesday,wednesday,thursday,friday,saturday'),
+    months = toArray('january,feburary,march,april,may,june,july,august,september,october,november,december'),
     monthsHash = wrap(months, BOOLEAN_TRUE),
+    monthsIndex = wrap(months, function (key, index) {
+        return index;
+    }),
     time = cacheable(function (number_) {
         var time = 0;
-        duff(commaSplit(number_ + EMPTY_STRING), function (num_) {
+        duff(toArray(number_ + EMPTY_STRING), function (num_) {
             var num = num_,
                 unit = customUnits(num, timeUnits),
                 number = +(num.split(unit || EMPTY_STRING).join(EMPTY_STRING)),
@@ -403,8 +405,9 @@ var cacheable = function (fn) {
         });
         return time;
     });
-_.exports({
-    monthIndex: monthsHash,
+_.publicize({
+    monthIndex: monthsIndex,
+    monthHash: monthsHash,
     months: months,
     weekdays: weekdays,
     // constants

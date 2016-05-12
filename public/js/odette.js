@@ -1,11 +1,11 @@
-this.Odette = function (global, WHERE, version, fn) {
+this.Odette = this.Odette || function (global, WHERE, version, fn, alt) {
     'use strict';
     var UNDEFINED, odette_version = '0.0.0',
         LENGTH = 'length',
         PARENT = 'global',
         PROTOTYPE = 'prototype',
         TOUCH = 'touch',
-        // TOP_ACCESS = 'topAccess',
+        HAS_ACCESS = 'hasAccess',
         PERIOD = '.',
         global_ = this || window || global,
         doc = global_.document,
@@ -21,12 +21,12 @@ this.Odette = function (global, WHERE, version, fn) {
         now = function () {
             return +(new Date());
         },
-        map = function (arra, fn, ctx) {
+        map = function (arra, fn) {
             var i = 0,
                 len = arra[LENGTH],
                 arr = [];
             while (len > i) {
-                arr[i] = fn.call(ctx, arra[i], i, arra);
+                arr[i] = fn(arra[i], i, arra);
                 i++;
             }
             return arr;
@@ -102,6 +102,7 @@ this.Odette = function (global, WHERE, version, fn) {
     function Application(name, parent) {
         this.version = name;
         this.scoped = BOOLEAN_TRUE;
+        this.application = this;
         this.missedDefinitions = [];
         this.createdAt = now();
         return this;
@@ -138,13 +139,9 @@ this.Odette = function (global, WHERE, version, fn) {
         var fn = name_ && (isFunction(name_) ? name_ : (isFunction(fn_) ? fn_ : NULL));
         return this[PARENT].scope(name, fn);
     };
-    Application[PROTOTYPE][TOUCH] = function () {
-        // allows the top part of this script to be swapped out against different globals_
-        return this[PARENT][TOUCH](global_);
-    };
-    // Application[PROTOTYPE][TOP_ACCESS] = function () {
-    //     this[TOUCH]();
-    //     return this[PARENT][TOP_ACCESS];
+    // Application[PROTOTYPE][TOUCH] = function (global_, windo) {
+    //     return this[PARENT][TOUCH](global_, windo);
+    //     // return this[PARENT][HAS_ACCESS];
     // };
     var app, application = global_[WHERE] = global_[WHERE] || {
         versions: {},
@@ -161,7 +158,7 @@ this.Odette = function (global, WHERE, version, fn) {
                 newApp = application.versions[name] = cachedOrCreated || app || new Application(name, application);
             newApp[PARENT] = application;
             application.currentVersion = name;
-            application.defaultVersion = (defaultVersion = application.defaultVersion) === UNDEFINED ? version : (maxVersion(defaultVersion, version) ? defaultVersion : version);
+            application.defaultVersion = (defaultVersion = application.defaultVersion) === UNDEFINED ? version : maxVersion(defaultVersion, version);
             if (!cachedOrCreated) {
                 application.versionOrder.push(name);
             }
@@ -255,53 +252,40 @@ this.Odette = function (global, WHERE, version, fn) {
                 lastScript = allScripts[allScripts[LENGTH] - 1];
             return currentScript || lastScript;
         },
-        makeScript: function (src, onload, docu_, preventappend) {
-            var docu = docu_ || doc,
-                script = docu.createElement('script');
-            script.type = 'text/javascript';
-            if (!preventappend) {
-                docu.head.appendChild(script);
-            }
-            if (src) {
-                if (onload) {
-                    script.onload = onload;
-                }
-                // src applied last for ie
-                script.src = src;
-            }
-            return script;
-        },
-        touch: function (global_, preventMap) {
+        touch: function (fromHere, toHere, preventMap) {
             // assume you have top access
-            var origin = this,
-                application = origin,
-                // test for browsers
-                hasAccess = wraptry(function () {
-                    var doc = global_.document;
-                    // overwrite the scoped application variable
-                    application = global_[WHERE] || application;
-                    return BOOLEAN_TRUE;
-                }, function () {
-                    return BOOLEAN_FALSE;
-                });
-            if (hasAccess) {
-                global_[WHERE] = application;
-                if (!preventMap && global_[WHERE] !== origin) {
+            var hasAccess, origin = this,
+                application = origin;
+            if (wraptry(function () {
+                // always errs
+                var doc = toHere.document;
+                // overwrite the scoped application variable
+                application = toHere[WHERE] || application;
+                return BOOLEAN_TRUE;
+            }, function () {
+                return BOOLEAN_FALSE;
+            })) {
+                toHere[WHERE] = application;
+                if (!preventMap && fromHere[WHERE] !== application) {
+                    fromHere[WHERE] = application;
                     map(origin.versionOrder, function (version) {
                         application.registerVersion(version, origin.versions[version]);
                     });
                 }
+                return application;
             }
-            return application;
         }
     };
     app = application.get(version);
     if (app) {
         // there is already an app with this same version that originated from this global object
-        return app;
+        if (alt) {
+            alt.call(global_, application, app);
+        }
+    } else {
+        app = application.registerVersion(version);
+        // call is used because apply is finicky and bind is not universal
+        fn.call(global_, application, app);
     }
-    app = application.registerVersion(version);
-    // call is used because apply is finicky and bind is not universal
-    fn.call(global_, application, app);
     return app;
 };

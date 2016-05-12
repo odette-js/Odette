@@ -7,8 +7,6 @@ application.scope().run(function (app, _, factories) {
         AN_ERROR = ' an error',
         TO_BE_THROWN = ' to be thrown',
         TO_BE_STRICTLY_EQUAL_STRING = ' to be strictly equal to ',
-        stringify = _.stringify,
-        negate = _.negate,
         errIfFalse = function (handler, makemessage) {
             return function (arg) {
                 var result, expectation = {};
@@ -89,12 +87,12 @@ application.scope().run(function (app, _, factories) {
             setupPoller();
         },
         describe = function (string, handler) {
-            var resolution = _.Promise();
+            var resolution = Promise();
             describes.push(resolution);
             stack.push(string);
             globalBeforeEachStack.push([]);
             globalAfterEachStack.push([]);
-            _.wraptry(handler, console.error, function () {
+            wraptry(handler, console.error, function () {
                 globalAfterEachStack.pop();
                 globalBeforeEachStack.pop();
                 stack.pop();
@@ -195,7 +193,7 @@ application.scope().run(function (app, _, factories) {
             globalAfterEachStack = [];
         },
         setupPoller = function () {
-            pollerTimeout = pollerTimeout === UNDEFINED ? setTimeout(function loops() {
+            pollerTimeout = pollerTimeout === void 0 ? setTimeout(function loops() {
                 var theIt, string, i = 0,
                     totalTime = 0;
                 if (!testisrunning) {
@@ -212,7 +210,7 @@ application.scope().run(function (app, _, factories) {
             }, 100) : pollerTimeout;
         };
     resetTests();
-    _.exports({
+    _.publicize({
         afterEach: afterEach,
         beforeEach: beforeEach,
         expect: expect,

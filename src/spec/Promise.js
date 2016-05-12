@@ -120,10 +120,10 @@ application.scope().run(function (app, _, factories) {
                 var allstates = promise.allStates();
                 _.expect(allstates.failure).toEqual('always');
             });
-            _.it('error is set to always', function () {
-                var allstates = promise.allStates();
-                _.expect(allstates.error).toEqual('always');
-            });
+            // _.it('error is set to always', function () {
+            //     var allstates = promise.allStates();
+            //     _.expect(allstates.error).toEqual('always');
+            // });
         });
     });
 });

@@ -1,5 +1,5 @@
 app.module('Socket', function (module, app, _, factories) {
-    var list = gapSplit('open message error close');
+    var list = _.toArray('open,message,error,close');
     var delegate = function (socket) {
         duff(list, function (evnt) {
             socket.pipe.addEventListener(evnt, socket.handlers[evnt]);

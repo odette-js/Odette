@@ -50,7 +50,7 @@ application.scope().run(function (app, _, factories) {
                     handlerCounter++;
                     _.expect(handlerCounter).toEqual(1);
                     throw new Error('some message here');
-                }).error(function () {
+                }).catch(function () {
                     handlerCounter++;
                 }).always(function () {
                     handlerCounter++;
@@ -89,7 +89,7 @@ application.scope().run(function (app, _, factories) {
                     var handlerCounter = 0;
                     factories.HTTP('/gibberish/500').handle('status:500', function () {
                         handlerCounter++;
-                    }).error(function () {
+                    }).failure(function () {
                         handlerCounter++;
                     }).always(function () {
                         handlerCounter++;
@@ -105,6 +105,9 @@ application.scope().run(function (app, _, factories) {
             });
             _.it('202 is success', function () {
                 _.expect(allstates['status:202']).toEqual('success');
+            });
+            _.it('204 is success', function () {
+                _.expect(allstates['status:204']).toEqual('success');
             });
             _.it('205 is success', function () {
                 _.expect(allstates['status:205']).toEqual('success');
@@ -133,17 +136,17 @@ application.scope().run(function (app, _, factories) {
             _.it('406 is failure', function () {
                 _.expect(allstates['status:406']).toEqual('failure');
             });
-            _.it('500 is error', function () {
-                _.expect(allstates['status:500']).toEqual('error');
+            _.it('500 is failure', function () {
+                _.expect(allstates['status:500']).toEqual('failure');
             });
-            _.it('502 is error', function () {
-                _.expect(allstates['status:502']).toEqual('error');
+            _.it('502 is failure', function () {
+                _.expect(allstates['status:502']).toEqual('failure');
             });
-            _.it('505 is error', function () {
-                _.expect(allstates['status:505']).toEqual('error');
+            _.it('505 is failure', function () {
+                _.expect(allstates['status:505']).toEqual('failure');
             });
-            _.it('511 is error', function () {
-                _.expect(allstates['status:511']).toEqual('error');
+            _.it('511 is failure', function () {
+                _.expect(allstates['status:511']).toEqual('failure');
             });
         });
     });

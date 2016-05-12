@@ -68,7 +68,6 @@ app.scope(function (app) {
         },
         Promise = _.Promise,
         moduleMethods = {
-            Child: BOOLEAN_TRUE,
             module: function (name_, windo, fn) {
                 var initResult, list, globalname, arg1, arg2, parentModulesDirective, modules, attrs, parentIsModule, nametree, parent = this,
                     originalParent = parent,
@@ -130,12 +129,11 @@ app.scope(function (app) {
                 return module;
             },
             run: function (windo, fn_) {
-                var application, result, module = this,
+                var result, module = this,
                     fn = isFunction(windo) ? windo : fn_,
                     args = isWindow(windo) ? [windo.DOMA] : [];
                 if (isFunction(fn)) {
-                    application = module.application;
-                    if (application && application !== module) {
+                    if (module.application !== module) {
                         result = fn.apply(module, createArguments(module, args));
                     } else {
                         result = fn.apply(module, module.createArguments(args));
@@ -174,7 +172,7 @@ app.scope(function (app) {
                     });
                 } else {
                     promise = _.Promise();
-                    list = gapSplit(modulename);
+                    list = toArray(modulename, SPACE);
                     if (!isArray(list) || !list[LENGTH]) {
                         return promise;
                     }
@@ -200,7 +198,7 @@ app.scope(function (app) {
             var _ = app._;
             return [app, _, _ && _.factories];
         },
-        appextendresult = app.extend(extend({}, factories.Directive[CONSTRUCTOR][PROTOTYPE], factories.Events[CONSTRUCTOR][PROTOTYPE], startableMethods, moduleMethods, {
+        appextendresult = app.extend(extend({}, factories.Directive[CONSTRUCTOR][PROTOTYPE], factories.Events[CONSTRUCTOR][PROTOTYPE], factories.Parent[CONSTRUCTOR][PROTOTYPE], startableMethods, moduleMethods, {
             addModuleArguments: function (arr) {
                 _.addAll(extraModuleArguments, arr);
                 return this;

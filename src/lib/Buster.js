@@ -491,7 +491,7 @@ app.scope(function (app) {
                 }).send();
             }
         });
-    if (app.touch(win[TOP])) {
+    if (app.global.touch(win, win[TOP])) {
         $(win[TOP]).on(MESSAGE, receive);
     }
 });
