@@ -113,6 +113,7 @@ var cacheable = function (fn) {
     upCase = cacheable(function (s) {
         return s[0].toUpperCase() + s.slice(1);
     }),
+    capitalize = upCase,
     /**
      * @func
      */
@@ -177,20 +178,32 @@ var cacheable = function (fn) {
         return customUnits(str, baseUnitList);
     },
     isHttp = cacheable(function (str) {
-        var ret = !1;
-        if ((str.indexOf(HTTP) === 0 && str.split('//')[LENGTH] >= 2) || str.indexOf('//') === 0) {
+        var ret = !1,
+            splitLength = str.split(DOUBLE_SLASH)[LENGTH];
+        if ((str.indexOf(HTTP) === 0 && splitLength >= 2) || (str.indexOf(DOUBLE_SLASH) === 0 && splitLength === 2)) {
             ret = !0;
         }
         return ret;
     }),
-    parseHash = cacheable(function (url) {
+    protocol = cacheable(function (url) {
+        var ret = !1,
+            split = str.split(DOUBLE_SLASH),
+            splitLength = split[LENGTH],
+            first = split.shift();
+        return ret;
+    }),
+    parseHash_ = cacheable(function (url) {
         var hash = EMPTY_STRING,
-            hashIdx = smartIndexOf(url, '#') + 1;
+            hashIdx = indexOf(url, '#') + 1;
         if (hashIdx) {
-            hash = url.slice(hashIdx - 1);
+            hash = url.slice(hashIdx);
         }
         return hash;
     }),
+    parseHash = function (url, parser) {
+        var parsed = parseHash_(url);
+        return parser ? parsed : parse(parsed);
+    },
     itemIs = function (list, item, index) {
         return list[index || 0] === item;
     },
@@ -286,9 +299,9 @@ var cacheable = function (fn) {
             }) || globalProtocol.slice(0, globalProtocol[LENGTH] - 1))) + COLON;
         if (searchIdx) {
             search = url.slice(searchIdx - 1);
-            hash = parseHash(search);
+            hash = parseHash_(search);
         } else {
-            hash = parseHash(url);
+            hash = parseHash_(url);
         }
         if (searchIdx) {
             search = search.split(hash).join(EMPTY_STRING);
@@ -422,6 +435,7 @@ _.publicize({
     prefix: prefix,
     prefixAll: prefixAll,
     upCase: upCase,
+    capitalize: capitalize,
     unCamelCase: unCamelCase,
     spinalCase: unCamelCase,
     camelCase: camelCase,

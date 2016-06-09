@@ -173,7 +173,7 @@ app.scope(function (app) {
                 promise[STASHED_ARGUMENT] = opts;
                 promise.reason = reason_ ? reason_ : BOOLEAN_FALSE;
                 resolveAs = promise.state;
-                promise.dispatchEvent('before:resolve');
+                promise[DISPATCH_EVENT](BEFORE_COLON + 'resolve');
                 promise.dispatchEvents(wraptry(function () {
                     return dispatch(promise, resolveAs);
                 }, function (e) {

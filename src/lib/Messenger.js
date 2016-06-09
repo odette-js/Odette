@@ -1,24 +1,21 @@
-app.scope(function (app) {
-    var request = function (key, arg) {
-            return this.hash[key] && this.hash[key](arg);
-        },
-        returns = function (affection) {
-            return function () {
-                return affection;
-            };
-        },
-        reply = function (key, handler) {
-            var hash = this.hash;
+var Messenger = factories.Directive.extend('Messenger', {
+    constructor: function () {
+        var messenger = this;
+        factories.Directive[CONSTRUCTOR].apply(this, arguments);
+        hash = {};
+        messenger.request = function (key, arg, prefix) {
+            return hash[key] && hash[key](arg);
+        };
+        messenger.reply = function (key, handler, prefix) {
             intendedObject(key, handler, function (key, handler) {
                 hash[key] = bind(isFunction(handler) ? handler : returns(handler), NULL);
             });
-            return this;
+            return messenger;
         };
-    app.defineDirective('Messenger', function () {
-        return {
-            hash: {},
-            reply: reply,
-            request: request
+        messenger.destroy = function () {
+            hash = UNDEFINED;
         };
-    });
+        return messenger;
+    }
 });
+app.defineDirective('Messenger', Messenger);

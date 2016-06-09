@@ -1,3 +1,4 @@
+var CAPITAL_ELEMENT = capitalize(ELEMENT);
 app.scope(function (app) {
     var _ = app._,
         factories = _.factories,
@@ -30,7 +31,7 @@ app.scope(function (app) {
                 return memo;
             }, {});
         },
-        Element = factories.Directive.extend('Element', {
+        Element = factories.Directive.extend(CAPITAL_ELEMENT, {
             constructor: function (view) {
                 this.view = view;
                 return this;
@@ -180,7 +181,7 @@ app.scope(function (app) {
                 return directive;
             }
         });
-    app.defineDirective(ELEMENT, Element[CONSTRUCTOR], function (directive, instance) {
+    app.defineDirective(CAPITAL_ELEMENT, Element[CONSTRUCTOR], function (directive, instance) {
         directive.el.destroy();
         directive.unset();
         var ui = directive.ui;

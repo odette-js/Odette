@@ -49,17 +49,51 @@ app.scope(function (app) {
             }
         },
         SYNCER = 'Syncer',
+        wrapSyncer = function (type, successful) {
+            return function () {
+                var syncer = this,
+                    type = type + 'Type',
+                    url = syncer.url(type);
+                if (!url) {
+                    exception({
+                        message: 'syncer methods must have a url'
+                    });
+                }
+                return successful(syncer, url, type);
+            };
+        },
         Syncer = factories[SYNCER] = factories.Events.extend(SYNCER, {
             // base method for xhr things
+            createType: 'POST',
+            updateType: 'PUT',
+            fetchType: 'GET',
             sync: function () {},
             // delete request. request that this model be deleted by the server
             destroy: function () {},
             // get request. this model needs an update
             fetch: function () {},
+            stringify: stringify,
             // put - second+ time
-            update: function () {},
+            update: wrapSyncer('update', function (syncer, url, type) {
+                var json = syncer.toJSON();
+                syncer.request = factories.HTTP({
+                    url: url,
+                    type: type,
+                    data: syncer.stringifyPosts ? syncer.stringify(json) : json
+                });
+            }),
             // post - first time
-            create: function () {}
+            create: wrapSyncer('create', function (syncer, url, type) {
+                syncer.request = factories.HTTP({
+                    url: url,
+                    type: type
+                }).success(function (result) {
+                    syncer[DISPATCH_EVENT]('sync', result);
+                });
+            }),
+            url: function () {
+                return '';
+            }
         }),
         SyncerDirective = app.defineDirective(SYNCER, Syncer[CONSTRUCTOR]),
         Children = factories[CHILDREN] = factories.Collection.extend(CHILDREN, {
@@ -308,7 +342,7 @@ app.scope(function (app) {
              * @func
              * @name Model#unset
              */
-            unset: directives.checkParody(DATA, 'unset', BOOLEAN_FALSE),
+            unset: checkParody(DATA, 'unset', BOOLEAN_FALSE),
             /**
              * @description returns attribute passed into
              * @param {String} attr - property string that is being gotten from the attributes object
@@ -316,7 +350,7 @@ app.scope(function (app) {
              * @func
              * @name Model#get
              */
-            get: directives.checkParody(DATA, 'get'),
+            get: checkParody(DATA, 'get'),
             /**
              * @func
              * @param {String} attr - property string that is being gotten from the attributes object
@@ -324,7 +358,7 @@ app.scope(function (app) {
              * @description checks to see if the current attribute is on the attributes object as anything other an undefined
              * @name Model#has
              */
-            has: directives.checkParody(DATA, 'has', BOOLEAN_FALSE),
+            has: checkParody(DATA, 'has', BOOLEAN_FALSE),
             constructor: function (attributes, secondary) {
                 var model = this;
                 model.reset(attributes);
@@ -379,7 +413,7 @@ app.scope(function (app) {
                     // and if you're not changing already, (already)
                     if (dataDirective.set(key, value) && !dataDirective.changing[name]) {
                         eventsDirective = eventsDirective || model.directive(EVENTS);
-                        eventsDirective.queueStack(CHANGE_COLON + key);
+                        // eventsDirective.queueStack(CHANGE_COLON + key);
                         changedList.push(key);
                     }
                 });
@@ -392,7 +426,7 @@ app.scope(function (app) {
                     duff(changedList, function (name) {
                         var eventName = CHANGE_COLON + name;
                         dataDirective.changing[name] = BOOLEAN_TRUE;
-                        eventsDirective.unQueueStack(eventName);
+                        // eventsDirective.unQueueStack(eventName);
                         model[DISPATCH_EVENT](eventName);
                         dataDirective.changing[name] = BOOLEAN_FALSE;
                     });
@@ -411,7 +445,7 @@ app.scope(function (app) {
                 // to prevent circular dependencies
                 return this.clone();
             },
-            clone: directives.checkParody(DATA, 'clone', function () {
+            clone: checkParody(DATA, 'clone', function () {
                 return {};
             }),
             valueOf: function () {

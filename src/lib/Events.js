@@ -182,7 +182,7 @@ app.scope(function (app) {
              */
             // uniqueKey: 'c',
             initialize: noop,
-            bubble: directives.parody(EVENTS, 'bubble'),
+            bubble: parody(EVENTS, 'bubble'),
             // onUntil: flattenMatrix(untilHandler),
             on: flattenMatrix(attachEventObject, 0, 3, onFiller),
             once: flattenMatrix(onceHandler, 0, 3, onFiller),
@@ -192,9 +192,9 @@ app.scope(function (app) {
             watchOnce: setupWatcher(0, 1),
             watchOther: setupWatcher(1),
             watchOtherOnce: setupWatcher(1, 1),
-            request: directives.parody('messenger', 'request'),
-            reply: directives.parody('messenger', 'reply'),
-            when: directives.parody('Linguistics', 'when'),
+            request: parody('Messenger', 'request'),
+            reply: parody('Messenger', 'reply'),
+            when: parody('Linguistics', 'when'),
             constructor: function (opts) {
                 var model = this;
                 extend(model, opts);

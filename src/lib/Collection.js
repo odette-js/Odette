@@ -1,23 +1,13 @@
 var COLLECTION = 'Collection',
     REVERSED = 'reversed',
-    eachCall = function (array, method, arg) {
-        return duff(array, function (item) {
-            result(item, method, arg);
-        });
-    },
-    results = function (array, method, arg) {
-        return map(array, function (item) {
-            return result(item, method, arg);
-        });
-    },
-    eachCallRight = function (array, method, arg) {
-        return duff(array, function (item) {
-            result(item, method, arg);
-        }, NULL, -1);
-    };
+    REGISTRY = 'Registry',
+    DELIMITED = 'delimited',
+    STRING_MANAGER = 'StringManager',
+    SORTED_COLLECTION = 'Sorted' + COLLECTION;
+// now we start with some privacy
 app.scope(function (app) {
     var isNullMessage = {
-            message: 'object must not be null or undefined'
+            message: 'object must not be null or ' + UNDEFINED
         },
         validIdMessage = {
             message: 'objects in sorted collections must have either a number or string for their valueOf result'
@@ -168,13 +158,12 @@ app.scope(function (app) {
          */
         recreateSelf = function (fn, ctx) {
             return function () {
-                return new this.__constructor__(fn.apply(ctx || this, arguments));
+                return new this[CONSTRUCTOR_KEY](fn.apply(ctx || this, arguments));
             };
         },
         /**
          * @func
          */
-        REGISTRY = 'Registry',
         Registry = factories[REGISTRY] = factories.Directive.extend(REGISTRY, {
             constructor: function () {
                 this.reset();
@@ -216,7 +205,7 @@ app.scope(function (app) {
                 return cached;
             }
         }),
-        recreatingSelfCollection = toArray('eq,pluck,where,whereNot,map,results,filter,cycle,uncycle,flatten,gather'),
+        recreatingSelfCollection = toArray('eq,where,whereNot,map,results,filter,cycle,uncycle,flatten,gather'),
         eachHandlers = {
             each: duff,
             duff: duff,
@@ -336,7 +325,7 @@ app.scope(function (app) {
             cycle: cycle,
             uncycle: uncycle,
             concat: concat,
-            pluck: pluck,
+            // pluck: pluck,
             where: where,
             findWhere: findWhere,
             findLastWhere: findLastWhere,
@@ -350,12 +339,11 @@ app.scope(function (app) {
             flatten: flatten,
             eq: eq
         }),
-        COLLECTION = 'Collection',
-        Collection = factories.Collection = factories.Directive.extend(upCase(COLLECTION), extend({
-            get: directives.parody(REGISTRY, 'get'),
-            keep: directives.parody(REGISTRY, 'keep'),
-            drop: directives.parody(REGISTRY, 'drop'),
-            swap: directives.parody(REGISTRY, 'swap'),
+        Collection = factories[COLLECTION] = factories.Directive.extend(COLLECTION, extend({
+            get: parody(REGISTRY, 'get'),
+            keep: parody(REGISTRY, 'keep'),
+            drop: parody(REGISTRY, 'drop'),
+            swap: parody(REGISTRY, 'swap'),
             constructor: function (items) {
                 this.reset(items);
                 return this;
@@ -430,34 +418,14 @@ app.scope(function (app) {
                     return Collection(arg).unwrap();
                 }));
             })
-            // ,
-            // results: function (key, arg) {
-            //     return this.map(function (obj) {
-            //         return result(obj, key, arg);
-            //     });
-            // }
         }, wrappedCollectionMethods)),
         directiveResult = app.defineDirective(COLLECTION, function () {
             return new Collection[CONSTRUCTOR]();
         }),
-        // just combining two directives here.
-        // One is being extended,
-        // the other is being used on the parent
-        // Collection = factories[COLLECTION] = factories.Collection.extend(COLLECTION, extend({
-        //     get: directives.parody(REGISTRY, 'get'),
-        //     register: directives.parody(REGISTRY, 'keep'),
-        //     unRegister: directives.parody(REGISTRY, 'drop'),
-        //     swapRegister: directives.parody(REGISTRY, 'swap'),
-        //     empty: function (one, two, three) {
-        //         this.reset(one);
-        //         this.directive(REGISTRY).reset(two, three);
-        //         return this;
-        //     }
-        // })),
         appDirectiveResult = app.defineDirective(COLLECTION, function () {
             return Collection();
         }),
-        SortedCollection = factories.SortedCollection = Collection.extend('Sorted' + COLLECTION, {
+        SortedCollection = factories.SortedCollection = Collection.extend(SORTED_COLLECTION, {
             constructor: function (list_, skip) {
                 var sorted = this;
                 Collection[CONSTRUCTOR].call(sorted);
@@ -519,7 +487,7 @@ app.scope(function (app) {
                 return BOOLEAN_TRUE;
             },
             pop: function () {
-                var length = this.length();
+                var length = this[LENGTH]();
                 if (length) {
                     return this.remove(this.last(), length - 1);
                 }
@@ -573,8 +541,7 @@ app.scope(function (app) {
                 return value;
             }
         }),
-        DELIMITED = 'delimited',
-        StringManager = factories.StringManager = SortedCollection.extend('StringManager', {
+        StringManager = factories[STRING_MANAGER] = SortedCollection.extend(STRING_MANAGER, {
             Child: StringObject,
             add: function (string) {
                 var sm = this,

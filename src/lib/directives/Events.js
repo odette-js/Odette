@@ -1,19 +1,15 @@
 var ACTIONS = 'actions',
-    IS_STOPPED = 'isStopped',
-    UPCASED_IS_STOPPED = upCase(IS_STOPPED),
     PROPAGATION = 'propagation',
+    UPCASED_STOPPED = 'Stopped',
     DEFAULT_PREVENTED = 'defaultPrevented',
-    PROPAGATION_IS_HALTED = PROPAGATION + 'IsHalted',
-    PROPAGATION_IS_STOPPED = PROPAGATION + UPCASED_IS_STOPPED,
-    IMMEDIATE_PROP_IS_STOPPED = 'immediate' + upCase(PROPAGATION) + UPCASED_IS_STOPPED;
+    PROPAGATION_HALTED = PROPAGATION + 'Halted',
+    PROPAGATION_STOPPED = PROPAGATION + UPCASED_STOPPED,
+    IMMEDIATE_PROP_STOPPED = 'immediate' + upCase(PROPAGATION) + UPCASED_STOPPED;
 app.scope(function (app) {
     var _ = app._,
         factories = _.factories,
-        __FN_ID__ = '__fnid__',
         event_incrementer = 1,
         Collection = factories.Collection,
-        // List = factories.List,
-        REMOVE_QUEUE = 'removeQueue',
         listeningCounter = 0,
         returnsId = function () {
             return this.id;
@@ -22,7 +18,10 @@ app.scope(function (app) {
         ObjectEvent = factories.ObjectEvent = factories.Directive.extend('ObjectEvent', {
             constructor: function (target, data, name, options, when) {
                 var evnt = this;
-                evnt[PROPAGATION_IS_HALTED] = evnt[PROPAGATION_IS_STOPPED] = evnt[IMMEDIATE_PROP_IS_STOPPED] = BOOLEAN_FALSE;
+                evnt.unmark(PROPAGATION_HALTED);
+                evnt.unmark(PROPAGATION_STOPPED);
+                evnt.unmark(IMMEDIATE_PROP_STOPPED);
+                // evnt[PROPAGATION_HALTED] = evnt[PROPAGATION_STOPPED] = evnt[IMMEDIATE_PROP_STOPPED] = BOOLEAN_FALSE;
                 evnt[ORIGIN] = target;
                 evnt[NAME] = name;
                 evnt[TYPE] = name.split(COLON)[0];
@@ -36,7 +35,7 @@ app.scope(function (app) {
                 return evnt;
             },
             isStopped: function () {
-                return this[PROPAGATION_IS_STOPPED] || this[IMMEDIATE_PROP_IS_STOPPED];
+                return this.is(PROPAGATION_STOPPED) || this.is(IMMEDIATE_PROP_STOPPED);
             },
             data: function (datum) {
                 return arguments[LENGTH] ? this.set(datum) : this[PASSED_DATA];
@@ -51,11 +50,11 @@ app.scope(function (app) {
             },
             stopImmediatePropagation: function () {
                 this.stopPropagation();
-                this[IMMEDIATE_PROP_IS_STOPPED] = BOOLEAN_TRUE;
-                this[PROPAGATION_IS_HALTED] = BOOLEAN_TRUE;
+                this.mark(IMMEDIATE_PROP_STOPPED);
+                this.mark(PROPAGATION_HALTED);
             },
             stopPropagation: function () {
-                this[PROPAGATION_IS_STOPPED] = BOOLEAN_TRUE;
+                this.mark(PROPAGATION_STOPPED);
             },
             preventDefault: function () {
                 this[DEFAULT_PREVENTED] = BOOLEAN_TRUE;
@@ -231,10 +230,15 @@ app.scope(function (app) {
                     running = events.running,
                     // prevents infinite loops
                     cached = running[name],
-                    stopped = evnt[PROPAGATION_IS_STOPPED],
+                    stopped = evnt.is(PROPAGATION_STOPPED),
                     bus = events.proxyStack;
                 // make sure setup is proper
-                if (cached || stopped || !list || !list[LENGTH]()) {
+                if (cached) {
+                    return exception({
+                        message: 'cannot stack events coming from the same object'
+                    });
+                }
+                if (stopped || !list || !list[LENGTH]()) {
                     return;
                 }
                 running[name] = BOOLEAN_TRUE;
@@ -246,7 +250,7 @@ app.scope(function (app) {
                         handler.fn(evnt);
                         events.unQueue(stack, handler, evnt);
                     }
-                    stopped = !!evnt[PROPAGATION_IS_HALTED];
+                    stopped = !!evnt.is(PROPAGATION_HALTED);
                 }
                 if (stopped) {
                     events.cancelled(stack, evnt);
@@ -257,18 +261,6 @@ app.scope(function (app) {
             },
             subset: function (list) {
                 return list.slice(0);
-            },
-            queueStack: function (name) {
-                var queued = this.queued;
-                if (!queued[name]) {
-                    queued[name] = 0;
-                }
-                return ++queued[name];
-            },
-            unQueueStack: function (name) {
-                if (!--this.queued[name]) {
-                    delete this.queued[name];
-                }
             }
         });
     app.defineDirective(EVENTS, factories.EventsDirective[CONSTRUCTOR]);

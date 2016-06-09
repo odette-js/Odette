@@ -149,18 +149,18 @@ app.scope(function (app) {
                 if (!manager) {
                     return region;
                 }
-                region.directive(ELEMENT).set(manager);
+                region.directive(CAPITAL_ELEMENT).set(manager);
                 return region;
             },
             render: function () {
                 var region = this,
                     bufferDirective = region.directive(BUFFERED_VIEWS),
-                    elementDirective = region.directive(ELEMENT);
+                    elementDirective = region.directive(CAPITAL_ELEMENT);
                 region.unmark(RENDERED);
                 // doc frags on regionviews, list of children to trigger events on
                 bufferDirective.ensure();
                 // request extra data or something before rendering: dom is still completely intact
-                region[DISPATCH_EVENT]('before:' + RENDER);
+                region[DISPATCH_EVENT](BEFORE_COLON + RENDER);
                 // unbinds and rebinds element only if it changes
                 region.setElement();
                 // update new element's attributes
@@ -203,9 +203,9 @@ app.scope(function (app) {
         // view needs to be pitted against a document
         View = factories.View = Region.extend('View', {
             Model: Model,
-            getRegion: directives.parody(REGION_MANAGER, 'get'),
-            addRegion: directives.parody(REGION_MANAGER, 'add'),
-            removeRegion: directives.parody(REGION_MANAGER, 'remove'),
+            getRegion: parody(REGION_MANAGER, 'get'),
+            addRegion: parody(REGION_MANAGER, 'add'),
+            removeRegion: parody(REGION_MANAGER, 'remove'),
             addChildView: addChildView,
             removeChildView: removeChildView,
             tagName: 'div',
@@ -234,13 +234,14 @@ app.scope(function (app) {
                 var secondary = secondary_ || {};
                 secondary.model = Model.isInstance(secondary.model) ? secondary.model : view.Model(secondary.model);
                 Parent[CONSTRUCTOR].call(view, secondary);
-                view.directive(ELEMENT).ensure();
+                view.directive(CAPITAL_ELEMENT).ensure();
                 this.id = uniqueId(BOOLEAN_FALSE, BOOLEAN_TRUE);
                 establishRegions(this);
                 return view;
             },
+            // mostly sorting purposes
             valueOf: function () {
-                return this.model.id;
+                return this.model.valueOf();
             },
             destroy: function (handler) {
                 var view = this;
@@ -256,7 +257,7 @@ app.scope(function (app) {
                 if (view.el) {
                     view.el.destroy(handler);
                 }
-                view.directiveDestruction(ELEMENT);
+                view.directiveDestruction(CAPITAL_ELEMENT);
                 Parent[CONSTRUCTOR][PROTOTYPE].destroy.call(view);
                 return view;
             },
@@ -268,11 +269,11 @@ app.scope(function (app) {
                 if (!view.filter()) {
                     return view;
                 }
-                element = view.directive(ELEMENT);
+                element = view.directive(CAPITAL_ELEMENT);
                 // prep the object with extra members (doc frags on regionviews,
                 // list of children to trigger events on)
                 // request extra data or something before rendering: dom is still completely intact
-                view[DISPATCH_EVENT]('before:' + RENDER);
+                view[DISPATCH_EVENT](BEFORE_COLON + RENDER);
                 // renders the html
                 json = view.model && view.model.toJSON();
                 // try to generate template
@@ -399,7 +400,7 @@ app.scope(function (app) {
         };
     });
     app.extend(foldl(toArray('add,remove,get'), function (memo, key) {
-        memo[key + 'Region'] = directives.parody(REGION_MANAGER, key);
+        memo[key + 'Region'] = parody(REGION_MANAGER, key);
         return memo;
     }, {
         addChildView: addChildView,

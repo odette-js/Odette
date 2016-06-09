@@ -141,7 +141,7 @@ app.scope(function (app) {
             run: function (_nowish) {
                 var sliced, finished, i = 0,
                     tween = this;
-                if (tween.is(HALTED) || tween.is(STOPPED) || !tween.length()) {
+                if (tween.is(HALTED) || tween.is(STOPPED) || !tween[LENGTH]()) {
                     return;
                 }
                 sliced = factories.Collection(tween.unwrap().slice(0));
@@ -149,7 +149,6 @@ app.scope(function (app) {
                 for (; i < tween[LENGTH]() && !finished; i++) {
                     finished = runner(tween, tween.item(i), i);
                 }
-                // sliced.find(runner, tween);
                 tween.current = NULL;
                 tween.unmark(RUNNING);
             },

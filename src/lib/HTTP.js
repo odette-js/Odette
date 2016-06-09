@@ -11,17 +11,21 @@ app.scope(function (app) {
         XDomainRequest = win.XDomainRequest,
         stringifyQuery = _.stringifyQuery,
         GET = 'GET',
+        PROGRESS = 'progress',
         validTypes = toArray(GET + ',POST,PUT,DELETE,HEAD,TRACE,OPTIONS,CONNECT'),
-        baseEvents = toArray('progress,timeout,abort,' + ERROR),
+        baseEvents = toArray(PROGRESS + ',timeout,abort,' + ERROR),
         attachBaseListeners = function (ajax) {
             var prog = 0,
                 req = ajax.requestObject;
             duff(baseEvents, function (evnt) {
-                if (evnt === 'progress') {
+                if (evnt === PROGRESS) {
+                    // we put it directly on the xhr object so we can
+                    // account for certain ie bugs that show up
                     req['on' + evnt] = function (e) {
+                        var percent = (e.loaded / e.total);
                         prog++;
-                        ajax.dispatchEvent('progress', {
-                            percent: (e.loaded / e.total) || (prog / (prog + 1)),
+                        ajax[DISPATCH_EVENT](PROGRESS, {
+                            percent: percent || (prog / (prog + 1)),
                             counter: prog
                         }, {
                             originalEvent: e

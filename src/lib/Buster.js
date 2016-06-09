@@ -9,7 +9,7 @@ app.scope(function (app) {
         IS_WINDOW = 'isWindow',
         DEFERRED = 'deferred',
         RESOLVED = 'resolved',
-        IS_DEFERRED = 'is' + upCase(DEFERRED),
+        IS_DEFERRED = 'is' + capitalize(DEFERRED),
         GROUP = 'group',
         POST_TO = 'postTo',
         COMMAND = 'command',
@@ -23,7 +23,7 @@ app.scope(function (app) {
         RESPONSE = 'response',
         MESSAGE = 'message',
         RESPONSE_OPTIONS = RESPONSE + 'Options',
-        CAPITAL_RESPONSE = upCase(RESPONSE),
+        CAPITAL_RESPONSE = capitalize(RESPONSE),
         LATEST_RESPONSE = 'latest' + CAPITAL_RESPONSE,
         LAST_RESPONSE = 'last' + CAPITAL_RESPONSE,
         RESPONDED = 'responded',
@@ -76,7 +76,7 @@ app.scope(function (app) {
         },
         defaultGroupId = uuid(),
         RESPOND_HANDLERS = 'respondHandlers',
-        Message = factories.Model.extend(upCase(MESSAGE), {
+        Message = factories.Model.extend(capitalize(MESSAGE), {
             idAttribute: MESSAGE + 'Id',
             initialize: function () {
                 var message = this;
@@ -165,7 +165,7 @@ app.scope(function (app) {
             buster.mark(CONNECTED);
             buster[DISPATCH_EVENT](CONNECTED);
         },
-        UPCASED_BUSTER = upCase(BUSTER),
+        UPCASED_BUSTER = capitalize(BUSTER),
         defaultMessage = function (buster) {
             return {
                 from: buster.get(ID),

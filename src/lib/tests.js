@@ -1,4 +1,4 @@
-application.scope().run(function (app, _, factories) {
+app.run(function (app, _, factories) {
     var current, pollerTimeout, allIts, describes, successfulIts, failedIts, stack, queue, allExpectations, successful, failures, successfulExpectations, failedExpectations, globalBeforeEachStack, globalAfterEachStack, failedTests = 0,
         testisrunning = BOOLEAN_FALSE,
         EXPECTED = 'expected',
@@ -201,7 +201,7 @@ application.scope().run(function (app, _, factories) {
                         theIt = allIts[i];
                         totalTime += (theIt.endTime - theIt.startTime);
                     }
-                    string = successfulExpectations.length + ' successful expectations\n' + failedExpectations.length + ' failed expectations\n' + allExpectations.length + ' expectations ran\n' + successfulIts.length + ' out of ' + allIts.length + ' tests passed\nin ' + totalTime + 'ms';
+                    string = successfulExpectations[LENGTH] + ' successful expectations\n' + failedExpectations[LENGTH] + ' failed expectations\n' + allExpectations[LENGTH] + ' expectations ran\n' + successfulIts[LENGTH] + ' out of ' + allIts[LENGTH] + ' tests passed\nin ' + totalTime + 'ms';
                     resetTests();
                     console.log(string);
                 } else {

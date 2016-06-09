@@ -466,7 +466,30 @@ application.scope().run(function (app, _) {
             }
         });
         _.it('_.string.match', function () {
-            _.expect(_.string.match('strings', 'string')).toEqual(['string']);
+            _.expect(_.string.match('strings are my stringy friends', 'string')).toEqual(['string']);
+        });
+        _.it('_.string.toLowerCase', function () {
+            _.expect(_.string.toLowerCase('YaYlOwErcasD')).toEqual('yaylowercasd');
+        });
+        _.it('_.string.toUpperCase', function () {
+            _.expect(_.string.toUpperCase('YaYlOwErcasD')).toEqual('YAYLOWERCASD');
+        });
+        _.it('_.baseUnitList', function () {
+            _.expect(_.baseUnitList.slice(0).sort()).toEqual(['vmax', 'vmin', 'rem', 'cm', 'em', 'ex', 'in', 'mm', 'pc', 'pt', 'px', 'vh', 'vw', '%'].slice(0).sort());
+        });
+        _.it('_.parseHash', function () {
+            _.expect(_.parseHash('#{"things":true}')).toEqual({
+                things: true
+            });
+        });
+        _.it('_.isHttp', function () {
+            _.expect(_.isHttp('http://localhost:8080')).toEqual(true);
+            _.expect(_.isHttp('https://localhost:8080')).toEqual(true);
+            _.expect(_.isHttp('//localhost:8080')).toEqual(true);
+            _.expect(_.isHttp('localhost:8080')).toEqual(false);
+            _.expect(_.isHttp('//localhost:8080//')).toEqual(false);
+            _.expect(_.isHttp(' //localhost:8080')).toEqual(false);
+            _.expect(_.isHttp('//localhost/alsdf.js')).toEqual(true);
         });
     });
 });
@@ -697,7 +720,7 @@ application.scope().run(function (app, _, factories) {
                     one: 3
                 }, {
                     one: 4
-                }]).pluck('one').unwrap()).toEqual([1, 2, 3, 4]);
+                }]).results('one').unwrap()).toEqual([1, 2, 3, 4]);
             });
             _.it('where', function () {
                 _.expect(factories.Collection([{

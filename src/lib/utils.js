@@ -1,25 +1,9 @@
 var factories = {},
-    // object = Object,
-    fn = Function,
-    FunctionConstructor = fn[CONSTRUCTOR],
-    array = Array,
-    string = String,
-    number = Number,
-    BRACKET_OBJECT_SPACE = '[object ',
-    stringProto = string[PROTOTYPE],
-    // objectProto = object[PROTOTYPE],
-    arrayProto = array[PROTOTYPE],
-    funcProto = fn[PROTOTYPE],
-    nativeKeys = Object.keys,
-    objectToString = Object[PROTOTYPE].toString,
+    nativeKeys = OBJECT_CONSTRUCTOR.keys,
+    objectToString = OBJECT_CONSTRUCTOR[PROTOTYPE].toString,
     hasEnumBug = !{
         toString: NULL
     }.propertyIsEnumerable(TO_STRING),
-    MAX_VALUE = number.MAX_VALUE,
-    MIN_VALUE = number.MIN_VALUE,
-    MAX_SAFE_INTEGER = number.MAX_SAFE_INTEGER,
-    MIN_SAFE_INTEGER = number.MIN_SAFE_INTEGER,
-    MAX_ARRAY_LENGTH = 4294967295,
     noop = function () {},
     /**
      * @func
@@ -114,12 +98,9 @@ var factories = {},
      * @func
      */
     sort = function (obj, fn_, reversed, context) {
-        var fn = fn_ || function (a, b) {
+        var fn = bindTo(fn_ || function (a, b) {
             return a > b;
-        };
-        // if (context) {
-        fn = bindTo(fn, context);
-        // }
+        }, context);
         // normalize sort function handling for safari
         return obj.sort(function (a, b) {
             var result = fn(a, b);
@@ -181,9 +162,6 @@ var factories = {},
     previousConstructor = function (instance) {
         return instance && instance[CONSTRUCTOR_KEY] && instance[CONSTRUCTOR_KEY][CONSTRUCTOR] || instance[CONSTRUCTOR];
     },
-    // nativeIsInstance = function (instance, constructor) {
-    //     return instance instanceof constructor;
-    // },
     isInstance = function (instance, constructor_) {
         var constructor = constructor_;
         if (has(constructor, CONSTRUCTOR)) {
@@ -202,19 +180,22 @@ var factories = {},
     /**
      * @func
      */
-    isWrap = function (type, fn) {
-        if (!fn) {
-            fn = function () {
-                return BOOLEAN_TRUE;
-            };
-        }
-        return function (thing) {
-            var ret = 0;
-            if (typeof thing === type && fn(thing)) {
-                ret = BOOLEAN_TRUE;
-            }
-            return !!ret;
+    isWrap = function (type, fn_) {
+        var fn = fn_ || function () {
+            return BOOLEAN_TRUE;
         };
+        return function (thing) {
+            return typeof thing === type && fn(thing);
+        };
+    },
+    /**
+     * @func
+     */
+    isNaN = function (thing) {
+        return thing !== thing;
+    },
+    notNaN = function (thing) {
+        return thing === thing;
     },
     /**
      * @func
@@ -228,6 +209,10 @@ var factories = {},
      * @func
      */
     isString = isWrap(STRING),
+    isNumber = isWrap(NUMBER, notNaN),
+    isObject = isWrap(OBJECT, function (thing) {
+        return !!thing;
+    }),
     /**
      * @func
      */
@@ -237,37 +222,25 @@ var factories = {},
     isUndefined = function (thing) {
         return thing === UNDEFINED;
     },
-    isBlank = function (thing) {
-        return isUndefined(thing) || isNull(thing);
-    },
-    /**
-     * @func
-     */
-    isNaN = function (thing) {
-        return thing !== thing;
-    },
     negate = function (fn) {
         return function () {
             return !fn.apply(this, arguments);
         };
     },
-    isNumber = isWrap('number', function (thing) {
-        return thing === thing;
-    }),
     isFinite_ = win.isFinite,
     isFinite = function (thing) {
         return isNumber(thing) && isFinite_(thing);
     },
+    isWindow = function (obj) {
+        return !!(obj && obj === obj[WINDOW]);
+    },
     /**
      * @func
      */
-    isObject = isWrap(OBJECT, function (thing) {
-        return !!thing;
-    }),
     /**
      * @func
      */
-    isArray = Array.isArray,
+    isArray = ARRAY_CONSTRUCTOR.isArray,
     /**
      * @func
      */
@@ -304,13 +277,6 @@ var factories = {},
             }
         }
     },
-    /**
-     * @func
-     */
-    // stringify = toString,
-    // stringify = function (obj) {
-    //     return (isObject(obj) ? JSON.stringify(obj) : isFunction(obj) ? obj.toString() : obj) + EMPTY_STRING;
-    // },
     /**
      * @func
      */
@@ -382,7 +348,6 @@ var factories = {},
     zip = function (lists) {
         var aggregator = [];
         duff(lists, function (list, listCount) {
-            // var zipped = aggregator
             duff(list, function (item, index) {
                 var destination = aggregator[index];
                 if (!aggregator[index]) {
@@ -634,9 +599,9 @@ var factories = {},
             if (child) {
                 passedParent = child;
             }
-            child = new FunctionConstructor('parent', 'return function ' + name + '(){return parent.apply(this,arguments);}')(passedParent);
+            child = new FUNCTION_CONSTRUCTOR_CONSTRUCTOR('parent', 'return function ' + name + '(){return parent.apply(this,arguments);}')(passedParent);
         } else {
-            child = child || new FunctionConstructor('parent', 'return ' + parent.toString())(parent);
+            child = child || new FUNCTION_CONSTRUCTOR_CONSTRUCTOR('parent', 'return ' + parent.toString())(parent);
         }
         child[EXTEND] = constructorExtend;
         var Surrogate = function () {
@@ -869,7 +834,7 @@ var factories = {},
     concatUnique = function () {
         return foldl(arguments, function (memo, argument) {
             duff(argument, function (item) {
-                if (smartIndexOf(memo, item) === -1) {
+                if (indexOf(memo, item) === -1) {
                     memo.push(item);
                 }
             });
@@ -906,11 +871,9 @@ var factories = {},
         };
     },
     // uncycle = internalMambo(cycle),
-    pluck = function (arr, key) {
-        return map(arr, function (item) {
-            return result(item, key);
-        });
-    },
+    // pluck = function (arr, key) {
+    //     return results(arr, key);
+    // },
     filter = function (obj, iteratee, context) {
         var isArrayResult = isArrayLike(obj),
             bound = bindTo(iteratee, context),
@@ -967,7 +930,7 @@ var factories = {},
             return baseDataTypes[val];
         }
         if (val.slice(0, 8) === 'function') {
-            return new FunctionConstructor('return ' + val)();
+            return new FUNCTION_CONSTRUCTOR_CONSTRUCTOR('return ' + val)();
         }
         return val;
     },
@@ -978,7 +941,7 @@ var factories = {},
             string = split.shift();
             string = (string = split.join('{')).slice(0, string[LENGTH] - 1);
         }
-        bound = FunctionConstructor.bind(context);
+        bound = FUNCTION_CONSTRUCTOR_CONSTRUCTOR.bind(context);
         handler = new bound('return ' + string);
         bound = bindTo(handler, context);
         return bound();
@@ -997,7 +960,7 @@ var factories = {},
         if (arrayLike[LENGTH] === 1) {
             return [arrayLike[0]];
         } else {
-            return Array.apply(NULL, arrayLike);
+            return ARRAY_CONSTRUCTOR.apply(NULL, arrayLike);
         }
     },
     objectToArray = function (obj) {
@@ -1232,18 +1195,27 @@ var factories = {},
     result = function (obj, str, arg, knows) {
         return obj == NULL ? obj : (isFunction(obj[str]) ? obj[str](arg) : (isObject(obj) ? obj[str] : obj));
     },
+    eachCall = function (array, method, arg) {
+        return duff(array, function (item) {
+            result(item, method, arg);
+        });
+    },
+    results = function (array, method, arg) {
+        return map(array, function (item) {
+            return result(item, method, arg);
+        });
+    },
+    eachCallRight = function (array, method, arg) {
+        return duff(array, function (item) {
+            result(item, method, arg);
+        }, NULL, -1);
+    },
     maths = Math,
     mathArray = function (method) {
         return function (args) {
             return maths[method].apply(maths, args);
         };
     },
-    // ensureFunction = function (fn) {
-    //     return function (_fn) {
-    //         _fn = _fn || noop;
-    //         return fn.call(this, _fn);
-    //     };
-    // },
     /**
      * @func
      */
@@ -1414,7 +1386,6 @@ var factories = {},
         isNumber: isNumber,
         isFinite: isFinite,
         isString: isString,
-        isBlank: isBlank,
         isNull: isNull,
         isNaN: isNaN,
         eachProxy: eachProxy,

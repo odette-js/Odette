@@ -3,9 +3,12 @@ app.scope(function (app) {
         factories = _.factories,
         Model = factories.Model,
         Collection = factories.Collection,
-        MODULES = 'Modules',
+        MODULE = 'module',
+        CAPITAL_MODULE = capitalize(MODULE),
+        MODULES = CAPITAL_MODULE + 's',
         STARTED = START + 'ed',
         INITIALIZED = 'initialized',
+        INITIALIZED_COLON_SUBMODULE = INITIALIZED + COLON + 'sub' + MODULE,
         DEFINED = 'defined',
         startableMethods = {
             start: function (evnt) {
@@ -54,14 +57,14 @@ app.scope(function (app) {
             }
         },
         createArguments = function (module, args) {
-            return [module].concat(module.application.createArguments(), args || []);
+            return [module].concat(module[APPLICATION].createArguments(), args || []);
         },
         checks = function (app, list) {
             var exporting = [];
             duff(list, function (path) {
                 var module = app.module(path);
                 if (module.is(INITIALIZED)) {
-                    exporting.push(module.exports);
+                    exporting.push(module[EXPORTS]);
                 }
             });
             return exporting[LENGTH] === list[LENGTH] ? exporting : BOOLEAN_FALSE;
@@ -77,11 +80,11 @@ app.scope(function (app) {
                     module = parent.directive(CHILDREN).get(name_),
                     triggerBubble = function () {
                         module.mark(DEFINED);
-                        module.parent.bubble(INITIALIZED + ':submodule');
+                        module[PARENT].bubble(INITIALIZED_COLON_SUBMODULE);
                     };
                 if (module) {
                     // hey, i found it. we're done here
-                    parent = module.parent;
+                    parent = module[PARENT];
                     if (!fn) {
                         return module;
                     }
@@ -97,9 +100,9 @@ app.scope(function (app) {
                 name = namespace.join(PERIOD);
                 module = parentModulesDirective.get(ID, name);
                 if (!module) {
-                    list = parent.globalname ? parent.globalname.split('.') : [];
+                    list = parent.globalname ? parent.globalname.split(PERIOD) : [];
                     list.push(name);
-                    globalname = list.join('.');
+                    globalname = list.join(PERIOD);
                     arg2 = extend(result(parent, 'childOptions') || {}, {
                         application: app,
                         parent: parent,
@@ -116,7 +119,7 @@ app.scope(function (app) {
                     app[CHILDREN].keep(ID, globalname, module);
                 }
                 if (isWindow(windo) || isFunction(windo) || isFunction(fn)) {
-                    module.exports = module.exports || {};
+                    module[EXPORTS] = module[EXPORTS] || {};
                     module.mark(INITIALIZED);
                     initResult = module.run(windo, fn);
                     // allows us to create dependency graphs
@@ -133,7 +136,7 @@ app.scope(function (app) {
                     fn = isFunction(windo) ? windo : fn_,
                     args = isWindow(windo) ? [windo.DOMA] : [];
                 if (isFunction(fn)) {
-                    if (module.application !== module) {
+                    if (module[APPLICATION] !== module) {
                         result = fn.apply(module, createArguments(module, args));
                     } else {
                         result = fn.apply(module, module.createArguments(args));
@@ -144,7 +147,7 @@ app.scope(function (app) {
             publicize: function (one, two) {
                 var module = this;
                 intendedObject(one, two, function (key, value) {
-                    module.exports[key] = value;
+                    module[EXPORTS][key] = value;
                 });
                 return module;
             },
@@ -152,22 +155,22 @@ app.scope(function (app) {
                 var module = this;
                 module.startWithParent = BOOLEAN_TRUE;
                 module.stopWithParent = BOOLEAN_TRUE;
-                module.exports = {};
+                module[EXPORTS] = {};
                 Model[CONSTRUCTOR].apply(module, arguments);
-                module.listenTo(module.parent, {
+                module.listenTo(module[PARENT], {
                     start: doStart,
                     stop: doStop
                 });
                 return module;
             },
             topLevel: function () {
-                return !this.application || this.application === this[PARENT];
+                return !this[APPLICATION] || this[APPLICATION] === this[PARENT];
             },
             require: function (modulename, handler) {
                 var promise, module, list, mappedArguments, app = this;
                 if (!isFunction(handler)) {
                     module = app.module(modulename);
-                    return module.is(DEFINED) ? module.exports : exception({
+                    return module.is(DEFINED) ? module[EXPORTS] : exception({
                         message: 'that module has not ' + DEFINED + ' initialization yet'
                     });
                 } else {
@@ -181,7 +184,7 @@ app.scope(function (app) {
                     if ((mappedArguments = checks(app, list))) {
                         promise.fulfill(mappedArguments);
                     } else {
-                        app.application.on(INITIALIZED + ':submodule', function () {
+                        app[APPLICATION].on(INITIALIZED_COLON_SUBMODULE, function () {
                             if ((mappedArguments = checks(app, list))) {
                                 app.off();
                                 promise.fulfill(mappedArguments);
@@ -193,7 +196,7 @@ app.scope(function (app) {
             }
         },
         extraModuleArguments = [],
-        Module = factories.Module = factories.Model.extend('Module', extend({}, startableMethods, moduleMethods)),
+        Module = factories.Module = factories.Model.extend(MODULE, extend({}, startableMethods, moduleMethods)),
         baseModuleArguments = function (app) {
             var _ = app._;
             return [app, _, _ && _.factories];

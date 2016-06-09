@@ -1,8 +1,5 @@
 var ATTACHED = 'attached',
-    IFRAME = 'iframe',
-    isWindow = function (obj) {
-        return obj && obj === obj[WINDOW];
-    };
+    IFRAME = 'iframe';
 app.scope(function (app) {
     var _ = app._,
         ATTRIBUTES = 'Attributes',
@@ -97,7 +94,7 @@ app.scope(function (app) {
             var source = "__HTML__+='";
             text.replace(matcher, function (match, escape, interpolate, evaluate, offset) {
                 source += text.slice(index, offset).replace(escapeRegExp, escapeChar);
-                index = offset + match.length;
+                index = offset + match[LENGTH];
                 if (escape) {
                     source += "'+\n((__t=(this." + escape + "))==null?'':_.escape(__t))+\n'";
                 } else if (interpolate) {
@@ -1840,7 +1837,7 @@ app.scope(function (app) {
         },
         styleManipulator = function (one, two) {
             var unCameled, styles, manager = this;
-            if (!manager.length()) {
+            if (!manager[LENGTH]()) {
                 return manager;
             }
             if (isString(one) && two === UNDEFINED) {
@@ -2060,14 +2057,14 @@ app.scope(function (app) {
             },
             stopPropagation: function () {
                 var e = this.originalEvent;
-                this[PROPAGATION_IS_STOPPED] = BOOLEAN_TRUE;
+                this[PROPAGATION_STOPPED] = BOOLEAN_TRUE;
                 if (e && e.stopPropagation) {
                     e.stopPropagation();
                 }
             },
             stopImmediatePropagation: function () {
                 var e = this.originalEvent;
-                this[IMMEDIATE_PROP_IS_STOPPED] = BOOLEAN_TRUE;
+                this[IMMEDIATE_PROP_STOPPED] = BOOLEAN_TRUE;
                 if (e && e.stopImmediatePropagation) {
                     e.stopImmediatePropagation();
                 }
@@ -2181,8 +2178,8 @@ app.scope(function (app) {
                 });
             },
             queue: function (stack, handler, evnt) {
-                if (evnt[PROPAGATION_IS_STOPPED] && evnt.currentTarget !== handler.temporaryTarget) {
-                    evnt[PROPAGATION_IS_HALTED] = BOOLEAN_TRUE;
+                if (evnt[PROPAGATION_STOPPED] && evnt.currentTarget !== handler.temporaryTarget) {
+                    evnt[PROPAGATION_HALTED] = BOOLEAN_TRUE;
                     return BOOLEAN_FALSE;
                 }
                 evnt.currentTarget = handler.temporaryTarget;
@@ -2340,10 +2337,31 @@ app.scope(function (app) {
             manager = new Wrapper[CONSTRUCTOR](manager, data, owner);
             return manager;
         },
+        removeHandler = function (fragment, handler) {
+            var el, parent, manager = this,
+                cachedRemoving = manager.is(REMOVING) || BOOLEAN_FALSE;
+            if (cachedRemoving || !(el = manager.element()) || !(parent = el[PARENT_NODE])) {
+                // can't remove because already removed
+                return manager;
+            }
+            manager.mark(REMOVING);
+            if (manager.isIframe && handler && isFunction(handler)) {
+                manager.owner.window().element().setTimeout(bind(handler, NULL, manager));
+            }
+            if (fragment) {
+                fragment.appendChild(el);
+            } else {
+                parent.removeChild(el);
+            }
+            dispatchDetached([el], manager.owner);
+            manager.remark(REMOVING, cachedRemoving);
+            return manager;
+        },
         DomManager = factories.DomManager = factories.Events.extend(DOM_MANAGER_STRING, extend({}, classApi, {
             'directive:creation:EventManager': DomEventsDirective,
             isValidDomManager: BOOLEAN_TRUE,
             $: manager_query,
+            querySelectorAll: manager_query,
             queryString: function () {
                 var string = '';
                 var json = this.toJSON(BOOLEAN_TRUE);
@@ -2655,11 +2673,11 @@ app.scope(function (app) {
                     return BOOLEAN_TRUE;
                 }
                 if (manager.is(ACCESSABLE)) {
-                    parsedReference = reference(element.location.href);
+                    parsedReference = reference(element[LOCATION].href);
                     if (!parsedReference && manager.iframe) {
                         parsedReference = reference(manager.iframe.src());
                     }
-                    return !parsedReference || parsedReference === reference(windoElement.location.href);
+                    return !parsedReference || parsedReference === reference(windoElement[LOCATION].href);
                 }
                 return BOOLEAN_FALSE;
             },
@@ -2685,12 +2703,12 @@ app.scope(function (app) {
                     return BOOLEAN_FALSE;
                 }
                 styles = manager.getStyle();
-                if (+styles.opacity === 0 || styles.display === NONE || styles.height === '0px' || styles.width === '0px' || styles.visibility === HIDDEN) {
+                if (+styles.opacity === 0 || styles.display === NONE || styles[HEIGHT] === ZERO_PIXELS || styles[WIDTH] === ZERO_PIXELS || styles.visibility === HIDDEN) {
                     return BOOLEAN_FALSE;
                 }
                 element = manager.element();
                 client = element.getBoundingClientRect();
-                if (!client.height || !client.width) {
+                if (!client[HEIGHT] || !client[WIDTH]) {
                     return BOOLEAN_FALSE;
                 }
                 windoElement = (manager.element().ownerDocument || {}).defaultView;
@@ -2706,10 +2724,10 @@ app.scope(function (app) {
                 return windo.isTop ? BOOLEAN_TRUE : windowIsVisible(windo, manager.owner);
             },
             hide: function () {
-                return this.applyStyle('display', 'none');
+                return this.applyStyle(DISPLAY, NONE);
             },
             show: function () {
-                return this.applyStyle('display', 'block');
+                return this.applyStyle(DISPLAY, 'block');
             },
             applyStyle: function (key, value, important) {
                 applyStyle(key, value, this, important);
@@ -2724,29 +2742,12 @@ app.scope(function (app) {
                 }
                 return returnValue;
             },
-            remove: function (fragment, handler) {
-                var el, parent, manager = this,
-                    cachedRemoving = manager.is(REMOVING) || BOOLEAN_FALSE;
-                if (cachedRemoving || !(el = manager.element()) || !(parent = el[PARENT_NODE])) {
-                    return manager;
-                }
-                manager.mark(REMOVING);
-                if (manager.isIframe && handler && isFunction(handler)) {
-                    setTimeout(bind(handler, NULL, manager));
-                }
-                if (fragment) {
-                    fragment.appendChild(el);
-                } else {
-                    parent.removeChild(el);
-                }
-                dispatchDetached([el], manager.owner);
-                manager.remark(REMOVING, cachedRemoving);
-                return manager;
-            },
-            frame: function (head, body) {
+            remove: removeHandler,
+            removeChild: removeHandler,
+            frame: function (head, body, passedContent) {
                 var manager = this,
                     content = head || '';
-                if (body || content.toLowerCase().split('<!doctype ')[LENGTH] === 1) {
+                if (!passedContent && (body || content.slice(0, 10).toLowerCase() !== '<!doctype ')) {
                     content = manager.owner.iframeContent(content, body);
                 }
                 if (manager.isIframe) {
@@ -2757,7 +2758,7 @@ app.scope(function (app) {
                     }
                     return manager;
                 } else {
-                    return content;
+                    return manager;
                 }
             },
             // rework how to destroy elements
@@ -2777,7 +2778,7 @@ app.scope(function (app) {
                     customName = manager.owner.registeredElementName(registeredAs);
                     manager.directiveDestruction(customName);
                 }
-                manager.dispatchEvent(DESTROY);
+                manager[DISPATCH_EVENT](DESTROY);
                 // destroy events
                 manager.directiveDestruction(EVENTS);
                 // remove from global hash
@@ -2821,32 +2822,7 @@ app.scope(function (app) {
                 if (manager.isWindow || manager.isDocument) {
                     return {};
                 }
-                obj = {
-                    tag: manager.isFragment ? DIV : tag(node)
-                };
-                if (!preventDeep) {
-                    children = manager.children();
-                    if ((childrenLength = children[LENGTH]())) {
-                        temporaryFragment = owner.element().createDocumentFragment();
-                        duffRight(children.unwrap(), function (manager) {
-                            var element = manager.element();
-                            temporaryFragment.insertBefore(element, previous || NULL);
-                            previous = element;
-                        });
-                        obj.children = children[TO_JSON]();
-                    }
-                    if (node[INNER_TEXT]) {
-                        obj[INNER_TEXT] = node[INNER_TEXT];
-                    }
-                    if (childrenLength) {
-                        node.appendChild(temporaryFragment);
-                    }
-                }
-                duff(node.attributes, function (attr) {
-                    var attributes = obj.attributes = obj.attributes || {};
-                    attributes[camelCase(attr[LOCAL_NAME])] = attr.nodeValue;
-                });
-                return obj;
+                return fromJSON(node, preventDeep);
             }
         }, wrap(directAttributes, function (attr, api) {
             if (!attr) {
@@ -2866,6 +2842,49 @@ app.scope(function (app) {
                 return this.wrap()[key](one, two, three);
             };
         }))),
+        fromJSON = function (node, preventDeep) {
+            var children, childrenLength, obj = {
+                tag: tag(node),
+                comment: BOOLEAN_FALSE,
+                text: BOOLEAN_FALSE
+            };
+            duff(node.attributes, function (attr) {
+                var attributes = obj.attributes = obj.attributes || {};
+                attributes[camelCase(attr[LOCAL_NAME])] = attr.nodeValue;
+            });
+            if (preventDeep) {
+                return obj;
+            }
+            children = node.childNodes;
+            if (!(childrenLength = children[LENGTH])) {
+                return;
+            }
+            obj.children = map(children, function (child) {
+                if (isElement(child)) {
+                    return fromJSON(child, preventDeep);
+                }
+                if (child.nodeType === 3) {
+                    return {
+                        tag: BOOLEAN_FALSE,
+                        comment: BOOLEAN_FALSE,
+                        text: BOOLEAN_TRUE,
+                        content: child.textContent
+                    };
+                }
+                if (child.nodeType === 8) {
+                    return {
+                        tag: BOOLEAN_FALSE,
+                        comment: BOOLEAN_TRUE,
+                        text: BOOLEAN_FALSE,
+                        content: child.textContent
+                    };
+                }
+                return {
+                    err: BOOLEAN_TRUE
+                };
+            });
+            return obj;
+        },
         _removeEventListener = function (manager, name, group, selector, handler, capture_) {
             var capture = !!capture_,
                 directive = manager.directive(EVENTS),
@@ -2964,7 +2983,7 @@ app.scope(function (app) {
                 });
             };
         },
-        allEachMethods = toArray('show,hide,style,remove,on,off,once,addEventListener,removeEventListener,dispatchEvent').concat(allDirectMethods),
+        allEachMethods = toArray('destroy,show,hide,style,remove,on,off,once,addEventListener,removeEventListener,dispatchEvent').concat(allDirectMethods),
         firstMethods = toArray('tag,element,client,box,flow'),
         applyToFirst = function (method) {
             var shouldBeContext = method !== 'tag';
@@ -2988,12 +3007,12 @@ app.scope(function (app) {
              * @returns {DOMA} instance
              */
             isValidDOMA: BOOLEAN_TRUE,
-            destroy: function (handler_) {
-                var handler = isFunction(handler_) ? handler_ : NULL;
-                return this.each(function (manager) {
-                    manager.destroy(handler);
-                });
-            },
+            // destroy: function (handler_) {
+            //     var handler = isFunction(handler_) ? handler_ : NULL;
+            //     return this.each(function (manager) {
+            //         manager.destroy(handler);
+            //     });
+            // },
             constructor: function (str, ctx, isValid, validContext, documentContext) {
                 var isArrayResult, els = str,
                     dom = this,
@@ -3075,7 +3094,7 @@ app.scope(function (app) {
             },
             elements: function () {
                 // to array of DOMAanagers
-                return this.mapCall('element');
+                return this.mapCall(ELEMENT);
             },
             /**
              * @func
@@ -3368,20 +3387,17 @@ app.scope(function (app) {
             }
         }, wrap(allEachMethods, applyToEach), wrap(firstMethods, applyToFirst), wrap(readMethods, applyToTarget))),
         allSetups = [],
-        setupWindow = function (windo) {
-            var setup = DOMA_SETUP(windo[DOCUMENT]);
-            allSetups.push(setup);
-            windo.DOMA = windo.DOMA || setup;
-            windo.$ = has(windo, '$') ? windo.$ : setup;
-            duff(plugins, function (plugin) {
-                plugin(setup);
-            });
-            return setup;
-        },
-        plugins = [],
-        // pushResult = plugins.push(),
-        $ = setupWindow(win);
-    app.undefine(setupWindow);
+        plugins = [];
+    app.undefine(function (app, windo) {
+        var setup = DOMA_SETUP(windo[DOCUMENT]);
+        allSetups.push(setup);
+        windo.DOMA = windo.DOMA || setup;
+        windo.$ = has(windo, '$') ? windo.$ : setup;
+        duff(plugins, function (plugin) {
+            plugin(setup);
+        });
+        return setup;
+    });
     // collect all templates with an id
     $.collectTemplates();
     // register all custom elements...

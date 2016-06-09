@@ -1,2 +1,2 @@
-application.definition('0.0.0', this, function (app) {
+Odette.definition(this, function (app, windo, options) {
         'use strict';

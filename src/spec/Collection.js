@@ -223,7 +223,7 @@ application.scope().run(function (app, _, factories) {
                     one: 3
                 }, {
                     one: 4
-                }]).pluck('one').unwrap()).toEqual([1, 2, 3, 4]);
+                }]).results('one').unwrap()).toEqual([1, 2, 3, 4]);
             });
             _.it('where', function () {
                 _.expect(factories.Collection([{

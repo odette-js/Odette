@@ -44,6 +44,7 @@ var content = ['browserify'],
         serverIndex: './index.js',
         ignoreFiles: ['.git/', 'node_modules/', './gulp', 'gulpfile.js', './public']
     }), {
+        src: './src/**/*',
         publicized: './src/static/**/*',
         publicizedOutput: './public',
         jsLibraryOutput: 'library.js',
