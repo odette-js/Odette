@@ -15,9 +15,13 @@ var content = ['browserify'],
             }
         });
     },
-    modules = 'scopeStart constants utils shims Strings Directives Collection Messenger Events Model directives/Events directives/Data directives/Children directives/Linguistics Promise Associator HTTP Module DOMA Looper directives/Element View Buster directives/swipe tests scopeEnd'.split(' '),
+    modules = 'scopeStart constants utils shims Strings Directives Collection Messenger Events Model directives/Events directives/Data directives/Children directives/Linguistics Promise Associator HTTP Module DOMA Looper Window directives/Element View Buster directives/swipe tests scopeEnd'.split(' '),
+    specModules = modules.concat(['evaluation']),
     extraModules = 'Socket Router LocalStorage NoSock'.split(' '),
     framedModules = 'index'.split(' '),
+    makeSpecPath = function (name) {
+        return './src/spec/' + name + '.js';
+    },
     paths = _.extend(makePath({
         // watch path
         jsAll: './src/**/*.js',
@@ -30,9 +34,7 @@ var content = ['browserify'],
         jsExtra: _.map(extraModules, function (name) {
             return './src/extras/' + name + '.js';
         }),
-        jsTestList: _.map(modules, function (name) {
-            return './src/spec/' + name + '.js';
-        }),
+        jsTestList: _.map(specModules, makeSpecPath),
         jsExtraTest: _.map(extraModules, function (name) {
             return './src/spec/' + name + '.js';
         }),

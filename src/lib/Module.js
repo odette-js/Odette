@@ -103,7 +103,7 @@ app.scope(function (app) {
                     list = parent.globalname ? parent.globalname.split(PERIOD) : [];
                     list.push(name);
                     globalname = list.join(PERIOD);
-                    arg2 = extend(result(parent, 'childOptions') || {}, {
+                    arg2 = extend({}, result(parent, CHILD_OPTIONS) || {}, {
                         application: app,
                         parent: parent,
                         id: name,
@@ -123,7 +123,7 @@ app.scope(function (app) {
                     module.mark(INITIALIZED);
                     initResult = module.run(windo, fn);
                     // allows us to create dependency graphs
-                    if (initResult && isInstance(initResult, Promise)) {
+                    if (initResult && Promise.fn.isChildType(initResult)) {
                         initResult.success(triggerBubble);
                     } else {
                         triggerBubble();
@@ -171,7 +171,7 @@ app.scope(function (app) {
                 if (!isFunction(handler)) {
                     module = app.module(modulename);
                     return module.is(DEFINED) ? module[EXPORTS] : exception({
-                        message: 'that module has not ' + DEFINED + ' initialization yet'
+                        message: 'that module has not been ' + DEFINED + ' yet'
                     });
                 } else {
                     promise = _.Promise();

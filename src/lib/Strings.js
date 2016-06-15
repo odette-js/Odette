@@ -99,7 +99,7 @@ var cacheable = function (fn) {
                 s = str.split(splitter);
                 for (i = s[LENGTH] - 1; i >= 1; i--) {
                     if (s[i]) {
-                        s[i] = upCase(s[i]);
+                        s[i] = capitalize(s[i]);
                     }
                 }
                 val = s.join(EMPTY_STRING);
@@ -110,10 +110,9 @@ var cacheable = function (fn) {
     /**
      * @func
      */
-    upCase = cacheable(function (s) {
+    capitalize = cacheable(function (s) {
         return s[0].toUpperCase() + s.slice(1);
     }),
-    capitalize = upCase,
     /**
      * @func
      */
@@ -434,7 +433,7 @@ _.publicize({
     deprefixAll: deprefixAll,
     prefix: prefix,
     prefixAll: prefixAll,
-    upCase: upCase,
+    capitalize: capitalize,
     capitalize: capitalize,
     unCamelCase: unCamelCase,
     spinalCase: unCamelCase,

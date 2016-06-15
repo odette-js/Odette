@@ -4,7 +4,7 @@ var ACTIONS = 'actions',
     DEFAULT_PREVENTED = 'defaultPrevented',
     PROPAGATION_HALTED = PROPAGATION + 'Halted',
     PROPAGATION_STOPPED = PROPAGATION + UPCASED_STOPPED,
-    IMMEDIATE_PROP_STOPPED = 'immediate' + upCase(PROPAGATION) + UPCASED_STOPPED;
+    IMMEDIATE_PROP_STOPPED = 'immediate' + capitalize(PROPAGATION) + UPCASED_STOPPED;
 app.scope(function (app) {
     var _ = app._,
         factories = _.factories,

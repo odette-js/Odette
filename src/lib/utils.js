@@ -111,7 +111,7 @@ var factories = {},
                 result = 1;
             }
             if (result === BOOLEAN_FALSE) {
-                result = 0;
+                result = -1;
             }
             return reversed ? result * -1 : result;
         });
@@ -614,35 +614,33 @@ var factories = {},
             extend(child[PROTOTYPE], protoProps);
         }
         constructor = child;
-        child = constructorWrapper(constructor);
-        child.__super__ = parent;
+        child = constructorWrapper(constructor, parent);
         constructor[PROTOTYPE][CONSTRUCTOR_KEY] = child;
-        // if (nameIsStr && attach && !_._preventConstructorAttach) {
-        //     factories[name] = child;
-        // }
         return child;
     },
-    constructorWrapper = function (Constructor) {
+    constructorWrapper = function (Constructor, parent) {
         var __ = function (one, two, three, four, five, six) {
             return one instanceof Constructor ? one : new Constructor(one, two, three, four, five, six);
         };
         __.isInstance = Constructor.isInstance = function (instance) {
             return isInstance(instance, Constructor);
         };
+        __.fn = Constructor.fn = Constructor[PROTOTYPE].fn = Constructor[PROTOTYPE];
         __[CONSTRUCTOR] = Constructor;
-        __[EXTEND] = Constructor[EXTEND] = function () {
-            return constructorExtend.apply(Constructor, arguments);
-        };
+        __[EXTEND] = Constructor[EXTEND] = bind(constructorExtend, Constructor);
+        if (parent) {
+            __.super = Constructor.super = Constructor[PROTOTYPE].super = parent;
+        }
         return __;
     },
     /**
      * @func
      */
     once = function (fn) {
-        var doIt;
+        var doIt = BOOLEAN_TRUE;
         return function () {
-            if (!doIt) {
-                doIt = 1;
+            if (doIt) {
+                doIt = BOOLEAN_FALSE;
                 return fn.apply(this, arguments);
             }
         };
@@ -791,30 +789,8 @@ var factories = {},
     /**
      * @func
      */
-    // unshift = function (thing, items) {
-    //     return thing.unshift.apply(thing, items);
-    // },
-    /**
-     * @func
-     */
     publicize = function (obj) {
         return extend(_, obj);
-    },
-    /**
-     * @func
-     */
-    Image = win.Image,
-    fetch = function (url, callback) {
-        var img = new Image();
-        url = stringifyQuery(url);
-        if (callback) {
-            img.onload = function () {
-                _.unshift(arguments, url);
-                callback.apply(this, arguments);
-            };
-        }
-        img.src = url;
-        return img;
     },
     passesFirstArgument = function (fn) {
         return function (first) {
@@ -870,10 +846,6 @@ var factories = {},
             return isMatch(obj2, obj1);
         };
     },
-    // uncycle = internalMambo(cycle),
-    // pluck = function (arr, key) {
-    //     return results(arr, key);
-    // },
     filter = function (obj, iteratee, context) {
         var isArrayResult = isArrayLike(obj),
             bound = bindTo(iteratee, context),
@@ -920,7 +892,7 @@ var factories = {},
         if ((val[0] === '{' && val[val[LENGTH] - 1] === '}') || (val[0] === '[' && val[val[LENGTH] - 1] === ']')) {
             return wraptry(function () {
                 return JSON.parse(val);
-            }, console.error);
+            });
         }
         coerced = +val;
         if (!isNaN(coerced)) {
@@ -934,17 +906,27 @@ var factories = {},
         }
         return val;
     },
-    evaluate = function (context, string_) {
-        var split, bound, handler, string = string_.toString();
+    evaluate = function (context, string_, args) {
+        var split, bound, Bound, handler, notFirst, argsString = '"use strict;"\n',
+            string = string_.toString(),
+            argKeys = keys(context);
         if (isFunction(string_)) {
             split = string.split('{');
             string = split.shift();
             string = (string = split.join('{')).slice(0, string[LENGTH] - 1);
         }
-        bound = FUNCTION_CONSTRUCTOR_CONSTRUCTOR.bind(context);
-        handler = new bound('return ' + string);
-        bound = bindTo(handler, context);
-        return bound();
+        if (argKeys[LENGTH]) {
+            duff(argKeys, function (key, index) {
+                if (!index) {
+                    argsString += 'var ';
+                }
+                argsString += (key + ' = this.' + key);
+                argsString += ((index === argKeys[LENGTH] - 1) ? ';' : ',\n');
+            });
+        }
+        return function () {
+            return eval(argsString + string);
+        }.apply(context, args);
     },
     returnDysmorphicBase = function (obj) {
         return isArrayLike(obj) ? [] : {};
@@ -970,7 +952,7 @@ var factories = {},
         }, []);
     },
     toArray = function (object, delimiter) {
-        return isArrayLike(object) ? isArray(object) ? object : arrayLikeToArray(object) : (isString(object) ? object.split(isString(delimiter) ? delimiter : COMMA) : (delimiter === BOOLEAN_TRUE ? objectToArray(object) : [object]));
+        return isArrayLike(object) ? isArray(object) ? object : arrayLikeToArray(object) : (isString(object) ? object.split(isString(delimiter) ? delimiter : COMMA) : [object]);
     },
     nonEnumerableProps = toArray('valueOf,isPrototypeOf,' + TO_STRING + ',propertyIsEnumerable,hasOwnProperty,toLocaleString'),
     flattenArray = function (list, deep_, handle) {
@@ -1200,6 +1182,20 @@ var factories = {},
             result(item, method, arg);
         });
     },
+    eachCallTry = function (array, method, arg, catcher, finallyer) {
+        return duff(array, function (item) {
+            wraptry(function () {
+                result(item, method, arg);
+            }, catcher, finallyer);
+        });
+    },
+    mapCallTry = function (array, method, arg, catcher, finallyer) {
+        return map(array, function (item) {
+            return wraptry(function () {
+                return result(item, method, arg);
+            }, catcher, finallyer);
+        });
+    },
     results = function (array, method, arg) {
         return map(array, function (item) {
             return result(item, method, arg);
@@ -1289,6 +1285,7 @@ var factories = {},
             returnValue = trythis();
         } catch (e) {
             err = e;
+            console.error(e);
             returnValue = errthat ? errthat(e) : returnValue;
         } finally {
             returnValue = finalfunction ? finalfunction(err, returnValue) : returnValue;
@@ -1394,7 +1391,6 @@ var factories = {},
         evaluate: evaluate,
         parse: parse,
         merge: merge,
-        fetch: fetch,
         clone: clone,
         bind: bind,
         bindTo: bindTo,
@@ -1436,4 +1432,4 @@ var factories = {},
 function Extendable(attributes, options) {
     return this;
 }
-factories.Extendable = constructorWrapper(Extendable);
+factories.Extendable = constructorWrapper(Extendable, OBJECT_CONSTRUCTOR);

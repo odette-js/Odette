@@ -241,7 +241,7 @@ app.scope(function (app) {
             seeker: function (handler, context) {
                 var list = this,
                     bound = bindTo(handler, context);
-                return _.duffRight(list.unwrap(), function (one, two, three) {
+                return duffRight(list.unwrap(), function (one, two, three) {
                     if (bound(one, two, three)) {
                         list.removeAt(two);
                     }
@@ -358,12 +358,10 @@ app.scope(function (app) {
                 duffRight(this.unwrap(), handler, context === UNDEFINED ? this : context);
                 return this;
             },
-            // good for overwriting and extending
             empty: function () {
                 this.reset();
                 this.directive(REGISTRY).reset();
                 return this;
-                // return this.reset();
             },
             reset: function (items) {
                 // can be array like
@@ -487,9 +485,10 @@ app.scope(function (app) {
                 return BOOLEAN_TRUE;
             },
             pop: function () {
-                var length = this[LENGTH]();
+                var collection = this,
+                    length = collection[LENGTH]();
                 if (length) {
-                    return this.remove(this.last(), length - 1);
+                    return collection.remove(collection.last(), length - 1);
                 }
             },
             shift: function () {
@@ -567,14 +566,16 @@ app.scope(function (app) {
                 return sm;
             },
             increment: function () {
-                this.changeCounter = this.changeCounter || 0;
-                this.changeCounter++;
-                return this;
+                var collection = this;
+                collection.changeCounter = collection.changeCounter || 0;
+                collection.changeCounter++;
+                return collection;
             },
             decrement: function () {
-                this.changeCounter = this.changeCounter || 0;
-                this.changeCounter--;
-                return this;
+                var collection = this;
+                collection.changeCounter = collection.changeCounter || 0;
+                collection.changeCounter--;
+                return collection;
             },
             remove: function (string) {
                 var sm = this,
@@ -617,7 +618,8 @@ app.scope(function (app) {
                 sliced = parent.unwrap().slice(0);
                 parent.indexer = 0;
                 parent.delimiter = delimiter;
-                // sliced is thrown away, leaving the invalidated ones to be collected
+                // sliced is thrown away,
+                // leaving the invalidated ones to be collected
                 result = sliced.join(EMPTY_STRING);
                 parent.current(delimiter, result);
                 delete parent.indexer;

@@ -20,7 +20,9 @@ application.scope().run(function (app, _, factories) {
         });
         _.it('can accept a string as a first argument', function (done) {
             var original, handlerCounter = 0;
-            factories.HTTP('/json/reporting.json').handle('status:200', function (json) {
+            factories.HTTP('/json/reporting.json').success(function (json) {
+                _.expect(original !== json).toEqual(BOOLEAN_TRUE);
+            }).handle('status:200', function (json) {
                 handlerCounter++;
                 original = json;
             }).success(function (json) {

@@ -1,7 +1,6 @@
 app.scope(function (app) {
     var _ = app._,
         factories = _.factories,
-        PROMISE = 'Promise',
         CATCH = 'catch',
         ERROR = 'error',
         STATUS = 'status',
@@ -33,7 +32,7 @@ app.scope(function (app) {
                     };
                 } else {
                     req['on' + evnt] = function (e) {
-                        ajax.resolveAs(evnt);
+                        ajax.resolveAs(evnt, e);
                     };
                 }
             });
@@ -73,7 +72,7 @@ app.scope(function (app) {
          * @augments Model
          * @classdesc XHR object wrapper Triggers events based on xhr state changes and abstracts many anomalies that have to do with IE
          */
-        HTTP = factories.HTTP = factories.Promise.extend('HTTP', {
+        HTTP = factories.HTTP = Promise.extend('HTTP', {
             /**
              * @func
              * @name HTTP#constructor
@@ -82,11 +81,11 @@ app.scope(function (app) {
              */
             parse: parse,
             constructor: function (str, secondary) {
-                var promise, url, thingToDo, typeThing, type, xhrReq, ajax = this,
-                    method = 'onreadystatechange';
-                // Add a cache buster to the url
-                // ajax.async = BOOLEAN_TRUE;
-                xhrReq = new XMLHttpRequest();
+                var promise, url, thingToDo, typeThing, type, ajax = this,
+                    method = 'onreadystatechange',
+                    // Add a cache buster to the url
+                    // ajax.async = BOOLEAN_TRUE;
+                    xhrReq = new XMLHttpRequest();
                 // covers ie9
                 if (!_.isUndefined(XDomainRequest)) {
                     xhrReq = new XDomainRequest();
@@ -147,6 +146,7 @@ app.scope(function (app) {
              */
             auxiliaryStates: function () {
                 return {
+                    // cross domain error
                     'status:0': FAILURE,
                     'status:200': SUCCESS,
                     'status:202': SUCCESS,

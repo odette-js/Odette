@@ -417,7 +417,7 @@ application.scope().run(function (app, _) {
             });
             _.it('_.protoProp', function () {
                 var box = factories.Model();
-                box.idAttribute = 'something';
+                box.idAttribute = _.returns('something');
                 _.expect(_.protoProp(box, 'idAttribute')).toEqual(factories.Model.constructor.prototype.idAttribute);
             });
             _.it('_.roundFloat', function () {
@@ -439,10 +439,10 @@ application.scope().run(function (app, _) {
             // does not modify the first character if it is passed in as a capital letter
             _.expect(_.camelCase('This Is Camel Cased', ' ')).not.toEqual(thatIsCamelCased);
         });
-        _.it('_.upCase', function () {
-            _.expect(_.upCase('some')).toEqual('Some');
-            _.expect(_.upCase('Some')).toEqual('Some');
-            _.expect(_.upCase('sOmE')).toEqual('SOmE');
+        _.it('_.capitalize', function () {
+            _.expect(_.capitalize('some')).toEqual('Some');
+            _.expect(_.capitalize('Some')).toEqual('Some');
+            _.expect(_.capitalize('sOmE')).toEqual('SOmE');
         });
         _.it('_.unCamelCase', function () {
             var thatIsCamelCased = 'thisIsUnCamelCased';
@@ -481,6 +481,9 @@ application.scope().run(function (app, _) {
             _.expect(_.parseHash('#{"things":true}')).toEqual({
                 things: true
             });
+            _.expect(_.parseHash('#route/here')).toEqual('route/here');
+            _.expect(_.parseHash('#48330382')).toEqual(48330382);
+            _.expect(_.parseHash('#48330382/2891-44303')).toEqual('48330382/2891-44303');
         });
         _.it('_.isHttp', function () {
             _.expect(_.isHttp('http://localhost:8080')).toEqual(true);
@@ -493,8 +496,8 @@ application.scope().run(function (app, _) {
         });
     });
 });
-window._ = application.scope()._;
-window.factories = application.scope()._.factories;
+// window._ = application.scope()._;
+// window.factories = application.scope()._.factories;
 application.scope().run(function (app, _, factories) {
     _.describe('Collection', function () {
         var collection, numberCollection, complexCollection, evenNumberList;
@@ -749,7 +752,7 @@ application.scope().run(function (app, _, factories) {
         });
     });
     _.describe('SortedCollection', function () {
-        var numberCollection, SortedCollection = factories.SortedCollection;
+        var collection, complexCollection, evenNumberList, numberCollection, SortedCollection = factories.SortedCollection;
         _.beforeEach(function () {
             collection = SortedCollection();
             numberCollection = SortedCollection([4, 5, 3, 7, 8, 6, 2, 0, 1, 9]);
@@ -1796,7 +1799,9 @@ application.scope().run(function (app, _, factories) {
         });
         _.it('can accept a string as a first argument', function (done) {
             var original, handlerCounter = 0;
-            factories.HTTP('/json/reporting.json').handle('status:200', function (json) {
+            factories.HTTP('/json/reporting.json').success(function (json) {
+                _.expect(original !== json).toEqual(BOOLEAN_TRUE);
+            }).handle('status:200', function (json) {
                 handlerCounter++;
                 original = json;
             }).success(function (json) {
@@ -2483,6 +2488,7 @@ application.scope().run(function (app, _, factories) {
         //
     });
 });
+
 application.scope().run(function (app, _, factories) {
     _.describe('View', function () {
         var view, complexView, count, ComplexView = factories.View.extend({
@@ -2627,8 +2633,8 @@ application.scope().run(function (app, _, factories) {
         _.beforeEach(function () {
             count = 0;
         });
-        _.describe('can understand unfriendly windows', function () {
-            _.it('can receive messages on windows', function (done) {
+        _.describe('can receive messages on', function () {
+            _.it('unfriendly windows', function (done) {
                 var iframe = $.createElement('iframe');
                 app.RegionManager.get('main').el.append(iframe);
                 var buster = factories.Buster(window, iframe, {
@@ -2644,9 +2650,7 @@ application.scope().run(function (app, _, factories) {
                     iframe.destroy(done);
                 }).send();
             });
-        });
-        _.describe('and windows without a source', function () {
-            _.it('can receive messages on windows', function (done) {
+            _.it('windows without a source', function (done) {
                 pagePromise.success(function (response) {
                     var iframe = $.createElement('iframe');
                     app.RegionManager.get('main').el.append(iframe);
@@ -2664,9 +2668,7 @@ application.scope().run(function (app, _, factories) {
                     }).send();
                 });
             });
-        });
-        _.describe('can understand friendly windows', function () {
-            _.it('can receive messages on windows', function (done) {
+            _.it('friendly windows', function (done) {
                 var iframe = $.createElement('iframe');
                 app.RegionManager.get('main').el.append(iframe);
                 var buster = factories.Buster(window, iframe, {
@@ -2682,6 +2684,56 @@ application.scope().run(function (app, _, factories) {
                     iframe.destroy(done);
                 }).send();
             });
+        });
+    });
+});
+application.scope().run(function (app, _) {
+    _.describe('evaluate needs it\'s own space to be tested', function () {
+        var windo = _.factories.Window(window);
+        _.it('_.evaluate', function (done) {
+            windo.done = done;
+            _.expect(function () {
+                _.evaluate(windo, function () {
+                    var count = 0;
+                    var called = 0;
+                    var check = function () {
+                        ++count;
+                        if (count < called) {
+                            return;
+                        }
+                        done();
+                    };
+                    var fn = function () {
+                        console.log(this);
+                        console.log(window);
+                    };
+                    console.log(this);
+                    console.log(window);
+                    fn();
+                    called++;
+                    setTimeout(function () {
+                        console.log(this);
+                        console.log(window);
+                        fn();
+                        check();
+                    });
+                    called++;
+                    requestAnimationFrame(function () {
+                        console.log(this);
+                        console.log(window);
+                        fn();
+                        check();
+                    });
+                });
+            }).not.toThrow();
+            _.expect(function () {
+                _.evaluate(windo, function () {
+                    glob = function () {
+                        console.log(this);
+                        console.log(window);
+                    };
+                });
+            }).toThrow();
         });
     });
 });

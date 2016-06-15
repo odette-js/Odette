@@ -77,7 +77,7 @@ app.scope(function (app) {
         defaultGroupId = uuid(),
         RESPOND_HANDLERS = 'respondHandlers',
         Message = factories.Model.extend(capitalize(MESSAGE), {
-            idAttribute: MESSAGE + 'Id',
+            idAttribute: returns(MESSAGE + 'Id'),
             initialize: function () {
                 var message = this;
                 message[RESPOND_HANDLERS] = [];
@@ -321,7 +321,8 @@ app.scope(function (app) {
                 settings.group = defaultGroupId;
                 factories.Model[CONSTRUCTOR].call(buster, settings);
                 buster.on(CONNECTED, function (e) {
-                    buster.connectPromise.fulfill(buster.directive(CHILDREN).first());
+                    var firstMessage = buster.directive(CHILDREN).first();
+                    buster.connectPromise.fulfill(firstMessage);
                     buster.flush();
                 });
                 buster.on({

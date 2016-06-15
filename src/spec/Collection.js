@@ -252,7 +252,7 @@ application.scope().run(function (app, _, factories) {
         });
     });
     _.describe('SortedCollection', function () {
-        var numberCollection, SortedCollection = factories.SortedCollection;
+        var collection, complexCollection, evenNumberList, numberCollection, SortedCollection = factories.SortedCollection;
         _.beforeEach(function () {
             collection = SortedCollection();
             numberCollection = SortedCollection([4, 5, 3, 7, 8, 6, 2, 0, 1, 9]);

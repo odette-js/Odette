@@ -12,8 +12,8 @@ application.scope().run(function (app, _, factories) {
         _.beforeEach(function () {
             count = 0;
         });
-        _.describe('can understand unfriendly windows', function () {
-            _.it('can receive messages on windows', function (done) {
+        _.describe('can receive messages on', function () {
+            _.it('unfriendly windows', function (done) {
                 var iframe = $.createElement('iframe');
                 app.RegionManager.get('main').el.append(iframe);
                 var buster = factories.Buster(window, iframe, {
@@ -29,9 +29,7 @@ application.scope().run(function (app, _, factories) {
                     iframe.destroy(done);
                 }).send();
             });
-        });
-        _.describe('and windows without a source', function () {
-            _.it('can receive messages on windows', function (done) {
+            _.it('windows without a source', function (done) {
                 pagePromise.success(function (response) {
                     var iframe = $.createElement('iframe');
                     app.RegionManager.get('main').el.append(iframe);
@@ -49,9 +47,7 @@ application.scope().run(function (app, _, factories) {
                     }).send();
                 });
             });
-        });
-        _.describe('can understand friendly windows', function () {
-            _.it('can receive messages on windows', function (done) {
+            _.it('friendly windows', function (done) {
                 var iframe = $.createElement('iframe');
                 app.RegionManager.get('main').el.append(iframe);
                 var buster = factories.Buster(window, iframe, {

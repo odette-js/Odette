@@ -15,7 +15,7 @@ app.run(function (app, _, factories) {
                 } else {
                     ++failedTests;
                     expectation = new Error(makemessage.call(this, current, arg));
-                    console.error(expectation);
+                    // console.error(expectation);
                     failedExpectations.push(expectation);
                 }
                 allExpectations.push(expectation);
@@ -92,15 +92,12 @@ app.run(function (app, _, factories) {
             stack.push(string);
             globalBeforeEachStack.push([]);
             globalAfterEachStack.push([]);
-            wraptry(handler, console.error, function () {
+            wraptry(handler, noop, function () {
                 globalAfterEachStack.pop();
                 globalBeforeEachStack.pop();
                 stack.pop();
             });
             return resolution;
-        },
-        timeoutErr = function (stack) {
-            console.error('timeout:\n' + stack.join('\n'));
         },
         setup = function (expectation) {
             testisrunning = BOOLEAN_TRUE;
@@ -200,6 +197,12 @@ app.run(function (app, _, factories) {
                     for (; i < allIts[LENGTH]; i++) {
                         theIt = allIts[i];
                         totalTime += (theIt.endTime - theIt.startTime);
+                    }
+                    if (failedExpectations[LENGTH]) {
+                        console.log('failed');
+                        duff(failedExpectations, function (obj) {
+                            console.log(obj);
+                        });
                     }
                     string = successfulExpectations[LENGTH] + ' successful expectations\n' + failedExpectations[LENGTH] + ' failed expectations\n' + allExpectations[LENGTH] + ' expectations ran\n' + successfulIts[LENGTH] + ' out of ' + allIts[LENGTH] + ' tests passed\nin ' + totalTime + 'ms';
                     resetTests();

@@ -320,7 +320,7 @@ this.Odette = this.Odette || function (global, WHERE, version, fn, alt) {
                     var doc = toHere.document;
                     // overwrite the scoped application variable
                     application = toHere[WHERE] || application;
-                    return BOOLEAN_TRUE;
+                    return !!doc;
                 }, function () {
                     return BOOLEAN_FALSE;
                 })) {

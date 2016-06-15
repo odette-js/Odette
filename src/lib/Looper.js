@@ -9,13 +9,16 @@ app.scope(function (app) {
         vendors = toArray('ms,moz,webkit,o'),
         RUNNING = 'running',
         HALTED = 'halted',
+        // SCHEDULER = 'Scheduler',
         STOPPED = 'stopped',
         DESTROYED = 'destroyed',
+        LOOPER = 'Looper',
         TIMEOUT = 'Timeout',
         SET_TIMEOUT = 'set' + TIMEOUT,
         CLEAR_TIMEOUT = 'clear' + TIMEOUT,
         ANIMATION_FRAME = 'AnimationFrame',
         REQUEST_ANIMATION_FRAME = 'request' + ANIMATION_FRAME,
+        UP_REQUEST_ANIMATION_FRAME = capitalize(REQUEST_ANIMATION_FRAME),
         CANCEL_ANIMATION_FRAME = 'cancel' + ANIMATION_FRAME,
         allLoopers = [],
         runningLoopers = [],
@@ -84,8 +87,8 @@ app.scope(function (app) {
         },
         shim = (function () {
             for (; x < vendors[LENGTH] && !win[REQUEST_ANIMATION_FRAME]; ++x) {
-                win[REQUEST_ANIMATION_FRAME] = win[vendors[x] + 'RequestAnimationFrame'];
-                win[CANCEL_ANIMATION_FRAME] = win[vendors[x] + upCase(CANCEL_ANIMATION_FRAME)] || win[vendors[x] + 'CancelRequestAnimationFrame'];
+                win[REQUEST_ANIMATION_FRAME] = win[vendors[x] + UP_REQUEST_ANIMATION_FRAME];
+                win[CANCEL_ANIMATION_FRAME] = win[vendors[x] + capitalize(CANCEL_ANIMATION_FRAME)] || win[vendors[x] + 'Cancel' + UP_REQUEST_ANIMATION_FRAME];
             }
             if (!win[REQUEST_ANIMATION_FRAME]) {
                 win[REQUEST_ANIMATION_FRAME] = function (callback) {
@@ -104,7 +107,6 @@ app.scope(function (app) {
                 };
             }
         }()),
-        LOOPER = 'Looper',
         Collection = factories.Collection,
         runner = function (tween, obj) {
             tween.current = obj;
@@ -118,11 +120,11 @@ app.scope(function (app) {
             }
             wraptry(function () {
                 obj.fn(tween.lastRun);
-            }, function (e) {
-                console.error(e);
+            }, function () {
                 tween.dequeue(obj.id);
             });
         },
+        // timeout = ,
         Looper = factories[LOOPER] = Collection.extend(LOOPER, {
             constructor: function (_runner) {
                 var looper = this;
@@ -139,15 +141,16 @@ app.scope(function (app) {
                 return this.halt();
             },
             run: function (_nowish) {
-                var sliced, finished, i = 0,
+                var sliced, slicedLength, finished, i = 0,
                     tween = this;
                 if (tween.is(HALTED) || tween.is(STOPPED) || !tween[LENGTH]()) {
                     return;
                 }
                 sliced = factories.Collection(tween.unwrap().slice(0));
                 tween.lastRun = _nowish;
-                for (; i < tween[LENGTH]() && !finished; i++) {
-                    finished = runner(tween, tween.item(i), i);
+                slicedLength = sliced[LENGTH]();
+                for (; i < slicedLength && !finished; i++) {
+                    finished = runner(tween, sliced.item(i), i);
                 }
                 tween.current = NULL;
                 tween.unmark(RUNNING);
@@ -241,32 +244,33 @@ app.scope(function (app) {
             },
             tween: function (time__, fn_) {
                 var fn, added = nowish(),
-                    time_ = time(time__);
+                    time_ = time(time__),
+                    tween = this;
                 if (!time_) {
                     time_ = 0;
                 }
                 if (!isFunction(fn_)) {
                     return;
                 }
-                fn = this.bind(fn_);
-                return this.interval(0, function (ms) {
-                    var tween = 1,
+                fn = tween.bind(fn_);
+                return tween.timeout(0, function (ms) {
+                    var finished = BOOLEAN_FALSE,
                         diff = ms - added;
                     if (diff >= time_) {
-                        tween = 0;
-                        this.dequeue();
+                        finished = BOOLEAN_TRUE;
+                        tween.dequeue();
                     }
-                    fn(ms, Math.min(1, (diff / time_)), !tween);
+                    fn(ms, Math.min(1, (diff / time_)), finished);
                 });
             },
             time: function (time_, fn_) {
-                var fn;
+                var fn, tween = this;
                 if (!isFunction(fn_)) {
-                    return this;
+                    return tween;
                 }
-                fn = this.bind(fn_);
-                return this.interval(time(time_), function (ms) {
-                    this.dequeue();
+                fn = tween.bind(fn_);
+                return tween.timeout(time(time_), function (ms) {
+                    tween.dequeue();
                     fn(ms);
                 });
             },
@@ -296,7 +300,7 @@ app.scope(function (app) {
                     lastDate = ms;
                 });
             },
-            interval: function (time, fn_) {
+            timeout: function (time, fn_) {
                 var fn, tweener = this,
                     last = nowish();
                 if (!isFunction(fn_)) {
@@ -308,22 +312,42 @@ app.scope(function (app) {
                 fn = tweener.bind(fn_);
                 return tweener.queue(function (ms) {
                     if (ms - time >= last) {
-                        last = ms;
+                        // last = ms;
+                        tweener.dequeue();
                         fn(ms);
                     }
                 });
             },
-            onceInterval: function (handler, time_) {
-                var fn = handler,
+            // onceInterval: function (handler, time_) {
+            //     var fn = handler,
+            //         tweener = this,
+            //         timey = time(time_);
+            //     if (!isFunction(fn)) {
+            //         return;
+            //     }
+            //     if (!isNumber(timey)) {
+            //         return;
+            //     }
+            //     return this.timeout(timey, handler);
+            // },
+            interval: function (handler, time_) {
+                var bound, fn = handler,
                     tweener = this,
-                    timey = time(time_);
+                    timey = time(time_),
+                    last = now();
                 if (!isFunction(fn)) {
                     return;
                 }
                 if (!isNumber(timey)) {
-                    return;
+                    timey = 0;
                 }
-                return this.interval(timey, handler);
+                bound = bind(handler, tweener);
+                return tweener.queue(function (t) {
+                    if (t - timey >= last) {
+                        last = t;
+                        fn(t);
+                    }
+                });
             },
             defer: function (handler, time) {
                 var id, tweener = this;
@@ -331,18 +355,12 @@ app.scope(function (app) {
                     var args = toArray(arguments);
                     var context = this || tweener;
                     tweener.dequeue(id);
-                    id = tweener.time(time, function () {
-                        handler.apply(context, args);
-                    });
+                    id = tweener.time(time, bind(handler, this, tweener));
                     return id;
                 };
             }
-        }),
-        Scheduler = factories.Scheduler = factories.Directive.extend('Scheduler', {
-            //
         });
     Looper.playWhileBlurred = BOOLEAN_TRUE;
-    app.defineDirective('Scheduler', Scheduler[CONSTRUCTOR]);
     _.publicize({
         AF: Looper()
     });

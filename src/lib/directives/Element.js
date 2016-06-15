@@ -52,7 +52,7 @@ app.scope(function (app) {
                 } else {
                     // defauts back to wrapping the element
                     // creates internal element
-                    el = element.create(result(view, 'tagName'));
+                    el = element.create(view.tagName());
                     // subclassed to expand the attributes that can be used
                 }
                 element.set(el, BOOLEAN_FALSE);
@@ -164,10 +164,11 @@ app.scope(function (app) {
             setAttributes: function () {
                 var directive = this,
                     view = directive.view,
-                    attrs = result(view, 'elementAttributes');
-                if (view[CLASSNAME]) {
+                    attrs = view.elementAttributes(),
+                    className = view[CLASSNAME]();
+                if (className) {
                     attrs = attrs || {};
-                    attrs[CLASS] = result(view, CLASSNAME);
+                    attrs[CLASS] = className;
                 }
                 if (attrs) {
                     directive.el.attr(attrs);
@@ -186,6 +187,6 @@ app.scope(function (app) {
         directive.unset();
         var ui = directive.ui;
         directive.degenerateUIBindings();
-        _.eachCall(ui, 'destroy');
+        eachCall(ui, 'destroy');
     });
 });

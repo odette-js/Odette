@@ -417,7 +417,7 @@ application.scope().run(function (app, _) {
             });
             _.it('_.protoProp', function () {
                 var box = factories.Model();
-                box.idAttribute = 'something';
+                box.idAttribute = _.returns('something');
                 _.expect(_.protoProp(box, 'idAttribute')).toEqual(factories.Model.constructor.prototype.idAttribute);
             });
             _.it('_.roundFloat', function () {

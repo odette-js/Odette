@@ -45,8 +45,8 @@ app.scope(function (app) {
         // very useful for componentizing your ui
         Parent = factories.Parent,
         Model = factories.Model,
-        makesView = function (region, view_, Child) {
-            var isModel, child, isView, model = view_,
+        makesView = function (region, view_) {
+            var isModel, child, Child, isView, model = view_,
                 children = region.directive(CHILDREN);
             if ((isView = View.isInstance(view_))) {
                 if ((child = children.get('modelId', view_.model.id))) {
@@ -60,6 +60,7 @@ app.scope(function (app) {
                     return child;
                 }
             } else {
+                Child = region.childConstructor();
                 return Child({
                     model: Child[CONSTRUCTOR][PROTOTYPE].Model(view_)
                 });
@@ -75,6 +76,12 @@ app.scope(function (app) {
             return region;
         },
         Region = factories.Region = Parent.extend('Region', {
+            // Child: BOOLEAN_FALSE,
+            elementAttributes: returns(BOOLEAN_FALSE),
+            className: returns(BOOLEAN_FALSE),
+            childConstructor: function () {
+                return this.Child === BOOLEAN_TRUE ? this[PARENT][PARENT].childConstructor() : this.Child;
+            },
             constructor: function (secondary) {
                 var model = this;
                 Parent[CONSTRUCTOR].call(model, secondary);
@@ -104,8 +111,7 @@ app.scope(function (app) {
                 if (!view_) {
                     return region;
                 }
-                view = makesView(region, view_, region.Child || region.parent.parent.Child || View);
-                // if ((view.model.id)) {}
+                view = makesView(region, view_);
                 if (view[PARENT]) {
                     if (view[PARENT] === region) {
                         return BOOLEAN_FALSE;
@@ -203,21 +209,17 @@ app.scope(function (app) {
         // view needs to be pitted against a document
         View = factories.View = Region.extend('View', {
             Model: Model,
+            Child: BOOLEAN_TRUE,
+            childConstructor: Parent.fn.childConstructor,
             getRegion: parody(REGION_MANAGER, 'get'),
             addRegion: parody(REGION_MANAGER, 'add'),
             removeRegion: parody(REGION_MANAGER, 'remove'),
             addChildView: addChildView,
             removeChildView: removeChildView,
-            tagName: 'div',
-            filter: function () {
-                return BOOLEAN_TRUE;
-            },
-            elementIsTemplate: function () {
-                return BOOLEAN_FALSE;
-            },
-            template: function () {
-                return EMPTY_STRING;
-            },
+            tagName: returns('div'),
+            filter: returns(BOOLEAN_TRUE),
+            elementIsTemplate: returns(BOOLEAN_FALSE),
+            template: returns(EMPTY_STRING),
             parentView: function () {
                 var found, view = this,
                     parent = view[PARENT];
@@ -324,7 +326,7 @@ app.scope(function (app) {
                 return regionManagerDirective;
             }
             intendedObject(key, selector, function (key, selector) {
-                var $selected, region = regionManagerDirective.list.get(key);
+                var $selected, region = regionManagerDirective.list.get(ID, key);
                 if (!region) {
                     region = regionManagerDirective.create(key, selector);
                 }

@@ -11,10 +11,10 @@ application.scope().run(function (app, _) {
             // does not modify the first character if it is passed in as a capital letter
             _.expect(_.camelCase('This Is Camel Cased', ' ')).not.toEqual(thatIsCamelCased);
         });
-        _.it('_.upCase', function () {
-            _.expect(_.upCase('some')).toEqual('Some');
-            _.expect(_.upCase('Some')).toEqual('Some');
-            _.expect(_.upCase('sOmE')).toEqual('SOmE');
+        _.it('_.capitalize', function () {
+            _.expect(_.capitalize('some')).toEqual('Some');
+            _.expect(_.capitalize('Some')).toEqual('Some');
+            _.expect(_.capitalize('sOmE')).toEqual('SOmE');
         });
         _.it('_.unCamelCase', function () {
             var thatIsCamelCased = 'thisIsUnCamelCased';
@@ -53,6 +53,9 @@ application.scope().run(function (app, _) {
             _.expect(_.parseHash('#{"things":true}')).toEqual({
                 things: true
             });
+            _.expect(_.parseHash('#route/here')).toEqual('route/here');
+            _.expect(_.parseHash('#48330382')).toEqual(48330382);
+            _.expect(_.parseHash('#48330382/2891-44303')).toEqual('48330382/2891-44303');
         });
         _.it('_.isHttp', function () {
             _.expect(_.isHttp('http://localhost:8080')).toEqual(true);
@@ -65,5 +68,5 @@ application.scope().run(function (app, _) {
         });
     });
 });
-window._ = application.scope()._;
-window.factories = application.scope()._.factories;
+// window._ = application.scope()._;
+// window.factories = application.scope()._.factories;

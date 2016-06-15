@@ -1,4 +1,6 @@
-var CHILDREN = upCase(CHILD + 'ren');
+var CHILDREN = capitalize(CHILD + 'ren'),
+    CHILD_OPTIONS = CHILD + 'Options',
+    CHILD_EVENTS = CHILD + 'Events';
 app.scope(function (app) {
     var Collection = factories.Collection,
         Events = factories.Events,
@@ -15,7 +17,7 @@ app.scope(function (app) {
         },
         // ties child events to new child
         _delegateChildEvents = function (parent, model) {
-            var childsEventDirective, childEvents = _.result(parent, CHILD + 'Events');
+            var childsEventDirective, childEvents = result(parent, CHILD_EVENTS);
             if (model && childEvents) {
                 childsEventDirective = model.directive(EVENTS);
                 // stash them
@@ -33,7 +35,7 @@ app.scope(function (app) {
         },
         _delegateParentEvents = function (parent_, model) {
             var childsEventDirective, parent = model[PARENT],
-                parentEvents = _.result(model, PARENT + 'Events');
+                parentEvents = result(model, PARENT + 'Events');
             if (parent && parentEvents) {
                 childsEventDirective = model.directive(EVENTS);
                 childsEventDirective[_DELEGATED_CHILD_EVENTS] = parentEvents;
@@ -201,6 +203,9 @@ app.scope(function (app) {
         }),
         Parent = factories.Parent = factories.Events.extend('Parent', {
             Child: BOOLEAN_TRUE,
+            childOptions: noop,
+            parentEvents: noop,
+            childEvents: noop,
             childConstructor: function () {
                 return this.Child === BOOLEAN_TRUE ? this.__constructor__ : (this.Child || Parent);
             },
@@ -211,7 +216,7 @@ app.scope(function (app) {
             add: function (objs_, secondary_) {
                 var childAdded, parent = this,
                     children = parent.directive(CHILDREN),
-                    secondary = extend(result(parent, CHILD + 'Options'), secondary_ || {}),
+                    secondary = extend(result(parent, CHILD_OPTIONS), secondary_ || {}),
                     list = Collection(objs_);
                 // unwrap it if you were passed a collection
                 if (!list[LENGTH]()) {
@@ -285,7 +290,7 @@ app.scope(function (app) {
                 if (!(children = model[CHILDREN])) {
                     return model;
                 }
-                comparator = comparator_ || result(model, 'comparator');
+                comparator = comparator_ || model.comparator;
                 if (isString(comparator)) {
                     isReversed = comparator[0] === '!';
                     comparingAttribute = comparator;
@@ -334,7 +339,7 @@ app.scope(function (app) {
         Model = factories.Model = factories.Parent.extend('Model', {
             // this id prefix is nonsense
             // define the actual key
-            idAttribute: ID,
+            // idAttribute: ID,
             /**
              * @description remove attributes from the Model object. Does not completely remove from object with delete, but instead simply sets it to UNDEFINED / undefined
              * @param {String} attr - property string that is on the attributes object
@@ -359,32 +364,38 @@ app.scope(function (app) {
              * @name Model#has
              */
             has: checkParody(DATA, 'has', BOOLEAN_FALSE),
+            idAttribute: returns('id'),
             constructor: function (attributes, secondary) {
                 var model = this;
                 model.reset(attributes);
                 Events[CONSTRUCTOR].call(this, secondary);
                 return model;
             },
+            defaults: function () {
+                return {};
+            },
             reset: function (data_) {
-                var childModel, firstReset, children, model = this,
+                var dataDirective, childModel, hasResetBefore, children, model = this,
                     // automatically checks to see if the data is a string
                     passed = parse(data_) || {},
                     // build new data
-                    defaultsResult = result(model, 'defaults', passed),
+                    defaultsResult = model.defaults(passed),
                     newAttributes = extend(defaultsResult, passed),
                     // try to get the id from the attributes
-                    idAttributeResult = result(model, 'idAttribute', newAttributes),
+                    idAttributeResult = model.idAttribute(newAttributes),
                     idResult = setId(model, newAttributes[idAttributeResult]),
-                    keysResult = keys(newAttributes),
-                    dataDirective = model.directive(DATA);
+                    keysResult = keys(newAttributes);
                 // set id and let parent know what your new id is
                 // setup previous data
-                if ((firstReset = model.is(RESET))) {
+                if ((hasResetBefore = model.is(RESET))) {
                     model[DISPATCH_EVENT](BEFORE_COLON + RESET);
                 }
-                dataDirective[RESET](newAttributes);
+                if (hasResetBefore || keysResult[LENGTH]) {
+                    dataDirective = model.directive(DATA);
+                    dataDirective[RESET](newAttributes);
+                }
                 // let everything know that it is changing
-                if (firstReset) {
+                if (hasResetBefore) {
                     model[DISPATCH_EVENT](RESET, newAttributes);
                 }
                 model.mark(RESET);
@@ -398,7 +409,7 @@ app.scope(function (app) {
              * @returns {Model} instance
              */
             destroy: function () {
-                Parent[CONSTRUCTOR][PROTOTYPE].destroy.call(this);
+                Parent.fn.destroy.call(this);
                 delete this.id;
                 return this;
             },
@@ -409,7 +420,7 @@ app.scope(function (app) {
                     previous = {},
                     eventsDirective;
                 intendedObject(key, value, function (key, value) {
-                    // definitely set the value, and let us know what happened
+                    // defconinitely set the value, and let us know what happened
                     // and if you're not changing already, (already)
                     if (dataDirective.set(key, value) && !dataDirective.changing[name]) {
                         eventsDirective = eventsDirective || model.directive(EVENTS);
@@ -471,3 +482,4 @@ app.scope(function (app) {
     // trick the modelMaker into thinking it is a Model Constructor
     modelMaker[CONSTRUCTOR] = Model[CONSTRUCTOR];
 });
+var Model = factories.Model;
