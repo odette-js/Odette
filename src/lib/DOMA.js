@@ -3,25 +3,6 @@ var ATTACHED = 'attached',
     FRAGMENT = 'fragment';
 app.scope(function (app) {
     var _ = app._,
-        allTheElements = {},
-        returnsElement = function (manager) {
-            var docManager = manager.owner;
-            var docId = docManager[__ELID__];
-            var elId = manager[__ELID__];
-            return allTheElements[docId][elId];
-        },
-        returnsDocument = function (manager) {
-            var docManager = manager.owner;
-            var docId = docManager[__ELID__];
-            return allTheElements[docId][docId];
-        },
-        registerDocument = function (doc, docId) {
-            allTheElements[docId] = allTheElements[docId] || {};
-            allTheElements[docId][docId] = doc;
-        },
-        registerElement = function (el, docId, elId) {
-            allTheElements[docId][elId] = el;
-        },
         ATTRIBUTES = 'Attributes',
         globalAssociator = factories.Associator(),
         DOM_MANAGER_STRING = 'DomManager',
@@ -284,7 +265,7 @@ app.scope(function (app) {
         makeEachTrigger = function (attr, api) {
             var whichever = api || attr;
             return function (manager) {
-                var el = returnsElement(manager);
+                var el = manager.element();
                 var ret, cachedTrust = DO_NOT_TRUST;
                 DO_NOT_TRUST = BOOLEAN_TRUE;
                 if (ALL_EVENTS_HASH[whichever] && isFunction(el[whichever])) {
@@ -368,7 +349,7 @@ app.scope(function (app) {
         // returns the flow of the element passed on relative to the element's bounding window
         flow = function (el, ctx) {
             var clientRect = el.getBoundingClientRect(),
-                computedStyle = getComputed(el, returnsElement(ctx)),
+                computedStyle = getComputed(el, ctx.element()),
                 marginTop = unitRemoval(computedStyle.marginTop),
                 marginLeft = unitRemoval(computedStyle.marginLeft),
                 marginRight = unitRemoval(computedStyle.marginRight),
@@ -716,7 +697,7 @@ app.scope(function (app) {
         //     '8': BOOLEAN_TRUE
         // },
         createElement = function (tag_, manager) {
-            var confirmedObject, foundElement, elementName, newElement, newManager, documnt = manager && returnsElement(manager),
+            var confirmedObject, foundElement, elementName, newElement, newManager, documnt = manager && manager.element(),
                 registeredElements = manager && manager.registeredElements,
                 tag = tag_;
             if (isObject(tag)) {
@@ -759,10 +740,10 @@ app.scope(function (app) {
             return newManager;
         },
         makeText = function (content, manager) {
-            return returnsElement(manager).createTextNode(content);
+            return manager.element().createTextNode(content);
         },
         makeComment = function (content, manager) {
-            return returnsElement(manager).createComment(content);
+            return manager.element().createComment(content);
         },
         makeTree = function (str, manager) {
             var div = createElement(DIV, manager);
@@ -795,7 +776,7 @@ app.scope(function (app) {
             return indexOf(query(selector, parent), element) !== -1;
         },
         createDocumentFragment = function (nulled, context) {
-            return context.is(DOCUMENT) && returnsElement(context).createDocumentFragment();
+            return context.is(DOCUMENT) && context.element().createDocumentFragment();
         },
         /**
          * @private
@@ -826,7 +807,7 @@ app.scope(function (app) {
                 frag = context.createDocumentFragment();
                 duff(els, function (manager_) {
                     var parentNode, manager = context.returnsManager(manager_),
-                        el = returnsElement(manager);
+                        el = manager.element();
                     if (!manager.is(ELEMENT) || manager.is(FRAGMENT)) {
                         return;
                     }
@@ -877,7 +858,7 @@ app.scope(function (app) {
             return key;
         },
         styleAttributeManipulator = function (manager, key, value) {
-            var element = returnsElement(manager);
+            var element = manager.element();
             if (manager.is(ELEMENT)) {
                 if (value === BOOLEAN_TRUE) {
                     return element[STYLE][key];
@@ -1098,7 +1079,7 @@ app.scope(function (app) {
             }));
             if (!wasCustom && manager.is(CUSTOM_LISTENER)) {
                 markCustom(manager, BOOLEAN_TRUE);
-                manager.remark(ATTACHED, isAttached(returnsElement(manager), manager.owner));
+                manager.remark(ATTACHED, isAttached(manager.element(), manager.owner));
             }
             return manager;
         },
@@ -1135,7 +1116,7 @@ app.scope(function (app) {
         },
         attributeParody = function (method) {
             return function (one, two) {
-                return attributeApi[method](returnsElement(this), one, two);
+                return attributeApi[method](this.element(), one, two);
             };
         },
         getInnard = function (attribute, manager) {
@@ -1144,13 +1125,13 @@ app.scope(function (app) {
                 testIframe(manager);
                 windo = manager.window();
                 if (windo.is(ACCESSABLE)) {
-                    parentElement = returnsElement(windo);
+                    parentElement = windo.element();
                     doc = parentElement[DOCUMENT];
                     returnValue = doc.body ? doc.body[PARENT_NODE].outerHTML : EMPTY_STRING;
                 }
             } else {
                 if (manager.is(ELEMENT)) {
-                    parentElement = returnsElement(manager);
+                    parentElement = manager.element();
                     returnValue = parentElement[attribute];
                 }
             }
@@ -1162,7 +1143,7 @@ app.scope(function (app) {
                 windo = manager.window();
                 testIframe(manager);
                 if (windo.is(ACCESSABLE)) {
-                    parentElement = returnsElement(windo);
+                    parentElement = windo.element();
                     doc = parentElement[DOCUMENT];
                     doc.open();
                     doc.write(value);
@@ -1171,7 +1152,7 @@ app.scope(function (app) {
                 }
             } else {
                 if (manager.is(ELEMENT)) {
-                    parentElement = returnsElement(manager);
+                    parentElement = manager.element();
                     cachedValue = parentElement[attribute];
                     parentElement[attribute] = value || EMPTY_STRING;
                     owner = manager.owner;
@@ -1206,7 +1187,7 @@ app.scope(function (app) {
             if (!manager.is(IFRAME)) {
                 return;
             }
-            element = element_ || returnsElement(manager);
+            element = element_ || manager.element();
             contentWindow = element.contentWindow;
             manager.remark('windowReady', !!contentWindow);
             if (!contentWindow) {
@@ -1214,7 +1195,7 @@ app.scope(function (app) {
             }
             contentWindowManager = manager.owner.returnsManager(contentWindow);
             contentWindowManager.iframe = manager;
-            markGlobal(contentWindowManager, element);
+            markGlobal(contentWindowManager, contentWindow);
             if (!manager.cachedContent || !contentWindowManager.is(ACCESSABLE)) {
                 return;
             }
@@ -1225,12 +1206,12 @@ app.scope(function (app) {
         cachedDispatch = factories.Events[CONSTRUCTOR][PROTOTYPE][DISPATCH_EVENT],
         eventDispatcher = function (manager, name, e, capturing_) {
             var capturing = !!capturing_;
-            return cachedDispatch.call(manager, name, validateEvent(e, returnsElement(manager), name), {
+            return cachedDispatch.call(manager, name, validateEvent(e, manager.element(), name), {
                 capturing: capturing
             });
         },
         directAttributes = {
-            // id: BOOLEAN_FALSE,
+            id: BOOLEAN_FALSE,
             src: BOOLEAN_FALSE,
             checked: BOOLEAN_FALSE,
             disabled: BOOLEAN_FALSE,
@@ -1245,7 +1226,7 @@ app.scope(function (app) {
         allDirectMethods = directEvents.concat(_.keys(videoDirectEvents), _.keys(directAttributes)),
         isAttached = function (element_, owner, passed_element_) {
             var isAttachedResult, parent, potential, manager = owner.returnsManager(element_),
-                element = passed_element_ || returnsElement(manager);
+                element = passed_element_ || manager.element();
             if ((isAttachedResult = manager.is(ATTACHED))) {
                 return isAttachedResult;
             }
@@ -1285,7 +1266,7 @@ app.scope(function (app) {
         dispatchDetached = dispatchDomEvent('detach', BOOLEAN_FALSE),
         dispatchAttached = dispatchDomEvent('attach', BOOLEAN_TRUE),
         applyStyle = function (key, value, manager, important) {
-            var newStyles, found, cached, element = returnsElement(manager);
+            var newStyles, found, cached, element = manager.element();
             if (!manager.is(ELEMENT) || (element[STYLE][key] === value && important)) {
                 return BOOLEAN_FALSE;
             }
@@ -1355,7 +1336,7 @@ app.scope(function (app) {
                 withClass = unCamelCased === CLASSNAME || unCamelCased === CLASS__NAME,
                 trigger = (withClass ? (api = propertyApi) && (unCamelCased = CLASSNAME) && CLASSNAME : passedTrigger_) || unCamelCased;
             return function (manager, idx) {
-                var converted, generated, el = returnsElement(manager),
+                var converted, generated, el = manager.element(),
                     read = api.read(el, unCamelCased),
                     returnValue = manager,
                     attributeManager = ensureManager(manager, unCamelCased, read);
@@ -1409,7 +1390,7 @@ app.scope(function (app) {
         hasAttributeValue = function (property, values_, third, api) {
             var values = toArray(values_, SPACE);
             return function (manager) {
-                var el = returnsElement(manager),
+                var el = manager.element(),
                     attributeManager = getStringManager(manager, property),
                     read = api.read(el, property);
                 attributeManager.ensure(read, SPACE);
@@ -1436,7 +1417,7 @@ app.scope(function (app) {
                         usingApi = givenApi || api;
                     if (firstIsString && second === UNDEFINED) {
                         context = context.item(0);
-                        return usingApi.read(returnsElement(context), keyprocess(first));
+                        return usingApi.read(context.element(), keyprocess(first));
                     } else {
                         reverseCache = {};
                         context.each(unmarkChange(intendedIteration(first, second, function (first, second, manager, idx) {
@@ -1538,7 +1519,7 @@ app.scope(function (app) {
         passer = function (key) {
             return function (a, b) {
                 return function (manager) {
-                    return classApiShim[key](returnsElement(manager), a, b);
+                    return classApiShim[key](manager.element(), a, b);
                 };
             };
         },
@@ -1561,13 +1542,13 @@ app.scope(function (app) {
             return memo;
         }, {}),
         markCustom = function (manager, forceCustom, element_) {
-            var resultant, isCustom, isCustomValue = manager.is(ELEMENT) && attributeApi.read(element_ || returnsElement(manager), CUSTOM_KEY);
+            var resultant, isCustom, isCustomValue = manager.is(ELEMENT) && attributeApi.read(element_ || manager.element(), CUSTOM_KEY);
             // more efficient way to do this?
             manager.remark(CUSTOM, forceCustom || !!isCustomValue);
             if (manager.is(CUSTOM) && !isCustomValue) {
                 isCustomValue = BOOLEAN_TRUE;
             }
-            resultant = manager.is(ELEMENT) && writeAttribute(element_ || returnsElement(manager), CUSTOM_KEY, isCustomValue);
+            resultant = manager.is(ELEMENT) && writeAttribute(element_ || manager.element(), CUSTOM_KEY, isCustomValue);
             if (isCustomValue) {
                 manager[REGISTERED_AS] = isCustomValue;
             }
@@ -1739,7 +1720,7 @@ app.scope(function (app) {
                 registeredConstructors: registeredConstructors,
                 registeredElementOptions: registeredElementOptions,
                 returnsManager: function (item) {
-                    return item === manager || item === returnsElement(manager) ? manager : returnsManager(item, manager);
+                    return item === manager || item === manager.element() ? manager : returnsManager(item, manager);
                 },
                 // createElement: function (one, two, three) {
                 //     return createElement(one, two, three, manager);
@@ -1818,9 +1799,6 @@ app.scope(function (app) {
                 },
                 // shared across all documents running this version
                 plugin: function (handler) {
-                    // if (returnsElement(manager.window()).__LOCKED__) {
-                    //     return this;
-                    // }
                     plugins.push(handler);
                     duff(allSetups, function (setup) {
                         handler(setup);
@@ -1888,7 +1866,7 @@ app.scope(function (app) {
         },
         runSupport = function (supported, manager) {
             var windowManager = manager.window();
-            var windowElement = returnsElement(windowManager);
+            var windowElement = windowManager.element();
             supported.deviceMotion = !!windowElement.DeviceMotionEvent;
             supported.deviceOrientation = !!windowElement.DeviceOrientationEvent;
             supported.motion = supported.deviceMotion || supported.deviceOrientation;
@@ -1919,7 +1897,7 @@ app.scope(function (app) {
         setValueCurried = setValue(domIterates),
         manager_query = function (selector) {
             var manager = this;
-            var target = returnsElement(manager);
+            var target = manager.element();
             return $(query(selector, target, manager), target);
         },
         isAppendable = function (els) {
@@ -1952,7 +1930,7 @@ app.scope(function (app) {
                 var stringResult, direction = _idxChange_,
                     parent, children, currentIndex, startIndex, target, idxChange = _idxChange || _idxChange_,
                     manager = this,
-                    element = returnsElement(manager),
+                    element = manager.element(),
                     traversed = element[property];
                 if (!(stringResult = isString(idxChange)) && property && !traversed) {
                     return manager.owner.returnsManager(traversed);
@@ -1964,7 +1942,7 @@ app.scope(function (app) {
             };
         },
         collectCustom = function (manager, markedListener) {
-            var element = returnsElement(manager);
+            var element = manager.element();
             return (manager.is(ELEMENT) && manager.is(markedListener ? CUSTOM_LISTENER : CUSTOM) ? [element] : []).concat(query(CUSTOM_ATTRIBUTE, element, manager));
         },
         reconstruct = function (string, context) {
@@ -1973,7 +1951,7 @@ app.scope(function (app) {
                 return fragment;
             }
             var objects = parse(string);
-            var contextDocument = returnsElement(context);
+            var contextDocument = context.element();
             each(toArray(objects), function (object) {
                 var element = contextDocument.createElement(object.tagName);
                 var frag = reconstruct(object.children, context);
@@ -2044,11 +2022,10 @@ app.scope(function (app) {
                 }
             },
             make: function (evnt, originalEvent, options) {
-                var acc, acc_, doc, val, i, prop, copy, type = originalEvent.type,
+                var acc, acc_, doc, target, val, i, prop, copy, type = originalEvent.type,
                     // Create a writable copy of the event object and normalize some properties
                     fixHook = fixHooks.fixedHooks[type],
-                    origin = options.origin,
-                    target = returnsElement(evnt.target);
+                    origin = options.origin;
                 if (!fixHook) {
                     fixHooks.fixedHooks[type] = fixHook = rmouseEvent.test(type) ? this.mouseHooks : rkeyEvent.test(type) ? this.keyHooks : rforceEvent.test(type) ? this.forceHooks : motionMorph.test(type) ? this.motionHooks : {};
                 }
@@ -2064,18 +2041,14 @@ app.scope(function (app) {
                 // Support: Cordova 2.5 (WebKit) (#13255)
                 // All events should have a target; Cordova deviceready doesn't
                 // ie also does not have a target... so use current target
-                target = target || (evnt.view ? evnt.view.event.currentTarget : event && event.currentTarget) || returnsElement(evnt.delegateTarget);
-                // if (!target) {
-                //     target = evnt.target = returnsManager(doc);
-                // }
+                target = evnt.target || (evnt.view ? evnt.view.event.currentTarget : event && event.currentTarget) || evnt.delegateTarget.element();
+                if (!target) {
+                    target = evnt.target = doc;
+                }
                 // Support: Safari 6.0+, Chrome<28
                 // Target should not be a text node (#504, #13143)
-                if (target && target[NODE_TYPE] === 3) {
-                    evnt.target = origin.owner.returnsManager(target[PARENT_NODE]);
-                } else {
-                    if (!target) {
-                        target = evnt.target = origin.owner.returnsManager(doc);
-                    }
+                if (target[NODE_TYPE] === 3) {
+                    evnt.target = target[PARENT_NODE];
                 }
                 (fixHook.filter || noop)(evnt, originalEvent);
                 type = distilledEventName[originalEvent.type] || originalEvent.type;
@@ -2110,7 +2083,7 @@ app.scope(function (app) {
                 if (!has(evnt.target) || !has(evnt.currentTarget)) {
                     e.delegateTarget = opts.origin;
                 } else {
-                    e.delegateTarget = opts.target;
+                    e.delegateTarget = opts.origin.owner.returnsManager(opts.target);
                 }
                 fixHooks.make(e, evnt, opts);
                 e.capturing = opts.capturing === UNDEFINED ? isCapturing(e) : opts.capturing;
@@ -2146,7 +2119,7 @@ app.scope(function (app) {
             }
         }),
         removeEvent = function (evnt, name, mainHandler, capturing) {
-            var el = returnsElement(evnt.origin);
+            var el = evnt.origin.element();
             if (el.removeEventListener) {
                 el.removeEventListener(name, mainHandler[capturing], capturing);
             } else {
@@ -2233,7 +2206,7 @@ app.scope(function (app) {
                     evnt.fn = (customEvents[name] || returns.first)(evnt.fn, name, evnt) || evnt.fn;
                 });
                 if (eventHandler) {
-                    el = returnsElement(evnt.origin);
+                    el = evnt.origin.element();
                     if (el.addEventListener) {
                         el.addEventListener(evnt.domName, eventHandler, capture);
                     } else {
@@ -2246,7 +2219,7 @@ app.scope(function (app) {
             },
             create: function (origin, original, type, opts) {
                 return DomEvent(original, {
-                    target: origin,
+                    target: origin.target,
                     origin: origin,
                     capturing: opts.capturing
                 });
@@ -2286,7 +2259,7 @@ app.scope(function (app) {
                 return events;
             },
             nextBubble: function (start, collected) {
-                var parent, element = returnsElement(start);
+                var parent, element = start.element();
                 if (!start.is(ELEMENT) || element[PARENT_NODE]) {
                     return BOOLEAN_FALSE;
                 }
@@ -2301,7 +2274,7 @@ app.scope(function (app) {
                 });
             },
             subset: function (list_, evnt) {
-                var parent, found, target, sumCount, element, counter, el, afterwards, selector, branch, first, mainHandler, delegateCount, captureCount, i = 0,
+                var ordersEventsByHierarchy, parent, found, target, sumCount, element, counter, el, afterwards, selector, branch, first, mainHandler, delegateCount, captureCount, i = 0,
                     j = 0,
                     list = [],
                     manager = evnt.origin;
@@ -2317,7 +2290,7 @@ app.scope(function (app) {
                 }
                 // sumCount = delegateCount - captureCount;
                 manager = evnt.origin;
-                el = returnsElement(manager);
+                el = manager.element();
                 // only take the target so we don't try to make managers for everyone
                 target = evnt.target;
                 // there are no delegated events, so just return everything after capture
@@ -2327,6 +2300,7 @@ app.scope(function (app) {
                 sumCount = captureCount + delegateCount;
                 i = captureCount;
                 afterwards = list_.slice(sumCount);
+                ordersEventsByHierarchy = manager.orderEventsByHeirarchy();
                 while (i < sumCount) {
                     first = list_[i];
                     ++i;
@@ -2341,7 +2315,7 @@ app.scope(function (app) {
                             first.temporaryTarget = found;
                             // how far up did you have to go before you got to the top
                             first.parentNodeNumber = counter;
-                            if (manager.owner.orderEventsByHeirarchy) {
+                            if (ordersEventsByHierarchy) {
                                 if (!(j = list[LENGTH])) {
                                     list.push(first);
                                 } else {
@@ -2366,7 +2340,7 @@ app.scope(function (app) {
             var notVisible = BOOLEAN_FALSE,
                 windo = windo_;
             while (!windo.isTop && !notVisible) {
-                windo = perspective.returnsManager(returnsElement(windo).parent);
+                windo = perspective.returnsManager(windo.element().parent);
                 if (windo.iframe && windo.is(ACCESSABLE)) {
                     notVisible = !windo.iframe.visible();
                 }
@@ -2382,13 +2356,13 @@ app.scope(function (app) {
             return function (num) {
                 var ret, manager = this[ITEM](num);
                 if (manager.is(ELEMENT)) {
-                    ret = clientRect(returnsElement(manager))[element];
+                    ret = clientRect(manager.element())[element];
                 } else {
-                    if (manager.is(DOCUMENT) && returnsElement(manager)[BODY]) {
-                        ret = returnsElement(manager)[BODY][doc];
+                    if (manager.is(DOCUMENT) && manager.element()[BODY]) {
+                        ret = manager.element()[BODY][doc];
                     } else {
                         if (manager.is(WINDOW)) {
-                            ret = returnsElement(manager)[win];
+                            ret = manager.element()[win];
                         }
                     }
                 }
@@ -2414,13 +2388,13 @@ app.scope(function (app) {
         removeHandler = function (fragment, handler) {
             var el, parent, manager = this,
                 cachedRemoving = manager.is(REMOVING) || BOOLEAN_FALSE;
-            if (cachedRemoving || !(el = returnsElement(manager)) || !(parent = el[PARENT_NODE])) {
+            if (cachedRemoving || !(el = manager.element()) || !(parent = el[PARENT_NODE])) {
                 // can't remove because already removed
                 return manager;
             }
             manager.mark(REMOVING);
             if (manager.is(IFRAME) && handler && isFunction(handler)) {
-                returnsElement(manager.owner.window()).setTimeout(bind(handler, NULL, manager));
+                manager.owner.window().element().setTimeout(bind(handler, NULL, manager));
             }
             if (fragment) {
                 fragment.appendChild(el);
@@ -2436,6 +2410,9 @@ app.scope(function (app) {
             isValidDomManager: BOOLEAN_TRUE,
             $: manager_query,
             querySelectorAll: manager_query,
+            orderEventsByHeirarchy: function () {
+                return this.owner.orderEventsByHeirarchy;
+            },
             queryString: function () {
                 var string = '';
                 var json = this.toJSON(BOOLEAN_TRUE);
@@ -2491,6 +2468,12 @@ app.scope(function (app) {
                     return manager !== original && filter(manager, index, list);
                 });
             },
+            element: function () {
+                return this[TARGET];
+            },
+            elements: function () {
+                return [this.element()];
+            },
             constructor: function (el, hash, owner_) {
                 var elId, registeredOptions, isDocument, owner = owner_,
                     manager = this;
@@ -2516,16 +2499,13 @@ app.scope(function (app) {
                     if ((isDocument = manager.is(DOCUMENT))) {
                         owner = manager;
                         manager[__ELID__] = elId = el[__ELID__];
-                        registerDocument(el, elId);
                     } else {
                         hash[DOM_MANAGER_STRING] = manager;
                         manager[__ELID__] = uniqueId('win');
                     }
                 }
                 manager.owner = owner || BOOLEAN_FALSE;
-                if (!isDocument) {
-                    registerElement(el, manager.owner[__ELID__], manager[__ELID__]);
-                }
+                manager[TARGET] = el;
                 if (manager.is(IFRAME)) {
                     manager.on(ATTRIBUTE_CHANGE + ':src detach attach', iframeChangeHandler);
                 }
@@ -2549,7 +2529,7 @@ app.scope(function (app) {
                 if (!manager.is(ELEMENT)) {
                     return {};
                 }
-                return makeBranch(returnsElement(manager)[OUTER_HTML], manager.owner);
+                return makeBranch(manager.element()[OUTER_HTML], manager.owner);
             },
             length: function () {
                 return 1;
@@ -2563,7 +2543,7 @@ app.scope(function (app) {
             parent: (function () {
                 var finder = function (manager, fn, original) {
                         var rets, found, parentManager = manager,
-                            parentElement = returnsElement(parentManager),
+                            parentElement = parentManager.element(),
                             next = original;
                         while (parentElement && !found) {
                             rets = fn(parentElement, original, next);
@@ -2660,7 +2640,7 @@ app.scope(function (app) {
                     return BOOLEAN_FALSE;
                 }
                 if (isString(element)) {
-                    return !!query(element, returnsElement(manager), manager)[LENGTH];
+                    return !!query(element, manager.element(), manager)[LENGTH];
                 }
                 if (element.isValidDOMA) {
                     return !!element.find(manager.contains, manager);
@@ -2669,7 +2649,7 @@ app.scope(function (app) {
                 if (target.is(DOCUMENT)) {
                     return target.window() === manager;
                 }
-                managerElement = returnsElement(manager);
+                managerElement = manager.element();
                 return !!target.parent(function (node) {
                     var parentNode = node[PARENT_NODE];
                     return [parentNode, parentNode === managerElement];
@@ -2679,11 +2659,11 @@ app.scope(function (app) {
                 var manager = this,
                     owner = manager.owner,
                     fragmentManager = isAppendable(els) ? owner.returnsManager(els) : owner.$(els).fragment(),
-                    fragment = returnsElement(fragmentManager),
+                    fragment = fragmentManager.element(),
                     children = index == NULL ? NULL : manager.children(),
                     child = children && children.item(index) || NULL,
-                    element = child && returnsElement(child) || NULL,
-                    managerElement = manager && returnsElement(manager),
+                    element = child && child.element() || NULL,
+                    managerElement = manager && manager.element(),
                     returns = fragmentManager.children(),
                     fragmentChildren = collectCustom(fragmentManager, BOOLEAN_TRUE),
                     detachNotify = dispatchDetached(fragmentChildren, owner),
@@ -2699,11 +2679,11 @@ app.scope(function (app) {
                 }
                 if (manager.is(DOCUMENT)) {
                     // it's a document, so return the manager relative to the inside
-                    return manager.returnsManager(returnsElement(manager).defaultView);
+                    return manager.returnsManager(manager.element().defaultView);
                 }
                 if (manager.is(IFRAME)) {
                     // it's an iframe, so return the manager relative to the outside
-                    return manager.owner.returnsManager(returnsElement(manager).contentWindow);
+                    return manager.owner.returnsManager(manager.element().contentWindow);
                 }
                 // it's an element so go up
                 return manager.owner.window();
@@ -2715,7 +2695,7 @@ app.scope(function (app) {
             },
             emit: function (message_, referrer_, handler) {
                 var message, post, windo = this.window(),
-                    element = returnsElement(windo);
+                    element = windo.element();
                 if (windo.is(ACCESSABLE)) {
                     message = parse(message_);
                     // if (handler) {
@@ -2733,7 +2713,9 @@ app.scope(function (app) {
                 wraptry(function () {
                     // do not parse message so it can be sent as is
                     if (!referrer_) {
-                        console.error('missing referrer: ' + windo.address);
+                        exception({
+                            message: 'missing referrer: ' + windo.address
+                        });
                     } else {
                         element.postMessage(message_, referrer_);
                     }
@@ -2742,9 +2724,9 @@ app.scope(function (app) {
             },
             sameOrigin: function () {
                 var parsedReference, manager = this,
-                    element = returnsElement(manager),
+                    element = manager.element(),
                     windo = manager.owner.window(),
-                    windoElement = returnsElement(windo);
+                    windoElement = windo.element();
                 if (windo === manager) {
                     return BOOLEAN_TRUE;
                 }
@@ -2759,7 +2741,7 @@ app.scope(function (app) {
             },
             children: function (eq, memo) {
                 var filter, resultant, manager = this,
-                    children = collectChildren(returnsElement(manager));
+                    children = collectChildren(manager.element());
                 if (eq === UNDEFINED) {
                     return memo ? ((children = map(children, manager.owner.returnsManager, manager.owner)) && result(memo, 'is', FRAGMENT) ? memo.append(children) : (memo.push.apply(memo, children) ? memo : memo)) : manager.wrap(children);
                 } else {
@@ -2782,12 +2764,12 @@ app.scope(function (app) {
                 if (+styles.opacity === 0 || styles.display === NONE || styles[HEIGHT] === ZERO_PIXELS || styles[WIDTH] === ZERO_PIXELS || styles.visibility === HIDDEN) {
                     return BOOLEAN_FALSE;
                 }
-                element = returnsElement(manager);
+                element = manager.element();
                 client = element.getBoundingClientRect();
                 if (!client[HEIGHT] || !client[WIDTH]) {
                     return BOOLEAN_FALSE;
                 }
-                windoElement = (returnsElement(manager).ownerDocument || {}).defaultView;
+                windoElement = (manager.element().ownerDocument || {}).defaultView;
                 if (!windoElement) {
                     return BOOLEAN_TRUE;
                 }
@@ -2812,9 +2794,9 @@ app.scope(function (app) {
             getStyle: function (eq) {
                 var returnValue = {},
                     manager = this,
-                    first = returnsElement(manager);
+                    first = manager.element();
                 if (first && manager.is(ELEMENT)) {
-                    returnValue = getComputed(first, returnsElement(manager.owner));
+                    returnValue = getComputed(first, manager.owner.element());
                 }
                 return returnValue;
             },
@@ -2841,7 +2823,7 @@ app.scope(function (app) {
             destroy: function (handler) {
                 var customName, manager = this,
                     registeredAs = manager[REGISTERED_AS],
-                    element = returnsElement(manager);
+                    element = manager.element();
                 if (manager.is(DESTROYED)) {
                     return manager;
                 }
@@ -2876,13 +2858,13 @@ app.scope(function (app) {
                 return fn(manager, 0, [manager]) ? manager : UNDEFINED;
             },
             client: function () {
-                return clientRect(returnsElement(this));
+                return clientRect(this.element());
             },
             box: function (context) {
-                return box(returnsElement(this), context);
+                return box(this.element(), context);
             },
             flow: function (context) {
-                return flow(returnsElement(this), context);
+                return flow(this.element(), context);
             },
             dispatchEvent: function (name, e, capturing_) {
                 var ret, cachedTrust = DO_NOT_TRUST;
@@ -2894,7 +2876,7 @@ app.scope(function (app) {
             toJSON: function (preventDeep) {
                 var previous, temporaryFragment, childrenLength, children, obj, manager = this,
                     owner = manager.owner,
-                    node = returnsElement(manager);
+                    node = manager.element();
                 if (manager.is(WINDOW) || manager.is(DOCUMENT)) {
                     return {};
                 }
@@ -2909,7 +2891,7 @@ app.scope(function (app) {
                 if (string !== UNDEFINED) {
                     return manager.attr(attr, string);
                 }
-                return returnsElement(manager)[attr];
+                return manager.element()[attr];
             };
         }), wrap(videoDirectEvents, triggerEventWrapperManager), wrap(directEvents, function (attr) {
             return triggerEventWrapperManager(attr);
@@ -2993,7 +2975,7 @@ app.scope(function (app) {
         },
         unwrapsOnLoop = function (fn) {
             return function (manager, index, list) {
-                return fn(returnsElement(manager), index, list);
+                return fn(manager.element(), index, list);
             };
         },
         dataReconstructor = function (list, fn) {
@@ -3093,7 +3075,7 @@ app.scope(function (app) {
                     dom = this,
                     context = dom.context = validContext ? ctx.item(0) : documentContext,
                     owner = dom.owner = documentContext,
-                    unwrapped = returnsElement(context);
+                    unwrapped = context.element();
                 if (str && !isWindow(str) && str.isValidDOMA) {
                     return str;
                 }
@@ -3214,7 +3196,7 @@ app.scope(function (app) {
                     };
                 // look into foldl so we do not get duplicate elements
                 return duff(context.unwrap(), function (manager) {
-                    duff(query(str, returnsElement(manager)), push);
+                    duff(query(str, manager.element()), push);
                 }) && matchers;
             }),
             /**
@@ -3415,8 +3397,8 @@ app.scope(function (app) {
                 var hash = {};
                 return context.foldl(function (memo, manager) {
                     var parent;
-                    if ((parent = manager.parent(original)) && !hash[returnsElement(parent)[__ELID__]]) {
-                        hash[returnsElement(parent)[__ELID__]] = parent;
+                    if ((parent = manager.parent(original)) && !hash[parent.element()[__ELID__]]) {
+                        hash[parent.element()[__ELID__]] = parent;
                         memo.push(parent);
                     }
                     return memo;
@@ -3468,7 +3450,7 @@ app.scope(function (app) {
         var setup = DOMA_SETUP(windo);
         allSetups.push(setup);
         windo.DOMA = windo.DOMA || setup;
-        windo.returnsElement = returnsElement;
+        // windo.returnsElement = returnsElement;
         windo.$ = has(windo, '$') ? windo.$ : setup;
         duff(plugins, function (plugin) {
             plugin(setup);

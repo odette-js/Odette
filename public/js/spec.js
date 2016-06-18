@@ -2047,7 +2047,7 @@ application.scope().run(function (app, _, factories) {
         });
         _.it('it knows it\'s own client rect', function () {
             var div = divs.first();
-            var rect = returnsElement(div).getBoundingClientRect();
+            var rect = div.element().getBoundingClientRect();
             _.expect(div.client()).toEqual({
                 height: rect.height,
                 width: rect.width,
@@ -2059,7 +2059,7 @@ application.scope().run(function (app, _, factories) {
         });
         _.it('can show and hide elements', function () {
             _.expect(divs.hide().map(function (manager) {
-                var el = returnsElement(manager);
+                var el = manager.element();
                 if (el.style.display === 'none') {
                     return '';
                 } else {
@@ -2067,7 +2067,7 @@ application.scope().run(function (app, _, factories) {
                 }
             }).join('')).toEqual('');
             _.expect(divs.show().map(function (manager) {
-                var el = returnsElement(manager);
+                var el = manager.element();
                 if (el.style.display === 'block') {
                     return '';
                 } else {
@@ -2143,7 +2143,7 @@ application.scope().run(function (app, _, factories) {
         _.describe('it can find it\'s children', function () {
             _.it('by calling the children method', function () {
                 divs.duff(function (manager, idx) {
-                    var div = returnsElement(manager);
+                    var div = manager.element();
                     var span1 = document.createElement('span');
                     var span2 = document.createElement('span');
                     span1.className = 'span-' + idx;
@@ -2154,23 +2154,23 @@ application.scope().run(function (app, _, factories) {
                 var kids = divs.children();
                 _.expect(kids.length()).toEqual(10);
                 kids.duff(function (kid, idx) {
-                    _.expect(returnsElement(kid).localName).toEqual('span');
+                    _.expect(kid.element().localName).toEqual('span');
                 });
                 kids = divs.children(1);
                 _.expect(kids.length()).toEqual(5);
                 kids = divs.children('.span-2');
                 _.expect(kids.unwrap()).toEqual(divs.children().filter('.span-2').unwrap());
                 _.expect(kids.length()).toEqual(2);
-                _.expect(returnsElement(kids) === kids.item(1)).toEqual(false);
+                _.expect(kids.element() === kids.item(1)).toEqual(false);
             });
             _.it('by querying the dom elements', function () {
                 divs.duff(function (div, idx) {
-                    returnsElement(div).innerHTML = '<span></span><img/>';
+                    div.element().innerHTML = '<span></span><img/>';
                 });
                 var kids = divs.$('img');
                 _.expect(kids.length()).toEqual(5);
                 kids.duff(function (kid, idx) {
-                    _.expect(returnsElement(kid).tagName).toEqual('IMG');
+                    _.expect(kid.element().tagName).toEqual('IMG');
                 });
             });
         });
@@ -2179,13 +2179,13 @@ application.scope().run(function (app, _, factories) {
                 var $start = $('.leaves'),
                     $end = $('.tree'),
                     end = $start.parent(2);
-                _.expect(returnsElement(end.first())).toEqual(returnsElement($end.first()));
+                _.expect(end.first().element()).toEqual($end.first().element());
             });
             _.it('or by finding via selector', function () {
                 var $start = $('.leaves'),
                     $end = $('.tree'),
                     end = $start.parent('.tree');
-                _.expect(returnsElement(end.first())).toEqual(returnsElement($end.first()));
+                _.expect(end.first().element()).toEqual($end.first().element());
             });
             _.it('or by passing a function', function () {
                 var $start = $('.leaves'),
@@ -2193,18 +2193,18 @@ application.scope().run(function (app, _, factories) {
                         var parent = el.parentNode;
                         return [parent, parent && parent.tagName === 'BODY'];
                     });
-                _.expect(returnsElement(end.item(0))).toEqual(document.body);
+                _.expect(end.item(0).element()).toEqual(document.body);
             });
             _.describe('or by passing a keyword', function () {
                 _.it('like document', function () {
                     var $start = $('.leaves'),
                         end = $start.parent('document');
-                    _.expect(returnsElement(end.first())).toEqual(document);
+                    _.expect(end.first().element()).toEqual(document);
                 });
                 _.it('or window', function () {
                     var $start = $('.leaves'),
                         end = $start.parent('window');
-                    _.expect(returnsElement(end.first())).toEqual(window);
+                    _.expect(end.first().element()).toEqual(window);
                 });
             });
         });
@@ -2298,7 +2298,7 @@ application.scope().run(function (app, _, factories) {
                 divs.each(function (el, idx) {
                     _.expect(_.isInstance(el, factories.DOMA)).toEqual(false);
                     _.expect(factories.DomManager.isInstance(el)).toEqual(true);
-                    _.expect(divs.item(idx) === returnsElement(el));
+                    _.expect(divs.item(idx) === el.element());
                 });
             });
             _.it('where the duff and forEach function just gives you the element at each index, just like a collection', function () {
@@ -2368,16 +2368,16 @@ application.scope().run(function (app, _, factories) {
         _.describe('there is also a data attributes interface', function () {
             _.it('where you can add', function () {
                 divs.duff(function (div, idx) {
-                    _.expect(returnsElement(div).getAttribute('data-one')).toEqual(null);
-                    _.expect(returnsElement(div).getAttribute('data-two')).toEqual(null);
+                    _.expect(div.element().getAttribute('data-one')).toEqual(null);
+                    _.expect(div.element().getAttribute('data-two')).toEqual(null);
                 });
                 divs.data({
                     one: 'one',
                     two: 'two'
                 });
                 divs.duff(function (div, idx) {
-                    _.expect(returnsElement(div).getAttribute('data-one')).toEqual('one');
-                    _.expect(returnsElement(div).getAttribute('data-two')).toEqual('two');
+                    _.expect(div.element().getAttribute('data-one')).toEqual('one');
+                    _.expect(div.element().getAttribute('data-two')).toEqual('two');
                 });
             });
             _.it('remove', function () {
@@ -2386,16 +2386,16 @@ application.scope().run(function (app, _, factories) {
                     two: 'two'
                 });
                 divs.duff(function (div, idx) {
-                    _.expect(returnsElement(div).getAttribute('data-one')).toEqual('one');
-                    _.expect(returnsElement(div).getAttribute('data-two')).toEqual('two');
+                    _.expect(div.element().getAttribute('data-one')).toEqual('one');
+                    _.expect(div.element().getAttribute('data-two')).toEqual('two');
                 });
                 divs.data({
                     one: false,
                     two: false
                 });
                 divs.duff(function (div, idx) {
-                    _.expect(returnsElement(div).getAttribute('data-one')).toEqual(null);
-                    _.expect(returnsElement(div).getAttribute('data-two')).toEqual(null);
+                    _.expect(div.element().getAttribute('data-one')).toEqual(null);
+                    _.expect(div.element().getAttribute('data-two')).toEqual(null);
                 });
             });
             _.it('and update data attributes', function () {
@@ -2404,15 +2404,15 @@ application.scope().run(function (app, _, factories) {
                     two: 'two'
                 });
                 divs.duff(function (div) {
-                    _.expect(returnsElement(div).getAttribute('data-one')).toEqual('one');
-                    _.expect(returnsElement(div).getAttribute('data-two')).toEqual('two');
+                    _.expect(div.element().getAttribute('data-one')).toEqual('one');
+                    _.expect(div.element().getAttribute('data-two')).toEqual('two');
                 });
             });
         });
         _.describe('it can also manipulate elements in other ways', function () {
             _.it('like by manipulating their attributes', function () {
                 divs.duff(function (div) {
-                    _.expect(returnsElement(div).getAttribute('tabindex')).toEqual(null);
+                    _.expect(div.element().getAttribute('tabindex')).toEqual(null);
                 });
                 divs.attr({
                     tabindex: -1
@@ -2423,7 +2423,7 @@ application.scope().run(function (app, _, factories) {
             });
             _.it('or by manipulating their properties', function () {
                 divs.duff(function (div, idx) {
-                    _.expect(returnsElement(div).align).toEqual('');
+                    _.expect(div.element().align).toEqual('');
                 });
                 divs.prop({
                     align: 'left'
@@ -2535,17 +2535,17 @@ application.scope().run(function (app, _, factories) {
             _.expect(complexView.el.html()).not.toEqual('');
         });
         _.it('can be attached to a region', function () {
-            _.expect(returnsElement(complexView.el).parentNode).toEqual(null);
+            _.expect(complexView.el.element().parentNode).toEqual(null);
             app.RegionManager.get('main').add(complexView);
-            _.expect(returnsElement(complexView.el).parentNode).not.toEqual(null);
+            _.expect(complexView.el.element().parentNode).not.toEqual(null);
         });
         _.it('can be filtered', function () {
-            _.expect(returnsElement(complexView.el).parentNode).toEqual(null);
+            _.expect(complexView.el.element().parentNode).toEqual(null);
             complexView.filter = function () {
                 return false;
             };
             app.RegionManager.get('main').add(complexView);
-            _.expect(returnsElement(complexView.el).parentNode).toEqual(null);
+            _.expect(complexView.el.element().parentNode).toEqual(null);
         });
         _.it('can have extra elements', function () {
             _.expect(_.isObject(complexView.ui)).toEqual(true);
@@ -2687,71 +2687,71 @@ application.scope().run(function (app, _, factories) {
         });
     });
 });
-application.scope().run(function (app, _) {
-    _.describe('evaluate needs it\'s own space to be tested', function () {
-        var windo = _.factories.Window(window);
-        _.it('_.evaluate', function (done) {
-            windo._ = _;
-            windo.done = done;
-            windo.console.log = function (comparison) {
-                // replace windo with a custom log function
-                _.expect(comparison).not.toBe(window);
-            };
-            _.expect(function () {
-                _.evaluate(windo, function () {
-                    var count = 0;
-                    var called = 0;
-                    var check = function () {
-                        ++count;
-                        if (count < called) {
-                            return;
-                        }
-                        done();
-                    };
-                    var fn = function () {
-                        console.log(this);
-                        console.log(window);
-                    };
-                    console.log(this);
-                    console.log(window);
-                    fn();
-                    called++;
-                    setTimeout(function () {
-                        console.log(this);
-                        console.log(window);
-                        fn();
-                        check();
-                    });
-                    called++;
-                    requestAnimationFrame(function () {
-                        console.log(this);
-                        console.log(window);
-                        fn();
-                        check();
-                    });
-                });
-            }).not.toThrow();
-            _.expect(function () {
-                _.evaluate(windo, function () {
-                    glob = function () {
-                        console.log(this);
-                        console.log(window);
-                    };
-                });
-            }).toThrow();
-            _.expect(function () {
-                _.evaluate(windo, function () {
-                    // remove ability to use Function Constructors if we can't get rid of eval
-                    eval('var fn = new Function.constructor("console.log(this);");fn();');
-                });
-            }).toThrow();
-            _.expect(_.evaluate(windo, function () {
-                var cachedInnerHeight = innerHeight;
-                delete window.innerHeight;
-                _.expect(window.innerHeight).toEqual(void 0);
-                _.expect(innerHeight).toEqual(cachedInnerHeight);
-                return innerHeight;
-            })).toEqual(void 0);
-        });
-    });
-});
+// application.scope().run(function (app, _) {
+//     _.describe('evaluate needs it\'s own space to be tested', function () {
+//         var windo = _.factories.Window(window);
+//         _.it('_.evaluate', function (done) {
+//             windo._ = _;
+//             windo.done = done;
+//             windo.console.log = function (comparison) {
+//                 // replace windo with a custom log function
+//                 _.expect(comparison).not.toBe(window);
+//             };
+//             _.expect(function () {
+//                 _.evaluate(windo, function () {
+//                     var count = 0;
+//                     var called = 0;
+//                     var check = function () {
+//                         ++count;
+//                         if (count < called) {
+//                             return;
+//                         }
+//                         done();
+//                     };
+//                     var fn = function () {
+//                         console.log(this);
+//                         console.log(window);
+//                     };
+//                     console.log(this);
+//                     console.log(window);
+//                     fn();
+//                     called++;
+//                     setTimeout(function () {
+//                         console.log(this);
+//                         console.log(window);
+//                         fn();
+//                         check();
+//                     });
+//                     called++;
+//                     requestAnimationFrame(function () {
+//                         console.log(this);
+//                         console.log(window);
+//                         fn();
+//                         check();
+//                     });
+//                 });
+//             }).not.toThrow();
+//             _.expect(function () {
+//                 _.evaluate(windo, function () {
+//                     glob = function () {
+//                         console.log(this);
+//                         console.log(window);
+//                     };
+//                 });
+//             }).toThrow();
+//             _.expect(function () {
+//                 _.evaluate(windo, function () {
+//                     // remove ability to use Function Constructors if we can't get rid of eval
+//                     eval('var fn = new Function.constructor("console.log(this);");fn();');
+//                 });
+//             }).toThrow();
+//             _.expect(_.evaluate(windo, function () {
+//                 var cachedInnerHeight = innerHeight;
+//                 delete window.innerHeight;
+//                 _.expect(window.innerHeight).toEqual(void 0);
+//                 _.expect(innerHeight).toEqual(cachedInnerHeight);
+//                 return innerHeight;
+//             })).toEqual(void 0);
+//         });
+//     });
+// });

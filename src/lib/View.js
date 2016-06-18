@@ -126,13 +126,13 @@ app.scope(function (app) {
             },
             attach: function (view) {
                 var parentNode, bufferDirective, region = this,
-                    el = view.el && returnsElement(view.el);
+                    el = view.el && view.el.element();
                 if (!el) {
                     return region;
                 }
                 parentNode = el.parentNode;
                 bufferDirective = region.directive(BUFFERED_VIEWS);
-                if (parentNode && parentNode === returnsElement(region.el)) {
+                if (parentNode && parentNode === region.el.element()) {
                     return region;
                 }
                 bufferDirective.els.appendChild(el);

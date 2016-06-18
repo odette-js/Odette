@@ -44,17 +44,17 @@ application.scope().run(function (app, _, factories) {
             _.expect(complexView.el.html()).not.toEqual('');
         });
         _.it('can be attached to a region', function () {
-            _.expect(returnsElement(complexView.el).parentNode).toEqual(null);
+            _.expect(complexView.el.element().parentNode).toEqual(null);
             app.RegionManager.get('main').add(complexView);
-            _.expect(returnsElement(complexView.el).parentNode).not.toEqual(null);
+            _.expect(complexView.el.element().parentNode).not.toEqual(null);
         });
         _.it('can be filtered', function () {
-            _.expect(returnsElement(complexView.el).parentNode).toEqual(null);
+            _.expect(complexView.el.element().parentNode).toEqual(null);
             complexView.filter = function () {
                 return false;
             };
             app.RegionManager.get('main').add(complexView);
-            _.expect(returnsElement(complexView.el).parentNode).toEqual(null);
+            _.expect(complexView.el.element().parentNode).toEqual(null);
         });
         _.it('can have extra elements', function () {
             _.expect(_.isObject(complexView.ui)).toEqual(true);

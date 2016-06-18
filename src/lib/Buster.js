@@ -261,7 +261,7 @@ app.scope(function (app) {
                 var emitReferrer, buster = this,
                     iframe = buster[IFRAME],
                     busterData = buster.directive(DATA),
-                    hrefSplit = returnsElement(buster.receiveWindow).location.href.split(ENCODED_BRACKET),
+                    hrefSplit = buster.receiveWindow.element().location.href.split(ENCODED_BRACKET),
                     hrefShift = hrefSplit.shift(),
                     unshifted = hrefSplit.unshift(EMPTY_STRING),
                     href = hrefSplit.join(ENCODED_BRACKET),
@@ -301,7 +301,7 @@ app.scope(function (app) {
                 if (!receiveWindow || !receiveWindow.is(WINDOW)) {
                     return;
                 }
-                hashString = returnsElement(receiveWindow).location.hash.slice(1);
+                hashString = receiveWindow.element().location.hash.slice(1);
                 hashSplit = hashString.split(ENCODED_BRACKET);
                 hashShift = hashSplit.shift();
                 hashSplit.unshift(EMPTY_STRING);
