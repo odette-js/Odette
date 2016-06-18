@@ -1,4 +1,4 @@
-var STATUS = 'StatusMarker',
+var STATUS = 'Status',
     STATUSES = 'statuses',
     directives = {
         creation: {},
@@ -60,7 +60,7 @@ var STATUS = 'StatusMarker',
         mark: parody(STATUS, 'mark'),
         unmark: parody(STATUS, 'unmark'),
         remark: parody(STATUS, 'remark'),
-        is: checkParody(STATUS, 'is'),
+        is: checkParody(STATUS, 'is', BOOLEAN_FALSE),
         directive: function (name) {
             var Handler, directive, that = this;
             if ((directive = that[name])) {
@@ -76,7 +76,7 @@ var STATUS = 'StatusMarker',
             return result;
         }
     }),
-    StatusMarker = factories.Extendable.extend(STATUS, {
+    Status = factories.Status = factories.Extendable.extend(STATUS, {
         constructor: function () {
             this[STATUSES] = {};
             return this;
@@ -107,7 +107,7 @@ var STATUS = 'StatusMarker',
             return !this[STATUSES][status];
         }
     });
-defineDirective(STATUS, StatusMarker[CONSTRUCTOR]);
+defineDirective(STATUS, Status[CONSTRUCTOR]);
 app.defineDirective = defineDirective;
 app.extendDirective = extendDirective;
 _.publicize({

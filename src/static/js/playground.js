@@ -13,7 +13,7 @@ application.scope().run(function (app, _, factories) {
     });
     var ViewContainer = factories.View.extend({
         Child: PersonView,
-        template: $.compile('profile-summary-container'),
+        template: $.compile('employees-container'),
         className: _.returns('employees-container'),
         regions: function () {
             return {
@@ -21,7 +21,7 @@ application.scope().run(function (app, _, factories) {
             };
         }
     });
-    app.addRegion({
+    app.directive('RegionManager').add({
         summaries: '#main-region'
     });
     var specless = Company({
@@ -29,12 +29,15 @@ application.scope().run(function (app, _, factories) {
         type: 'inc'
     });
     factories.HTTP('/json/data.json').success(function (data) {
-        var summaries = app.getRegion('summaries');
+        var summaries = app.directive('RegionManager').get('summaries');
         var speclessView = ViewContainer({
             model: specless
         });
         speclessView.addChildView('employees', data);
         app.addChildView('summaries', speclessView);
-        console.log(speclessView);
+        setTimeout(function () {
+            console.log(speclessView);
+            speclessView.render();
+        });
     });
 });

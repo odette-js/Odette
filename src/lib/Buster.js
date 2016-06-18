@@ -1,3 +1,30 @@
+var busterGroupHash = {},
+    VERSION = 'version',
+    UPPERCASE_VERSION = VERSION.toUpperCase(),
+    receivePostMessage = function (evt) {
+        var buster, data = evt.data(),
+            postTo = data.postTo;
+        if (app.isDestroyed || !data || !postTo || (app[UPPERCASE_VERSION] !== data[VERSION] && data[VERSION] !== '*')) {
+            return;
+        }
+        buster = (busterGroupHash[data.group] || {})[data.postTo];
+        if (!buster) {
+            return;
+        }
+        var originalMessage, runCount = data.runCount,
+            children = buster.directive(CHILDREN);
+        if (runCount) {
+            originalMessage = children.get(ID, data.messageId);
+            if (!originalMessage) {
+                return buster;
+            }
+            // found the message that i originally sent you
+            // allow the buster to set some things up
+            buster.response(originalMessage, data);
+        } else {
+            buster.receive(data);
+        }
+    };
 app.scope(function (app) {
     var _ = app._,
         factories = _.factories,
@@ -6,7 +33,7 @@ app.scope(function (app) {
         ENCODED_BRACKET = '%7B',
         IS_LATE = 'isLate',
         DOCUMENT_READY = 'documentReady',
-        IS_WINDOW = 'isWindow',
+        //.is(WINDOW)= 'isWindow',
         DEFERRED = 'deferred',
         RESOLVED = 'resolved',
         IS_DEFERRED = 'is' + capitalize(DEFERRED),
@@ -37,32 +64,6 @@ app.scope(function (app) {
         EMIT_REFERRER = 'emitReferrer',
         BUSTER = 'buster',
         PACKET = 'packet',
-        VERSION = 'version',
-        busterGroupHash = {},
-        receive = function (evt) {
-            var buster, data = evt.data(),
-                postTo = data.postTo;
-            if (app.isDestroyed || !data || !postTo || (app[VERSION] !== data[VERSION] && data[VERSION] !== '*')) {
-                return;
-            }
-            buster = (busterGroupHash[data.group] || {})[data.postTo];
-            if (!buster) {
-                return;
-            }
-            var originalMessage, runCount = data.runCount,
-                children = buster.directive(CHILDREN);
-            if (runCount) {
-                originalMessage = children.get(ID, data.messageId);
-                if (!originalMessage) {
-                    return buster;
-                }
-                // found the message that i originally sent you
-                // allow the buster to set some things up
-                buster.response(originalMessage, data);
-            } else {
-                buster.receive(data);
-            }
-        },
         /**
          * single function to stringify and post message an object to the other side
          * @private
@@ -72,7 +73,7 @@ app.scope(function (app) {
          */
         postMessage = function (base, buster) {
             var referrer, message = stringify(base);
-            return buster.emitWindow.emit(message, buster.get(EMIT_REFERRER), receive);
+            return buster.emitWindow.emit(message, buster.get(EMIT_REFERRER));
         },
         defaultGroupId = uuid(),
         RESPOND_HANDLERS = 'respondHandlers',
@@ -95,7 +96,7 @@ app.scope(function (app) {
                 if (arguments[0]) {
                     message.set(PACKET, data || {});
                 } else {
-                    message = parse(stringify(message.get(PACKET)));
+                    message = cloneJSON(message.get(PACKET));
                 }
                 return message;
             },
@@ -131,7 +132,7 @@ app.scope(function (app) {
             }
         }),
         receiveWindowEvents = {
-            message: receive
+            message: receivePostMessage
         },
         wipe = function (buster) {
             return find(busterGroupHash, function (groupHash) {
@@ -171,7 +172,7 @@ app.scope(function (app) {
                 from: buster.get(ID),
                 postTo: buster.get(POST_TO),
                 group: buster.get(GROUP),
-                version: app[VERSION],
+                version: app[UPPERCASE_VERSION],
                 messageId: buster.directive(CHILDREN)[LENGTH](),
                 timeStamp: _.now()
             };
@@ -232,24 +233,24 @@ app.scope(function (app) {
             defineWindows: function (receiveWindow, emitWindow) {
                 var buster = this,
                     busterData = buster.directive(DATA);
-                if (receiveWindow && receiveWindow[IS_WINDOW]) {
+                if (receiveWindow && receiveWindow.is(WINDOW)) {
                     // takes care of preventing duplicate handlers
                     buster.receiveWindow = receiveWindow.on(receiveWindowEvents);
                     buster.mark(DOCUMENT_READY);
                     buster.flush();
                 }
-                if (emitWindow && emitWindow[IS_WINDOW]) {
+                if (emitWindow && emitWindow.is(WINDOW)) {
                     buster.emitWindow = emitWindow;
                     busterData.set(POST_TO, busterData.get(POST_TO) || buster.emitWindow.address);
                 }
             },
             defineIframe: function (iframe) {
                 var busterData, emitReferrer, receiveReferrer, iframeSrc, referrer, receiveWindow, data, href, windo, buster = this;
-                if (!iframe || !iframe.isIframe) {
+                if (!iframe || !iframe.is(IFRAME)) {
                     return;
                 }
                 buster[IFRAME] = iframe;
-                if (iframe.is('attached') && (windo = iframe.window())) {
+                if (iframe.is(ATTACHED) && (windo = iframe.window())) {
                     buster.defineWindows(NULL, windo);
                 }
                 if (iframe) {
@@ -260,7 +261,7 @@ app.scope(function (app) {
                 var emitReferrer, buster = this,
                     iframe = buster[IFRAME],
                     busterData = buster.directive(DATA),
-                    hrefSplit = buster.receiveWindow.element().location.href.split(ENCODED_BRACKET),
+                    hrefSplit = returnsElement(buster.receiveWindow).location.href.split(ENCODED_BRACKET),
                     hrefShift = hrefSplit.shift(),
                     unshifted = hrefSplit.unshift(EMPTY_STRING),
                     href = hrefSplit.join(ENCODED_BRACKET),
@@ -297,10 +298,10 @@ app.scope(function (app) {
             stripData: function () {
                 var hashSplit, hashShift, hashString, buster = this,
                     receiveWindow = buster.receiveWindow;
-                if (!receiveWindow || !receiveWindow[IS_WINDOW]) {
+                if (!receiveWindow || !receiveWindow.is(WINDOW)) {
                     return;
                 }
-                hashString = receiveWindow.element().location.hash.slice(1);
+                hashString = returnsElement(receiveWindow).location.hash.slice(1);
                 hashSplit = hashString.split(ENCODED_BRACKET);
                 hashShift = hashSplit.shift();
                 hashSplit.unshift(EMPTY_STRING);
@@ -334,10 +335,10 @@ app.scope(function (app) {
                 });
                 buster.on(events);
                 buster.setGroup();
-                if (receiveWindow && receiveWindow[IS_WINDOW]) {
+                if (receiveWindow && receiveWindow.is(WINDOW)) {
                     buster.defineWindows(receiveWindow);
                 }
-                if (manager[IS_WINDOW]) {
+                if (manager.is(WINDOW)) {
                     buster.defineWindows(NULL, manager);
                     // window tests... because messages are going up
                 } else {
@@ -493,6 +494,6 @@ app.scope(function (app) {
             }
         });
     if (app.global.touch(win, win[TOP])) {
-        $(win[TOP]).on(MESSAGE, receive);
+        $(win[TOP]).on(MESSAGE, receivePostMessage);
     }
 });

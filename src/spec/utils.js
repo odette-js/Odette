@@ -323,19 +323,21 @@ application.scope().run(function (app, _) {
             _.it('_.clone', function () {
                 var original = {
                         some: 'thing',
-                        out: 'there'
+                        out: 'there',
+                        fun: function () {}
                     },
                     cloned = _.clone(original);
                 _.expect(cloned).toEqual(original);
             });
             // write more differentiating code for this test
-            _.it('_.fullClone', function () {
+            _.it('_.cloneJSON', function () {
                 var original = {
                         some: 'thing',
-                        out: 'there'
+                        out: 'there',
+                        fun: function () {}
                     },
-                    cloned = _.fullClone(original);
-                _.expect(cloned).toEqual(original);
+                    cloned = _.cloneJSON(original);
+                _.expect(cloned).not.toEqual(original);
             });
             _.it('_.wrap', function () {
                 _.expect(_.wrap(['some', 'where'], function (val) {

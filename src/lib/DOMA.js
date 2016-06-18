@@ -1,14 +1,32 @@
 var ATTACHED = 'attached',
-    IFRAME = 'iframe';
+    IFRAME = 'iframe',
+    FRAGMENT = 'fragment';
 app.scope(function (app) {
     var _ = app._,
+        allTheElements = {},
+        returnsElement = function (manager) {
+            var docManager = manager.owner;
+            var docId = docManager[__ELID__];
+            var elId = manager[__ELID__];
+            return allTheElements[docId][elId];
+        },
+        returnsDocument = function (manager) {
+            var docManager = manager.owner;
+            var docId = docManager[__ELID__];
+            return allTheElements[docId][docId];
+        },
+        registerDocument = function (doc, docId) {
+            allTheElements[docId] = allTheElements[docId] || {};
+            allTheElements[docId][docId] = doc;
+        },
+        registerElement = function (el, docId, elId) {
+            allTheElements[docId][elId] = el;
+        },
         ATTRIBUTES = 'Attributes',
-        factories = _.factories,
-        Collection = factories.Collection,
         globalAssociator = factories.Associator(),
         DOM_MANAGER_STRING = 'DomManager',
         NODE_TYPE = 'nodeType',
-        DESTROYED = 'destroyed',
+        DESTROYED = DESTROY + 'ed',
         CUSTOM = 'custom',
         REMOVING = 'removing',
         ACCESSABLE = 'accessable',
@@ -29,12 +47,11 @@ app.scope(function (app) {
         ATTRIBUTES_CHANGING = 'attributesChanging',
         DELEGATE_COUNT = 'delegateCount',
         CAPTURE_COUNT = 'captureCount',
-        CUSTOM_KEY = DATA + HYPHEN + CUSTOM,
+        CUSTOM_KEY = 'is',
         CUSTOM_ATTRIBUTE = '[' + CUSTOM_KEY + ']',
         CLASS__NAME = (CLASS + HYPHEN + NAME),
         FONT_SIZE = 'fontSize',
         DEFAULT_VIEW = 'defaultView',
-        IS_ELEMENT = 'isElement',
         DIV = 'div',
         devicePixelRatio = (win.devicePixelRatio || 1),
         ensure = function (el, owner) {
@@ -267,7 +284,7 @@ app.scope(function (app) {
         makeEachTrigger = function (attr, api) {
             var whichever = api || attr;
             return function (manager) {
-                var el = manager.element();
+                var el = returnsElement(manager);
                 var ret, cachedTrust = DO_NOT_TRUST;
                 DO_NOT_TRUST = BOOLEAN_TRUE;
                 if (ALL_EVENTS_HASH[whichever] && isFunction(el[whichever])) {
@@ -351,7 +368,7 @@ app.scope(function (app) {
         // returns the flow of the element passed on relative to the element's bounding window
         flow = function (el, ctx) {
             var clientRect = el.getBoundingClientRect(),
-                computedStyle = getComputed(el, ctx.element()),
+                computedStyle = getComputed(el, returnsElement(ctx)),
                 marginTop = unitRemoval(computedStyle.marginTop),
                 marginLeft = unitRemoval(computedStyle.marginLeft),
                 marginRight = unitRemoval(computedStyle.marginRight),
@@ -699,7 +716,7 @@ app.scope(function (app) {
         //     '8': BOOLEAN_TRUE
         // },
         createElement = function (tag_, manager) {
-            var confirmedObject, foundElement, elementName, newElement, newManager, documnt = manager && manager.element(),
+            var confirmedObject, foundElement, elementName, newElement, newManager, documnt = manager && returnsElement(manager),
                 registeredElements = manager && manager.registeredElements,
                 tag = tag_;
             if (isObject(tag)) {
@@ -742,10 +759,10 @@ app.scope(function (app) {
             return newManager;
         },
         makeText = function (content, manager) {
-            return manager.element().createTextNode(content);
+            return returnsElement(manager).createTextNode(content);
         },
         makeComment = function (content, manager) {
-            return manager.element().createComment(content);
+            return returnsElement(manager).createComment(content);
         },
         makeTree = function (str, manager) {
             var div = createElement(DIV, manager);
@@ -778,7 +795,7 @@ app.scope(function (app) {
             return indexOf(query(selector, parent), element) !== -1;
         },
         createDocumentFragment = function (nulled, context) {
-            return context.isDocument && context.element().createDocumentFragment();
+            return context.is(DOCUMENT) && returnsElement(context).createDocumentFragment();
         },
         /**
          * @private
@@ -809,8 +826,8 @@ app.scope(function (app) {
                 frag = context.createDocumentFragment();
                 duff(els, function (manager_) {
                     var parentNode, manager = context.returnsManager(manager_),
-                        el = manager.element();
-                    if (!manager[IS_ELEMENT] || manager.isFragment) {
+                        el = returnsElement(manager);
+                    if (!manager.is(ELEMENT) || manager.is(FRAGMENT)) {
                         return;
                     }
                     parentNode = el[PARENT_NODE];
@@ -860,8 +877,8 @@ app.scope(function (app) {
             return key;
         },
         styleAttributeManipulator = function (manager, key, value) {
-            var element = manager.element();
-            if (manager[IS_ELEMENT]) {
+            var element = returnsElement(manager);
+            if (manager.is(ELEMENT)) {
                 if (value === BOOLEAN_TRUE) {
                     return element[STYLE][key];
                 } else {
@@ -1081,7 +1098,7 @@ app.scope(function (app) {
             }));
             if (!wasCustom && manager.is(CUSTOM_LISTENER)) {
                 markCustom(manager, BOOLEAN_TRUE);
-                manager.remark(ATTACHED, isAttached(manager.element(), manager.owner));
+                manager.remark(ATTACHED, isAttached(returnsElement(manager), manager.owner));
             }
             return manager;
         },
@@ -1118,22 +1135,22 @@ app.scope(function (app) {
         },
         attributeParody = function (method) {
             return function (one, two) {
-                return attributeApi[method](this.element(), one, two);
+                return attributeApi[method](returnsElement(this), one, two);
             };
         },
         getInnard = function (attribute, manager) {
             var windo, win, doc, parentElement, returnValue = EMPTY_STRING;
-            if (manager.isIframe) {
+            if (manager.is(IFRAME)) {
                 testIframe(manager);
                 windo = manager.window();
                 if (windo.is(ACCESSABLE)) {
-                    parentElement = windo.element();
+                    parentElement = returnsElement(windo);
                     doc = parentElement[DOCUMENT];
                     returnValue = doc.body ? doc.body[PARENT_NODE].outerHTML : EMPTY_STRING;
                 }
             } else {
-                if (manager[IS_ELEMENT]) {
-                    parentElement = manager.element();
+                if (manager.is(ELEMENT)) {
+                    parentElement = returnsElement(manager);
                     returnValue = parentElement[attribute];
                 }
             }
@@ -1141,11 +1158,11 @@ app.scope(function (app) {
         },
         setInnard = function (attribute, manager, value) {
             var owner, cachedValue, win, doc, windo, doTheThing, parentElement;
-            if (manager.isIframe) {
+            if (manager.is(IFRAME)) {
                 windo = manager.window();
                 testIframe(manager);
                 if (windo.is(ACCESSABLE)) {
-                    parentElement = windo.element();
+                    parentElement = returnsElement(windo);
                     doc = parentElement[DOCUMENT];
                     doc.open();
                     doc.write(value);
@@ -1153,8 +1170,8 @@ app.scope(function (app) {
                     doTheThing = BOOLEAN_TRUE;
                 }
             } else {
-                if (manager[IS_ELEMENT]) {
-                    parentElement = manager.element();
+                if (manager.is(ELEMENT)) {
+                    parentElement = returnsElement(manager);
                     cachedValue = parentElement[attribute];
                     parentElement[attribute] = value || EMPTY_STRING;
                     owner = manager.owner;
@@ -1183,13 +1200,13 @@ app.scope(function (app) {
         /**
          * @func
          */
-        testIframe = function (manager) {
+        testIframe = function (manager, element_) {
             var contentWindow, contentWindowManager, element;
-            manager.isIframe = manager.tagName === IFRAME;
-            if (!manager.isIframe) {
+            manager.remark(IFRAME, manager.tagName === IFRAME);
+            if (!manager.is(IFRAME)) {
                 return;
             }
-            element = manager.element();
+            element = element_ || returnsElement(manager);
             contentWindow = element.contentWindow;
             manager.remark('windowReady', !!contentWindow);
             if (!contentWindow) {
@@ -1197,7 +1214,7 @@ app.scope(function (app) {
             }
             contentWindowManager = manager.owner.returnsManager(contentWindow);
             contentWindowManager.iframe = manager;
-            markGlobal(contentWindowManager);
+            markGlobal(contentWindowManager, element);
             if (!manager.cachedContent || !contentWindowManager.is(ACCESSABLE)) {
                 return;
             }
@@ -1208,7 +1225,7 @@ app.scope(function (app) {
         cachedDispatch = factories.Events[CONSTRUCTOR][PROTOTYPE][DISPATCH_EVENT],
         eventDispatcher = function (manager, name, e, capturing_) {
             var capturing = !!capturing_;
-            return cachedDispatch.call(manager, name, validateEvent(e, manager.element(), name), {
+            return cachedDispatch.call(manager, name, validateEvent(e, returnsElement(manager), name), {
                 capturing: capturing
             });
         },
@@ -1226,13 +1243,13 @@ app.scope(function (app) {
         directEvents = toArray('blur,focus,focusin,focusout,load,resize,scroll,unload,click,dblclick,mousedown,mouseup,mousemove,mouseover,mouseout,mouseenter,mouseleave,change,select,submit,keydown,keypress,keyup,error,contextmenu'),
         // collected here so DOMA can do what it wants
         allDirectMethods = directEvents.concat(_.keys(videoDirectEvents), _.keys(directAttributes)),
-        isAttached = function (element_, owner) {
+        isAttached = function (element_, owner, passed_element_) {
             var isAttachedResult, parent, potential, manager = owner.returnsManager(element_),
-                element = manager.element();
+                element = passed_element_ || returnsElement(manager);
             if ((isAttachedResult = manager.is(ATTACHED))) {
                 return isAttachedResult;
             }
-            if (manager.isWindow) {
+            if (manager.is(WINDOW)) {
                 return BOOLEAN_TRUE;
             }
             while (!parent && element && element[PARENT_NODE]) {
@@ -1258,7 +1275,7 @@ app.scope(function (app) {
                     var manager = owner.returnsManager(element);
                     var original = manager.is(ATTACHED);
                     manager.remark(ATTACHED, mark);
-                    if (mark !== original && manager[IS_ELEMENT] && manager.is(CUSTOM_LISTENER)) {
+                    if (mark !== original && manager.is(ELEMENT) && manager.is(CUSTOM_LISTENER)) {
                         managers.push(manager);
                     }
                 });
@@ -1268,8 +1285,8 @@ app.scope(function (app) {
         dispatchDetached = dispatchDomEvent('detach', BOOLEAN_FALSE),
         dispatchAttached = dispatchDomEvent('attach', BOOLEAN_TRUE),
         applyStyle = function (key, value, manager, important) {
-            var newStyles, found, cached, element = manager.element();
-            if (!manager[IS_ELEMENT] || (element[STYLE][key] === value && important)) {
+            var newStyles, found, cached, element = returnsElement(manager);
+            if (!manager.is(ELEMENT) || (element[STYLE][key] === value && important)) {
                 return BOOLEAN_FALSE;
             }
             cached = attributeApi.read(element, STYLE);
@@ -1338,7 +1355,7 @@ app.scope(function (app) {
                 withClass = unCamelCased === CLASSNAME || unCamelCased === CLASS__NAME,
                 trigger = (withClass ? (api = propertyApi) && (unCamelCased = CLASSNAME) && CLASSNAME : passedTrigger_) || unCamelCased;
             return function (manager, idx) {
-                var converted, generated, el = manager.element(),
+                var converted, generated, el = returnsElement(manager),
                     read = api.read(el, unCamelCased),
                     returnValue = manager,
                     attributeManager = ensureManager(manager, unCamelCased, read);
@@ -1392,7 +1409,7 @@ app.scope(function (app) {
         hasAttributeValue = function (property, values_, third, api) {
             var values = toArray(values_, SPACE);
             return function (manager) {
-                var el = manager.element(),
+                var el = returnsElement(manager),
                     attributeManager = getStringManager(manager, property),
                     read = api.read(el, property);
                 attributeManager.ensure(read, SPACE);
@@ -1419,7 +1436,7 @@ app.scope(function (app) {
                         usingApi = givenApi || api;
                     if (firstIsString && second === UNDEFINED) {
                         context = context.item(0);
-                        return usingApi.read(context.element(), keyprocess(first));
+                        return usingApi.read(returnsElement(context), keyprocess(first));
                     } else {
                         reverseCache = {};
                         context.each(unmarkChange(intendedIteration(first, second, function (first, second, manager, idx) {
@@ -1521,7 +1538,7 @@ app.scope(function (app) {
         passer = function (key) {
             return function (a, b) {
                 return function (manager) {
-                    return classApiShim[key](manager.element(), a, b);
+                    return classApiShim[key](returnsElement(manager), a, b);
                 };
             };
         },
@@ -1543,49 +1560,49 @@ app.scope(function (app) {
             memo[key + 'Class'] = handler(passer(key === 'has' ? 'contains' : key));
             return memo;
         }, {}),
-        markCustom = function (manager, forceCustom) {
-            var resultant, isCustom, isCustomValue = manager[IS_ELEMENT] && attributeApi.read(manager.element(), CUSTOM_KEY);
+        markCustom = function (manager, forceCustom, element_) {
+            var resultant, isCustom, isCustomValue = manager.is(ELEMENT) && attributeApi.read(element_ || returnsElement(manager), CUSTOM_KEY);
+            // more efficient way to do this?
             manager.remark(CUSTOM, forceCustom || !!isCustomValue);
             if (manager.is(CUSTOM) && !isCustomValue) {
                 isCustomValue = BOOLEAN_TRUE;
             }
-            resultant = manager[IS_ELEMENT] && writeAttribute(manager.element(), CUSTOM_KEY, isCustomValue);
+            resultant = manager.is(ELEMENT) && writeAttribute(element_ || returnsElement(manager), CUSTOM_KEY, isCustomValue);
             if (isCustomValue) {
                 manager[REGISTERED_AS] = isCustomValue;
             }
         },
-        markElement = function (manager) {
-            var element;
-            manager[IS_ELEMENT] = BOOLEAN_FALSE;
-            manager.isIframe = BOOLEAN_FALSE;
+        markElement = function (manager, element) {
+            manager.unmark(ELEMENT);
+            manager.unmark(IFRAME);
             manager.tagName = BOOLEAN_FALSE;
-            if (manager.isWindow) {
+            if (manager.is(WINDOW)) {
                 return;
             }
-            element = manager.element();
-            if ((manager[IS_ELEMENT] = isElement(element))) {
+            if ((manager.remark(ELEMENT, isElement(element)))) {
                 manager.tagName = tag(element);
-                testIframe(manager);
-                markCustom(manager);
+                testIframe(manager, element);
+                markCustom(manager, BOOLEAN_FALSE, element);
             }
         },
-        markGlobal = function (manager) {
-            var isAccessable, element = manager.element();
-            manager.isWindow = isWindow(element);
-            if (!manager.isWindow || !manager.owner) {
+        markGlobal = function (manager, element) {
+            var isAccessable;
+            manager.remark(WINDOW, isWindow(element));
+            if (!manager.is(WINDOW) || !manager.owner) {
                 return;
             }
             manager.remark(ACCESSABLE, (isAccessable = !!wraptry(function () {
                 return element[DOCUMENT];
             })));
-            manager.isTop = !!(window && element === window.top);
+            manager.remark('topWindow', (element === element.top));
+            // manager.isTop = !!(window && element === window.top);
             manager.setAddress();
             // either the window is null, (we're detached),
             // or it is an unfriendly window
             if (!isAccessable) {
                 return;
             }
-            if (manager.isTop) {
+            if (manager.is('topWindow')) {
                 // tests do never fail on top window because it always
                 // exists otherwise this code would not run
                 return;
@@ -1593,27 +1610,26 @@ app.scope(function (app) {
             // more accessable tests
             manager.remark(ACCESSABLE, manager.sameOrigin());
         },
-        test = function (manager, owner) {
-            var element = manager.element();
-            markGlobal(manager);
-            markElement(manager);
-            manager.isDocument = BOOLEAN_FALSE;
-            manager.isFragment = BOOLEAN_FALSE;
+        test = function (manager, owner, element) {
+            markGlobal(manager, element);
+            markElement(manager, element);
+            manager.unmark(DOCUMENT);
+            manager.unmark(FRAGMENT);
             manager.unmark(ATTACHED);
-            if (manager.isWindow) {
+            if (manager.is(WINDOW)) {
                 manager.mark(ATTACHED);
                 return;
             }
-            manager.isDocument = isDocument(element);
-            manager.isFragment = isFragment(element);
-            if (manager.isDocument || manager.isFragment) {
+            manager.remark(DOCUMENT, isDocument(element));
+            manager.remark(FRAGMENT, isFragment(element));
+            if (manager.is(DOCUMENT) || manager.is(FRAGMENT)) {
                 manager.mark(ATTACHED);
                 return;
             }
-            manager.remark(ATTACHED, isAttached(manager, owner));
+            manager.remark(ATTACHED, isAttached(manager, owner, element));
         },
         registeredElementName = function (name, manager) {
-            return capitalize(ELEMENT) + HYPHEN + manager.documentId + HYPHEN + name;
+            return capitalize(ELEMENT) + HYPHEN + manager[__ELID__] + HYPHEN + name;
         },
         iframeContent = function (head, body) {
             return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="user-scalable=no,width=device-width,initial-scale=1"><meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">' + head + '</head><body>' + body + '</body></html>';
@@ -1643,10 +1659,12 @@ app.scope(function (app) {
                 return toArray(returnsArray(elements));
             }
         },
-        DOMA_SETUP = factories.DOMA_SETUP = function (doc_) {
-            var registeredElements, $, setup, wrapped, manager = returnsManager(doc_, BOOLEAN_TRUE),
+        DOMA_SETUP = factories.DOMA_SETUP = function (windo_) {
+            var registeredElements, $, setup, wrapped, windo = windo_,
+                doc = windo[DOCUMENT],
+                manager = returnsManager(doc, BOOLEAN_TRUE),
                 unregisteredElements = factories.Registry(),
-                expanders = parse(stringify(_eventExpander)),
+                expanders = cloneJSON(_eventExpander),
                 cachedMotionEvent, lastCalculatedMotionEvent = 0,
                 cachedMotionCalculation = {},
                 registeredConstructors = {},
@@ -1668,7 +1686,7 @@ app.scope(function (app) {
                         absolute: 0
                     };
                 };
-            if (manager.documentId) {
+            if (manager.is('setupComplete')) {
                 return manager.$;
             }
             registeredElements = clone(validTagsNamesHash);
@@ -1680,7 +1698,6 @@ app.scope(function (app) {
                 var context = ctx || manager;
                 return DOMA(sel, context, BOOLEAN_FALSE, manager === context, manager);
             };
-            manager.documentId = manager.id = uniqueId('doc');
             wrapped = extend(wrap({
                 $: $,
                 makeTree: makeTree,
@@ -1716,15 +1733,13 @@ app.scope(function (app) {
                         ui: UIEvents,
                         progress: ProgressEvent,
                         all: AllEvents
-                    }, function (value, key) {
-                        return parse(stringify(value));
-                    })
+                    }, cloneJSON)
                 },
                 supports: {},
                 registeredConstructors: registeredConstructors,
                 registeredElementOptions: registeredElementOptions,
                 returnsManager: function (item) {
-                    return item === manager || item === manager[TARGET] ? manager : returnsManager(item, manager);
+                    return item === manager || item === returnsElement(manager) ? manager : returnsManager(item, manager);
                 },
                 // createElement: function (one, two, three) {
                 //     return createElement(one, two, three, manager);
@@ -1750,7 +1765,7 @@ app.scope(function (app) {
                 iframeContent: iframeContent,
                 orderEventsByHeirarchy: BOOLEAN_TRUE,
                 data: factories.Associator(),
-                documentId: manager.documentId,
+                // documentId: manager.documentId,
                 document: manager,
                 devicePixelRatio: devicePixelRatio,
                 constructor: DOMA[CONSTRUCTOR],
@@ -1759,6 +1774,9 @@ app.scope(function (app) {
                     evaluate: /<%([\s\S]+?)%>/g,
                     interpolate: /<%=([\s\S]+?)%>/g,
                     escape: /<%-([\s\S]+?)%>/g
+                },
+                customAttribute: function (key) {
+                    return key ? '[' + CUSTOM_KEY + '="' + key + '"]' : CUSTOM_ATTRIBUTE;
                 },
                 stashMotionEvent: function (evnt) {
                     cachedMotionEvent = evnt;
@@ -1800,6 +1818,9 @@ app.scope(function (app) {
                 },
                 // shared across all documents running this version
                 plugin: function (handler) {
+                    // if (returnsElement(manager.window()).__LOCKED__) {
+                    //     return this;
+                    // }
                     plugins.push(handler);
                     duff(allSetups, function (setup) {
                         handler(setup);
@@ -1811,11 +1832,11 @@ app.scope(function (app) {
                 },
                 collectTemplates: function () {
                     return $('script[id]').each(function (script) {
-                        compile(script.element().id, script.html(), manager);
+                        compile(script.prop(ID), script.html(), manager);
                     }).remove();
                 },
                 unregisteredElement: function (manager) {
-                    unregisteredElements.keep(manager.registeredElementName(), manager.id, manager);
+                    unregisteredElements.keep(manager.registeredElementName(), manager[__ELID__], manager);
                 },
                 registerElement: function (name, options_) {
                     var generatedTagName, creation, group, wasDefined, options = options_ || {},
@@ -1841,9 +1862,14 @@ app.scope(function (app) {
                     options.creation = (extendss ? _.flows(registeredElementOptions[extendss].creation, options.creation || noop) : options.creation) || noop;
                     registeredElementOptions[name] = options;
                     registeredConstructors[name] = (extendss ? (registeredConstructors[extendss] || DomManager) : DomManager).extend(capitalize(camelCase(name)), extend({}, prototype));
+                    if (this.document.is('ready')) {
+                        manager.$(manager.customAttribute(name)).each(manager.returnsManager);
+                    }
                     return registeredConstructors[name];
                 }
             });
+            manager.mark('setupComplete');
+            // manager.documentId = uniqueId('doc');
             extend(manager, wrapped);
             extend($, wrapped);
             runSupport(manager.supports, manager);
@@ -1862,7 +1888,7 @@ app.scope(function (app) {
         },
         runSupport = function (supported, manager) {
             var windowManager = manager.window();
-            var windowElement = windowManager.element();
+            var windowElement = returnsElement(windowManager);
             supported.deviceMotion = !!windowElement.DeviceMotionEvent;
             supported.deviceOrientation = !!windowElement.DeviceOrientationEvent;
             supported.motion = supported.deviceMotion || supported.deviceOrientation;
@@ -1893,7 +1919,7 @@ app.scope(function (app) {
         setValueCurried = setValue(domIterates),
         manager_query = function (selector) {
             var manager = this;
-            var target = manager.element();
+            var target = returnsElement(manager);
             return $(query(selector, target, manager), target);
         },
         isAppendable = function (els) {
@@ -1926,7 +1952,7 @@ app.scope(function (app) {
                 var stringResult, direction = _idxChange_,
                     parent, children, currentIndex, startIndex, target, idxChange = _idxChange || _idxChange_,
                     manager = this,
-                    element = manager.element(),
+                    element = returnsElement(manager),
                     traversed = element[property];
                 if (!(stringResult = isString(idxChange)) && property && !traversed) {
                     return manager.owner.returnsManager(traversed);
@@ -1938,8 +1964,8 @@ app.scope(function (app) {
             };
         },
         collectCustom = function (manager, markedListener) {
-            var element = manager.element();
-            return (manager[IS_ELEMENT] && manager.is(markedListener ? CUSTOM_LISTENER : CUSTOM) ? [element] : []).concat(query(CUSTOM_ATTRIBUTE, element, manager));
+            var element = returnsElement(manager);
+            return (manager.is(ELEMENT) && manager.is(markedListener ? CUSTOM_LISTENER : CUSTOM) ? [element] : []).concat(query(CUSTOM_ATTRIBUTE, element, manager));
         },
         reconstruct = function (string, context) {
             var fragment = context.createDocumentFragment();
@@ -1947,7 +1973,7 @@ app.scope(function (app) {
                 return fragment;
             }
             var objects = parse(string);
-            var contextDocument = context.element();
+            var contextDocument = returnsElement(context);
             each(toArray(objects), function (object) {
                 var element = contextDocument.createElement(object.tagName);
                 var frag = reconstruct(object.children, context);
@@ -2018,10 +2044,11 @@ app.scope(function (app) {
                 }
             },
             make: function (evnt, originalEvent, options) {
-                var acc, acc_, doc, target, val, i, prop, copy, type = originalEvent.type,
+                var acc, acc_, doc, val, i, prop, copy, type = originalEvent.type,
                     // Create a writable copy of the event object and normalize some properties
                     fixHook = fixHooks.fixedHooks[type],
-                    origin = options.origin;
+                    origin = options.origin,
+                    target = returnsElement(evnt.target);
                 if (!fixHook) {
                     fixHooks.fixedHooks[type] = fixHook = rmouseEvent.test(type) ? this.mouseHooks : rkeyEvent.test(type) ? this.keyHooks : rforceEvent.test(type) ? this.forceHooks : motionMorph.test(type) ? this.motionHooks : {};
                 }
@@ -2037,14 +2064,18 @@ app.scope(function (app) {
                 // Support: Cordova 2.5 (WebKit) (#13255)
                 // All events should have a target; Cordova deviceready doesn't
                 // ie also does not have a target... so use current target
-                target = evnt.target || (evnt.view ? evnt.view.event.currentTarget : event && event.currentTarget) || evnt.delegateTarget.element();
-                if (!target) {
-                    target = evnt.target = doc;
-                }
+                target = target || (evnt.view ? evnt.view.event.currentTarget : event && event.currentTarget) || returnsElement(evnt.delegateTarget);
+                // if (!target) {
+                //     target = evnt.target = returnsManager(doc);
+                // }
                 // Support: Safari 6.0+, Chrome<28
                 // Target should not be a text node (#504, #13143)
-                if (target[NODE_TYPE] === 3) {
-                    evnt.target = target[PARENT_NODE];
+                if (target && target[NODE_TYPE] === 3) {
+                    evnt.target = origin.owner.returnsManager(target[PARENT_NODE]);
+                } else {
+                    if (!target) {
+                        target = evnt.target = origin.owner.returnsManager(doc);
+                    }
                 }
                 (fixHook.filter || noop)(evnt, originalEvent);
                 type = distilledEventName[originalEvent.type] || originalEvent.type;
@@ -2079,7 +2110,7 @@ app.scope(function (app) {
                 if (!has(evnt.target) || !has(evnt.currentTarget)) {
                     e.delegateTarget = opts.origin;
                 } else {
-                    e.delegateTarget = opts.origin.owner.returnsManager(opts.target);
+                    e.delegateTarget = opts.target;
                 }
                 fixHooks.make(e, evnt, opts);
                 e.capturing = opts.capturing === UNDEFINED ? isCapturing(e) : opts.capturing;
@@ -2115,7 +2146,7 @@ app.scope(function (app) {
             }
         }),
         removeEvent = function (evnt, name, mainHandler, capturing) {
-            var el = evnt.origin.element();
+            var el = returnsElement(evnt.origin);
             if (el.removeEventListener) {
                 el.removeEventListener(name, mainHandler[capturing], capturing);
             } else {
@@ -2202,7 +2233,7 @@ app.scope(function (app) {
                     evnt.fn = (customEvents[name] || returns.first)(evnt.fn, name, evnt) || evnt.fn;
                 });
                 if (eventHandler) {
-                    el = evnt.origin.element();
+                    el = returnsElement(evnt.origin);
                     if (el.addEventListener) {
                         el.addEventListener(evnt.domName, eventHandler, capture);
                     } else {
@@ -2215,7 +2246,7 @@ app.scope(function (app) {
             },
             create: function (origin, original, type, opts) {
                 return DomEvent(original, {
-                    target: origin.target,
+                    target: origin,
                     origin: origin,
                     capturing: opts.capturing
                 });
@@ -2255,8 +2286,8 @@ app.scope(function (app) {
                 return events;
             },
             nextBubble: function (start, collected) {
-                var parent, element = start.element();
-                if (!start[IS_ELEMENT] || element[PARENT_NODE]) {
+                var parent, element = returnsElement(start);
+                if (!start.is(ELEMENT) || element[PARENT_NODE]) {
                     return BOOLEAN_FALSE;
                 }
                 return start.parent(function (element) {
@@ -2286,7 +2317,7 @@ app.scope(function (app) {
                 }
                 // sumCount = delegateCount - captureCount;
                 manager = evnt.origin;
-                el = manager.element();
+                el = returnsElement(manager);
                 // only take the target so we don't try to make managers for everyone
                 target = evnt.target;
                 // there are no delegated events, so just return everything after capture
@@ -2335,7 +2366,7 @@ app.scope(function (app) {
             var notVisible = BOOLEAN_FALSE,
                 windo = windo_;
             while (!windo.isTop && !notVisible) {
-                windo = perspective.returnsManager(windo.element().parent);
+                windo = perspective.returnsManager(returnsElement(windo).parent);
                 if (windo.iframe && windo.is(ACCESSABLE)) {
                     notVisible = !windo.iframe.visible();
                 }
@@ -2350,14 +2381,14 @@ app.scope(function (app) {
         dimensionFinder = function (element, doc, win) {
             return function (num) {
                 var ret, manager = this[ITEM](num);
-                if (manager[IS_ELEMENT]) {
-                    ret = clientRect(manager.element())[element];
+                if (manager.is(ELEMENT)) {
+                    ret = clientRect(returnsElement(manager))[element];
                 } else {
-                    if (manager.isDocument && manager.element()[BODY]) {
-                        ret = manager.element()[BODY][doc];
+                    if (manager.is(DOCUMENT) && returnsElement(manager)[BODY]) {
+                        ret = returnsElement(manager)[BODY][doc];
                     } else {
-                        if (manager.isWindow) {
-                            ret = manager.element()[win];
+                        if (manager.is(WINDOW)) {
+                            ret = returnsElement(manager)[win];
                         }
                     }
                 }
@@ -2383,13 +2414,13 @@ app.scope(function (app) {
         removeHandler = function (fragment, handler) {
             var el, parent, manager = this,
                 cachedRemoving = manager.is(REMOVING) || BOOLEAN_FALSE;
-            if (cachedRemoving || !(el = manager.element()) || !(parent = el[PARENT_NODE])) {
+            if (cachedRemoving || !(el = returnsElement(manager)) || !(parent = el[PARENT_NODE])) {
                 // can't remove because already removed
                 return manager;
             }
             manager.mark(REMOVING);
-            if (manager.isIframe && handler && isFunction(handler)) {
-                manager.owner.window().element().setTimeout(bind(handler, NULL, manager));
+            if (manager.is(IFRAME) && handler && isFunction(handler)) {
+                returnsElement(manager.owner.window()).setTimeout(bind(handler, NULL, manager));
             }
             if (fragment) {
                 fragment.appendChild(el);
@@ -2428,8 +2459,10 @@ app.scope(function (app) {
             toggleValue: toggleValue(domIterates),
             changeValue: changeValue(domIterates),
             on: addEventListener,
+            addEventListener: addEventListener,
             once: addEventListenerOnce,
             off: removeEventListener,
+            removeEventListener: removeEventListener,
             append: appendChild,
             appendChild: appendChild,
             prepend: prependChild,
@@ -2459,7 +2492,7 @@ app.scope(function (app) {
                 });
             },
             constructor: function (el, hash, owner_) {
-                var registeredOptions, owner = owner_,
+                var elId, registeredOptions, isDocument, owner = owner_,
                     manager = this;
                 if (DomManager.isInstance(el)) {
                     // extend what we already know
@@ -2469,32 +2502,37 @@ app.scope(function (app) {
                     registeredOptions = owner.registeredElementOptions[manager[REGISTERED_AS]];
                     registeredOptions.creation.call(manager, manager);
                     manager.on(registeredOptions.events);
-                    manager.on('destroy', registeredOptions.destruction);
+                    manager.on(DESTROY, registeredOptions.destruction);
                     return manager;
                 }
-                manager[TARGET] = el;
-                test(manager, owner);
-                if (manager[IS_ELEMENT] || manager.isFragment) {
+                test(manager, owner, el);
+                if (manager.is(ELEMENT) || manager.is(FRAGMENT)) {
                     hash[DOM_MANAGER_STRING] = manager;
                     owner = ensure(el.ownerDocument, BOOLEAN_TRUE);
-                    if (manager[IS_ELEMENT]) {
-                        manager.id = el[__ELID__];
+                    if (manager.is(ELEMENT)) {
+                        manager[__ELID__] = el[__ELID__];
                     }
                 } else {
-                    if (manager.isDocument) {
+                    if ((isDocument = manager.is(DOCUMENT))) {
                         owner = manager;
+                        manager[__ELID__] = elId = el[__ELID__];
+                        registerDocument(el, elId);
                     } else {
                         hash[DOM_MANAGER_STRING] = manager;
+                        manager[__ELID__] = uniqueId('win');
                     }
                 }
                 manager.owner = owner || BOOLEAN_FALSE;
-                if (manager.isIframe) {
+                if (!isDocument) {
+                    registerElement(el, manager.owner[__ELID__], manager[__ELID__]);
+                }
+                if (manager.is(IFRAME)) {
                     manager.on(ATTRIBUTE_CHANGE + ':src detach attach', iframeChangeHandler);
                 }
-                if (manager.isWindow) {
-                    markGlobal(manager);
+                if (manager.is(WINDOW)) {
+                    markGlobal(manager, el);
                 }
-                if (manager[IS_ELEMENT]) {
+                if (manager.is(ELEMENT)) {
                     if (manager[REGISTERED_AS] && manager[REGISTERED_AS] !== BOOLEAN_TRUE) {
                         wraptry(function () {
                             manager = registerAs(manager, hash, owner);
@@ -2508,16 +2546,10 @@ app.scope(function (app) {
             },
             clone: function () {
                 var manager = this;
-                if (!manager[IS_ELEMENT]) {
+                if (!manager.is(ELEMENT)) {
                     return {};
                 }
-                return makeBranch(manager.element()[OUTER_HTML], manager.owner);
-            },
-            element: function () {
-                return this[TARGET];
-            },
-            elements: function () {
-                return [this[TARGET]];
+                return makeBranch(returnsElement(manager)[OUTER_HTML], manager.owner);
             },
             length: function () {
                 return 1;
@@ -2531,7 +2563,7 @@ app.scope(function (app) {
             parent: (function () {
                 var finder = function (manager, fn, original) {
                         var rets, found, parentManager = manager,
-                            parentElement = parentManager.element(),
+                            parentElement = returnsElement(parentManager),
                             next = original;
                         while (parentElement && !found) {
                             rets = fn(parentElement, original, next);
@@ -2628,16 +2660,16 @@ app.scope(function (app) {
                     return BOOLEAN_FALSE;
                 }
                 if (isString(element)) {
-                    return !!query(element, manager.element(), manager)[LENGTH];
+                    return !!query(element, returnsElement(manager), manager)[LENGTH];
                 }
                 if (element.isValidDOMA) {
                     return !!element.find(manager.contains, manager);
                 }
                 target = manager.owner.returnsManager(element);
-                if (target.isDocument) {
+                if (target.is(DOCUMENT)) {
                     return target.window() === manager;
                 }
-                managerElement = manager.element();
+                managerElement = returnsElement(manager);
                 return !!target.parent(function (node) {
                     var parentNode = node[PARENT_NODE];
                     return [parentNode, parentNode === managerElement];
@@ -2647,11 +2679,11 @@ app.scope(function (app) {
                 var manager = this,
                     owner = manager.owner,
                     fragmentManager = isAppendable(els) ? owner.returnsManager(els) : owner.$(els).fragment(),
-                    fragment = fragmentManager.element(),
+                    fragment = returnsElement(fragmentManager),
                     children = index == NULL ? NULL : manager.children(),
                     child = children && children.item(index) || NULL,
-                    element = child && child.element() || NULL,
-                    managerElement = manager && manager.element(),
+                    element = child && returnsElement(child) || NULL,
+                    managerElement = manager && returnsElement(manager),
                     returns = fragmentManager.children(),
                     fragmentChildren = collectCustom(fragmentManager, BOOLEAN_TRUE),
                     detachNotify = dispatchDetached(fragmentChildren, owner),
@@ -2661,17 +2693,17 @@ app.scope(function (app) {
             },
             window: function () {
                 var manager = this;
-                if (manager.isWindow) {
+                if (manager.is(WINDOW)) {
                     // yay we're here!
                     return manager;
                 }
-                if (manager.isDocument) {
+                if (manager.is(DOCUMENT)) {
                     // it's a document, so return the manager relative to the inside
-                    return manager.returnsManager(manager.element().defaultView);
+                    return manager.returnsManager(returnsElement(manager).defaultView);
                 }
-                if (manager.isIframe) {
+                if (manager.is(IFRAME)) {
                     // it's an iframe, so return the manager relative to the outside
-                    return manager.owner.returnsManager(manager.element().contentWindow);
+                    return manager.owner.returnsManager(returnsElement(manager).contentWindow);
                 }
                 // it's an element so go up
                 return manager.owner.window();
@@ -2683,20 +2715,20 @@ app.scope(function (app) {
             },
             emit: function (message_, referrer_, handler) {
                 var message, post, windo = this.window(),
-                    element = windo.element();
+                    element = returnsElement(windo);
                 if (windo.is(ACCESSABLE)) {
                     message = parse(message_);
-                    if (handler) {
-                        handler({
-                            // this can be expanded a bit when you get some time
-                            srcElement: element,
-                            timeStamp: _.now(),
-                            data: function () {
-                                return message;
-                            }
-                        });
-                        return this;
-                    }
+                    // if (handler) {
+                    (handler || receivePostMessage)({
+                        // this can be expanded a bit when you get some time
+                        srcElement: element,
+                        timeStamp: _.now(),
+                        data: function () {
+                            return message;
+                        }
+                    });
+                    return this;
+                    // }
                 }
                 wraptry(function () {
                     // do not parse message so it can be sent as is
@@ -2710,9 +2742,9 @@ app.scope(function (app) {
             },
             sameOrigin: function () {
                 var parsedReference, manager = this,
-                    element = manager.element(),
+                    element = returnsElement(manager),
                     windo = manager.owner.window(),
-                    windoElement = windo.element();
+                    windoElement = returnsElement(windo);
                 if (windo === manager) {
                     return BOOLEAN_TRUE;
                 }
@@ -2726,20 +2758,20 @@ app.scope(function (app) {
                 return BOOLEAN_FALSE;
             },
             children: function (eq, memo) {
-                var filter, result, manager = this,
-                    children = collectChildren(manager.element());
+                var filter, resultant, manager = this,
+                    children = collectChildren(returnsElement(manager));
                 if (eq === UNDEFINED) {
-                    return memo ? ((children = map(children, manager.owner.returnsManager, manager.owner)) && memo.isFragment ? memo.append(children) : (memo.push.apply(memo, children) ? memo : memo)) : manager.wrap(children);
+                    return memo ? ((children = map(children, manager.owner.returnsManager, manager.owner)) && result(memo, 'is', FRAGMENT) ? memo.append(children) : (memo.push.apply(memo, children) ? memo : memo)) : manager.wrap(children);
                 } else {
                     filter = createDomFilter(eq);
-                    result = foldl(children, function (memo, child, idx, children) {
+                    resultant = foldl(children, function (memo, child, idx, children) {
                         if (filter(child, idx, children)) {
                             memo.push(manager.owner.returnsManager(child));
                         }
                         return memo;
                     }, memo || []);
                 }
-                return memo ? result : manager.wrap(result);
+                return memo ? resultant : manager.wrap(resultant);
             },
             visible: function () {
                 var client, element, styles, owner, windo, windoElement, innerHeight, innerWidth, manager = this;
@@ -2750,12 +2782,12 @@ app.scope(function (app) {
                 if (+styles.opacity === 0 || styles.display === NONE || styles[HEIGHT] === ZERO_PIXELS || styles[WIDTH] === ZERO_PIXELS || styles.visibility === HIDDEN) {
                     return BOOLEAN_FALSE;
                 }
-                element = manager.element();
+                element = returnsElement(manager);
                 client = element.getBoundingClientRect();
                 if (!client[HEIGHT] || !client[WIDTH]) {
                     return BOOLEAN_FALSE;
                 }
-                windoElement = (manager.element().ownerDocument || {}).defaultView;
+                windoElement = (returnsElement(manager).ownerDocument || {}).defaultView;
                 if (!windoElement) {
                     return BOOLEAN_TRUE;
                 }
@@ -2780,9 +2812,9 @@ app.scope(function (app) {
             getStyle: function (eq) {
                 var returnValue = {},
                     manager = this,
-                    first = manager.element();
-                if (first && manager[IS_ELEMENT]) {
-                    returnValue = getComputed(first, manager.owner.element());
+                    first = returnsElement(manager);
+                if (first && manager.is(ELEMENT)) {
+                    returnValue = getComputed(first, returnsElement(manager.owner));
                 }
                 return returnValue;
             },
@@ -2794,7 +2826,7 @@ app.scope(function (app) {
                 if (!passedContent && (body || content.slice(0, 10).toLowerCase() !== '<!doctype ')) {
                     content = manager.owner.iframeContent(content, body);
                 }
-                if (manager.isIframe) {
+                if (manager.is(IFRAME)) {
                     if (manager.is(ATTACHED)) {
                         manager.html(content);
                     } else {
@@ -2809,12 +2841,12 @@ app.scope(function (app) {
             destroy: function (handler) {
                 var customName, manager = this,
                     registeredAs = manager[REGISTERED_AS],
-                    element = manager.element();
+                    element = returnsElement(manager);
                 if (manager.is(DESTROYED)) {
                     return manager;
                 }
                 manager.mark(DESTROYED);
-                if (manager.isIframe) {
+                if (manager.is(IFRAME)) {
                     manager.owner.data.remove(element.contentWindow);
                 }
                 manager.remove(NULL, handler);
@@ -2844,13 +2876,13 @@ app.scope(function (app) {
                 return fn(manager, 0, [manager]) ? manager : UNDEFINED;
             },
             client: function () {
-                return clientRect(this.element());
+                return clientRect(returnsElement(this));
             },
             box: function (context) {
-                return box(this.element(), context);
+                return box(returnsElement(this), context);
             },
             flow: function (context) {
-                return flow(this.element(), context);
+                return flow(returnsElement(this), context);
             },
             dispatchEvent: function (name, e, capturing_) {
                 var ret, cachedTrust = DO_NOT_TRUST;
@@ -2862,8 +2894,8 @@ app.scope(function (app) {
             toJSON: function (preventDeep) {
                 var previous, temporaryFragment, childrenLength, children, obj, manager = this,
                     owner = manager.owner,
-                    node = manager.element();
-                if (manager.isWindow || manager.isDocument) {
+                    node = returnsElement(manager);
+                if (manager.is(WINDOW) || manager.is(DOCUMENT)) {
                     return {};
                 }
                 return fromJSON(node, preventDeep);
@@ -2877,7 +2909,7 @@ app.scope(function (app) {
                 if (string !== UNDEFINED) {
                     return manager.attr(attr, string);
                 }
-                return manager.element()[attr];
+                return returnsElement(manager)[attr];
             };
         }), wrap(videoDirectEvents, triggerEventWrapperManager), wrap(directEvents, function (attr) {
             return triggerEventWrapperManager(attr);
@@ -2961,7 +2993,7 @@ app.scope(function (app) {
         },
         unwrapsOnLoop = function (fn) {
             return function (manager, index, list) {
-                return fn(manager.element(), index, list);
+                return fn(returnsElement(manager), index, list);
             };
         },
         dataReconstructor = function (list, fn) {
@@ -3026,7 +3058,7 @@ app.scope(function (app) {
                 });
             };
         },
-        allEachMethods = toArray('destroy,show,hide,style,remove,on,off,once,addEventListener,removeEventListener,dispatchEvent').concat(allDirectMethods),
+        allEachMethods = toArray(DESTROY + ',show,hide,style,remove,on,off,once,addEventListener,removeEventListener,dispatchEvent').concat(allDirectMethods),
         firstMethods = toArray('tag,element,client,box,flow'),
         applyToFirst = function (method) {
             var shouldBeContext = method !== 'tag';
@@ -3061,7 +3093,7 @@ app.scope(function (app) {
                     dom = this,
                     context = dom.context = validContext ? ctx.item(0) : documentContext,
                     owner = dom.owner = documentContext,
-                    unwrapped = context.element();
+                    unwrapped = returnsElement(context);
                 if (str && !isWindow(str) && str.isValidDOMA) {
                     return str;
                 }
@@ -3182,7 +3214,7 @@ app.scope(function (app) {
                     };
                 // look into foldl so we do not get duplicate elements
                 return duff(context.unwrap(), function (manager) {
-                    duff(query(str, manager.element()), push);
+                    duff(query(str, returnsElement(manager)), push);
                 }) && matchers;
             }),
             /**
@@ -3218,7 +3250,7 @@ app.scope(function (app) {
              */
             allElements: function () {
                 return !!(this[LENGTH]() && !find(this.unwrap(), function (manager) {
-                    return !manager[IS_ELEMENT];
+                    return !manager.is(ELEMENT);
                 }));
             },
             /**
@@ -3339,7 +3371,7 @@ app.scope(function (app) {
                 }
                 return mappedConcat(context, function (manager, index) {
                     var elements = els_;
-                    if (!manager[IS_ELEMENT]) {
+                    if (!manager.is(ELEMENT)) {
                         return [];
                     }
                     if (isStringResult) {
@@ -3366,7 +3398,7 @@ app.scope(function (app) {
             },
             clone: attachPrevious(function (context) {
                 return context.foldl(function (memo, manager) {
-                    if (manager[IS_ELEMENT]) {
+                    if (manager.is(ELEMENT)) {
                         memo.push(manager.clone());
                     }
                     return memo;
@@ -3383,8 +3415,8 @@ app.scope(function (app) {
                 var hash = {};
                 return context.foldl(function (memo, manager) {
                     var parent;
-                    if ((parent = manager.parent(original)) && !hash[parent[TARGET][__ELID__]]) {
-                        hash[parent[TARGET][__ELID__]] = parent;
+                    if ((parent = manager.parent(original)) && !hash[returnsElement(parent)[__ELID__]]) {
+                        hash[returnsElement(parent)[__ELID__]] = parent;
                         memo.push(parent);
                     }
                     return memo;
@@ -3433,9 +3465,10 @@ app.scope(function (app) {
         allSetups = [],
         plugins = [];
     app.undefine(function (app, windo) {
-        var setup = DOMA_SETUP(windo[DOCUMENT]);
+        var setup = DOMA_SETUP(windo);
         allSetups.push(setup);
         windo.DOMA = windo.DOMA || setup;
+        windo.returnsElement = returnsElement;
         windo.$ = has(windo, '$') ? windo.$ : setup;
         duff(plugins, function (plugin) {
             plugin(setup);

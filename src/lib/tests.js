@@ -4,12 +4,16 @@ app.run(function (app, _, factories) {
         EXPECTED = 'expected',
         SPACE_NOT = ' not',
         TO_EQUAL = ' to equal ',
+        TO_EVALUATE_TO = ' to evaluate to ',
         AN_ERROR = ' an error',
         TO_BE_THROWN = ' to be thrown',
         TO_BE_STRICTLY_EQUAL_STRING = ' to be strictly equal to ',
-        errIfFalse = function (handler, makemessage) {
+        errIfFalse = function (handler, makemessage, execute) {
             return function (arg) {
                 var result, expectation = {};
+                if (execute) {
+                    current = current();
+                }
                 if ((result = handler(current, arg))) {
                     successfulExpectations.push(expectation);
                 } else {
@@ -29,9 +33,9 @@ app.run(function (app, _, factories) {
             current = start;
             return expectationsHash;
         },
-        maker = expect.maker = function (where, test, positive, negative) {
-            expectationsHash[where] = errIfFalse(test, positive);
-            expectationsHash.not[where] = errIfFalse(negate(test), negative);
+        maker = expect.maker = function (where, test, positive, negative, execute) {
+            expectationsHash[where] = errIfFalse(test, positive, execute);
+            expectationsHash.not[where] = errIfFalse(negate(test), negative, execute);
         },
         internalToThrowResult = maker('toThrow', function (handler) {
             var errRan = BOOLEAN_FALSE;
@@ -59,6 +63,13 @@ app.run(function (app, _, factories) {
         }, function (current, comparison) {
             return EXPECTED + SPACE + stringify(current) + SPACE_NOT + TO_EQUAL + stringify(comparison);
         }),
+        internalToEvaluateTo = maker('toEvaluateTo', function (current, comparison) {
+            return _.isEqual(current, comparison);
+        }, function (current, comparison) {
+            return EXPECTED + SPACE + 'function' + TO_EVALUATE_TO + stringify(comparison);
+        }, function (current, comparison) {
+            return EXPECTED + SPACE + 'function not' + TO_EVALUATE_TO + stringify(comparison);
+        }, BOOLEAN_TRUE),
         errHandler = function (expectation) {
             return function (err) {
                 expectation.erred = err;

@@ -1,45 +1,62 @@
-application.scope().run(function (app, _, factories) {
+factories.Window = constructorWrapper(function (actual) {
+    var $actual = $(actual);
+
     function HTMLDocument() {
         return this;
     }
+    Window[PROTOTYPE] = {
+        PERSISTENT: 1,
+        TEMPORARY: 0,
+        addEventListener: function (string, fn, capture) {
+            if (isString(string) && isFunction(fn)) {
+                $actual.on(string, fn, !!capture);
+            }
+            return windo;
+        },
+        dispatchEvent: function (key, data) {
+            return $actual.dispatchEvent(key, data, {
+                isTrusted: BOOLEAN_FALSE
+            });
+        },
+        removeEventListener: function (string, fn, capture) {
+            if (isString(string) && isFunction(fn)) {
+                $actual.off(string, fn, !!capture);
+            }
+            return windo;
+        }
+    };
 
-    function Window(actual) {
-        var $actual = $(actual);
+    function Window() {
         var windo = this;
         var illegal = function () {
             exception({
                 message: 'Uncaught TypeError: Illegal constructor'
             });
         };
-        windo.constructor.prototype = {
-            PERSISTENT: 1,
-            TEMPORARY: 0,
-            addEventListener: function (string, fn, capture) {
-                if (isString(string) && isFunction(fn)) {
-                    $actual.on(string, fn, !!capture);
-                }
-                return windo;
-            },
-            dispatchEvent: noop,
-            removeEventListener: function (string, fn, capture) {
-                if (isString(string) && isFunction(fn)) {
-                    $actual.off(string, fn, !!capture);
-                }
-                return windo;
-            }
-        };
-        _.extend(windo, {
+        var Function_constructor = illegal;
+        Function_constructor.constructor = Function_constructor;
+        var document = new HTMLDocument();
+        windo.length = 0;
+        extend(windo, {
+            Object: OBJECT_CONSTRUCTOR,
+            Array: ARRAY_CONSTRUCTOR,
+            Function: Function_constructor,
+            Number: NUMBER_CONSTRUCTOR,
+            String: STRING_CONSTRUCTOR,
             Infinity: INFINITY,
             Window: illegal,
             HTMLDocument: illegal,
+            open: noop,
             alert: noop,
             confirm: noop,
+            prompt: noop,
+            print: noop,
+            statusbar: actual.statusbar,
             atob: actual.atob,
             btoa: actual.btoa,
             close: noop,
             window: windo,
             isSecureContext: BOOLEAN_TRUE,
-            length: 0,
             frames: windo,
             self: windo,
             parent: windo,
@@ -50,6 +67,15 @@ application.scope().run(function (app, _, factories) {
             getComputedStyle: function (el) {
                 return actual.getComputedStyle(el) || NULL;
             },
+            postMessage: function (msg, origin) {
+                $actual.emit(msg, origin, function () {});
+            },
+            performance: performance,
+            opener: NULL,
+            JSON: JSON,
+            Math: Math,
+            status: '',
+            screen: actual.screen,
             name: EMPTY_STRING,
             innerHeight: actual.innerHeight,
             innerWidth: actual.innerWidth,
@@ -57,29 +83,30 @@ application.scope().run(function (app, _, factories) {
             screenTop: 0,
             screenY: 0,
             screenX: 0,
-            isNaN: _.isNaN,
+            NaN: NaN,
+            isNaN: isNaN,
             devicePixelRatio: actual.devicePixelRatio,
-            document: new HTMLDocument(),
+            document: document,
             setTimeout: function (fn, time) {
-                return setTimeout(_.bind(fn, windo), time);
+                return setTimeout(bind(fn, windo), time);
             },
             clearTimeout: function (id) {
                 return clearTimeout(id);
             },
-            console: {
-                log: function (comparison) {
-                    // replace windo with a custom log function
-                    _.expect(comparison).not.toBe(actual);
-                }
-            },
+            console: extend({}, console),
             requestAnimationFrame: function (handler) {
-                return _.AF.once(handler);
+                return AF.once(handler);
             },
             cancelAnimationFrame: function (id) {
-                return _.AF.dequeue(id);
+                return AF.dequeue(id);
             }
+        });
+        _.each(windo, function (value, key) {
+            Object.defineProperty(windo, key, {
+                value: value
+            });
         });
         return windo;
     }
-    factories.Window = constructorWrapper(Window, OBJECT_CONSTRUCTOR);
-});
+    return new Window();
+}, OBJECT_CONSTRUCTOR);

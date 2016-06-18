@@ -22,15 +22,13 @@ app.scope(function (app) {
         getRegion = function (key) {
             return this.list.get(ID, key);
         },
-        addRegion = function (key, selector) {
+        addRegion = intendedApi(function (key, selector) {
             var regionManagerDirective = this;
-            intendedObject(key, selector, function (key, selector) {
-                var region = regionManagerDirective.list.get(ID, key);
-                if (!region) {
-                    regionManagerDirective.establish(key, selector);
-                }
-            });
-        },
+            var region = regionManagerDirective.list.get(ID, key);
+            if (!region) {
+                regionManagerDirective.establish(key, selector);
+            }
+        }),
         noRegionMessage = {
             message: 'that region does not exist'
         },
@@ -128,13 +126,13 @@ app.scope(function (app) {
             },
             attach: function (view) {
                 var parentNode, bufferDirective, region = this,
-                    el = view.el && view.el.element();
+                    el = view.el && returnsElement(view.el);
                 if (!el) {
                     return region;
                 }
                 parentNode = el.parentNode;
                 bufferDirective = region.directive(BUFFERED_VIEWS);
-                if (parentNode && parentNode === region.el.element()) {
+                if (parentNode && parentNode === returnsElement(region.el)) {
                     return region;
                 }
                 bufferDirective.els.appendChild(el);
@@ -177,7 +175,6 @@ app.scope(function (app) {
                 // appends child elements
                 elementDirective.el.append(bufferDirective.els);
                 // pass the buffered views up
-                // region.passBuffered(list);
                 // mark the view as rendered
                 region.mark(RENDERED);
                 // reset buffered objects
@@ -192,20 +189,14 @@ app.scope(function (app) {
             var regionsResult = keys(regions)[LENGTH] && view.directive(REGION_MANAGER).establish(regions);
             return view;
         },
-        addChildView = function (region, views) {
-            var view = this;
-            intendedObject(region, views, function (regionKey, views) {
-                var region = (region = view.directive(REGION_MANAGER).get(regionKey)) ? region.add(views) : exception(noRegionMessage);
-            });
-            return view;
-        },
-        removeChildView = function (region, views) {
-            var view = this;
-            intendedObject(region, views, function (regionKey, views) {
-                var region = (region = view.directive(REGION_MANAGER).get(regionKey)) ? region.remove(views) : exception(noRegionMessage);
-            });
-            return view;
-        },
+        addChildView = intendedApi(function (regionKey, views) {
+            var region;
+            return (region = this.directive(REGION_MANAGER).get(regionKey)) ? region.add(views) : exception(noRegionMessage);
+        }),
+        removeChildView = intendedApi(function (regionKey, views) {
+            var region;
+            return (region = this.directive(REGION_MANAGER).get(regionKey)) ? region.remove(views) : exception(noRegionMessage);
+        }),
         // view needs to be pitted against a document
         View = factories.View = Region.extend('View', {
             Model: Model,
@@ -380,33 +371,44 @@ app.scope(function (app) {
         },
         bufferedElsReset = function () {
             this.els = document.createDocumentFragment();
-        };
-    app.defineDirective(REGION_MANAGER, function (instance) {
-        return {
-            list: Collection(),
-            parent: instance,
+        },
+        RegionManager = factories[REGION_MANAGER] = factories.Directive.extend(REGION_MANAGER, {
+            constructor: function (instance) {
+                var regionManager = this;
+                regionManager.parent = instance;
+                regionManager.list = Collection();
+                return regionManager;
+            },
             create: createRegion,
             establish: establishRegion,
             remove: removeRegion,
             add: addRegion,
             get: getRegion
-        };
-    });
-    app.defineDirective(BUFFERED_VIEWS, function (instance) {
-        return {
-            region: instance,
-            els: $.createDocumentFragment(),
+        }),
+        BufferedViews = factories[BUFFERED_VIEWS] = factories.Directive.extend(BUFFERED_VIEWS, {
+            constructor: function (instance) {
+                var bufferedViews = this;
+                bufferedViews.region = instance;
+                bufferedViews.els = $.createDocumentFragment();
+                return bufferedViews;
+            },
             reset: bufferedReset,
             ensure: bufferedEnsure,
             resetEls: bufferedElsReset
-        };
-    });
-    app.extend(foldl(toArray('add,remove,get'), function (memo, key) {
-        memo[key + 'Region'] = parody(REGION_MANAGER, key);
-        return memo;
-    }, {
+        });
+    app.defineDirective(REGION_MANAGER, RegionManager[CONSTRUCTOR]);
+    app.defineDirective(BUFFERED_VIEWS, BufferedViews[CONSTRUCTOR]);
+    app.extend({
         addChildView: addChildView,
         removeChildView: removeChildView
-    }));
+    });
+    // app.extend(foldl(toArray('add,remove,get'), function (memo, key) {
+    //     memo[key + 'Region'] = parody(REGION_MANAGER, key);
+    //     return memo;
+    // }, {
+    //     addChildView: addChildView,
+    //     removeChildView: removeChildView
+    // }));
+    // just put it on the app immediately so that people can access it as a property if they want
     app.directive(REGION_MANAGER);
 });

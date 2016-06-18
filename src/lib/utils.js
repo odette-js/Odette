@@ -325,7 +325,7 @@ var factories = {},
                 if (deep) {
                     if (isObject(obj2[key])) {
                         if (!isObject(obj1[key])) {
-                            obj1[key] = returnDysmorphicBase(obj2[key]);
+                            obj1[key] = returnBaseType(obj2[key]);
                         }
                         merge(obj1[key], obj2[key], deep);
                     } else {
@@ -384,7 +384,7 @@ var factories = {},
      */
     isArrayLike = function (collection) {
         var length = !!collection && collection[LENGTH];
-        return isArray(collection) || (isNumber(length) && !isString(collection) && length >= 0 && length <= MAX_ARRAY_INDEX && !isFunction(collection));
+        return isArray(collection) || (isWindow(collection) ? BOOLEAN_FALSE : (isNumber(length) && !isString(collection) && length >= 0 && length <= MAX_ARRAY_INDEX && !isFunction(collection)));
     },
     iterates = function (obj, iterator, context) {
         var list = keys(obj),
@@ -763,7 +763,7 @@ var factories = {},
             return value;
         });
     },
-    fullClone = function (obj) {
+    cloneJSON = function (obj) {
         return parse(stringify(obj));
     },
     /**
@@ -906,33 +906,26 @@ var factories = {},
         }
         return val;
     },
-    evaluate = function (context, string_, args) {
-        var split, bound, Bound, handler, notFirst, argsString = '"use strict;"\n',
-            string = string_.toString(),
-            argKeys = keys(context);
-        if (isFunction(string_)) {
+    unwrapBlock = function (string_) {
+        var string = string_.toString(),
             split = string.split('{');
-            string = split.shift();
-            string = (string = split.join('{')).slice(0, string[LENGTH] - 1);
-        }
-        if (argKeys[LENGTH]) {
-            duff(argKeys, function (key, index) {
-                if (!index) {
-                    argsString += 'var ';
-                }
-                argsString += (key + ' = this.' + key);
-                argsString += ((index === argKeys[LENGTH] - 1) ? ';' : ',\n');
-            });
-        }
-        return function () {
-            return eval(argsString + string);
-        }.apply(context, args);
+        string = split.shift();
+        return (string = split.join('{')).slice(0, string[LENGTH] - 1);
     },
-    returnDysmorphicBase = function (obj) {
+    evaluate = function (context, string_, args) {
+        var string = string_;
+        if (isFunction(string_)) {
+            string = unwrapBlock(string_);
+        }
+        // use a function constructor to get around strict mode
+        var fn = new FUNCTION_CONSTRUCTOR_CONSTRUCTOR('string', 'with(this) {\n\teval("(function (){"+string+"}());");\n}');
+        fn.call(context, '"use strict";\n' + string);
+    },
+    returnBaseType = function (obj) {
         return isArrayLike(obj) ? [] : {};
     },
     map = function (objs, iteratee, context) {
-        var collection = returnDysmorphicBase(objs),
+        var collection = returnBaseType(objs),
             bound = bindTo(iteratee, context);
         return !objs ? collection : each(objs, function (item, index) {
             collection[index] = bound(item, index, objs);
@@ -1174,7 +1167,7 @@ var factories = {},
         mult = Math.pow(base || 10, power);
         return (parseInt((mult * val), 10) / mult);
     },
-    result = function (obj, str, arg, knows) {
+    result = function (obj, str, arg) {
         return obj == NULL ? obj : (isFunction(obj[str]) ? obj[str](arg) : (isObject(obj) ? obj[str] : obj));
     },
     eachCall = function (array, method, arg) {
@@ -1329,6 +1322,7 @@ var factories = {},
     },
     _ = app._ = {
         is: is,
+        unwrapBlock: unwrapBlock,
         passes: passes,
         performance: performance,
         constructorWrapper: constructorWrapper,
@@ -1343,7 +1337,7 @@ var factories = {},
         hasEnumBug: hasEnumBug,
         roundFloat: roundFloat,
         factories: factories,
-        fullClone: fullClone,
+        cloneJSON: cloneJSON,
         toBoolean: toBoolean,
         stringify: stringify,
         values: values,

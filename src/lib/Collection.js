@@ -672,3 +672,4 @@ app.scope(function (app) {
         });
     app.defineDirective(REGISTRY, Registry[CONSTRUCTOR]);
 });
+var Collection = factories[COLLECTION];

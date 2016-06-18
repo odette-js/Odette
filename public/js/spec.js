@@ -323,19 +323,21 @@ application.scope().run(function (app, _) {
             _.it('_.clone', function () {
                 var original = {
                         some: 'thing',
-                        out: 'there'
+                        out: 'there',
+                        fun: function () {}
                     },
                     cloned = _.clone(original);
                 _.expect(cloned).toEqual(original);
             });
             // write more differentiating code for this test
-            _.it('_.fullClone', function () {
+            _.it('_.cloneJSON', function () {
                 var original = {
                         some: 'thing',
-                        out: 'there'
+                        out: 'there',
+                        fun: function () {}
                     },
-                    cloned = _.fullClone(original);
-                _.expect(cloned).toEqual(original);
+                    cloned = _.cloneJSON(original);
+                _.expect(cloned).not.toEqual(original);
             });
             _.it('_.wrap', function () {
                 _.expect(_.wrap(['some', 'where'], function (val) {
@@ -1995,6 +1997,11 @@ application.scope().run(function (app, _, factories) {
         });
     });
 });
+// $.registerElement('tester', {
+//     creation: function () {
+//         debugger;
+//     }
+// });
 application.scope().run(function (app, _, factories) {
     var elementData = _.associator;
     _.describe('DOMA', function () {
@@ -2039,8 +2046,8 @@ application.scope().run(function (app, _, factories) {
             _.expect(_.isInstance($empty, factories.Collection)).toEqual(true);
         });
         _.it('it knows it\'s own client rect', function () {
-            var div = divs.eq(0);
-            var rect = div.element().getBoundingClientRect();
+            var div = divs.first();
+            var rect = returnsElement(div).getBoundingClientRect();
             _.expect(div.client()).toEqual({
                 height: rect.height,
                 width: rect.width,
@@ -2052,7 +2059,7 @@ application.scope().run(function (app, _, factories) {
         });
         _.it('can show and hide elements', function () {
             _.expect(divs.hide().map(function (manager) {
-                var el = manager.element();
+                var el = returnsElement(manager);
                 if (el.style.display === 'none') {
                     return '';
                 } else {
@@ -2060,7 +2067,7 @@ application.scope().run(function (app, _, factories) {
                 }
             }).join('')).toEqual('');
             _.expect(divs.show().map(function (manager) {
-                var el = manager.element();
+                var el = returnsElement(manager);
                 if (el.style.display === 'block') {
                     return '';
                 } else {
@@ -2070,42 +2077,42 @@ application.scope().run(function (app, _, factories) {
         });
         _.it('can attach dom elements', function () {
             var div = divs.eq();
-            div.append(divs.element(1));
-            _.expect(div.children().element()).toEqual(divs.element(1));
+            div.append(divs.item(1));
+            _.expect(divs.children().item(0)).toEqual(divs.item(1));
         });
         _.it('can remove dom elements', function () {
             var div = divs.eq();
-            div.append(divs.element(1));
-            _.expect(div.children().element()).toEqual(divs.element(1));
+            div.append(divs.item(1));
+            _.expect(divs.children().item(0)).toEqual(divs.item(1));
             div.children().remove();
             _.expect(div.children().length()).toEqual(0);
         });
         _.describe('except it has some methods that are highly pertinant to DOM manipulation... ergo: DOMA', function () {
-            _.it('can check if its items are windows', function () {
-                _.expect($win.isWindow()).toEqual(true);
-                _.expect($doc.isWindow()).toEqual(false);
-                _.expect($body.isWindow()).toEqual(false);
-            });
-            _.it('can check if its items are documents', function () {
-                _.expect($win.isDocument()).toEqual(false);
-                _.expect($doc.isDocument()).toEqual(true);
-                _.expect($body.isDocument()).toEqual(false);
-            });
+            // _.it('can check if its items are windows', function () {
+            //     _.expect($win.isWindow()).toEqual(true);
+            //     _.expect($doc.isWindow()).toEqual(false);
+            //     _.expect($body.isWindow()).toEqual(false);
+            // });
+            // _.it('can check if its items are documents', function () {
+            //     _.expect($win.isDocument()).toEqual(false);
+            //     _.expect($doc.isDocument()).toEqual(true);
+            //     _.expect($body.isDocument()).toEqual(false);
+            // });
             _.it('can check if its items are actually elements', function () {
                 _.expect($win.allElements()).toEqual(false);
                 _.expect($doc.allElements()).toEqual(false);
                 _.expect($body.allElements()).toEqual(true);
                 _.expect($('div').allElements()).toEqual(true);
             });
-            _.it('can check if its items are document fragments', function () {
-                var frag = document.createDocumentFragment();
-                frag.appendChild(document.createElement('div'));
-                _.expect($win.isFragment()).toEqual(false);
-                _.expect($doc.isFragment()).toEqual(false);
-                _.expect($body.isFragment()).toEqual(false);
-                _.expect($('div').isFragment()).toEqual(false);
-                _.expect($(frag).isFragment()).toEqual(true);
-            });
+            // _.it('can check if its items are document fragments', function () {
+            //     var frag = document.createDocumentFragment();
+            //     frag.appendChild(document.createElement('div'));
+            //     _.expect($win.isFragment()).toEqual(false);
+            //     _.expect($doc.isFragment()).toEqual(false);
+            //     _.expect($body.isFragment()).toEqual(false);
+            //     _.expect($('div').isFragment()).toEqual(false);
+            //     _.expect($(frag).isFragment()).toEqual(true);
+            // });
         });
         _.describe('it can filter itself', function () {
             _.it('by query string matching', function () {
@@ -2127,16 +2134,16 @@ application.scope().run(function (app, _, factories) {
                 _.expect(newDivs.length()).toEqual(3);
             });
             _.it('can also get the first', function () {
-                _.expect(divs.first().element()).toEqual(divs.element(0));
+                _.expect(divs.first()).toEqual(divs.item(0));
             });
             _.it('and the last element in the list', function () {
-                _.expect(divs.last().element()).toEqual(divs.element(divs.length() - 1));
+                _.expect(divs.last()).toEqual(divs.item(divs.length() - 1));
             });
         });
         _.describe('it can find it\'s children', function () {
             _.it('by calling the children method', function () {
                 divs.duff(function (manager, idx) {
-                    var div = manager.element();
+                    var div = returnsElement(manager);
                     var span1 = document.createElement('span');
                     var span2 = document.createElement('span');
                     span1.className = 'span-' + idx;
@@ -2147,23 +2154,23 @@ application.scope().run(function (app, _, factories) {
                 var kids = divs.children();
                 _.expect(kids.length()).toEqual(10);
                 kids.duff(function (kid, idx) {
-                    _.expect(kid.element().localName).toEqual('span');
+                    _.expect(returnsElement(kid).localName).toEqual('span');
                 });
                 kids = divs.children(1);
                 _.expect(kids.length()).toEqual(5);
                 kids = divs.children('.span-2');
                 _.expect(kids.unwrap()).toEqual(divs.children().filter('.span-2').unwrap());
                 _.expect(kids.length()).toEqual(2);
-                _.expect(kids.element() === kids.element(1)).toEqual(false);
+                _.expect(returnsElement(kids) === kids.item(1)).toEqual(false);
             });
             _.it('by querying the dom elements', function () {
                 divs.duff(function (div, idx) {
-                    div.element().innerHTML = '<span></span><img/>';
+                    returnsElement(div).innerHTML = '<span></span><img/>';
                 });
                 var kids = divs.$('img');
                 _.expect(kids.length()).toEqual(5);
                 kids.duff(function (kid, idx) {
-                    _.expect(kid.element().tagName).toEqual('IMG');
+                    _.expect(returnsElement(kid).tagName).toEqual('IMG');
                 });
             });
         });
@@ -2172,13 +2179,13 @@ application.scope().run(function (app, _, factories) {
                 var $start = $('.leaves'),
                     $end = $('.tree'),
                     end = $start.parent(2);
-                _.expect(end.element()).toEqual($end.element());
+                _.expect(returnsElement(end.first())).toEqual(returnsElement($end.first()));
             });
             _.it('or by finding via selector', function () {
                 var $start = $('.leaves'),
                     $end = $('.tree'),
                     end = $start.parent('.tree');
-                _.expect(end.element()).toEqual($end.element());
+                _.expect(returnsElement(end.first())).toEqual(returnsElement($end.first()));
             });
             _.it('or by passing a function', function () {
                 var $start = $('.leaves'),
@@ -2186,18 +2193,18 @@ application.scope().run(function (app, _, factories) {
                         var parent = el.parentNode;
                         return [parent, parent && parent.tagName === 'BODY'];
                     });
-                _.expect(end.element()).toEqual(document.body);
+                _.expect(returnsElement(end.item(0))).toEqual(document.body);
             });
             _.describe('or by passing a keyword', function () {
                 _.it('like document', function () {
                     var $start = $('.leaves'),
                         end = $start.parent('document');
-                    _.expect(end.element()).toEqual(document);
+                    _.expect(returnsElement(end.first())).toEqual(document);
                 });
                 _.it('or window', function () {
                     var $start = $('.leaves'),
                         end = $start.parent('window');
-                    _.expect(end.element()).toEqual(window);
+                    _.expect(returnsElement(end.first())).toEqual(window);
                 });
             });
         });
@@ -2291,7 +2298,7 @@ application.scope().run(function (app, _, factories) {
                 divs.each(function (el, idx) {
                     _.expect(_.isInstance(el, factories.DOMA)).toEqual(false);
                     _.expect(factories.DomManager.isInstance(el)).toEqual(true);
-                    _.expect(divs.element(idx) === el.element());
+                    _.expect(divs.item(idx) === returnsElement(el));
                 });
             });
             _.it('where the duff and forEach function just gives you the element at each index, just like a collection', function () {
@@ -2361,16 +2368,16 @@ application.scope().run(function (app, _, factories) {
         _.describe('there is also a data attributes interface', function () {
             _.it('where you can add', function () {
                 divs.duff(function (div, idx) {
-                    _.expect(div.element().getAttribute('data-one')).toEqual(null);
-                    _.expect(div.element().getAttribute('data-two')).toEqual(null);
+                    _.expect(returnsElement(div).getAttribute('data-one')).toEqual(null);
+                    _.expect(returnsElement(div).getAttribute('data-two')).toEqual(null);
                 });
                 divs.data({
                     one: 'one',
                     two: 'two'
                 });
                 divs.duff(function (div, idx) {
-                    _.expect(div.element().getAttribute('data-one')).toEqual('one');
-                    _.expect(div.element().getAttribute('data-two')).toEqual('two');
+                    _.expect(returnsElement(div).getAttribute('data-one')).toEqual('one');
+                    _.expect(returnsElement(div).getAttribute('data-two')).toEqual('two');
                 });
             });
             _.it('remove', function () {
@@ -2379,16 +2386,16 @@ application.scope().run(function (app, _, factories) {
                     two: 'two'
                 });
                 divs.duff(function (div, idx) {
-                    _.expect(div.element().getAttribute('data-one')).toEqual('one');
-                    _.expect(div.element().getAttribute('data-two')).toEqual('two');
+                    _.expect(returnsElement(div).getAttribute('data-one')).toEqual('one');
+                    _.expect(returnsElement(div).getAttribute('data-two')).toEqual('two');
                 });
                 divs.data({
                     one: false,
                     two: false
                 });
                 divs.duff(function (div, idx) {
-                    _.expect(div.element().getAttribute('data-one')).toEqual(null);
-                    _.expect(div.element().getAttribute('data-two')).toEqual(null);
+                    _.expect(returnsElement(div).getAttribute('data-one')).toEqual(null);
+                    _.expect(returnsElement(div).getAttribute('data-two')).toEqual(null);
                 });
             });
             _.it('and update data attributes', function () {
@@ -2397,15 +2404,15 @@ application.scope().run(function (app, _, factories) {
                     two: 'two'
                 });
                 divs.duff(function (div) {
-                    _.expect(div.element().getAttribute('data-one')).toEqual('one');
-                    _.expect(div.element().getAttribute('data-two')).toEqual('two');
+                    _.expect(returnsElement(div).getAttribute('data-one')).toEqual('one');
+                    _.expect(returnsElement(div).getAttribute('data-two')).toEqual('two');
                 });
             });
         });
         _.describe('it can also manipulate elements in other ways', function () {
             _.it('like by manipulating their attributes', function () {
                 divs.duff(function (div) {
-                    _.expect(div.element().getAttribute('tabindex')).toEqual(null);
+                    _.expect(returnsElement(div).getAttribute('tabindex')).toEqual(null);
                 });
                 divs.attr({
                     tabindex: -1
@@ -2416,7 +2423,7 @@ application.scope().run(function (app, _, factories) {
             });
             _.it('or by manipulating their properties', function () {
                 divs.duff(function (div, idx) {
-                    _.expect(div.element().align).toEqual('');
+                    _.expect(returnsElement(div).align).toEqual('');
                 });
                 divs.prop({
                     align: 'left'
@@ -2466,14 +2473,6 @@ application.scope().run(function (app, _, factories) {
                     div.destroy();
                     _.expect(count).toEqual(1);
                 });
-                // _.it('can even apply to elements that have already been created', function () {
-                //     $.createElement('test2');
-                //     _.expect(count).toEqual(0);
-                //     $.registerElement('test2', {
-                //         creation: handler
-                //     });
-                //     _.expect(count).toEqual(1);
-                // });
             });
         });
         _.it('tags cannot be created without being registered first', function () {
@@ -2481,6 +2480,7 @@ application.scope().run(function (app, _, factories) {
                 $.createElement('unregistered');
             }).toThrow();
         });
+        _.it('tags are automatically queried for and registered', function () {});
     });
 });
 application.scope().run(function (app, _, factories) {
@@ -2535,17 +2535,17 @@ application.scope().run(function (app, _, factories) {
             _.expect(complexView.el.html()).not.toEqual('');
         });
         _.it('can be attached to a region', function () {
-            _.expect(complexView.el.element().parentNode).toEqual(null);
+            _.expect(returnsElement(complexView.el).parentNode).toEqual(null);
             app.RegionManager.get('main').add(complexView);
-            _.expect(complexView.el.element().parentNode).not.toEqual(null);
+            _.expect(returnsElement(complexView.el).parentNode).not.toEqual(null);
         });
         _.it('can be filtered', function () {
-            _.expect(complexView.el.element().parentNode).toEqual(null);
+            _.expect(returnsElement(complexView.el).parentNode).toEqual(null);
             complexView.filter = function () {
                 return false;
             };
             app.RegionManager.get('main').add(complexView);
-            _.expect(complexView.el.element().parentNode).toEqual(null);
+            _.expect(returnsElement(complexView.el).parentNode).toEqual(null);
         });
         _.it('can have extra elements', function () {
             _.expect(_.isObject(complexView.ui)).toEqual(true);
@@ -2691,7 +2691,12 @@ application.scope().run(function (app, _) {
     _.describe('evaluate needs it\'s own space to be tested', function () {
         var windo = _.factories.Window(window);
         _.it('_.evaluate', function (done) {
+            windo._ = _;
             windo.done = done;
+            windo.console.log = function (comparison) {
+                // replace windo with a custom log function
+                _.expect(comparison).not.toBe(window);
+            };
             _.expect(function () {
                 _.evaluate(windo, function () {
                     var count = 0;
@@ -2734,6 +2739,19 @@ application.scope().run(function (app, _) {
                     };
                 });
             }).toThrow();
+            _.expect(function () {
+                _.evaluate(windo, function () {
+                    // remove ability to use Function Constructors if we can't get rid of eval
+                    eval('var fn = new Function.constructor("console.log(this);");fn();');
+                });
+            }).toThrow();
+            _.expect(_.evaluate(windo, function () {
+                var cachedInnerHeight = innerHeight;
+                delete window.innerHeight;
+                _.expect(window.innerHeight).toEqual(void 0);
+                _.expect(innerHeight).toEqual(cachedInnerHeight);
+                return innerHeight;
+            })).toEqual(void 0);
         });
     });
 });

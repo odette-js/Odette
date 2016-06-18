@@ -9,7 +9,6 @@ app.scope(function (app) {
         vendors = toArray('ms,moz,webkit,o'),
         RUNNING = 'running',
         HALTED = 'halted',
-        // SCHEDULER = 'Scheduler',
         STOPPED = 'stopped',
         DESTROYED = 'destroyed',
         LOOPER = 'Looper',
@@ -107,7 +106,6 @@ app.scope(function (app) {
                 };
             }
         }()),
-        Collection = factories.Collection,
         runner = function (tween, obj) {
             tween.current = obj;
             if (obj.disabled) {
@@ -124,7 +122,6 @@ app.scope(function (app) {
                 tween.dequeue(obj.id);
             });
         },
-        // timeout = ,
         Looper = factories[LOOPER] = Collection.extend(LOOPER, {
             constructor: function (_runner) {
                 var looper = this;
@@ -318,18 +315,6 @@ app.scope(function (app) {
                     }
                 });
             },
-            // onceInterval: function (handler, time_) {
-            //     var fn = handler,
-            //         tweener = this,
-            //         timey = time(time_);
-            //     if (!isFunction(fn)) {
-            //         return;
-            //     }
-            //     if (!isNumber(timey)) {
-            //         return;
-            //     }
-            //     return this.timeout(timey, handler);
-            // },
             interval: function (handler, time_) {
                 var bound, fn = handler,
                     tweener = this,
@@ -365,3 +350,4 @@ app.scope(function (app) {
         AF: Looper()
     });
 });
+var AF = _.AF;
