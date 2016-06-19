@@ -1,4 +1,4 @@
-application.scope().run(function (app, _, factories) {
+application.scope().run(window, function (app, _, factories, documentView, scopedFactories, $) {
     var BOOLEAN_TRUE = true,
         isObject = _.isObject;
     _.describe('HTTP', function () {

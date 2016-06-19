@@ -1817,7 +1817,7 @@ app.scope(function (app) {
                 manager[REGISTERED_AS] = isCustomValue;
             }
         },
-        markElement = function (manager, element) {
+        markElement = function (manager, owner, element) {
             manager.unmark(ELEMENT);
             manager.unmark(IFRAME);
             manager.tagName = BOOLEAN_FALSE;
@@ -1826,6 +1826,7 @@ app.scope(function (app) {
             }
             if ((manager.remark(ELEMENT, isElement(element)))) {
                 manager.tagName = tag(element);
+                manager.owner = owner;
                 testIframe(manager, element);
                 markCustom(manager, BOOLEAN_FALSE, element);
             }
@@ -1857,7 +1858,7 @@ app.scope(function (app) {
         },
         test = function (manager, owner, element) {
             markGlobal(manager, element);
-            markElement(manager, element);
+            markElement(manager, owner, element);
             manager.unmark(DOCUMENT);
             manager.unmark(FRAGMENT);
             manager.unmark(ATTACHED);

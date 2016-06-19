@@ -22,11 +22,13 @@
         <script type="text/javascript" src="/js/library.js"></script>
         <script type="text/javascript">application.definition(application.scope().VERSION, this);</script>
         <script type="text/javascript">
-            $(function () {
-                var script = $.createElement('script');
-                script.prop('type', 'text/javascript');
-                $('body').append(script);
-                script.prop('src', '/js/framed.js');
+            application.scope().run(window, function (app, _, factories, documentView, scopedFactories, $) {
+                $(function () {
+                    var script = $.createElement('script');
+                    script.prop('type', 'text/javascript');
+                    $('body').append(script);
+                    script.prop('src', '/js/framed.js');
+                });
             });
         </script>
     </body>

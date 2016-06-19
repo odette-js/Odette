@@ -1,9 +1,4 @@
-// $.registerElement('tester', {
-//     creation: function () {
-//         debugger;
-//     }
-// });
-application.scope().run(function (app, _, factories) {
+application.scope().run(window, function (app, _, factories, documentView, scopedFactories, $) {
     var elementData = _.associator;
     _.describe('DOMA', function () {
         var divs, count, $empty = $(),

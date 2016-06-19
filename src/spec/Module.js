@@ -1,4 +1,4 @@
-application.scope().run(function (app, _, factories) {
+application.scope().run(window, function (app, _, factories, documentView, scopedFactories, $) {
     _.describe('Modules', function () {
         var level = app.module('level');
         var lower = app.module('level.lower');

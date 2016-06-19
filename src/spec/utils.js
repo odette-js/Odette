@@ -1,5 +1,4 @@
-application.scope().run(function (app, _) {
-    var factories = _.factories;
+application.scope().run(window, function (app, _, factories, documentView, scopedFactories, $) {
     _.describe('var _ = app._;', function () {
         var baseString = 'my string is a great string',
             specialString = 'here&are*a ()lot o~/f special_+characters',

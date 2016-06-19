@@ -1,5 +1,4 @@
-application.scope().run(function (app, _) {
-    var factories = _.factories;
+application.scope().run(window, function (app, _, factories, documentView, scopedFactories, $) {
     _.describe('var _ = app._;', function () {
         var baseString = 'my string is a great string',
             specialString = 'here&are*a ()lot o~/f special_+characters',
@@ -500,7 +499,7 @@ application.scope().run(function (app, _) {
 });
 // window._ = application.scope()._;
 // window.factories = application.scope()._.factories;
-application.scope().run(function (app, _, factories) {
+application.scope().run(window, function (app, _, factories, documentView, scopedFactories, $) {
     _.describe('Collection', function () {
         var collection, numberCollection, complexCollection, evenNumberList;
         _.beforeEach(function () {
@@ -794,7 +793,7 @@ application.scope().run(function (app, _, factories) {
         });
     });
 });
-application.scope().run(function (app, _, factories) {
+application.scope().run(window, function (app, _, factories, documentView, scopedFactories, $) {
     _.describe('Events', function () {
         var blank, box,
             Model = factories.Model,
@@ -1118,7 +1117,7 @@ application.scope().run(function (app, _, factories) {
     // console.log(collection2);
     // document.body.insertBefore(div, document.body.children[0]);
 });
-application.scope().run(function (app, _, factories) {
+application.scope().run(window, function (app, _, factories, documentView, scopedFactories, $) {
     // var factories = _.factories;
     _.describe('Model', function () {
         var blank, count, box,
@@ -1621,7 +1620,7 @@ application.scope().run(function (app, _, factories) {
         });
     });
 });
-application.scope().run(function (app, _, factories) {
+application.scope().run(window, function (app, _, factories, documentView, scopedFactories, $) {
     _.describe('Promise', function () {
         var madeit, promise, handler = function () {
             madeit++;
@@ -1750,7 +1749,7 @@ application.scope().run(function (app, _, factories) {
         });
     });
 });
-application.scope().run(function (app, _, factories) {
+application.scope().run(window, function (app, _, factories, documentView, scopedFactories, $) {
     var registry = factories.Associator();
     _.describe('Registry', function () {
         _.beforeEach(function () {});
@@ -1779,7 +1778,7 @@ application.scope().run(function (app, _, factories) {
         });
     });
 });
-application.scope().run(function (app, _, factories) {
+application.scope().run(window, function (app, _, factories, documentView, scopedFactories, $) {
     var BOOLEAN_TRUE = true,
         isObject = _.isObject;
     _.describe('HTTP', function () {
@@ -1934,7 +1933,7 @@ application.scope().run(function (app, _, factories) {
         });
     });
 });
-application.scope().run(function (app, _, factories) {
+application.scope().run(window, function (app, _, factories, documentView, scopedFactories, $) {
     _.describe('Modules', function () {
         var level = app.module('level');
         var lower = app.module('level.lower');
@@ -1997,12 +1996,7 @@ application.scope().run(function (app, _, factories) {
         });
     });
 });
-// $.registerElement('tester', {
-//     creation: function () {
-//         debugger;
-//     }
-// });
-application.scope().run(function (app, _, factories) {
+application.scope().run(window, function (app, _, factories, documentView, scopedFactories, $) {
     var elementData = _.associator;
     _.describe('DOMA', function () {
         var divs, count, $empty = $(),
@@ -2483,15 +2477,15 @@ application.scope().run(function (app, _, factories) {
         _.it('tags are automatically queried for and registered', function () {});
     });
 });
-application.scope().run(function (app, _, factories) {
+application.scope().run(window, function (app, _, factories, documentView, scopedFactories, $) {
     _.describe('Looper', function () {
         //
     });
 });
 
-application.scope().run(function (app, _, factories) {
+application.scope().run(window, function (app, _, factories, documentView, scopedFactories, $) {
     _.describe('View', function () {
-        var view, complexView, count, ComplexView = factories.View.extend({
+        var view, complexView, count, ComplexView = scopedFactories.View.extend({
             ui: {
                 there: '.here'
             },
@@ -2505,10 +2499,10 @@ application.scope().run(function (app, _, factories) {
                 return '<span></span><div class="here"></div>';
             }
         });
-        app.RegionManager.add('main', '.test-div');
+        documentView.addRegion('main', '.test-div');
         _.beforeEach(function () {
             count = 0;
-            view = factories.View();
+            view = scopedFactories.View();
             complexView = ComplexView();
         });
         _.afterEach(function () {
@@ -2517,43 +2511,43 @@ application.scope().run(function (app, _, factories) {
         });
         _.it('is an object', function () {
             _.expect(_.isObject(view)).toEqual(true);
-            _.expect(_.isInstance(view, factories.View)).toEqual(true);
+            _.expect(_.isInstance(view, scopedFactories.View)).toEqual(true);
         });
         _.it('has an element that you can interact with', function () {
             _.expect(_.isInstance(view.el, factories.DomManager)).toEqual(true);
             window.readytostop = true;
         });
         _.it('can even have extra elements tied to it... but only when it is rendered', function () {
-            _.expect(_.isString(complexView.ui.there)).toEqual(true);
-            complexView.render();
+            // _.expect(_.isString(complexView.ui.there)).toEqual(true);
+            // complexView.render();
             _.expect(_.isInstance(complexView.ui.there, factories.DOMA)).toEqual(true);
         });
         _.it('can be rendered', function () {
-            _.expect(complexView.el.html()).toEqual('');
-            complexView.render();
+            // _.expect(complexView.el.html()).toEqual('');
+            // complexView.render();
             _.expect(complexView.el.html()).not.toEqual('');
         });
         _.it('can be attached to a region', function () {
             _.expect(complexView.el.element().parentNode).toEqual(null);
-            app.RegionManager.get('main').add(complexView);
+            documentView.directive('RegionManager').get('main').add(complexView);
             _.expect(complexView.el.element().parentNode).not.toEqual(null);
         });
         _.it('can be filtered', function () {
             _.expect(complexView.el.element().parentNode).toEqual(null);
             complexView.filter = _.returns(false);
-            app.RegionManager.get('main').add(complexView);
+            documentView.directive('RegionManager').get('main').add(complexView);
             _.expect(complexView.el.element().parentNode).toEqual(null);
         });
         _.it('can have extra elements', function () {
             _.expect(_.isObject(complexView.ui)).toEqual(true);
-            _.expect(_.isString(complexView.ui.there)).toEqual(true);
-            complexView.render();
+            // _.expect(_.isString(complexView.ui.there)).toEqual(true);
+            // complexView.render();
             _.expect(_.isInstance(complexView.ui.there, factories.DOMA)).toEqual(true);
             _.expect(complexView.ui.there.length()).toEqual(1);
         });
         _.it('can also attach events to it\'s element', function () {
             _.expect(count).toEqual(0);
-            app.RegionManager.get('main').add(complexView);
+            documentView.directive('RegionManager').get('main').add(complexView);
             _.expect(count).toEqual(0);
             complexView.el.click();
             _.expect(count).toEqual(1);
@@ -2564,7 +2558,7 @@ application.scope().run(function (app, _, factories) {
         });
         _.it('as well as it\'s ui elements', function () {
             _.expect(count).toEqual(0);
-            app.RegionManager.get('main').add(complexView);
+            documentView.directive('RegionManager').get('main').add(complexView);
             _.expect(count).toEqual(0);
             complexView.ui.there.click();
             _.expect(count).toEqual(1);
@@ -2574,7 +2568,7 @@ application.scope().run(function (app, _, factories) {
             _.expect(count).toEqual(2);
         });
         _.it('views can be detached', function () {
-            app.RegionManager.get('main').add(complexView);
+            documentView.directive('RegionManager').get('main').add(complexView);
             _.expect(count).toEqual(0);
             complexView.ui.there.click();
             _.expect(count).toEqual(1);
@@ -2582,7 +2576,7 @@ application.scope().run(function (app, _, factories) {
             _.expect(count).toEqual(1);
         });
         _.it('and still keep their elements and events intact', function () {
-            app.RegionManager.get('main').add(complexView);
+            documentView.directive('RegionManager').get('main').add(complexView);
             _.expect(count).toEqual(0);
             complexView.ui.there.click();
             _.expect(count).toEqual(1);
@@ -2592,19 +2586,19 @@ application.scope().run(function (app, _, factories) {
             _.expect(count).toEqual(2);
         });
         _.it('they can even be reattached', function () {
-            app.RegionManager.get('main').add(complexView);
+            documentView.directive('RegionManager').get('main').add(complexView);
             _.expect(count).toEqual(0);
             complexView.ui.there.click();
             _.expect(count).toEqual(1);
             complexView.remove();
             _.expect(count).toEqual(1);
-            app.RegionManager.get('main').add(complexView);
+            documentView.directive('RegionManager').get('main').add(complexView);
             _.expect(count).toEqual(1);
             complexView.ui.there.click();
             _.expect(count).toEqual(2);
         });
         _.it('when they are destroyed however, their events are detached from the element and the view is automatically removed', function () {
-            app.RegionManager.get('main').add(complexView);
+            documentView.directive('RegionManager').get('main').add(complexView);
             _.expect(count).toEqual(0);
             var there = complexView.ui.there;
             there.click();
@@ -2616,7 +2610,7 @@ application.scope().run(function (app, _, factories) {
         });
     });
 });
-application.scope().run(function (app, _, factories) {
+application.scope().run(window, function (app, _, factories, documentView, scopedFactories, $) {
     var buster, iframe, count, handler = function () {
             count++;
         },
@@ -2633,8 +2627,8 @@ application.scope().run(function (app, _, factories) {
         _.describe('can receive messages on', function () {
             _.it('unfriendly windows', function (done) {
                 var iframe = $.createElement('iframe');
-                app.RegionManager.get('main').el.append(iframe);
-                var buster = factories.Buster(window, iframe, {
+                documentView.directive('RegionManager').get('main').el.append(iframe);
+                var buster = scopedFactories.Buster(window, iframe, {
                     iframeSrc: 'http://localhost:8000/test/framed.html'
                 });
                 buster.connected(handler);
@@ -2650,8 +2644,8 @@ application.scope().run(function (app, _, factories) {
             _.it('windows without a source', function (done) {
                 pagePromise.success(function (response) {
                     var iframe = $.createElement('iframe');
-                    app.RegionManager.get('main').el.append(iframe);
-                    var buster = factories.Buster(window, iframe, {
+                    documentView.directive('RegionManager').get('main').el.append(iframe);
+                    var buster = scopedFactories.Buster(window, iframe, {
                         iframeContent: response
                     });
                     buster.connected(handler);
@@ -2667,8 +2661,8 @@ application.scope().run(function (app, _, factories) {
             });
             _.it('friendly windows', function (done) {
                 var iframe = $.createElement('iframe');
-                app.RegionManager.get('main').el.append(iframe);
-                var buster = factories.Buster(window, iframe, {
+                documentView.directive('RegionManager').get('main').el.append(iframe);
+                var buster = scopedFactories.Buster(window, iframe, {
                     iframeSrc: 'http://localhost:8080/test/framed.html'
                 });
                 buster.connected(handler);
@@ -2684,6 +2678,7 @@ application.scope().run(function (app, _, factories) {
         });
     });
 });
+//
 // application.scope().run(function (app, _) {
 //     _.describe('evaluate needs it\'s own space to be tested', function () {
 //         var windo = _.factories.Window(window);

@@ -1,5 +1,5 @@
-application.scope().run(function (app, _, factories) {
-    var buster = factories.Buster(window, window.parent, {
+application.scope().run(window, function (app, _, factories, documentView, scopedFactories, $) {
+    var buster = scopedFactories.Buster(window, window.parent, {
         strip: true
     }, {
         'received:delayed': function (e) {

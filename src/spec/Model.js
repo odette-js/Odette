@@ -1,4 +1,4 @@
-application.scope().run(function (app, _, factories) {
+application.scope().run(window, function (app, _, factories, documentView, scopedFactories, $) {
     // var factories = _.factories;
     _.describe('Model', function () {
         var blank, count, box,

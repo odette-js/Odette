@@ -132,7 +132,8 @@ app.scope(function (app) {
                 return module;
             },
             createArguments: function (windo) {
-                return [module].concat(module[APPLICATION].createArguments(windo), args || []);
+                var module = this;
+                return [module].concat(module[APPLICATION].createArguments(windo));
             },
             run: function (windo_, fn_) {
                 var result, module = this,
@@ -140,11 +141,6 @@ app.scope(function (app) {
                     windo = fn === windo_ ? window : windo_;
                 if (isFunction(fn)) {
                     result = fn.apply(module, module.createArguments(windo));
-                    // if (module[APPLICATION] !== module) {
-                    //     result = fn.apply(module, createArguments(module, windo));
-                    // } else {
-                    //     result = fn.apply(module, module.createArguments(windo));
-                    // }
                 }
                 return result === UNDEFINED ? module : result;
             },
@@ -204,7 +200,7 @@ app.scope(function (app) {
         baseModuleArguments = function (app, windo) {
             var _ = app._;
             var documentView = app.directive(DOCUMENT_MANAGER).documents.get(ID, windo[DOCUMENT][__ELID__]);
-            return [app, _, _ && _.factories, documentView, documentView.scopedFactories, documentView.$];
+            return [app, _, _ && _.factories, documentView, documentView.factories, documentView.$];
         },
         appextendresult = app.extend(extend({}, factories.Directive[CONSTRUCTOR][PROTOTYPE], factories.Events[CONSTRUCTOR][PROTOTYPE], factories.Parent[CONSTRUCTOR][PROTOTYPE], startableMethods, moduleMethods, {
             // addModuleArguments: function (arr) {

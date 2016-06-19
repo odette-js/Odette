@@ -1,4 +1,4 @@
-application.scope().run(function (app, _, factories) {
+application.scope().run(window, function (app, _, factories, documentView, scopedFactories, $) {
     var buster, iframe, count, handler = function () {
             count++;
         },
@@ -15,8 +15,8 @@ application.scope().run(function (app, _, factories) {
         _.describe('can receive messages on', function () {
             _.it('unfriendly windows', function (done) {
                 var iframe = $.createElement('iframe');
-                app.RegionManager.get('main').el.append(iframe);
-                var buster = factories.Buster(window, iframe, {
+                documentView.directive('RegionManager').get('main').el.append(iframe);
+                var buster = scopedFactories.Buster(window, iframe, {
                     iframeSrc: 'http://localhost:8000/test/framed.html'
                 });
                 buster.connected(handler);
@@ -32,8 +32,8 @@ application.scope().run(function (app, _, factories) {
             _.it('windows without a source', function (done) {
                 pagePromise.success(function (response) {
                     var iframe = $.createElement('iframe');
-                    app.RegionManager.get('main').el.append(iframe);
-                    var buster = factories.Buster(window, iframe, {
+                    documentView.directive('RegionManager').get('main').el.append(iframe);
+                    var buster = scopedFactories.Buster(window, iframe, {
                         iframeContent: response
                     });
                     buster.connected(handler);
@@ -49,8 +49,8 @@ application.scope().run(function (app, _, factories) {
             });
             _.it('friendly windows', function (done) {
                 var iframe = $.createElement('iframe');
-                app.RegionManager.get('main').el.append(iframe);
-                var buster = factories.Buster(window, iframe, {
+                documentView.directive('RegionManager').get('main').el.append(iframe);
+                var buster = scopedFactories.Buster(window, iframe, {
                     iframeSrc: 'http://localhost:8080/test/framed.html'
                 });
                 buster.connected(handler);
@@ -66,3 +66,4 @@ application.scope().run(function (app, _, factories) {
         });
     });
 });
+//
