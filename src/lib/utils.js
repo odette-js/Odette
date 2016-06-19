@@ -1172,7 +1172,12 @@ var factories = {},
     },
     eachCall = function (array, method, arg) {
         return duff(array, function (item) {
-            result(item, method, arg);
+            item[method](arg);
+        });
+    },
+    eachCallBound = function (array, arg) {
+        return duff(array, function (fn) {
+            fn();
         });
     },
     eachCallTry = function (array, method, arg, catcher, finallyer) {
@@ -1185,7 +1190,7 @@ var factories = {},
     mapCallTry = function (array, method, arg, catcher, finallyer) {
         return map(array, function (item) {
             return wraptry(function () {
-                return result(item, method, arg);
+                return item[method](arg);
             }, catcher, finallyer);
         });
     },
@@ -1213,10 +1218,13 @@ var factories = {},
         // Optimized iterator function as using arguments[LENGTH]
         // in the main function will deoptimize the, see #1991.
         var iterator = function (obj, iteratee, memo, keys, index, length) {
-            var currentKey;
+            var nextMemo, currentKey;
             for (; index >= 0 && index < length; index += dir) {
                 currentKey = keys ? keys[index] : index;
-                memo = iteratee(memo, obj[currentKey], currentKey, obj);
+                nextMemo = iteratee(memo, obj[currentKey], currentKey, obj);
+                if (nextMemo !== UNDEFINED) {
+                    memo = nextMemo;
+                }
             }
             return memo;
         };
@@ -1298,6 +1306,7 @@ var factories = {},
             return thing;
         };
     },
+    returnsTrue = returns(BOOLEAN_TRUE),
     returnsFirstArgument = returns.first = function (value) {
         return value;
     },

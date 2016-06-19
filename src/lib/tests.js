@@ -1,6 +1,7 @@
-app.run(function (app, _, factories) {
+app.scope(function (app) {
     var current, pollerTimeout, allIts, describes, successfulIts, failedIts, stack, queue, allExpectations, successful, failures, successfulExpectations, failedExpectations, globalBeforeEachStack, globalAfterEachStack, failedTests = 0,
         testisrunning = BOOLEAN_FALSE,
+        // _ = app._,
         EXPECTED = 'expected',
         SPACE_NOT = ' not',
         TO_EQUAL = ' to equal ',

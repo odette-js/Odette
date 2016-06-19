@@ -2523,7 +2523,6 @@ application.scope().run(function (app, _, factories) {
             _.expect(_.isInstance(view.el, factories.DomManager)).toEqual(true);
             window.readytostop = true;
         });
-        // this test is invalid because there should be no ui available before render
         _.it('can even have extra elements tied to it... but only when it is rendered', function () {
             _.expect(_.isString(complexView.ui.there)).toEqual(true);
             complexView.render();
@@ -2541,9 +2540,7 @@ application.scope().run(function (app, _, factories) {
         });
         _.it('can be filtered', function () {
             _.expect(complexView.el.element().parentNode).toEqual(null);
-            complexView.filter = function () {
-                return false;
-            };
+            complexView.filter = _.returns(false);
             app.RegionManager.get('main').add(complexView);
             _.expect(complexView.el.element().parentNode).toEqual(null);
         });

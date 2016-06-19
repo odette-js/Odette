@@ -56,9 +56,9 @@ app.scope(function (app) {
                 this[STOP](e);
             }
         },
-        createArguments = function (module, args) {
-            return [module].concat(module[APPLICATION].createArguments(), args || []);
-        },
+        // createArguments = function (module, windo, args) {
+        //     return ;
+        // },
         checks = function (app, list) {
             var exporting = [];
             duff(list, function (path) {
@@ -131,16 +131,20 @@ app.scope(function (app) {
                 }
                 return module;
             },
-            run: function (windo, fn_) {
+            createArguments: function (windo) {
+                return [module].concat(module[APPLICATION].createArguments(windo), args || []);
+            },
+            run: function (windo_, fn_) {
                 var result, module = this,
-                    fn = isFunction(windo) ? windo : fn_,
-                    args = isWindow(windo) ? [windo.DOMA] : [];
+                    fn = isWindow(windo_) ? fn_ : windo_,
+                    windo = fn === windo_ ? window : windo_;
                 if (isFunction(fn)) {
-                    if (module[APPLICATION] !== module) {
-                        result = fn.apply(module, createArguments(module, args));
-                    } else {
-                        result = fn.apply(module, module.createArguments(args));
-                    }
+                    result = fn.apply(module, module.createArguments(windo));
+                    // if (module[APPLICATION] !== module) {
+                    //     result = fn.apply(module, createArguments(module, windo));
+                    // } else {
+                    //     result = fn.apply(module, module.createArguments(windo));
+                    // }
                 }
                 return result === UNDEFINED ? module : result;
             },
@@ -195,23 +199,24 @@ app.scope(function (app) {
                 }
             }
         },
-        extraModuleArguments = [],
+        // extraModuleArguments = [],
         Module = factories.Module = factories.Model.extend(MODULE, extend({}, startableMethods, moduleMethods)),
-        baseModuleArguments = function (app) {
+        baseModuleArguments = function (app, windo) {
             var _ = app._;
-            return [app, _, _ && _.factories];
+            var documentView = app.directive(DOCUMENT_MANAGER).documents.get(ID, windo[DOCUMENT][__ELID__]);
+            return [app, _, _ && _.factories, documentView, documentView.scopedFactories, documentView.$];
         },
         appextendresult = app.extend(extend({}, factories.Directive[CONSTRUCTOR][PROTOTYPE], factories.Events[CONSTRUCTOR][PROTOTYPE], factories.Parent[CONSTRUCTOR][PROTOTYPE], startableMethods, moduleMethods, {
-            addModuleArguments: function (arr) {
-                _.addAll(extraModuleArguments, arr);
-                return this;
-            },
-            removeModuleArguments: function (arr) {
-                _.removeAll(extraModuleArguments, arr);
-                return this;
-            },
-            createArguments: function (args) {
-                return baseModuleArguments(this).concat(extraModuleArguments, args || []);
+            // addModuleArguments: function (arr) {
+            //     _.addAll(extraModuleArguments, arr);
+            //     return this;
+            // },
+            // removeModuleArguments: function (arr) {
+            //     _.removeAll(extraModuleArguments, arr);
+            //     return this;
+            // },
+            createArguments: function (windo) {
+                return baseModuleArguments(this, windo);
             }
         }));
 });

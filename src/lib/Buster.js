@@ -493,7 +493,11 @@ app.scope(function (app) {
                 }).send();
             }
         });
-    if (app.global.touch(win, win[TOP])) {
-        $(win[TOP]).on(MESSAGE, receivePostMessage);
-    }
+    app.undefine(function (app, win) {
+        var documentManager = app.directive(DOCUMENT_MANAGER);
+        var documentView = documentManager.documents.get(ID, win[DOCUMENT][__ELID__]);
+        if (app.global.touch(win, win[TOP])) {
+            documentView.$(win[TOP]).on(MESSAGE, receivePostMessage);
+        }
+    });
 });

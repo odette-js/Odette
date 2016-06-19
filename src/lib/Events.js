@@ -22,10 +22,13 @@ app.scope(function (app) {
             });
         },
         flattenMatrix = function (iterator, _nameOrObjectIndex, expects, fills) {
-            return function (first) {
+            return function (first, second) {
                 var args, eventsDirective, firstTimeRound = BOOLEAN_TRUE,
                     eventer = this;
                 if (!first) {
+                    return eventer;
+                }
+                if (_nameOrObjectIndex && !second) {
                     return eventer;
                 }
                 args = toArray(arguments);
