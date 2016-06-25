@@ -14,8 +14,10 @@ application.scope().run(window, function (app, _, factories, documentView, scope
     var PersonView = scopedFactories.View.extend({
         Model: Person,
         template: $.compile('profile-summary'),
-        className: _.returns('profile'),
         tagName: _.returns('li'),
+        attributes: {
+            class: 'profile'
+        },
         elementEvents: {
             click: 'incrementClicks'
         },
@@ -25,18 +27,38 @@ application.scope().run(window, function (app, _, factories, documentView, scope
             });
         }
     });
+    var log = function () {
+        console.log('here');
+    };
     var ViewContainer = scopedFactories.View.extend({
         Child: PersonView,
         Model: Company,
-        template: $.compile('employees-container'),
-        className: _.returns('employees-container'),
-        regions: function () {
-            return {
-                employees: '.employees'
-            };
+        template: $.compile(function () {
+            console.log(helpers, _);
+            return [
+                ["h3", null, name, {
+                    key: "company_name"
+                }],
+                ["ul", {
+                        class: "employees"
+                    },
+                    null, {
+                        key: "employees"
+                    }
+                ]
+            ];
+        }),
+        attributes: {
+            class: 'employees-container'
+        },
+        ui: {
+            title: 'company_name'
+        },
+        regions: {
+            employees: 'employees'
         }
     });
-    documentView.directive('RegionManager').add({
+    documentView.addRegion({
         summaries: '#main-region'
     });
     factories.HTTP('/json/data.json').success(function (data) {
@@ -49,11 +71,6 @@ application.scope().run(window, function (app, _, factories, documentView, scope
         });
         speclessView.addChildView('employees', data);
         documentView.addChildView('summaries', speclessView);
-        speclessView.render(_.returns(true));
-        var employees = speclessView.getChildren('employees');
-        var michael = employees.get('modelId', 'Michael');
-        var michaelModel = michael.model;
-        michaelModel.set('clicks', 2);
-        console.log(speclessView);
     });
+    window.$ = $;
 });

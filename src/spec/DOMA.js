@@ -473,9 +473,17 @@ application.scope().run(window, function (app, _, factories, documentView, scope
         });
         _.it('tags cannot be created without being registered first', function () {
             _.expect(function () {
-                $.createElement('unregistered');
+                $.createElement('unregistered-test');
             }).toThrow();
+            $.registerElement('unregistered-test');
+            _.expect(function () {
+                $.createElement('unregistered-test');
+            }).not.toThrow();
         });
-        _.it('tags are automatically queried for and registered', function () {});
+        _.it('tags are automatically queried for and registered', function () {
+            _.expect($.document.data.get(document.getElementById('nodatahere')).DomManager).toEqual(void 0);
+            // this one has an is property so it will be queried for automatically
+            _.expect($.document.data.get(document.getElementById('datahere')).DomManager).not.toEqual(void 0);
+        });
     });
 });

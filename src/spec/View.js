@@ -11,7 +11,12 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 count++;
             },
             template: function () {
-                return '<span></span><div class="here"></div>';
+                return [
+                    ['span'],
+                    ['div', {
+                        class: 'here'
+                    }]
+                ];
             }
         });
         documentView.addRegion('main', '.test-div');
@@ -30,16 +35,15 @@ application.scope().run(window, function (app, _, factories, documentView, scope
         });
         _.it('has an element that you can interact with', function () {
             _.expect(_.isInstance(view.el, factories.DomManager)).toEqual(true);
-            window.readytostop = true;
         });
         _.it('can even have extra elements tied to it... but only when it is rendered', function () {
-            // _.expect(_.isString(complexView.ui.there)).toEqual(true);
-            // complexView.render();
+            _.expect(_.isString(complexView.ui.there)).toEqual(true);
+            complexView.render();
             _.expect(_.isInstance(complexView.ui.there, factories.DOMA)).toEqual(true);
         });
         _.it('can be rendered', function () {
-            // _.expect(complexView.el.html()).toEqual('');
-            // complexView.render();
+            _.expect(complexView.el.html()).toEqual('');
+            complexView.render();
             _.expect(complexView.el.html()).not.toEqual('');
         });
         _.it('can be attached to a region', function () {
@@ -55,8 +59,8 @@ application.scope().run(window, function (app, _, factories, documentView, scope
         });
         _.it('can have extra elements', function () {
             _.expect(_.isObject(complexView.ui)).toEqual(true);
-            // _.expect(_.isString(complexView.ui.there)).toEqual(true);
-            // complexView.render();
+            _.expect(_.isString(complexView.ui.there)).toEqual(true);
+            complexView.render();
             _.expect(_.isInstance(complexView.ui.there, factories.DOMA)).toEqual(true);
             _.expect(complexView.ui.there.length()).toEqual(1);
         });

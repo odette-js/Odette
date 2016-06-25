@@ -21,7 +21,7 @@ var ATTACHED = 'attached',
             el.setAttribute(key, (val_ === BOOLEAN_TRUE ? EMPTY_STRING : stringify(val_)) + EMPTY_STRING);
         }
     },
-    matchesSelctor = function (element, selector) {
+    matchesSelector = function (element, selector) {
         var match, parent, matchesSelector;
         if (!selector || !element || element[NODE_TYPE] !== 1) {
             return BOOLEAN_FALSE;
@@ -145,41 +145,6 @@ var ATTACHED = 'attached',
         memo.hash[attributeKey] = BOOLEAN_TRUE;
         memo.list.push(attributeKey);
     },
-    deltas = {
-        updateText: function (oldEl, newText) {
-            return function () {
-                oldEl.textContent = newText;
-            };
-        },
-        removeNodes: function (el) {
-            return function () {
-                removeChild(el);
-                return BOOLEAN_TRUE;
-            };
-        },
-        addNodes: function (parent, els, index) {
-            var frag = document.createDocumentFragment();
-            duff(els, function (el) {
-                frag.appendChild(el);
-            });
-            return function () {
-                parent.appendChild(frag);
-                return BOOLEAN_TRUE;
-            };
-        },
-        updateAttribute: function (element, key, value) {
-            return function () {
-                attributeApi.write(element, key, value);
-            };
-        },
-        replaceNode: function (a, b, index) {
-            return function () {
-                var parent = a[PARENT_NODE];
-                insertBefore(parent, a, b);
-                removeChild(b);
-            };
-        }
-    },
     appendChild = function (parent, target) {
         return target && parent.appendChild && parent.appendChild(target);
     },
@@ -208,71 +173,95 @@ var ATTACHED = 'attached',
             }
         }
     },
+    returnsJSONNodeType = function (tagName) {
+        return tagName === 'text' ? 3 : 1;
+    },
+    collectAttributes = function (a, b, context, mutations) {
+        var bKeys, aLength = a.attributes.length;
+        var bLength = (bKeys = keys(b[1])).length;
+        var attrs = foldl({
+            length: Math.max(aLength, bLength)
+        }, function (memo, voided, index) {
+            var key;
+            if (memo.aLength > index) {
+                collectAttr(memo, a.attributes[index], mutations);
+            }
+            if (memo.bLength > index) {
+                key = bKeys[index];
+                collectAttr(memo, {
+                    localName: key,
+                    nodeValue: b[1][key]
+                }, mutations, BOOLEAN_TRUE);
+            }
+        }, {
+            list: [],
+            hash: {},
+            attrsA: {},
+            accessA: {},
+            attrsB: {},
+            accessB: {},
+            aLength: aLength,
+            bLength: bLength
+        });
+        duff(attrs.list, function (key) {
+            if (attrs.accessA[key] === attrs.accessB[key]) {
+                return;
+            }
+            mutations.push(context.deltas.updateAttribute(a, key, attrs.accessB[key] === UNDEFINED ? NULL : attrs.accessB[key]));
+        });
+    },
     // cannot start with a text node
-    nodeComparison = function (a, b, stopper, index_, diffs_) {
-        var first = !diffs_,
-            diffs = diffs_ || [],
-            index = index_ || 0;
-        if (tag(a) === tag(b) && a.nodeType === b.nodeType) {
-            if (a.nodeType === 3) {
-                if (a.textContent !== b.textContent) {
-                    diffs.push(deltas.updateText(a, b.textContent));
+    nodeComparison = function (a, b, context, hash_, stopper, layer_level_, diffs_) {
+        var resultant, first = !diffs_,
+            diffs = diffs_ || {
+                mutations: [],
+                keys: {}
+            },
+            keys = diffs.keys,
+            mutations = diffs.mutations,
+            layer_level = layer_level_ || 0,
+            hash = hash_ || {},
+            diff = mutations[layer_level];
+        if (!diff) {
+            mutations.push([]);
+            diff = mutations[layer_level];
+        }
+        if (tag(a) === b[0] && a.nodeType === returnsJSONNodeType(b[0])) {
+            if (a.childNodes[LENGTH] === 1 && isString(b[2])) {
+                if (a.textContent !== b[2]) {
+                    diff.push(context.deltas.updateText(a, b[2]));
                 }
                 return;
             }
-            if (attributeApi.read(b, 'is')) {
+            // what is different.
+            collectAttributes(a, b, context, diff);
+            var aChildren = a.childNodes;
+            var bChildren = b[2];
+            if (isString(bChildren)) {
+                diff.push(context.deltas.resetHtml(a, bChildren, context));
                 return BOOLEAN_TRUE;
             }
-            // what is different.
-            var aLength = a.attributes.length;
-            var bLength = b.attributes.length;
-            var attrs = foldl({
-                length: Math.max(aLength, bLength)
-            }, function (memo, voided, index) {
-                if (memo.aLength > index) {
-                    collectAttr(memo, a.attributes[index], diffs);
-                }
-                if (memo.bLength > index) {
-                    collectAttr(memo, b.attributes[index], diffs, BOOLEAN_TRUE);
-                }
-            }, {
-                list: [],
-                hash: {},
-                attrsA: {},
-                accessA: {},
-                attrsB: {},
-                accessB: {},
-                aLength: aLength,
-                bLength: bLength
-            });
-            duff(attrs.list, function (key) {
-                if (attrs.accessA[key] === attrs.accessB[key]) {
-                    return;
-                }
-                diffs.push(deltas.updateAttribute(a, key, attrs.accessB[key] === UNDEFINED ? NULL : attrs.accessB[key]));
-            });
-            var aChildren = a.childNodes;
-            var bChildren = b.childNodes;
-            var aChildrenLength = aChildren[LENGTH];
-            var bChildrenLength = bChildren[LENGTH];
-            find({
-                length: Math.max(aChildrenLength, bChildrenLength)
-            }, function (voided, index) {
-                var result;
-                if (aChildrenLength <= index) {
-                    diffs.push(deltas.addNodes(a, toArray(bChildren).slice(index)));
+            var aChildrenLength = aChildren && aChildren[LENGTH];
+            var bChildrenLength = bChildren && bChildren[LENGTH];
+            var maxLength = Math.max(aChildrenLength, bChildrenLength);
+            resultant = maxLength && find({
+                length: maxLength
+            }, function (voided, i) {
+                var bChild, result;
+                if (aChildrenLength <= i) {
+                    diff.push(context.deltas.addNodes(a, toArray(bChildren).slice(i), context, keys));
                     return BOOLEAN_TRUE;
                 } else {
                     if (!stopper(b)) {
                         return;
                     }
-                    if (bChildrenLength <= index) {
-                        diffs.push(deltas.removeNodes(toArray(aChildren).slice(index)));
+                    if (bChildrenLength <= i) {
+                        diff.push(context.deltas.removeNodes(toArray(aChildren).slice(i), hash));
                         return BOOLEAN_TRUE;
                     } else {
-                        result = nodeComparison(aChildren[index], bChildren[index], stopper, index, diffs);
+                        result = nodeComparison(aChildren[i], bChildren[i], context, hash, stopper, layer_level + 1, diffs);
                         if (result === BOOLEAN_FALSE) {
-                            diffs.push(deltas.swapNode(a, b));
+                            diff.push(context.deltas.replaceNode(a, b, context, hash));
                         }
                     }
                 }
@@ -306,22 +295,21 @@ var ATTACHED = 'attached',
         obj.children = foldl(children, function (memo, child) {
             if (isElement(child)) {
                 memo.push(nodeToJSON(child, shouldStop, includeComments));
-                return;
+            } else {
+                if (child.nodeType === 3) {
+                    memo.push(textJSON(child.textContent));
+                } else {
+                    if (includeComments) {
+                        if (child.nodeType === 8) {
+                            memo.push(commentJSON(child.textContent));
+                        } else {
+                            memo.push({
+                                err: BOOLEAN_TRUE
+                            });
+                        }
+                    }
+                }
             }
-            if (child.nodeType === 3) {
-                memo.push(textJSON(child.textContent));
-                return;
-            }
-            if (!includeComments) {
-                return;
-            }
-            if (child.nodeType === 8) {
-                memo.push(commentJSON(child.textContent));
-                return;
-            }
-            memo.push({
-                err: BOOLEAN_TRUE
-            });
         }, []);
         return obj;
     },
@@ -366,6 +354,9 @@ app.scope(function (app) {
         CAPTURE_COUNT = 'captureCount',
         CUSTOM_KEY = 'is',
         CUSTOM_ATTRIBUTE = '[' + CUSTOM_KEY + ']',
+        createAttributeFromTag = function (tag) {
+            return '[' + CUSTOM_KEY + '="' + tag + '"]';
+        },
         CLASS__NAME = (CLASS + HYPHEN + NAME),
         FONT_SIZE = 'fontSize',
         DEFAULT_VIEW = 'defaultView',
@@ -419,52 +410,111 @@ app.scope(function (app) {
         },
         escape = createEscaper(escapeMap),
         unescape = createEscaper(unescapeMap),
-        templateGenerator = function (text, templateSettings) {
-            var settings = extend({}, templateSettings);
-            var matcher = RegExp([
-                (settings.escape || noMatch).source, (settings.interpolate || noMatch).source, (settings.evaluate || noMatch).source
-            ].join('|') + '|$', 'g');
-            var index = 0;
-            var source = "__HTML__+='";
-            text.replace(matcher, function (match, escape, interpolate, evaluate, offset) {
-                source += text.slice(index, offset).replace(escapeRegExp, escapeChar);
-                index = offset + match[LENGTH];
-                if (escape) {
-                    source += "'+\n((__t=(this." + escape + "))==null?'':_.escape(__t))+\n'";
-                } else if (interpolate) {
-                    source += "'+\n((__t=(this." + interpolate + "))==null?'':__t)+\n'";
-                } else if (evaluate) {
-                    source += "';\n" + evaluate + "\n__HTML__+='";
+        templateMiddleware = function (string) {
+            var split = string.split('<');
+            var pseudo = foldl(split, function (memo, splitstring) {
+                var endsplit = splitstring.split('>');
+                if (endsplit[LENGTH] === 1) {
+                    // just text
+                    memo.list.push(splitstring);
+                    return;
                 }
-                // Adobe VMs need the match returned
-                // to produce the correct offset.
-                return match;
+                var nexttext = endsplit[1];
+                var contained = endsplit[0];
+                if (nexttext) {}
+            }, {
+                layer: 0,
+                list: []
             });
-            source += "';\n";
-            // If a variable is not specified, place data values in local scope.
-            if (!settings.variable) {
-                source = 'with(this||{}){\n' + source + '}\n';
+            return string;
+        },
+        foldAttributes = function (attributes) {
+            return attributes[LENGTH] ? _.foldl(attributes, function (memo, attribute) {
+                memo[attribute[LOCAL_NAME]] = attribute.nodeValue;
+            }) : NULL;
+        },
+        virtualizeDom = function (nodes) {
+            return _.map(nodes, function (node) {
+                return [node.tagName, foldAttributes(node.attributes)];
+            });
+        },
+        templateGenerator = function (text_, templateSettings) {
+            var render, template, trimmed, argument, settings = extend({}, templateSettings),
+                text = text_,
+                templateIsFunction = isFunction(text);
+            if (templateIsFunction || text.match(/return(\s*)\[/igm)) {
+                if (templateIsFunction) {
+                    text = unwrapBlock(text);
+                }
+                trimmed = text.trim();
+                if (trimmed[trimmed[LENGTH] - 1] !== ';') {
+                    trimmed += ';';
+                }
+                trimmed = text;
+                render = _.wraptry(function () {
+                    return new FUNCTION_CONSTRUCTOR_CONSTRUCTOR('helpers', '_', blockWrapper(trimmed));
+                });
+                return function (data, helpers) {
+                    return render.call(data, helpers, _);
+                };
             }
-            source = "var __t,__HTML__='',__j=Array.prototype.join," + "print=function(){__HTML__+=__j.call(arguments,'');};\n" + source + 'return __HTML__;\n';
-            var render = _.wraptry(function () {
-                return new FUNCTION_CONSTRUCTOR_CONSTRUCTOR(settings.variable || '_', source);
-            });
-            var template = function (data) {
-                return render.call(data || {}, _);
-            };
-            // Provide the compiled source as a convenience for precompilation.
-            var argument = settings.variable || 'obj';
-            template.source = 'function(' + argument + '){\n' + source + '}';
-            return template;
+            // }
+            // var matcher = RegExp([
+            //     (settings.escape || noMatch).source, (settings.interpolate || noMatch).source, (settings.evaluate || noMatch).source
+            // ].join('|') + '|$', 'g');
+            // var index = 0;
+            // var source = "__HTML__+='";
+            // text.replace(matcher, function (match, escape, interpolate, evaluate, offset) {
+            //     source += text.slice(index, offset).replace(escapeRegExp, escapeChar);
+            //     index = offset + match[LENGTH];
+            //     if (escape) {
+            //         source += "'+\n((__t=(this." + escape + "))==null?'':_.escape(__t))+\n'";
+            //     } else if (interpolate) {
+            //         source += "'+\n((__t=(this." + interpolate + "))==null?'':__t)+\n'";
+            //     } else if (evaluate) {
+            //         source += "';\n" + evaluate + "\n__HTML__+='";
+            //     }
+            //     // Adobe VMs need the match returned
+            //     // to produce the correct offset.
+            //     return match;
+            // });
+            // source += "';\n";
+            // // If a variable is not specified, place data values in local scope.
+            // // if (!settings.variable) {
+            // source = 'with(this||{}){\n' + source + '}\n';
+            // // }
+            // source = "var __t,__HTML__='',__j=Array.prototype.join," + "print=function(){__HTML__+=__j.call(arguments,'');};\n" + source + 'return __HTML__;\n';
+            // render = _.wraptry(function () {
+            //     return new FUNCTION_CONSTRUCTOR_CONSTRUCTOR(settings.variable || '_', source);
+            // });
+            // template = function (data) {
+            //     return virtualize(render.call(data || {}, _));
+            // };
+            // // Provide the compiled source as a convenience for precompilation.
+            // argument = settings.variable || 'obj';
+            // template.source = 'function(' + argument + '){\n' + source + '}';
+            // return template;
         },
         compile = function (id, template_, context) {
-            var template, templates = context.templates = context.templates || Collection(),
-                templateHandler = templates.get(ID, id);
+            var templateHandler, templateIsFunction, template, trimmed, templates = context.templates = context.templates || Collection();
+            if (isFunction(id)) {
+                return templateGenerator(unwrapBlock(id), context.templateSettings);
+            }
+            templateHandler = templates.get(ID, id);
             if (templateHandler) {
                 return templateHandler;
             }
             template = template_ || context.$('#' + id).html();
+            // templateIsFunction = isFunction(template);
+            // if (templateIsFunction) {
+            //     template = unwrapBlock(template);
+            // }
+            // trimmed = template.trim();
+            // if (trimmed.slice(0, 6) === 'return') {
+            //     templateHandler = new FUNCTION_CONSTRUCTOR_CONSTRUCTOR(blockWrapper(trimmed));
+            // } else {
             templateHandler = templateGenerator(template, context.templateSettings);
+            // }
             templateHandler.id = id;
             templates.push(templateHandler);
             templates.keep(ID, id, templateHandler);
@@ -540,15 +590,6 @@ app.scope(function (app) {
             return img;
         },
         DO_NOT_TRUST = BOOLEAN_FALSE,
-        // cannotTrust = function (fn) {
-        //     return function () {
-        //         var ret, cachedTrust = DO_NOT_TRUST;
-        //         DO_NOT_TRUST = BOOLEAN_TRUE;
-        //         ret = fn.apply(this, arguments);
-        //         DO_NOT_TRUST = cachedTrust;
-        //         return ret;
-        //     };
-        // },
         makeEachTrigger = function (attr, api) {
             var whichever = api || attr;
             return function (manager) {
@@ -1100,7 +1141,7 @@ app.scope(function (app) {
         htmlTextManipulator = function (attr) {
             return function (string) {
                 var dom = this;
-                return string !== UNDEFINED ? dom.eachCall(attr, string) && dom : dom.results(attr).join(EMPTY_STRING); //dom.map(getInnard.bind(NULL, attr)).join(EMPTY_STRING);
+                return string !== UNDEFINED ? dom.eachCall(attr, string) && dom : dom.results(attr).join(EMPTY_STRING);
             };
         },
         horizontalTraverser = function (method, _idxChange) {
@@ -1414,7 +1455,8 @@ app.scope(function (app) {
             return returnValue;
         },
         setInnard = function (attribute, manager, value) {
-            var owner, cachedValue, win, doc, windo, doTheThing, parentElement;
+            var children, cachedValue, win, doc, windo, doTheThing, parentElement,
+                owner = manager.owner;
             if (manager.is(IFRAME)) {
                 windo = manager.window();
                 testIframe(manager);
@@ -1429,17 +1471,17 @@ app.scope(function (app) {
             } else {
                 if (manager.is(ELEMENT)) {
                     parentElement = manager.element();
-                    cachedValue = parentElement[attribute];
-                    parentElement[attribute] = value || EMPTY_STRING;
-                    owner = manager.owner;
-                    duff(owner.$(CUSTOM_ATTRIBUTE, parentElement), owner.returnsManager, owner);
-                    if (cachedValue !== parentElement[attribute]) {
-                        doTheThing = BOOLEAN_TRUE;
+                    if (attribute === INNER_HTML) {
+                        children = toArray(manager.$(CUSTOM_ATTRIBUTE));
                     }
+                    parentElement[attribute] = value || EMPTY_STRING;
+                    if (children[LENGTH]) {
+                        // detach old
+                        dispatchDetached(children, owner);
+                    }
+                    // establish new
+                    duff(owner.$(CUSTOM_ATTRIBUTE, parentElement), owner.returnsManager, owner);
                 }
-            }
-            if (doTheThing) {
-                manager.bubble('content:changed', value);
             }
         },
         innardManipulator = function (attribute) {
@@ -1480,11 +1522,16 @@ app.scope(function (app) {
             manager.cachedContent = NULL;
         },
         cachedDispatch = factories.Events[CONSTRUCTOR][PROTOTYPE][DISPATCH_EVENT],
-        eventDispatcher = function (manager, name, e, capturing_) {
+        RUNNING_EVENT = 'runningEvent',
+        eventDispatcher = function (manager, name, e, capturing_, DO_NOT_TRUST) {
             var capturing = !!capturing_;
-            return cachedDispatch.call(manager, name, validateEvent(e, manager.element(), name), {
+            manager.owner.mark(RUNNING_EVENT);
+            var validated = validateEvent(e, manager.element(), name);
+            var returnValue = cachedDispatch.call(manager, name, validated, {
                 capturing: capturing
             });
+            manager.owner.remark(RUNNING_EVENT, DO_NOT_TRUST);
+            return returnValue;
         },
         directAttributes = {
             id: BOOLEAN_FALSE,
@@ -1885,24 +1932,42 @@ app.scope(function (app) {
                 return element[PARENT_NODE] === parent;
             };
         },
-        query = function (str, ctx, manager) {
-            var directSelector, elements, context = ctx || doc_,
-                returnsArray = returns.first;
-            if (str === 'body') {
-                return [context.body];
+        returnsSelector = function (string, owner) {
+            var registeredElements = owner.registeredElements;
+            return registeredElements[string] === BOOLEAN_TRUE ? string : createAttributeFromTag(string);
+        },
+        convertSelector = function (str, owner) {
+            return map(toArray(str, SPACE), function (level) {
+                return level.replace(/^(\S*?)([\.|\#|\[])/i, function (match_) {
+                    var match = match_;
+                    var last = match[LENGTH] - 1;
+                    return last ? (returnsSelector(match.slice(0, last), owner) + match.slice(last)) : match;
+                });
+            }).join(SPACE);
+        },
+        query = function (str_, ctx, manager) {
+            var directSelector, elements, str = str_,
+                context = ctx,
+                returnsArray = returns.first,
+                owner = manager.owner;
+            if (manager && manager === owner) {
+                if (str === 'body') {
+                    return [context.body];
+                }
+                if (str === 'head') {
+                    return [context.head];
+                }
+                if (manager && str[0] === '>') {
+                    directSelector = BOOLEAN_TRUE;
+                    str = manager.queryString() + str;
+                }
             }
-            if (str === 'head') {
-                return [context.head];
-            }
-            if (manager && str[0] === '>') {
-                directSelector = BOOLEAN_TRUE;
-                str = manager.queryString() + str;
-            }
+            str = convertSelector(str, owner);
             elements = context.querySelectorAll(str);
             if (directSelector) {
                 return dataReconstructor(elements, filtersParentNotMe(context));
             } else {
-                return toArray(returnsArray(elements));
+                return toArray(elements);
             }
         },
         DOMA_SETUP = factories.DOMA_SETUP = function (windo_) {
@@ -1931,6 +1996,77 @@ app.scope(function (app) {
                         gamma: 0,
                         absolute: 0
                     };
+                },
+                deltas = {
+                    update: function (node, attrs, children, hash) {
+                        var results;
+                        each(attrs, function (value, key) {
+                            attributeApi.write(node, key, value);
+                        });
+                        results = isString(children) ? (node.innerHTML = children) : duff(children, function (child) {
+                            appendChild(node, deltas.create(child, node, hash));
+                        });
+                        return node;
+                    },
+                    create: function (virtual, parent, hash) {
+                        var key, data, created;
+                        if (virtual[0] === 'text') {
+                            parent.innerHTML += virtual[1];
+                            return;
+                        }
+                        created = doc.createElement(virtual[0]);
+                        data = virtual[3];
+                        if (data && data.key) {
+                            if (hash[data.key]) {
+                                exception({
+                                    message: 'can\'t have a non unique key at ' + data.key
+                                });
+                            }
+                            hash[data.key] = created;
+                        }
+                        parent.appendChild(deltas.update(created, virtual[1], virtual[2], hash));
+                        return created;
+                    },
+                    resetHtml: function (target, newhtml) {
+                        return function () {
+                            $(target).html(newhtml);
+                        };
+                    },
+                    updateText: function (oldEl, newText) {
+                        return function () {
+                            oldEl.textContent = newText;
+                        };
+                    },
+                    removeNodes: function (el) {
+                        return function () {
+                            removeChild(el);
+                            return BOOLEAN_TRUE;
+                        };
+                    },
+                    addNodes: function (parent, els, context, hash) {
+                        var frag = doc.createDocumentFragment();
+                        duff(els, function (el) {
+                            deltas.create(el, frag, hash);
+                        });
+                        return function () {
+                            parent.appendChild(frag);
+                            return BOOLEAN_TRUE;
+                        };
+                    },
+                    updateAttribute: function (element, key, value) {
+                        return function () {
+                            attributeApi.write(element, key, value);
+                        };
+                    },
+                    replaceNode: function (a, b, index, hash) {
+                        var parent = a[PARENT_NODE];
+                        var frag = doc.createDocumentFragment();
+                        deltas.create(b, frag, hash);
+                        return function () {
+                            insertBefore(parent, frag, a);
+                            var result = a[__ELID__] ? $(a).remove() : removeChild(a);
+                        };
+                    }
                 };
             if (manager.is('setupComplete')) {
                 return manager.$;
@@ -1959,11 +2095,6 @@ app.scope(function (app) {
             }), wrap({
                 makeTree: makeTree,
                 makeBranch: makeBranch,
-                // }, function (handler) {
-                //     return function (one, two) {
-                //         return handler(one, manager, two);
-                //     };
-                // }), wrap({
                 createElement: createElement,
                 diff: diff
             }, function (handler) {
@@ -1971,6 +2102,23 @@ app.scope(function (app) {
                     return handler(one, manager, two, three);
                 };
             }), {
+                supports: {},
+                deltas: deltas,
+                registeredConstructors: registeredConstructors,
+                registeredElementOptions: registeredElementOptions,
+                iframeContent: iframeContent,
+                orderEventsByHeirarchy: returns(BOOLEAN_TRUE),
+                data: factories.Associator(),
+                // documentId: manager.documentId,
+                document: manager,
+                devicePixelRatio: devicePixelRatio,
+                constructor: DOMA[CONSTRUCTOR],
+                registeredElements: registeredElements,
+                templateSettings: {
+                    evaluate: /<%([\s\S]+?)%>/g,
+                    interpolate: /<%=([\s\S]+?)%>/g,
+                    escape: /<%-([\s\S]+?)%>/g
+                },
                 events: {
                     custom: {},
                     expanders: {},
@@ -1992,9 +2140,6 @@ app.scope(function (app) {
                         all: AllEvents
                     }, cloneJSON)
                 },
-                supports: {},
-                registeredConstructors: registeredConstructors,
-                registeredElementOptions: registeredElementOptions,
                 returnsManager: function (item) {
                     return item === manager || item === manager.element() ? manager : returnsManager(item, manager);
                 },
@@ -2015,19 +2160,6 @@ app.scope(function (app) {
                         manager.events.custom[key] = value;
                     });
                     return manager;
-                },
-                iframeContent: iframeContent,
-                orderEventsByHeirarchy: BOOLEAN_TRUE,
-                data: factories.Associator(),
-                // documentId: manager.documentId,
-                document: manager,
-                devicePixelRatio: devicePixelRatio,
-                constructor: DOMA[CONSTRUCTOR],
-                registeredElements: registeredElements,
-                templateSettings: {
-                    evaluate: /<%([\s\S]+?)%>/g,
-                    interpolate: /<%=([\s\S]+?)%>/g,
-                    escape: /<%-([\s\S]+?)%>/g
                 },
                 customAttribute: function (key) {
                     return key ? '[' + CUSTOM_KEY + '="' + key + '"]' : CUSTOM_ATTRIBUTE;
@@ -2179,17 +2311,19 @@ app.scope(function (app) {
         iframeChangeHandler = function () {
             testIframe(this);
         },
-        childByTraversal = function (manager, parent, element, idxChange_, ask, isString) {
+        childByTraversal = function (manager, parent, element, idxChange_, ask_, isString) {
             var target, found,
                 idxChange = idxChange_,
                 children = collectChildren(parent),
-                startIndex = indexOf(children, element);
+                startIndex = indexOf(children, element),
+                ask = ask_;
             if (isString) {
                 idxChange = idxChange || 1;
                 target = element;
+                ask = convertSelector(ask, manager.owner);
                 while (target && !found) {
                     target = children[(startIndex = (startIndex += idxChange))];
-                    found = matchesSelctor(target, ask);
+                    found = matchesSelector(target, ask);
                 }
             } else {
                 target = element;
@@ -2584,7 +2718,7 @@ app.scope(function (app) {
                     parent = target;
                     while (!found && parent && isElement(parent) && parent !== el) {
                         ++counter;
-                        if (matchesSelctor(parent, selector)) {
+                        if (matchesSelector(parent, selector)) {
                             found = parent;
                             // hold on to the temporary target
                             first.temporaryTarget = found;
@@ -2744,7 +2878,7 @@ app.scope(function (app) {
             width: dimensionFinder(WIDTH, 'scrollWidth', INNER_WIDTH),
             siblings: function (filtr) {
                 var original = this,
-                    filter = createDomFilter(filtr);
+                    filter = createDomFilter(filtr, original.owner);
                 return original.parent().children(function (manager, index, list) {
                     return manager !== original && filter(manager, index, list);
                 });
@@ -2824,16 +2958,17 @@ app.scope(function (app) {
             parent: (function () {
                 var finder = function (manager, fn, original) {
                         var rets, found, parentManager = manager,
+                            owner = manager.owner,
                             parentElement = parentManager.element(),
                             next = original;
                         while (parentElement && !found) {
-                            rets = fn(parentElement, original, next);
+                            rets = fn(parentElement, original, next, owner);
                             parentElement = rets[0];
                             found = rets[1];
                             next = rets[2];
                         }
                         if (found) {
-                            return parentManager.owner.returnsManager(parentElement);
+                            return owner.returnsManager(parentElement);
                         }
                     },
                     number = function (element, original, next) {
@@ -2843,9 +2978,10 @@ app.scope(function (app) {
                         }
                         return [element[PARENT_NODE], !next, next];
                     },
-                    string = function (element, original, next) {
+                    string = function (element, original_, next, owner) {
                         var parent = element[PARENT_NODE];
-                        return [parent, matchesSelctor(parent, original)];
+                        var original = convertSelector(original_, owner);
+                        return [parent, matchesSelector(parent, original)];
                     },
                     speshal = {
                         document: function (element, original, next) {
@@ -3026,7 +3162,7 @@ app.scope(function (app) {
                 if (eq === UNDEFINED) {
                     return memo ? ((children = map(children, manager.owner.returnsManager, manager.owner)) && result(memo, 'is', FRAGMENT) ? memo.append(children) : (memo.push.apply(memo, children) ? memo : memo)) : manager.wrap(children);
                 } else {
-                    filter = createDomFilter(eq);
+                    filter = createDomFilter(eq, manager.owner);
                     resultant = foldl(children, function (memo, child, idx, children) {
                         if (filter(child, idx, children)) {
                             memo.push(manager.owner.returnsManager(child));
@@ -3150,7 +3286,7 @@ app.scope(function (app) {
             dispatchEvent: function (name, e, capturing_) {
                 var ret, cachedTrust = DO_NOT_TRUST;
                 DO_NOT_TRUST = BOOLEAN_TRUE;
-                ret = eventDispatcher(this, name, e, capturing_);
+                ret = eventDispatcher(this, name, e, capturing_, cachedTrust);
                 DO_NOT_TRUST = cachedTrust;
                 return ret;
             },
@@ -3204,9 +3340,10 @@ app.scope(function (app) {
          */
         eq = _.eq,
         objectMatches = _.matches,
-        createDomFilter = function (filtr) {
-            return isFunction(filtr) ? filtr : (isString(filtr) ? (filterExpressions[filtr] || function (item) {
-                return matchesSelctor(item, filtr);
+        createDomFilter = function (filtr_, owner) {
+            var filtr = filtr_;
+            return isFunction(filtr) ? filtr : (isString(filtr) ? (filterExpressions[filtr] || (filtr = convertSelector(filtr, owner)) && function (item) {
+                return matchesSelector(item, filtr);
             }) : (isNumber(filtr) ? function (el, idx) {
                 return idx === filtr;
             } : (isObject(filtr) ? objectMatches(filtr) : function () {
@@ -3226,8 +3363,8 @@ app.scope(function (app) {
                 return memo;
             }, []);
         },
-        domFilter = function (items, filtr) {
-            var filter = createDomFilter(filtr);
+        domFilter = function (items, filtr, owner) {
+            var filter = createDomFilter(filtr, owner);
             return dataReconstructor(items, unwrapsOnLoop(filter));
         },
         returnsManager = function (element, owner) {
@@ -3323,7 +3460,7 @@ app.scope(function (app) {
                             if (str[0] === '<') {
                                 els = makeTree(str, owner);
                             } else {
-                                els = map(query(str, unwrapped), owner.returnsManager, owner);
+                                els = map(query(str, unwrapped, context), owner.returnsManager, owner);
                             }
                         } else {
                             els = str;
@@ -3409,10 +3546,10 @@ app.scope(function (app) {
              * @returns {DOMA} new DOMA instance object
              */
             filter: attachPrevious(function (context, filter) {
-                return domFilter(context.unwrap(), filter);
+                return domFilter(context.unwrap(), filter, context.owner);
             }),
             empty: attachPrevious(function (context, filtr) {
-                var filter = createDomFilter(filtr);
+                var filter = createDomFilter(filtr, context.owner);
                 return dataReconstructor(context.unwrap(), unwrapsOnLoop(function (memo, manager, idx, list) {
                     return !filter(manager, idx, list) && manager.remove();
                 }));
@@ -3430,7 +3567,7 @@ app.scope(function (app) {
                     };
                 // look into foldl so we do not get duplicate elements
                 return duff(context.unwrap(), function (manager) {
-                    duff(query(str, manager.element()), push);
+                    duff(query(str, manager.element(), manager), push);
                 }) && matchers;
             }),
             /**

@@ -103,7 +103,6 @@ application.scope().module('Router', function (module, app, _, factories) {
                     match.shift();
                     variables = _.foldl(match, function (memo, item, index) {
                         memo[route.keys[index]] = item;
-                        return memo;
                     }, {});
                     route.handler.call(router, variables);
                     variables = router.trigger && router.dispatchEvent(router.trigger, variables);

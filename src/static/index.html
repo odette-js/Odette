@@ -24,23 +24,17 @@
             .some.here {
                 background-color: rgba(0,0,0,0.25);
             }
-
-
         </style>
     </head>
     <body>
-<script type="text/x-odette" id="basic">
-<span><%=text%></span>
-<div class="region-1"></div>
-<div class="region-2"></div>
-</script>
-<script type="text/x-odette" id="employees-container" data-watches>
-<h3><%=name%></h3>
-<ul class="employees"></ul>
-</script>
+<!-- <script type="text/x-odette" id="employees-container">
+</script> -->
+
 <script type="text/x-odette" id="profile-summary">
-<span><%=first_name%></span>&nbsp;<span><%=last_name%></span>
-<p><%=clicks%></p>
+return [
+    ["span", null, first_name + ' ' + last_name, "full_name"],
+    ["p", null, clicks + '', "click_counter"]
+];
 </script>
         <div id="main-region"></div>
         <script type="text/javascript" src="/js/odette.js"></script>

@@ -51,7 +51,6 @@ application.scope(function (app) {
                     var socket = this;
                     socket.handlers = _.foldl(list, function (memo, item) {
                         memo[item] = _.bind(handlers[item], socket);
-                        return memo;
                     }, {});
                     if (_.isString(options)) {
                         options = {

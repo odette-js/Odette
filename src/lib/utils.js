@@ -650,6 +650,7 @@ var factories = {},
      */
     // Internal recursive comparison function for `isEqual`.
     eq = function (a, b, aStack, bStack) {
+        var className, areArrays, aCtor, bCtor, length, objKeys, key;
         // Identical objects are equal. `0 === -0`, but they aren't identical.
         // See the [Harmony `egal` proposal](http://wiki.ecmascript.org/doku.php?id=harmony:egal).
         if (a === b) {
@@ -663,7 +664,7 @@ var factories = {},
         // if (a instanceof _) a = a._wrapped;
         // if (b instanceof _) b = b._wrapped;
         // Compare `[[Class]]` names.
-        var className = objectToString.call(a);
+        className = objectToString.call(a);
         if (className !== objectToString.call(b)) return BOOLEAN_FALSE;
         switch (className) {
             // Strings, numbers, regular expressions, dates, and booleans are compared by value.
@@ -686,15 +687,15 @@ var factories = {},
             // of `NaN` are not equivalent.
             return +a === +b;
         }
-        var areArrays = className === BRACKET_OBJECT_SPACE + 'Array]';
+        areArrays = className === BRACKET_OBJECT_SPACE + 'Array]';
         if (!areArrays) {
             if (!isObject(a) || !isObject(b)) {
                 return BOOLEAN_FALSE;
             }
             // Objects with different constructors are not equivalent, but `Object`s or `Array`s
             // from different frames are.
-            var aCtor = a[CONSTRUCTOR],
-                bCtor = b[CONSTRUCTOR];
+            aCtor = a[CONSTRUCTOR];
+            bCtor = b[CONSTRUCTOR];
             if (aCtor !== bCtor && !(isFunction(aCtor) && (aCtor instanceof aCtor) && isFunction(bCtor) && (bCtor instanceof bCtor)) && (CONSTRUCTOR in a && CONSTRUCTOR in b)) {
                 return BOOLEAN_FALSE;
             }
@@ -705,7 +706,7 @@ var factories = {},
         // It's done here since we only need them for objects and arrays comparison.
         // aStack = aStack || [];
         // bStack = bStack || [];
-        var length = aStack[LENGTH];
+        length = aStack[LENGTH];
         while (length--) {
             // Linear search. Performance is inversely proportional to the number of
             // unique nested structures.
@@ -731,8 +732,7 @@ var factories = {},
             }
         } else {
             // Deep compare objects.
-            var objKeys = keys(a),
-                key;
+            objKeys = keys(a);
             length = objKeys[LENGTH];
             // Ensure that both objects contain the same number of properties before comparing deep equality.
             if (keys(b)[LENGTH] !== length) return BOOLEAN_FALSE;
@@ -912,13 +912,16 @@ var factories = {},
         string = split.shift();
         return (string = split.join('{')).slice(0, string[LENGTH] - 1);
     },
+    blockWrapper = function (block, context) {
+        return 'with(' + (context || 'this') + '){\n' + block + '\n}';
+    },
     evaluate = function (context, string_, args) {
         var string = string_;
         if (isFunction(string_)) {
             string = unwrapBlock(string_);
         }
         // use a function constructor to get around strict mode
-        var fn = new FUNCTION_CONSTRUCTOR_CONSTRUCTOR('string', 'with(this) {\n\teval("(function (){"+string+"}());");\n}');
+        var fn = new FUNCTION_CONSTRUCTOR_CONSTRUCTOR('string', blockWrapper('\teval("(function (){"+string+"}());");'));
         fn.call(context, '"use strict";\n' + string);
     },
     returnBaseType = function (obj) {
@@ -1331,6 +1334,7 @@ var factories = {},
     },
     _ = app._ = {
         is: is,
+        blockWrapper: blockWrapper,
         unwrapBlock: unwrapBlock,
         passes: passes,
         performance: performance,

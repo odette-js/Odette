@@ -11,7 +11,7 @@ module.exports = function (settings) {
     var expressive = require('../expressive');
     var app = express();
     var expressWs = require('express-ws')(app);
-    var publicroot = path.join(__dirname, '../public');
+    var publicroot = path.join(__dirname, '../dist');
     //Here we are configuring express to use body-parser as middle-ware.
     app.use(bodyParser.urlencoded({
         extended: false

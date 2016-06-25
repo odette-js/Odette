@@ -76,7 +76,7 @@ var STATUS = 'Status',
             return result;
         }
     }),
-    Status = factories.Status = factories.Extendable.extend(STATUS, {
+    Status = factories.Status = factories.Directive.extend(STATUS, {
         constructor: function () {
             this[STATUSES] = {};
             return this;

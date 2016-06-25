@@ -1,7 +1,7 @@
-var content = ['browserify'],
-    server = ['open', 'serve'],
-    allTasks = content.concat(server, ['watch']),
-    devTasks = allTasks.concat(['build']),
+var content = ['browserify', 'distribute'],
+    server = ['serve', 'open'],
+    allTasks = content.concat(['watch'], server),
+    devTasks = allTasks.concat(content),
     gulp = require('gulp'),
     gulpTasker = require('./gulp'),
     path = require('path'),
@@ -41,20 +41,24 @@ var content = ['browserify'],
         jsFramed: _.map(framedModules, function (name) {
             return './src/framed/' + name + '.js';
         }),
-        jspublic: './public/js/',
-        jsTestsPublic: './public/js/',
+        jspublic: './dist/js/',
+        jsTestsPublic: './dist/js/',
         serverIndex: './index.js',
-        ignoreFiles: ['.git/', 'node_modules/', './gulp', 'gulpfile.js', './public']
+        ignoreFiles: ['.git/', 'node_modules/', './gulp', 'gulpfile.js', './dist']
     }), {
         src: './src/**/*',
         publicized: './src/static/**/*',
-        publicizedOutput: './public',
+        publicizedOutput: './dist',
         jsLibraryOutput: 'library.js',
         jsOdetteOutput: 'odette.js',
         jsApplicationOutput: 'application.js',
         jsTestOutput: 'spec.js',
         jsExtraOutput: 'extra.js',
-        jsFramedOutput: 'framed.js'
+        jsFramedOutput: 'framed.js',
+        jsOdetteDistribute: 'odette.js',
+        jsApplicationDistribute: 'application.js',
+        jsLibraryDistribute: 'library.js',
+        jsDistributes: './dist/build/'
     });
 gulpTasker(allTasks, [require('./settings'), paths]);
 gulp.task('build', content);
