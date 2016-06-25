@@ -313,6 +313,17 @@ var factories = {},
         }
         return base;
     },
+    returnOrApply = function (obj_or_fn, context, args) {
+        return isFunction(obj_or_fn) ? obj_or_fn.apply(context, args) : obj_or_fn;
+    },
+    superExtend = function (key, handler) {
+        return function () {
+            var context = this,
+                supertarget = context[CONSTRUCTOR].fn[key],
+                args = toArray(arguments);
+            return extend(BOOLEAN_TRUE, returnOrApply(supertarget, context, args), returnOrApply(handler, context, args));
+        };
+    },
     merge = function (obj1, obj2, deep) {
         var key, val, i = 0,
             instanceKeys = keys(obj2),
@@ -1375,6 +1386,7 @@ var factories = {},
         isBoolean: isBoolean,
         invert: invert,
         extend: extend,
+        superExtend: superExtend,
         noop: noop,
         toggle: toggle,
         reduce: foldl,

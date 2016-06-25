@@ -485,5 +485,8 @@ application.scope().run(window, function (app, _, factories, documentView, scope
             // this one has an is property so it will be queried for automatically
             _.expect($.document.data.get(document.getElementById('datahere')).DomManager).not.toEqual(void 0);
         });
+        _.it('can use direct parent selectors', function () {
+            _.expect($('.branch').eq(0).$('> .leaves').length()).toEqual(5);
+        });
     });
 });

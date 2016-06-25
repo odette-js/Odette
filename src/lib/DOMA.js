@@ -67,25 +67,11 @@ var ATTACHED = 'attached',
         write: writeAttribute,
         remove: removeAttribute
     },
-    removeChild = function (el, target) {
-        var result = el && (target ? target.appendChild(el) : el.parentNode && el.parentNode.removeChild(el));
+    appendChild = function (parent, target) {
+        return target && parent.appendChild && parent.appendChild(target);
     },
-    addRemoveAttributes = function (value_, stringManager) {
-        // handle complex adding and removing
-        var value = value_,
-            isArrayResult = isArray(value);
-        if (isObject(value) && !isArrayResult) {
-            // toggles add remove value
-            each(value, function (value, key) {
-                stringManager.add(key).toggle(!!value);
-            });
-        } else {
-            if (!isArrayResult) {
-                value += EMPTY_STRING;
-            }
-            stringManager.refill(toArray(value, SPACE));
-        }
-        return stringManager;
+    removeChild = function (el, target) {
+        var result = el && (target ? appendChild(target, el) : el.parentNode && el.parentNode.removeChild(el));
     },
     readProperty = function (el, property) {
         return el[property];
@@ -144,9 +130,6 @@ var ATTACHED = 'attached',
         }
         memo.hash[attributeKey] = BOOLEAN_TRUE;
         memo.list.push(attributeKey);
-    },
-    appendChild = function (parent, target) {
-        return target && parent.appendChild && parent.appendChild(target);
     },
     finalInsertBefore = function (parent, el1, el2) {
         return el1 && parent.insertBefore && parent.insertBefore(el1, el2);
@@ -1888,7 +1871,6 @@ app.scope(function (app) {
                 return element[DOCUMENT];
             })));
             manager.remark('topWindow', (element === element.top));
-            // manager.isTop = !!(window && element === window.top);
             manager.setAddress();
             // either the window is null, (we're detached),
             // or it is an unfriendly window
@@ -1937,6 +1919,8 @@ app.scope(function (app) {
             return registeredElements[string] === BOOLEAN_TRUE ? string : createAttributeFromTag(string);
         },
         convertSelector = function (str, owner) {
+            // removes custom tag names and replaces them with [is="tag"]
+            // if anyone knows some regexp that would be better than this, then take a stab at it
             return map(toArray(str, SPACE), function (level) {
                 return level.replace(/^(\S*?)([\.|\#|\[])/i, function (match_) {
                     var match = match_;
@@ -1945,22 +1929,27 @@ app.scope(function (app) {
                 });
             }).join(SPACE);
         },
+        superElements = function (context, key) {
+            return isElement(context[key]) ? [context[key]] : [];
+        },
+        superElementsHash = {
+            body: BOOLEAN_TRUE,
+            head: BOOLEAN_TRUE
+        },
+        // takes string to query for, subset of tree to query for and manager so it can always get to the document
         query = function (str_, ctx, manager) {
             var directSelector, elements, str = str_,
                 context = ctx,
                 returnsArray = returns.first,
                 owner = manager.owner;
             if (manager && manager === owner) {
-                if (str === 'body') {
-                    return [context.body];
+                if (superElementsHash[str]) {
+                    return superElements(context, 'body');
                 }
-                if (str === 'head') {
-                    return [context.head];
-                }
-                if (manager && str[0] === '>') {
-                    directSelector = BOOLEAN_TRUE;
-                    str = manager.queryString() + str;
-                }
+            }
+            if (manager && str[0] === '>') {
+                directSelector = BOOLEAN_TRUE;
+                str = manager.queryString() + str;
             }
             str = convertSelector(str, owner);
             elements = context.querySelectorAll(str);
@@ -2748,7 +2737,7 @@ app.scope(function (app) {
         windowIsVisible = function (windo_, perspective) {
             var notVisible = BOOLEAN_FALSE,
                 windo = windo_;
-            while (!windo.isTop && !notVisible) {
+            while (!windo.is('topWindow') && !notVisible) {
                 windo = perspective.returnsManager(windo.element().parent);
                 if (windo.iframe && windo.is(ACCESSABLE)) {
                     notVisible = !windo.iframe.visible();
@@ -2763,12 +2752,12 @@ app.scope(function (app) {
         },
         dimensionFinder = function (element, doc, win) {
             return function (num) {
-                var ret, manager = this[ITEM](num);
+                var ret, body, manager = this[ITEM](num);
                 if (manager.is(ELEMENT)) {
                     ret = clientRect(manager.element())[element];
                 } else {
-                    if (manager.is(DOCUMENT) && manager.element()[BODY]) {
-                        ret = manager.element()[BODY][doc];
+                    if (manager.is(DOCUMENT) && (body = manager.element()[BODY])) {
+                        ret = body[doc];
                     } else {
                         if (manager.is(WINDOW)) {
                             ret = manager.element()[win];
@@ -2844,7 +2833,6 @@ app.scope(function (app) {
                     bound(key, value);
                 });
             },
-            // getValue: getValueCurried,
             hasValue: hasValue(domContextFind),
             addValue: addValue(domIterates),
             removeValue: removeValue(domIterates),
@@ -2990,7 +2978,7 @@ app.scope(function (app) {
                                 return [parent, BOOLEAN_TRUE];
                             } else {
                                 if (isElement(parent)) {
-                                    return [parent[PARENT_NODE], BOOLEAN_FALSE];
+                                    return [parent, BOOLEAN_FALSE];
                                 } else {
                                     if (isFragment(parent)) {
                                         return [NULL, BOOLEAN_FALSE];
@@ -3196,7 +3184,7 @@ app.scope(function (app) {
                     return BOOLEAN_FALSE;
                 }
                 windo = manager.owner.returnsManager(windoElement);
-                return windo.isTop ? BOOLEAN_TRUE : windowIsVisible(windo, manager.owner);
+                return windo.is('topWindow') ? BOOLEAN_TRUE : windowIsVisible(windo, manager.owner);
             },
             hide: function () {
                 return this.applyStyle(DISPLAY, NONE);
