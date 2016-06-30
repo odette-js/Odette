@@ -1,9 +1,5 @@
 app.scope(function (app) {
-    var _ = app._,
-        periodSplit = splitGen(PERIOD),
-        factories = _.factories,
-        CHANGE_COUNTER = 'counter',
-        CHANGING = 'changing',
+    var CHANGE_COUNTER = 'counter',
         DataDirective = factories.DataDirective = factories.Directive.extend('DataDirective', {
             constructor: function () {
                 var dataDirective = this;
@@ -36,23 +32,28 @@ app.scope(function (app) {
             },
             reset: function (hash) {
                 this[CURRENT] = hash || {};
+                return this;
             },
-            digest: function (model, handler) {
-                var dataDirective = this;
-                ++dataDirective[CHANGE_COUNTER];
-                handler();
-                --dataDirective[CHANGE_COUNTER];
-                // this event should only ever exist here
-                if (!dataDirective[CHANGE_COUNTER]) {
-                    model[DISPATCH_EVENT](CHANGE, dataDirective[CHANGING]);
-                    dataDirective[CHANGING] = {};
-                    dataDirective.previous = {};
-                }
+            increment: function () {
+                this[CHANGE_COUNTER] += 1;
+                return this;
             },
-            getDeep: function (key) {
+            decrement: function () {
+                this[CHANGE_COUNTER] -= 1;
+                return this;
+            },
+            static: function () {
+                return !this[CHANGE_COUNTER];
+            },
+            finish: function () {
+                this[PREVIOUS] = {};
+                this[CHANGING] = {};
+                return this;
+            },
+            reach: function (key) {
                 var lastkey, previous, dataDirective = this,
                     current = dataDirective[CURRENT];
-                return duff(periodSplit(key), function (key, index, path) {
+                return duff(toArray(key, PERIOD), function (key, index, path) {
                     var no_more = index === path[LENGTH];
                     lastkey = key;
                     if (!no_more) {

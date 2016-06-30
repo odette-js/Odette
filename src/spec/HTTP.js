@@ -2,18 +2,14 @@ application.scope().run(window, function (app, _, factories, documentView, scope
     var BOOLEAN_TRUE = true,
         isObject = _.isObject;
     _.describe('HTTP', function () {
-        var ajax, allstates;
-        _.beforeEach(function () {
-            ajax = factories.HTTP();
-            allstates = ajax.allStates();
-        });
+        var allstates;
         _.it('is an object', function () {
+            var ajax = factories.HTTP('/json/reporting.json');
+            allstates = ajax.allStates();
             _.expect(isObject(ajax)).toEqual(BOOLEAN_TRUE);
         });
         _.it('can accept an object as a first argument', function (done) {
-            factories.HTTP({
-                url: '/json/reporting.json'
-            }).success(function (json) {
+            factories.HTTP('/json/reporting.json').success(function (json) {
                 _.expect(isObject(json)).toEqual(BOOLEAN_TRUE);
                 done();
             });
@@ -37,7 +33,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
         _.describe('can handle', function () {
             _.it('failures', function (done) {
                 var handlerCounter = 0;
-                var prom = factories.HTTP().failure(function () {
+                var prom = factories.HTTP('https://google.com').failure(function () {
                     handlerCounter++;
                 }).always(function () {
                     handlerCounter++;

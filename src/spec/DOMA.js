@@ -488,5 +488,116 @@ application.scope().run(window, function (app, _, factories, documentView, scope
         _.it('can use direct parent selectors', function () {
             _.expect($('.branch').eq(0).$('> .leaves').length()).toEqual(5);
         });
+        _.it('can traverse horizontally for it\'s siblings', function () {
+            var $branch = $('.branch');
+            var $item2 = $branch.item(2);
+            _.expect(factories.DomManager.isInstance($item2));
+            _.expect($item2.prev()).toEqual($branch.item(1));
+        });
+        _.it('establishes dom managers immediately after an element\'s html is changed', function () {
+            var $tree = $.createElement('div');
+            $tree.html('<div><span is></span></div>');
+            _.expect($tree.element().querySelectorAll('span')[0].__elid__).not.toEqual(void 0);
+        });
+        var template1 = function (data) {
+            var listItems = _.map(data && data.points, function (item, index) {
+                return [item.tag, {
+                        class: "classname" + index
+                    },
+                    item.text, {
+                        key: 'listitem' + index
+                    }
+                ];
+            });
+            return ['div', {
+                    class: 'tree'
+                },
+                [
+                    ['span', {
+                        class: 'spanned'
+                    }, 'name', {
+                        key: 'name'
+                    }],
+                    ['ul', {
+                            class: 'container'
+                        },
+                        listItems, {
+                            key: 'container'
+                        }
+                    ]
+                ]
+            ];
+        };
+        var makeBasicTemplate = function (points) {
+            return template1({
+                points: points || [{
+                    tag: 'li',
+                    text: 'sometext'
+                }, {
+                    tag: 'li',
+                    text: 'someothertext'
+                }]
+            });
+        };
+        var basicTemplateKeyTagNames = {
+            name: 'span',
+            container: 'ul'
+        };
+        var applyMutations = function (mutations) {
+            _.each(mutations, function (level) {
+                _.each(level, function (fn) {
+                    fn();
+                });
+            });
+        };
+        _.describe('can diff node trees and update them', function () {
+            var $root, templatized;
+            _.beforeEach(function () {
+                $root = $.createElement('div');
+                templatized = makeBasicTemplate();
+            });
+            _.it('and update them', function () {
+                var diff = $.nodeComparison($root.element(), templatized);
+                _.expect($root.html()).toEqual('');
+                _.each(diff.mutations, function (level) {
+                    _.expect(_.isArray(level)).toBe(true);
+                    _.each(level, function (mutator) {
+                        _.expect(_.isFunction(mutator)).toBe(true);
+                    });
+                });
+                applyMutations(diff.mutations);
+                _.expect($root.html()).not.toEqual('');
+            });
+            _.it('collects keys that the template marks using index 3 of each child', function () {
+                var diff = $.nodeComparison($root.element(), templatized);
+                _.each(diff.keys, function (element, key) {
+                    _.expect(element.tagName.toLowerCase()).toEqual(basicTemplateKeyTagNames[key] || 'li');
+                });
+            });
+            _.it('updates attributes when needed', function () {
+                var attributes = {};
+                var diff = $.nodeComparison($root.element(), templatized);
+                var attrs = $root.attributes();
+                _.expect(attrs).not.toEqual(templatized[1]);
+                applyMutations(diff.mutations);
+                attrs = $root.attributes();
+                _.expect(attrs).toEqual(templatized[1]);
+            });
+            _.it('removes nodes when needed', function () {
+                var diff = $.nodeComparison($root.element(), templatized);
+                applyMutations(diff.mutations);
+                templatized = makeBasicTemplate([{
+                    tag: 'li',
+                    text: 'sometext'
+                }]);
+                var $lis = $root.$('ul.container').children();
+                var $first = $lis.first();
+                var diff2 = $.nodeComparison($root.element(), templatized);
+                applyMutations(diff2.mutations);
+                var $newChildren = $root.$('ul.container').children();
+                _.expect($first.element()).toBe($newChildren.first().element());
+                _.expect($newChildren.length()).toEqual(1);
+            });
+        });
     });
 });

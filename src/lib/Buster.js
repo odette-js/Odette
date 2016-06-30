@@ -368,7 +368,7 @@ app.scope(function (app) {
          * @name Buster#flush
          */
         flush: function () {
-            var command, children, n, item, gah, childrenLen, queuedMsg, nuData, i = 0,
+            var command, children, childrenLen, queuedMsg, i = 0,
                 buster = this,
                 dataManager = buster.directive(DATA),
                 currentIdx = dataManager.get(SENT_MESSAGE_INDEX),

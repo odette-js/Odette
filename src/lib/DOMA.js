@@ -6,6 +6,37 @@ var ATTACHED = 'attached',
     TAG_NAME = 'tagName',
     NODE_TYPE = 'nodeType',
     PARENT_NODE = 'parentNode',
+    ATTRIBUTES = 'Attributes',
+    DOM_MANAGER_STRING = 'DomManager',
+    DESTROYED = DESTROY + 'ed',
+    CUSTOM = 'custom',
+    REMOVING = 'removing',
+    ACCESSABLE = 'accessable',
+    CUSTOM_LISTENER = CUSTOM + 'Listener',
+    UPPER_CHILD = 'Child',
+    APPEND_CHILD = 'append' + UPPER_CHILD,
+    REMOVE = 'remove',
+    REMOVE_CHILD = REMOVE + UPPER_CHILD,
+    HTML = 'html',
+    INNER_HTML = 'innerHTML',
+    TEXT = 'text',
+    INNER_TEXT = 'innerText',
+    OUTER_HTML = 'outerHTML',
+    REGISTERED_AS = 'registeredAs',
+    ATTRIBUTE_CHANGE = 'attributeChange',
+    ATTRIBUTES_CHANGING = 'attributesChanging',
+    DELEGATE_COUNT = 'delegateCount',
+    CAPTURE_COUNT = 'captureCount',
+    CUSTOM_KEY = 'is',
+    CLASS__NAME = (CLASS + HYPHEN + NAME),
+    FONT_SIZE = 'fontSize',
+    DEFAULT_VIEW = 'defaultView',
+    DIV = 'div',
+    CUSTOM_ATTRIBUTE = '[' + CUSTOM_KEY + ']',
+    devicePixelRatio = (win.devicePixelRatio || 1),
+    createAttributeFromTag = function (tag) {
+        return '[' + CUSTOM_KEY + '="' + tag + '"]';
+    },
     tag = function (el, str) {
         var tag;
         if (!el || !isElement(el)) {
@@ -159,7 +190,7 @@ var ATTACHED = 'attached',
     returnsJSONNodeType = function (tagName) {
         return tagName === 'text' ? 3 : 1;
     },
-    collectAttributes = function (a, b, context, mutations) {
+    collectAttributes = function (a, b, mutations, context) {
         var bKeys, aLength = a.attributes.length;
         var bLength = (bKeys = keys(b[1])).length;
         var attrs = foldl({
@@ -194,61 +225,67 @@ var ATTACHED = 'attached',
         });
     },
     // cannot start with a text node
-    nodeComparison = function (a, b, context, hash_, stopper, layer_level_, diffs_) {
+    nodeComparison = function (a, b, hash_, stopper_, layer_level_, diffs_, context) {
         var resultant, first = !diffs_,
             diffs = diffs_ || {
                 mutations: [],
-                keys: {}
+                keys: {},
+                elIds: {}
             },
+            stopper = stopper_ || returnsTrue,
             keys = diffs.keys,
             mutations = diffs.mutations,
             layer_level = layer_level_ || 0,
             hash = hash_ || {},
-            diff = mutations[layer_level];
+            diff = mutations[layer_level],
+            identifiers = b[3];
         if (!diff) {
             mutations.push([]);
             diff = mutations[layer_level];
         }
         if (tag(a) === b[0] && a.nodeType === returnsJSONNodeType(b[0])) {
-            if (a.childNodes[LENGTH] === 1 && isString(b[2])) {
-                if (a.textContent !== b[2]) {
-                    diff.push(context.deltas.updateText(a, b[2]));
+            if (identifiers && identifiers.key) {
+                diffs.keys[identifiers.key] = a;
+            }
+            if (isString(b[2])) {
+                if (a.innerHTML !== b[2]) {
+                    diff.push(context.deltas.resetHtml(a, b[2], context, hash));
                 }
-                return;
+                return diffs;
             }
             // what is different.
-            collectAttributes(a, b, context, diff);
+            collectAttributes(a, b, diff, context);
             var aChildren = a.childNodes;
             var bChildren = b[2];
             if (isString(bChildren)) {
-                diff.push(context.deltas.resetHtml(a, bChildren, context));
-                return BOOLEAN_TRUE;
+                diff.push(context.deltas.resetHtml(a, bChildren, context, hash));
+                return first ? diffs : BOOLEAN_TRUE;
             }
             var aChildrenLength = aChildren && aChildren[LENGTH];
             var bChildrenLength = bChildren && bChildren[LENGTH];
             var maxLength = Math.max(aChildrenLength, bChildrenLength);
-            resultant = maxLength && find({
-                length: maxLength
-            }, function (voided, i) {
-                var bChild, result;
-                if (aChildrenLength <= i) {
-                    diff.push(context.deltas.addNodes(a, toArray(bChildren).slice(i), context, keys));
-                    return BOOLEAN_TRUE;
-                } else {
-                    if (!stopper(b)) {
-                        return;
-                    }
-                    if (bChildrenLength <= i) {
-                        diff.push(context.deltas.removeNodes(toArray(aChildren).slice(i), hash));
-                        return BOOLEAN_TRUE;
+            var finished, bChild, result, i = 0;
+            if (bChildrenLength) {
+                for (; i < maxLength && !finished; i++) {
+                    if (aChildrenLength <= i) {
+                        diff.push(context.deltas.addNodes(a, toArray(bChildren).slice(i), context, keys));
+                        finished = BOOLEAN_TRUE;
                     } else {
-                        result = nodeComparison(aChildren[i], bChildren[i], context, hash, stopper, layer_level + 1, diffs);
-                        if (result === BOOLEAN_FALSE) {
-                            diff.push(context.deltas.replaceNode(a, b, context, hash));
+                        if (stopper(b)) {
+                            // do not do children
+                            if (bChildrenLength <= i) {
+                                diff.push(context.deltas.removeNodes(toArray(aChildren).slice(i), hash));
+                                // stops early
+                            } else {
+                                result = nodeComparison(aChildren[i], bChildren[i], hash, stopper, layer_level + 1, diffs, context);
+                                if (result === BOOLEAN_FALSE) {
+                                    diff.push(context.deltas.replaceNode(a, b, context, hash));
+                                }
+                            }
                         }
                     }
                 }
-            });
+            }
         } else {
             // instant fail
             if (first) {
@@ -313,39 +350,7 @@ var ATTACHED = 'attached',
     },
     globalAssociator = factories.Associator();
 app.scope(function (app) {
-    var _ = app._,
-        ATTRIBUTES = 'Attributes',
-        DOM_MANAGER_STRING = 'DomManager',
-        DESTROYED = DESTROY + 'ed',
-        CUSTOM = 'custom',
-        REMOVING = 'removing',
-        ACCESSABLE = 'accessable',
-        CUSTOM_LISTENER = CUSTOM + 'Listener',
-        UPPER_CHILD = 'Child',
-        APPEND_CHILD = 'append' + UPPER_CHILD,
-        REMOVE = 'remove',
-        REMOVE_CHILD = REMOVE + UPPER_CHILD,
-        HTML = 'html',
-        INNER_HTML = 'innerHTML',
-        TEXT = 'text',
-        INNER_TEXT = 'innerText',
-        OUTER_HTML = 'outerHTML',
-        REGISTERED_AS = 'registeredAs',
-        ATTRIBUTE_CHANGE = 'attributeChange',
-        ATTRIBUTES_CHANGING = 'attributesChanging',
-        DELEGATE_COUNT = 'delegateCount',
-        CAPTURE_COUNT = 'captureCount',
-        CUSTOM_KEY = 'is',
-        CUSTOM_ATTRIBUTE = '[' + CUSTOM_KEY + ']',
-        createAttributeFromTag = function (tag) {
-            return '[' + CUSTOM_KEY + '="' + tag + '"]';
-        },
-        CLASS__NAME = (CLASS + HYPHEN + NAME),
-        FONT_SIZE = 'fontSize',
-        DEFAULT_VIEW = 'defaultView',
-        DIV = 'div',
-        devicePixelRatio = (win.devicePixelRatio || 1),
-        ensure = function (el, owner) {
+    var ensure = function (el, owner) {
             var data;
             if (owner === BOOLEAN_TRUE) {
                 data = globalAssociator.get(el);
@@ -425,22 +430,27 @@ app.scope(function (app) {
             var render, template, trimmed, argument, settings = extend({}, templateSettings),
                 text = text_,
                 templateIsFunction = isFunction(text);
-            if (templateIsFunction || text.match(/return(\s*)\[/igm)) {
-                if (templateIsFunction) {
-                    text = unwrapBlock(text);
+            if (templateIsFunction) {
+                render = text;
+            } else {
+                if (text.match(/return(\s*)\[/igm)) {
+                    trimmed = text.trim();
+                    if (trimmed[trimmed[LENGTH] - 1] !== ';') {
+                        trimmed += ';';
+                    }
+                    trimmed = text;
+                    render = wraptry(function () {
+                        return new FUNCTION_CONSTRUCTOR_CONSTRUCTOR('helpers', '_', blockWrapper(trimmed));
+                    });
+                } else {
+                    exception({
+                        message: 'templates must return a json structure'
+                    });
                 }
-                trimmed = text.trim();
-                if (trimmed[trimmed[LENGTH] - 1] !== ';') {
-                    trimmed += ';';
-                }
-                trimmed = text;
-                render = _.wraptry(function () {
-                    return new FUNCTION_CONSTRUCTOR_CONSTRUCTOR('helpers', '_', blockWrapper(trimmed));
-                });
-                return function (data, helpers) {
-                    return render.call(data, helpers, _);
-                };
             }
+            return function (data, helpers) {
+                return render.call(data, helpers, _);
+            };
             // }
             // var matcher = RegExp([
             //     (settings.escape || noMatch).source, (settings.interpolate || noMatch).source, (settings.evaluate || noMatch).source
@@ -481,23 +491,14 @@ app.scope(function (app) {
         compile = function (id, template_, context) {
             var templateHandler, templateIsFunction, template, trimmed, templates = context.templates = context.templates || Collection();
             if (isFunction(id)) {
-                return templateGenerator(unwrapBlock(id), context.templateSettings);
+                return templateGenerator(id, context.templateSettings);
             }
             templateHandler = templates.get(ID, id);
             if (templateHandler) {
                 return templateHandler;
             }
             template = template_ || context.$('#' + id).html();
-            // templateIsFunction = isFunction(template);
-            // if (templateIsFunction) {
-            //     template = unwrapBlock(template);
-            // }
-            // trimmed = template.trim();
-            // if (trimmed.slice(0, 6) === 'return') {
-            //     templateHandler = new FUNCTION_CONSTRUCTOR_CONSTRUCTOR(blockWrapper(trimmed));
-            // } else {
             templateHandler = templateGenerator(template, context.templateSettings);
-            // }
             templateHandler.id = id;
             templates.push(templateHandler);
             templates.keep(ID, id, templateHandler);
@@ -1392,7 +1393,7 @@ app.scope(function (app) {
             evntName = evnt.shift();
             return [evntName, evnt.sort().join(PERIOD)];
         },
-        appendChild = function (el) {
+        appendChildDomManager = function (el) {
             return this.insertAt(el, NULL);
         },
         prependChild = function (el) {
@@ -1463,7 +1464,7 @@ app.scope(function (app) {
                         dispatchDetached(children, owner);
                     }
                     // establish new
-                    duff(owner.$(CUSTOM_ATTRIBUTE, parentElement), owner.returnsManager, owner);
+                    duff(manager.$(CUSTOM_ATTRIBUTE, parentElement), owner.returnsManager, owner);
                 }
             }
         },
@@ -1472,11 +1473,11 @@ app.scope(function (app) {
                 var manager = this,
                     returnValue = manager;
                 if (value === UNDEFINED) {
-                    returnValue = getInnard(attribute, manager);
+                    return getInnard(attribute, manager);
                 } else {
                     setInnard(attribute, manager, value);
+                    return manager;
                 }
-                return returnValue;
             };
         },
         /**
@@ -2016,19 +2017,14 @@ app.scope(function (app) {
                         parent.appendChild(deltas.update(created, virtual[1], virtual[2], hash));
                         return created;
                     },
-                    resetHtml: function (target, newhtml) {
+                    resetHtml: function (target, newhtml, context) {
                         return function () {
-                            $(target).html(newhtml);
-                        };
-                    },
-                    updateText: function (oldEl, newText) {
-                        return function () {
-                            oldEl.textContent = newText;
+                            context.owner.returnsManager(target).html(newhtml);
                         };
                     },
                     removeNodes: function (el) {
                         return function () {
-                            removeChild(el);
+                            duff(el, passesFirstArgument(removeChild));
                             return BOOLEAN_TRUE;
                         };
                     },
@@ -2091,6 +2087,9 @@ app.scope(function (app) {
                     return handler(one, manager, two, three);
                 };
             }), {
+                nodeComparison: function (a, b, hash_, stopper, layer_level_, diffs_) {
+                    return nodeComparison(a, b, hash_, stopper, layer_level_, diffs_, manager);
+                },
                 supports: {},
                 deltas: deltas,
                 registeredConstructors: registeredConstructors,
@@ -2240,12 +2239,12 @@ app.scope(function (app) {
                     return registeredConstructors[name];
                 }
             });
-            manager.mark('setupComplete');
             // manager.documentId = uniqueId('doc');
             extend(manager, wrapped);
             extend($, wrapped);
             runSupport(manager.supports, manager);
             setupDomContentLoaded(setup, manager);
+            manager.mark('setupComplete');
             return $;
         },
         testWithHandler = function (win, evntname, handler, failure) {
@@ -2279,7 +2278,7 @@ app.scope(function (app) {
             }
             if (isString(one) && two === UNDEFINED) {
                 unCameled = unCamelCase(one);
-                return (manager = manager.item(0)) && (styles = manager.getStyle()) && ((prefix = _.find(prefixedStyles[camelCase(one)], function (prefix) {
+                return (manager = manager.item(0)) && (styles = manager.getStyle()) && ((prefix = find(prefixedStyles[camelCase(one)], function (prefix) {
                     return styles[prefix + unCameled] !== UNDEFINED;
                 })) ? styles[prefix + unCameled] : styles[prefix + unCameled]);
             } else {
@@ -2823,15 +2822,22 @@ app.scope(function (app) {
             registeredElementName: function () {
                 return this.owner.registeredElementName(this[REGISTERED_AS]);
             },
-            attributes: function (fn) {
-                var manager = this;
+            attributes: function (fn_) {
+                var memo, bound, manager = this;
                 var element = manager.element();
-                var bound = bindTo(fn, manager);
-                duff(element.attributes, function (attribute) {
-                    var key = attribute.localName;
-                    var value = attribute.nodeValue;
-                    bound(key, value);
+                var elementAttributes = element.attributes;
+                if (!fn_) {
+                    memo = {};
+                    duff(elementAttributes, function (attribute) {
+                        memo[attribute.localName] = attribute.nodeValue;
+                    });
+                    return memo;
+                }
+                bound = bindTo(fn_, manager);
+                duff(elementAttributes, function (attribute) {
+                    bound(attribute.nodeValue, attribute.localName);
                 });
+                return manager;
             },
             hasValue: hasValue(domContextFind),
             addValue: addValue(domIterates),
@@ -2843,8 +2849,8 @@ app.scope(function (app) {
             once: addEventListenerOnce,
             off: removeEventListener,
             removeEventListener: removeEventListener,
-            append: appendChild,
-            appendChild: appendChild,
+            append: appendChildDomManager,
+            appendChild: appendChildDomManager,
             prepend: prependChild,
             insertBefore: sharedInsertBefore,
             insertAfter: insertAfter,

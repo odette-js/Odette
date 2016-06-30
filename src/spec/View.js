@@ -119,6 +119,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
         _.it('when they are destroyed however, their events are detached from the element and the view is automatically removed', function () {
             documentView.directive('RegionManager').get('main').add(complexView);
             _.expect(count).toEqual(0);
+            // cache it so we can access it after the view has been destroyed
             var there = complexView.ui.there;
             there.click();
             _.expect(count).toEqual(1);
@@ -126,6 +127,28 @@ application.scope().run(window, function (app, _, factories, documentView, scope
             _.expect(count).toEqual(1);
             there.click();
             _.expect(count).toEqual(1);
+        });
+        _.it('when rendering a view, if a false is passed, then it will leave the children alone', function () {
+            var LeftAloneView = scopedFactories.View.extend({
+                template: _.returns(false)
+            });
+            var leftAloneView = LeftAloneView();
+            var newdiv = $.createElement('div');
+            leftAloneView.render();
+            leftAloneView.el.append(newdiv);
+            leftAloneView.render();
+            _.expect(leftAloneView.el.children().length()).toEqual(1);
+        });
+        _.it('when rendering a view if a string is passed, the children will be overwritten', function () {
+            var EmptiedView = scopedFactories.View.extend({
+                template: _.returns('')
+            });
+            var emptiedView = EmptiedView();
+            var newdiv2 = $.createElement('div');
+            emptiedView.render();
+            emptiedView.el.append(newdiv2);
+            emptiedView.render();
+            _.expect(emptiedView.el.children().length()).toEqual(0);
         });
     });
 });

@@ -215,4 +215,5 @@ app.scope(function (app) {
                 return baseModuleArguments(this, windo);
             }
         }));
+    delete app.fn;
 });

@@ -123,7 +123,7 @@ app.scope(function (app) {
             });
         },
         Looper = factories[LOOPER] = Collection.extend(LOOPER, {
-            constructor: function (_runner) {
+            constructor: function () {
                 var looper = this;
                 looper.mark(STOPPED);
                 looper.unmark(HALTED);
@@ -143,7 +143,7 @@ app.scope(function (app) {
                 if (tween.is(HALTED) || tween.is(STOPPED) || !tween[LENGTH]()) {
                     return;
                 }
-                sliced = factories.Collection(tween.unwrap().slice(0));
+                sliced = Collection(tween.unwrap().slice(0));
                 tween.lastRun = _nowish;
                 slicedLength = sliced[LENGTH]();
                 for (; i < slicedLength && !finished; i++) {
@@ -168,10 +168,12 @@ app.scope(function (app) {
                     return BOOLEAN_FALSE;
                 }
                 found = tween.get(ID, id);
-                if (found) {
-                    tween.drop(ID, id);
-                    return tween.remove(found);
+                if (!found) {
+                    return BOOLEAN_FALSE;
                 }
+                tween.drop(ID, id);
+                tween.remove(found);
+                return BOOLEAN_TRUE;
             },
             stop: function () {
                 this.mark(STOPPED);
@@ -179,10 +181,8 @@ app.scope(function (app) {
             },
             start: function () {
                 var looper = this;
-                if (looper.is(STOPPED)) {
-                    looper.unmark(STOPPED);
-                    looper.unmark(HALTED);
-                }
+                looper.unmark(STOPPED);
+                looper.unmark(HALTED);
                 return looper;
             },
             halt: function () {
@@ -260,17 +260,6 @@ app.scope(function (app) {
                     fn(ms, Math.min(1, (diff / time_)), finished);
                 });
             },
-            time: function (time_, fn_) {
-                var fn, tween = this;
-                if (!isFunction(fn_)) {
-                    return tween;
-                }
-                fn = tween.bind(fn_);
-                return tween.timeout(time(time_), function (ms) {
-                    tween.dequeue();
-                    fn(ms);
-                });
-            },
             frameRate: function (time__, fn_, min) {
                 var fn, tween = this,
                     minimum = Math.min(min || 0.8, 0.8),
@@ -309,13 +298,12 @@ app.scope(function (app) {
                 fn = tweener.bind(fn_);
                 return tweener.queue(function (ms) {
                     if (ms - time >= last) {
-                        // last = ms;
                         tweener.dequeue();
                         fn(ms);
                     }
                 });
             },
-            interval: function (handler, time_) {
+            interval: function (time_, handler) {
                 var bound, fn = handler,
                     tweener = this,
                     timey = time(time_),
@@ -330,17 +318,16 @@ app.scope(function (app) {
                 return tweener.queue(function (t) {
                     if (t - timey >= last) {
                         last = t;
-                        fn(t);
+                        bound(t);
                     }
                 });
             },
-            defer: function (handler, time) {
+            defer: function (time, handler) {
                 var id, tweener = this;
                 return function () {
                     var args = toArray(arguments);
-                    var context = this || tweener;
                     tweener.dequeue(id);
-                    id = tweener.time(time, bind(handler, this, tweener));
+                    id = tweener.timeout(time, bind.apply(_, [handler, this].concat(args)));
                     return id;
                 };
             }

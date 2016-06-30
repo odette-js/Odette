@@ -2,8 +2,7 @@ var CHILDREN = capitalize(CHILD + 'ren'),
     CHILD_OPTIONS = CHILD + 'Options',
     CHILD_EVENTS = CHILD + 'Events';
 app.scope(function (app) {
-    var Collection = factories.Collection,
-        Events = factories.Events,
+    var Events = factories.Events,
         List = factories.Collection,
         SORT = 'sort',
         ADDED = 'added',
@@ -52,10 +51,9 @@ app.scope(function (app) {
         },
         SYNCER = 'Syncer',
         wrapSyncer = function (type, successful) {
-            return function () {
+            return function (url) {
                 var syncer = this,
-                    type = type + 'Type',
-                    url = syncer.url(type);
+                    type = type + 'Type';
                 if (!url) {
                     exception({
                         message: 'syncer methods must have a url'
@@ -64,39 +62,27 @@ app.scope(function (app) {
                 return successful(syncer, url, type);
             };
         },
-        Syncer = factories[SYNCER] = factories.Events.extend(SYNCER, {
-            // base method for xhr things
+        sendWithData = function (syncer, url, type) {
+            var json = syncer.toJSON();
+            return factories.HTTP({
+                url: url,
+                type: type,
+                data: syncer.stringifyPosts ? syncer.stringify(json) : json
+            });
+        },
+        Syncer = factories.Directive.extend(SYNCER, _.extend({
             createType: 'POST',
             updateType: 'PUT',
             fetchType: 'GET',
-            sync: function () {},
-            // delete request. request that this model be deleted by the server
-            destroy: function () {},
-            // get request. this model needs an update
-            fetch: function () {},
+            deleteType: 'DELETE',
+            parse: parse,
             stringify: stringify,
-            // put - second+ time
-            update: wrapSyncer('update', function (syncer, url, type) {
-                var json = syncer.toJSON();
-                syncer.request = factories.HTTP({
-                    url: url,
-                    type: type,
-                    data: syncer.stringifyPosts ? syncer.stringify(json) : json
-                });
-            }),
-            // post - first time
-            create: wrapSyncer('create', function (syncer, url, type) {
-                syncer.request = factories.HTTP({
-                    url: url,
-                    type: type
-                }).success(function (result) {
-                    syncer[DISPATCH_EVENT]('sync', result);
-                });
-            }),
-            url: function () {
-                return '';
+            // base method for xhr things
+            constructor: function (target) {
+                this.target = target;
+                return this;
             }
-        }),
+        }, wrap(['destroy', 'fetch', 'update', 'create'], sendWithData, BOOLEAN_TRUE))),
         SyncerDirective = app.defineDirective(SYNCER, Syncer[CONSTRUCTOR]),
         Children = factories[CHILDREN] = factories.Collection.extend(CHILDREN, {
             constructor: function (instance) {
@@ -363,6 +349,8 @@ app.scope(function (app) {
              * @description checks to see if the current attribute is on the attributes object as anything other an undefined
              * @name Model#has
              */
+            keys: checkParody(DATA, 'keys', returnsArray),
+            values: checkParody(DATA, 'values', returnsArray),
             has: checkParody(DATA, 'has', BOOLEAN_FALSE),
             idAttribute: returns('id'),
             constructor: function (attributes, secondary) {
@@ -395,10 +383,10 @@ app.scope(function (app) {
                     dataDirective[RESET](newAttributes);
                 }
                 // let everything know that it is changing
+                model.mark(RESET);
                 if (hasResetBefore) {
                     model[DISPATCH_EVENT](RESET, newAttributes);
                 }
-                model.mark(RESET);
                 return model;
             },
             /**
@@ -433,7 +421,7 @@ app.scope(function (app) {
                     return model;
                 }
                 // list
-                dataDirective.digest(model, function () {
+                model.digest(function () {
                     duff(changedList, function (name) {
                         var eventName = CHANGE_COLON + name;
                         dataDirective.changing[name] = BOOLEAN_TRUE;
@@ -443,6 +431,18 @@ app.scope(function (app) {
                     });
                 });
                 return model;
+            },
+            digest: function (handler) {
+                var model = this,
+                    dataDirective = model.directive(DATA);
+                dataDirective.increment();
+                handler();
+                dataDirective.decrement();
+                // this event should only ever exist here
+                if (dataDirective.static()) {
+                    model[DISPATCH_EVENT](CHANGE, dataDirective[CHANGING]);
+                    dataDirective.finish();
+                }
             },
             /**
              * @description basic json clone of the attributes object

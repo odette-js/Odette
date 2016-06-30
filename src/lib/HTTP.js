@@ -15,7 +15,7 @@ app.scope(function (app) {
         baseEvents = toArray(PROGRESS + ',timeout,abort,' + ERROR),
         attachBaseListeners = function (ajax) {
             var prog = 0,
-                req = ajax.requestObject;
+                req = ajax.options.requestObject;
             duff(baseEvents, function (evnt) {
                 if (evnt === PROGRESS) {
                     // we put it directly on the xhr object so we can
@@ -46,26 +46,6 @@ app.scope(function (app) {
                 });
             };
         },
-        alterurlHandler = function () {
-            var ajax = this,
-                xhrReq = ajax.requestObject,
-                type = ajax.get('type'),
-                url = ajax.getUrl(),
-                args = [],
-                data = ajax.get('data');
-            if (!url) {
-                return;
-            }
-            ajax.attachResponseHandler();
-            xhrReq.open(type, url, ajax.get('async'));
-            if (data) {
-                args.push(stringify(data));
-            }
-            ajax.headers(ajax.get('headers'));
-            attachBaseListeners(ajax);
-            // have to wrap in set timeout for ie
-            setTimeout(sendthething(xhrReq, args, ajax));
-        },
         /**
          * @class HTTP
          * @alias factories.HTTP
@@ -80,18 +60,18 @@ app.scope(function (app) {
              * @returns {HTTP} new ajax object
              */
             parse: parse,
-            constructor: function (str, secondary) {
+            constructor: function (str) {
                 var promise, url, thingToDo, typeThing, type, ajax = this,
                     method = 'onreadystatechange',
                     // Add a cache buster to the url
                     // ajax.async = BOOLEAN_TRUE;
                     xhrReq = new XMLHttpRequest();
                 // covers ie9
-                if (!_.isUndefined(XDomainRequest)) {
+                if (!isUndefined(XDomainRequest)) {
                     xhrReq = new XDomainRequest();
                     method = 'onload';
                 }
-                if (!_.isObject(str)) {
+                if (!isObject(str)) {
                     str = str || EMPTY_STRING;
                     type = GET;
                     typeThing = str.toUpperCase();
@@ -105,14 +85,35 @@ app.scope(function (app) {
                         type: type
                     };
                 }
-                str.async = BOOLEAN_TRUE;
-                str.type = (str.type || GET).toUpperCase();
-                str.method = method;
-                factories.Promise[CONSTRUCTOR].call(ajax);
-                ajax.on('change:url', alterurlHandler);
-                extend(ajax, secondary);
-                ajax.requestObject = xhrReq;
-                ajax.set(str);
+                ajax.options = _.extend({
+                    async: BOOLEAN_TRUE,
+                    method: method,
+                    type: type,
+                    requestObject: xhrReq
+                }, str);
+                Promise[CONSTRUCTOR].call(ajax, function () {
+                    var type = ajax.options.type,
+                        url = ajax.options.url,
+                        args = [],
+                        data = ajax.options.data;
+                    if (isObject(url) && !isArray(url)) {
+                        url = stringifyQuery(url);
+                    }
+                    if (!url || !type) {
+                        return exception({
+                            message: 'http object must have a url and a type'
+                        });
+                    }
+                    ajax.attachResponseHandler();
+                    xhrReq.open(type, url, ajax.options.async);
+                    if (data) {
+                        args.push(stringify(data));
+                    }
+                    ajax.headers(ajax.options.headers);
+                    attachBaseListeners(ajax);
+                    // have to wrap in set timeout for ie
+                    setTimeout(sendthething(xhrReq, args, ajax));
+                });
                 return ajax;
             },
             status: function (code, handler) {
@@ -131,13 +132,6 @@ app.scope(function (app) {
              * @returns {string} returns the completed string that will be fetched / posted / put / or deleted against
              * @name HTTP#getUrl
              */
-            getUrl: function () {
-                var url = this.get('url');
-                if (isObject(url) && !isArray(url)) {
-                    url = stringifyQuery(url);
-                }
-                return url;
-            },
             /**
              * @description makes public the ability to attach a response handler if one has not already been attached. We recommend not passing a function in and instead just listening to the various events that the xhr object will trigger directly, or indirectly on the ajax object
              * @param {function} [fn=handler] - pass in a function to have a custom onload, onreadystatechange handler
@@ -170,9 +164,9 @@ app.scope(function (app) {
             },
             attachResponseHandler: function () {
                 var ajax = this,
-                    xhrReqObj = ajax.requestObject,
+                    xhrReqObj = ajax.options.requestObject,
                     hasFinished = BOOLEAN_FALSE,
-                    method = ajax.get('method'),
+                    method = ajax.options.method,
                     handler = function (evnt) {
                         var status, doIt, allStates, rawData, xhrReqObj = this;
                         if (!xhrReqObj || hasFinished) {
@@ -181,9 +175,8 @@ app.scope(function (app) {
                         status = xhrReqObj[STATUS];
                         rawData = xhrReqObj.responseText;
                         if (method === 'onload' || (method === 'onreadystatechange' && xhrReqObj[READY_STATE] === 4)) {
-                            ajax.set(STATUS, status);
                             allStates = result(ajax, 'allStates');
-                            rawData = result(ajax, 'parse', rawData);
+                            rawData = ajax.options.preventParse ? rawData : ajax.parse(rawData);
                             hasFinished = BOOLEAN_TRUE;
                             ajax.resolveAs(STATUS + COLON + xhrReqObj[STATUS], rawData);
                         }
@@ -203,6 +196,5 @@ app.scope(function (app) {
                 url: url
             }, options));
         };
-        return memo;
     }, HTTP);
 });

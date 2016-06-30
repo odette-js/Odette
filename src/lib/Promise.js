@@ -80,6 +80,9 @@ app.scope(function (app) {
                 collected = {},
                 opts = arguments[LENGTH] === 2 ? (has(promise, STASHED_ARGUMENT) ? promise[STASHED_ARGUMENT] : promise[REASON]) : opts_,
                 collectedKeys = [];
+            if (!isString(finalName)) {
+                exception(unknownStateErrorMessage);
+            }
             do {
                 if (collected[finalName]) {
                     // check for circularity
@@ -194,16 +197,18 @@ app.scope(function (app) {
             promise.remark(FULFILLED, bool);
             promise.remark(REJECTED, !bool);
         },
-        Promise = factories.Promise = _.Promise = Model.extend('Promise', {
+        Events = factories.Events,
+        Promise = factories.Promise = _.Promise = Events.extend('Promise', {
             addHandler: addHandler,
             fulfillKey: 'success',
             rejectKey: 'reject',
+            auxiliaryStates: returns(BOOLEAN_FALSE),
             constructor: function (handler) {
                 var promise = this;
                 promise.state = PENDING;
                 promise[STASHED_HANDLERS] = [];
                 promise[REASON] = BOOLEAN_FALSE;
-                Model[CONSTRUCTOR].call(promise);
+                Events[CONSTRUCTOR].call(promise);
                 // cannot have been resolved in any way yet
                 // attach some convenience handlers to the
                 // instance so we can call crazy custom methods
@@ -212,7 +217,7 @@ app.scope(function (app) {
                 // i do not understand this line,
                 // but it is part of the js spec
                 if (handler) {
-                    handler(_.bind(promise.fulfill, promise), _.bind(promise.reject, promise), _.bind(promise.resolveAs, promise));
+                    handler(bind(promise.fulfill, promise), bind(promise.reject, promise), bind(promise.resolveAs, promise));
                 }
                 // return the promise
                 return promise;
@@ -220,11 +225,8 @@ app.scope(function (app) {
             isChildType: function (promise) {
                 return promise[SUCCESS] && promise[FAILURE] && promise[ALWAYS] && promise[CATCH];
             },
-            auxiliaryStates: function () {
-                return BOOLEAN_FALSE;
-            },
             allStates: function () {
-                return extend({}, baseStates, result(this, 'auxiliaryStates') || {});
+                return extend({}, baseStates, result(this, 'auxiliaryStates'));
             },
             resolveAs: function (resolveAs_, opts_) {
                 var dispatched, opts = opts_,

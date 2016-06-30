@@ -1321,6 +1321,12 @@ var factories = {},
         };
     },
     returnsTrue = returns(BOOLEAN_TRUE),
+    returnsArray = returns.array = function () {
+        return [];
+    },
+    returnsObject = returns.object = function () {
+        return {};
+    },
     returnsFirstArgument = returns.first = function (value) {
         return value;
     },
@@ -1404,6 +1410,7 @@ var factories = {},
         isString: isString,
         isNull: isNull,
         isNaN: isNaN,
+        notNaN: notNaN,
         eachProxy: eachProxy,
         publicize: publicize,
         allKeys: allKeys,

@@ -66,7 +66,11 @@ application.scope().run(function (app, _) {
             _.expect(_.isHttp(' //localhost:8080')).toEqual(false);
             _.expect(_.isHttp('//localhost/alsdf.js')).toEqual(true);
         });
+        _.it('can return a time, in ms from now when given a string', function () {
+            _.expect(_.time('1secs')).toEqual(1000);
+        });
+        _.it('can even take compunded time in a comma delineated list', function () {
+            _.expect(_.time('9hrs,3mins,5secs')).toBe((9 * 1000 * 60 * 60) + (3 * 1000 * 60) + (5 * 1000));
+        });
     });
 });
-// window._ = application.scope()._;
-// window.factories = application.scope()._.factories;

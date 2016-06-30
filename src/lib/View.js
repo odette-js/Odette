@@ -2,11 +2,12 @@ var REGION_MANAGER = 'RegionManager',
     DOCUMENT_VIEW = 'DocumentView',
     DOCUMENT_MANAGER = 'DocumentManager',
     verifyOwner$ = function (instance) {
-        if (!instance.owner$) {
-            exception({
-                message: 'object needs an owner$ function to scope itself against a document'
-            });
+        if (instance.owner$) {
+            return;
         }
+        exception({
+            message: 'object needs an owner$ function to scope itself against a document'
+        });
     };
 app.scope(function (app) {
     var protoProp = _.protoProp,
@@ -215,11 +216,9 @@ app.scope(function (app) {
         getRegion = parody(REGION_MANAGER, 'get'),
         removeRegion = parody(REGION_MANAGER, 'remove'),
         // view needs to be pitted against a document
-        View = factories.View = Region.extend('View', {
+        View = factories.View = Parent.extend('View', {
             Model: Model,
             modifiers: noop,
-            Child: BOOLEAN_TRUE,
-            childConstructor: Parent.fn.childConstructor,
             getRegion: getRegion,
             addRegion: addRegion,
             removeRegion: removeRegion,
@@ -227,8 +226,8 @@ app.scope(function (app) {
             removeChildView: removeChildView,
             tagName: returns('div'),
             filter: returns(BOOLEAN_TRUE),
-            template: returns(EMPTY_STRING),
-            getChildren: function (key) {
+            template: returns(BOOLEAN_FALSE),
+            childrenOf: function (key) {
                 return this.directive(REGION_MANAGER).get(key).directive(CHILDREN);
             },
             parentView: function () {
@@ -431,7 +430,7 @@ app.scope(function (app) {
             modify: function () {
                 var data, documentView = this,
                     modifications = documentView.modifications;
-                if (documentView.get('renderLoop') !== 0 || !modifications.length()) {
+                if (!modifications.length()) {
                     return;
                 }
                 data = documentView.directive(DATA);
@@ -448,6 +447,9 @@ app.scope(function (app) {
                 data.set('renderLoop', documentView.get('renderLoop') + 1);
                 return function () {
                     data.set('renderLoop', documentView.get('renderLoop') - 1);
+                    if (documentView.get('renderLoop') !== 0) {
+                        return;
+                    }
                     documentView.modify();
                 };
             },
@@ -565,17 +567,17 @@ app.scope(function (app) {
                     json = (view.model && view.model.toJSON()) || {},
                     // try to generate template
                     virtual = element.virtual = [view.tagName(), element.attributes(), view.template(json, result(view, 'helpers') || {})],
-                    comparison = nodeComparison(el, virtual, manager.owner, element.cachedKeys, bindTo(element.comparisonFilter, element)),
+                    comparison = view.owner$.nodeComparison(el, virtual, element.cachedKeys, bindTo(element.comparisonFilter, element)),
                     keys = element.hashed = comparison.keys,
                     mutations = element.mutations = comparison.mutations.concat(view.modifiers() || []);
             },
             comparisonFilter: function (node) {
                 var element = this,
                     view = element.view,
-                    regionManager = view.directive(REGION_MANAGER);
-                return !regionManager.list.find(function (region) {
-                    return matchesSelctor(node, region.selector);
-                });
+                    regionManager = view.directive(REGION_MANAGER),
+                    id = node[3] || {},
+                    key = id.key;
+                return !key || !regionManager.get(ID, key);
             },
             delta: function () {
                 var element = this;
@@ -690,7 +692,7 @@ app.scope(function (app) {
                 }
                 each(elementTriggers, function (method, key) {
                     var object = makeDelegateEventKeys(view.cid, directive.uiBindings, key),
-                        bound = object.fn = bindWith(basicViewTrigger, view, method);
+                        bound = object.fn = bindWith(basicViewTrigger, [view, method]);
                     el.on(object.events, object[SELECTOR], bound, object.capture, object.group);
                 });
                 directive.cachedElementTriggers = __events;

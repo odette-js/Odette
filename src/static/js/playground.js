@@ -27,16 +27,12 @@ application.scope().run(window, function (app, _, factories, documentView, scope
             });
         }
     });
-    var log = function () {
-        console.log('here');
-    };
     var ViewContainer = scopedFactories.View.extend({
         Child: PersonView,
         Model: Company,
         template: $.compile(function () {
-            console.log(helpers, _);
             return [
-                ["h3", null, name, {
+                ["h3", null, this.name, {
                     key: "company_name"
                 }],
                 ["ul", {
@@ -71,6 +67,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
         });
         speclessView.addChildView('employees', data);
         documentView.addChildView('summaries', speclessView);
+        console.log(speclessView);
     });
     window.$ = $;
 });
