@@ -502,10 +502,10 @@ application.scope().run(window, function (app, _, factories, documentView, scope
         var template1 = function (data) {
             var listItems = _.map(data && data.points, function (item, index) {
                 return [item.tag, {
-                        class: "classname" + index
+                        class: "classname" + (item.number || index)
                     },
                     item.text, {
-                        key: 'listitem' + index
+                        key: 'listitem' + (item.number || index)
                     }
                 ];
             });
@@ -544,10 +544,8 @@ application.scope().run(window, function (app, _, factories, documentView, scope
             container: 'ul'
         };
         var applyMutations = function (mutations) {
-            _.each(mutations, function (level) {
-                _.each(level, function (fn) {
-                    fn();
-                });
+            _.duff([mutations.remove, mutations.update, mutations.insert], function (fn) {
+                fn();
             });
         };
         _.describe('can diff node trees and update them', function () {
@@ -559,11 +557,8 @@ application.scope().run(window, function (app, _, factories, documentView, scope
             _.it('and update them', function () {
                 var diff = $.nodeComparison($root.element(), templatized);
                 _.expect($root.html()).toEqual('');
-                _.each(diff.mutations, function (level) {
-                    _.expect(_.isArray(level)).toBe(true);
-                    _.each(level, function (mutator) {
-                        _.expect(_.isFunction(mutator)).toBe(true);
-                    });
+                _.each(diff.mutations, function (level, key) {
+                    _.expect(_.isFunction(level)).toBe(true);
                 });
                 applyMutations(diff.mutations);
                 _.expect($root.html()).not.toEqual('');
@@ -592,11 +587,90 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 }]);
                 var $lis = $root.$('ul.container').children();
                 var $first = $lis.first();
-                var diff2 = $.nodeComparison($root.element(), templatized);
+                var diff2 = $.nodeComparison($root.element(), templatized, diff.keys);
                 applyMutations(diff2.mutations);
                 var $newChildren = $root.$('ul.container').children();
                 _.expect($first.element()).toBe($newChildren.first().element());
                 _.expect($newChildren.length()).toEqual(1);
+            });
+            _.it('removes nodes even when they\'re at the front', function () {
+                var diff = $.nodeComparison($root.element(), templatized);
+                applyMutations(diff.mutations);
+                templatized = makeBasicTemplate([{
+                    tag: 'li',
+                    text: 'someothertext2',
+                    number: 1
+                }]);
+                var $lis = $root.$('ul.container').children();
+                var $first = $lis.first();
+                var diff2 = $.nodeComparison($root.element(), templatized, diff.keys);
+                applyMutations(diff2.mutations);
+                var $newChildren = $root.$('ul.container').children();
+                _.expect($first.element()).not.toBe(void 0);
+                _.expect($first.element()).not.toBe($newChildren.first().element());
+                _.expect($newChildren.length()).toEqual(1);
+            });
+            _.it('and inserts them at the front when needed', function () {
+                templatized = makeBasicTemplate([{
+                    tag: 'li',
+                    text: 'someothertext2',
+                    number: 1
+                }]);
+                var diff = $.nodeComparison($root.element(), templatized);
+                applyMutations(diff.mutations);
+                var $lis = $root.$('ul.container').children();
+                var $first = $lis.first();
+                templatized = makeBasicTemplate();
+                var diff2 = $.nodeComparison($root.element(), templatized, diff.keys);
+                applyMutations(diff2.mutations);
+                var $newChildren = $root.$('ul.container').children();
+                _.expect($first.element()).not.toBe($newChildren.first().element());
+                _.expect($newChildren.length()).toEqual(2);
+            });
+            _.it('can rearrange elements as needed', function () {
+                templatized = makeBasicTemplate([{
+                    tag: 'li',
+                    text: 'another',
+                    number: '2'
+                }, {
+                    tag: 'li',
+                    text: 'someothertext2',
+                    number: '1'
+                }, {
+                    tag: 'li',
+                    text: 'anotherone',
+                    number: '3'
+                }, {
+                    tag: 'li',
+                    text: 'first',
+                    number: '0'
+                }]);
+                var diff = $.nodeComparison($root.element(), templatized);
+                applyMutations(diff.mutations);
+                var $lis = $root.$('ul.container').children();
+                var $first = $lis.last();
+                templatized = makeBasicTemplate([{
+                    tag: 'li',
+                    text: 'first',
+                    number: '0'
+                }, {
+                    tag: 'li',
+                    text: 'someothertext2',
+                    number: '1'
+                }, {
+                    tag: 'li',
+                    text: 'another',
+                    number: '2'
+                }, {
+                    tag: 'li',
+                    text: 'anotherone',
+                    number: '3'
+                }]);
+                var diff2 = $.nodeComparison($root.element(), templatized, diff.keys);
+                applyMutations(diff2.mutations);
+                var $newChildren = $root.$('ul.container').children();
+                _.expect($first.element()).toBe($newChildren.first().element());
+                _.expect($newChildren.length()).toEqual(4);
             });
         });
     });

@@ -32,14 +32,12 @@ application.scope().run(window, function (app, _, factories, documentView, scope
         Model: Company,
         template: $.compile(function () {
             return [
-                ["h3", null, this.name, {
-                    key: "company_name"
-                }],
+                ["h3", null, this.name],
                 ["ul", {
                         class: "employees"
                     },
                     null, {
-                        key: "employees"
+                        key: "list"
                     }
                 ]
             ];
@@ -48,10 +46,10 @@ application.scope().run(window, function (app, _, factories, documentView, scope
             class: 'employees-container'
         },
         ui: {
-            title: 'company_name'
+            title: 'h3'
         },
         regions: {
-            employees: 'employees'
+            employees: 'list'
         }
     });
     documentView.addRegion({

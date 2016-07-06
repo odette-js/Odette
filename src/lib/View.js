@@ -225,7 +225,6 @@ app.scope(function (app) {
             addChildView: addChildView,
             removeChildView: removeChildView,
             tagName: returns('div'),
-            filter: returns(BOOLEAN_TRUE),
             template: returns(BOOLEAN_FALSE),
             childrenOf: function (key) {
                 return this.directive(REGION_MANAGER).get(key).directive(CHILDREN);
@@ -233,30 +232,29 @@ app.scope(function (app) {
             parentView: function () {
                 var found, view = this,
                     parent = view[PARENT];
-                while (found && parent && !isInstance(parent, View)) {
+                while (!found && parent) {
                     parent = parent[PARENT];
-                    if (isInstance(parent, View)) {
+                    if (View.isInstance(parent)) {
                         found = parent;
                     }
                 }
                 return found;
             },
             bindModel: function (model) {
-                var view = this;
+                var view = this,
+                    modelEvents = result(view, 'modelEvents');
                 view.model = Model.isInstance(model) ? model : view.Model(model);
-                view.listenTo(view.model, result(view, 'modelEvents'));
+                view.listenTo(view.model, modelEvents);
                 view.listenTo(view.model, CHANGE, view.render);
             },
             constructor: function (secondary_) {
                 var view = this;
                 var secondary = secondary_ || {};
+                view.id = uniqueId(BOOLEAN_FALSE, BOOLEAN_TRUE);
                 view.bindModel(secondary.model);
                 delete secondary.model;
                 Parent[CONSTRUCTOR].call(view, secondary);
                 view.directive(CAPITAL_ELEMENT).ensure();
-                this.id = uniqueId(BOOLEAN_FALSE, BOOLEAN_TRUE);
-                // commenting this out may break things... probably in test
-                // establishRegions(this);
                 return view;
             },
             // mostly sorting purposes
@@ -281,15 +279,9 @@ app.scope(function (app) {
                 Parent[CONSTRUCTOR][PROTOTYPE].destroy.call(view);
                 return view;
             },
-            watchList: function () {
-                return parse(stringify(this.template.interpolators));
-            },
             render: function (preventChain) {
                 var newelementisDifferent, element, json, html, renderResult, bufferedDirective, template, settingElement, view = this;
                 // you might be able to do this a better way
-                if (!view.filter(view)) {
-                    return view;
-                }
                 view.mark(RENDERING);
                 element = view.directive(CAPITAL_ELEMENT);
                 // prep the object with extra members (doc frags on regionviews,
@@ -491,7 +483,7 @@ app.scope(function (app) {
             return {
                 selector: hasAt ? normalizeUIString(key.slice(indexOfAt), bindings) : EMPTY_STRING,
                 group: viewNamespace,
-                events: hasAt ? key.slice(0, indexOfAt) : key
+                events: hasAt ? key.slice(0, indexOfAt).trim() : key
             };
         },
         normalizeUIString = function (uiString, ui) {
@@ -569,7 +561,8 @@ app.scope(function (app) {
                     virtual = element.virtual = [view.tagName(), element.attributes(), view.template(json, result(view, 'helpers') || {})],
                     comparison = view.owner$.nodeComparison(el, virtual, element.cachedKeys, bindTo(element.comparisonFilter, element)),
                     keys = element.hashed = comparison.keys,
-                    mutations = element.mutations = comparison.mutations.concat(view.modifiers() || []);
+                    mutations = element.mutations = comparison.mutations,
+                    modifiers = element.modifiers = view.modifiers();
             },
             comparisonFilter: function (node) {
                 var element = this,
@@ -580,16 +573,22 @@ app.scope(function (app) {
                 return !key || !regionManager.get(ID, key);
             },
             delta: function () {
-                var element = this;
-                var view = element.view;
-                var mutations = element.mutations;
-                var memo = BOOLEAN_FALSE;
+                var element = this,
+                    view = element.view,
+                    mutations = element.mutations,
+                    modifiers = element.modifiers,
+                    memo = BOOLEAN_FALSE;
                 delete element.mutations;
-                return mutations[LENGTH] ? foldl(mutations, function (memo, fns) {
-                    return fns[LENGTH] ? foldl(fns, function (memo, fn) {
-                        return fn(view) || memo;
-                    }, memo) : memo;
-                }, memo) : memo;
+                delete element.modifiers;
+                if (!isObject(modifiers)) {
+                    modifiers = {
+                        insert: modifiers
+                    };
+                }
+                mutations = [mutations.remove, modifiers.remove || noop, mutations.update, modifiers.update || noop, mutations.insert, modifiers.insert || noop];
+                return foldl(mutations, function (memo, fn) {
+                    return fn(view) || memo;
+                }, memo);
             },
             renderEl: function () {
                 var replacing, elementsSwapped, element = this,

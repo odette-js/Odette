@@ -14,8 +14,10 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 return [
                     ['span'],
                     ['div', {
-                        class: 'here'
-                    }]
+                            class: 'here'
+                        },
+                        null
+                    ]
                 ];
             }
         });
@@ -50,12 +52,6 @@ application.scope().run(window, function (app, _, factories, documentView, scope
             _.expect(complexView.el.element().parentNode).toEqual(null);
             documentView.directive('RegionManager').get('main').add(complexView);
             _.expect(complexView.el.element().parentNode).not.toEqual(null);
-        });
-        _.it('can be filtered', function () {
-            _.expect(complexView.el.element().parentNode).toEqual(null);
-            complexView.filter = _.returns(false);
-            documentView.directive('RegionManager').get('main').add(complexView);
-            _.expect(complexView.el.element().parentNode).toEqual(null);
         });
         _.it('can have extra elements', function () {
             _.expect(_.isObject(complexView.ui)).toEqual(true);

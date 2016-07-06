@@ -250,7 +250,7 @@ app.scope(function (app) {
                     return retList;
                 }
                 models = idModel && idModel.unwrap ? idModel.unwrap() : idModel;
-                Collection(models).each(function (model) {
+                Collection(models).slice().each(function (model) {
                     var result, children, parent = model[PARENT];
                     retList.push(model);
                     if (!parent) {

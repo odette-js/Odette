@@ -147,21 +147,6 @@ var ATTACHED = 'attached',
             content: text
         };
     },
-    collectAttr = function (memo, attribute, diffs, future) {
-        var attributeKey = attribute[LOCAL_NAME];
-        if (future) {
-            memo.attrsA[attributeKey] = BOOLEAN_TRUE;
-            memo.accessB[attributeKey] = attribute.nodeValue;
-        } else {
-            memo.attrsA[attributeKey] = BOOLEAN_TRUE;
-            memo.accessA[attributeKey] = attribute.nodeValue;
-        }
-        if (memo.hash[attributeKey]) {
-            return;
-        }
-        memo.hash[attributeKey] = BOOLEAN_TRUE;
-        memo.list.push(attributeKey);
-    },
     finalInsertBefore = function (parent, el1, el2) {
         return el1 && parent.insertBefore && parent.insertBefore(el1, el2);
     },
@@ -187,105 +172,265 @@ var ATTACHED = 'attached',
             }
         }
     },
+    collectAttr = function (memo, attribute, future) {
+        var attributeKey = attribute[LOCAL_NAME];
+        if (future) {
+            memo.attrsA[attributeKey] = BOOLEAN_TRUE;
+            memo.accessB[attributeKey] = attribute.nodeValue;
+        } else {
+            memo.attrsA[attributeKey] = BOOLEAN_TRUE;
+            memo.accessA[attributeKey] = attribute.nodeValue;
+        }
+        if (memo.hash[attributeKey]) {
+            return;
+        }
+        memo.hash[attributeKey] = BOOLEAN_TRUE;
+        memo.list.push(attributeKey);
+    },
     returnsJSONNodeType = function (tagName) {
         return tagName === 'text' ? 3 : 1;
     },
-    collectAttributes = function (a, b, mutations, context) {
-        var bKeys, aLength = a.attributes.length;
-        var bLength = (bKeys = keys(b[1])).length;
-        var attrs = foldl({
-            length: Math.max(aLength, bLength)
-        }, function (memo, voided, index) {
-            var key;
-            if (memo.aLength > index) {
-                collectAttr(memo, a.attributes[index], mutations);
-            }
-            if (memo.bLength > index) {
-                key = bKeys[index];
-                collectAttr(memo, {
-                    localName: key,
-                    nodeValue: b[1][key]
-                }, mutations, BOOLEAN_TRUE);
-            }
-        }, {
-            list: [],
-            hash: {},
-            attrsA: {},
-            accessA: {},
-            attrsB: {},
-            accessB: {},
-            aLength: aLength,
-            bLength: bLength
-        });
+    checkNeedForCustom = function (el) {
+        return el[__ELID__] && attributeApi.read(el, 'is') !== BOOLEAN_FALSE;
+    },
+    diffAttributes = function (a, b, diffs, context) {
+        var bKeys, aAttributes = a.attributes,
+            aLength = aAttributes.length,
+            bLength = (bKeys = keys(b[1])).length,
+            attrs = foldl({
+                length: Math.max(aLength, bLength)
+            }, function (memo, voided, index) {
+                var key;
+                if (memo.aLength > index) {
+                    collectAttr(memo, aAttributes[index]);
+                }
+                if (memo.bLength > index) {
+                    key = bKeys[index];
+                    collectAttr(memo, {
+                        localName: key,
+                        nodeValue: b[1][key]
+                    }, BOOLEAN_TRUE);
+                }
+            }, {
+                list: [],
+                hash: {},
+                attrsA: {},
+                accessA: {},
+                attrsB: {},
+                accessB: {},
+                aLength: aLength,
+                bLength: bLength
+            }),
+            anElId = a[__ELID__],
+            updates;
         duff(attrs.list, function (key) {
-            if (attrs.accessA[key] === attrs.accessB[key]) {
-                return;
+            if (attrs.accessA[key] !== attrs.accessB[key]) {
+                updates = updates || {};
+                updates[key] = attrs.accessB[key] === UNDEFINED ? NULL : attrs.accessB[key];
             }
-            mutations.push(context.deltas.updateAttribute(a, key, attrs.accessB[key] === UNDEFINED ? NULL : attrs.accessB[key]));
+        });
+        if (!updates) {
+            return;
+        }
+        diffs.updating.push(function () {
+            if (checkNeedForCustom(a)) {
+                context.returnsManager(a).attr(updates);
+            } else {
+                each(updates, function (value, key) {
+                    attributeApi.write(a, key, value);
+                });
+            }
         });
     },
+    collectVirtualKeys = function (virtualized, diff, previous_hash, level_, index_) {
+        var groups, children = virtualized[2];
+        var uniques = virtualized[3];
+        var level = level_ || 0;
+        var index = index_ || 0;
+        if (uniques) {
+            groups = toArray(uniques.group);
+            if (uniques.key) {
+                diff.ids[uniques.key] = {
+                    virtual: virtualized,
+                    level: level,
+                    index: index,
+                    group: groups[LENGTH] ? groups : NULL,
+                    el: previous_hash[uniques.key]
+                };
+            }
+        }
+        duff(children, function (child, index) {
+            collectVirtualKeys(child, diff, previous_hash, level + 1, index);
+        });
+    },
+    computeStringDifference = function (a, b, context, diffs) {
+        if (isString(b[2])) {
+            if (a.innerHTML !== b[2]) {
+                diffs.updating.push(function () {
+                    if (checkNeedForCustom(a)) {
+                        context.returnsManager(a).html(b[2]);
+                    } else {
+                        a.innerHTML = b[2];
+                    }
+                });
+            }
+            return BOOLEAN_TRUE;
+        }
+    },
+    insertMapper = function (els, parent, context, i, hash) {
+        var frag = doc.createDocumentFragment();
+        duff(els, function (el) {
+            context.deltas.create(el, frag, hash);
+        });
+        return {
+            parent: parent,
+            el: frag,
+            index: i
+        };
+    },
+    filtersAlreadyInserted = function (els, hash) {
+        return _.filter(els, function (el) {
+            var identifiers = el[3];
+            if (identifiers && identifiers.key) {
+                return !hash[identifiers.key];
+            }
+            return BOOLEAN_TRUE;
+        });
+    },
+    diffChildren = function (a, b, hash, stopper, layer_level, diffs, context) {
+        var aChildren = a.childNodes;
+        var bChildren = b[2];
+        var mutations = diffs.mutations;
+        var keys = diffs.keys;
+        // it was a string, so there's nothing more to compute in regards to children
+        if (computeStringDifference(a, b, context, diffs)) {
+            return diffs;
+        }
+        var aChildrenLength = aChildren && aChildren[LENGTH];
+        var bChildrenLength = bChildren && bChildren[LENGTH];
+        var maxLength = Math.max(aChildrenLength, bChildrenLength);
+        var j, finished, bChild, removing, result, dontCreate, offset = 0,
+            i = 0,
+            focus = 0;
+        if (!bChildren || isNumber(bChildren)) {
+            return diffs;
+        }
+        for (; i < maxLength && !finished; i++) {
+            if (aChildrenLength <= i) {
+                diffs.inserting.push(insertMapper(filtersAlreadyInserted(toArray(bChildren).slice(i), hash), a, context, i, diffs.keys));
+                return diffs;
+            } else {
+                if (b[2] && stopper(b)) {
+                    // do not do children
+                    if (bChildrenLength <= i) {
+                        dontCreate = BOOLEAN_TRUE;
+                        diffs.removing.push.apply(diffs.removing, toArray(aChildren).slice(i));
+                        return diffs;
+                    } else {
+                        result = nodeComparison(aChildren[i], bChildren[i], hash, stopper, layer_level, i, diffs, context, a);
+                        if (result === BOOLEAN_FALSE) {
+                            diffs.removing.push(a);
+                            diffs.inserting.push(insertMapper([b], a, context, i + offset, diffs.keys));
+                        }
+                    }
+                }
+            }
+        }
+        return diffs;
+    },
     // cannot start with a text node
-    nodeComparison = function (a, b, hash_, stopper_, layer_level_, diffs_, context) {
-        var resultant, first = !diffs_,
+    nodeComparison = function (a_, b_, hash_, stopper_, layer_level_, index_, diffs_, context, future_parent_) {
+        var returns, resultant, current, inserting, identifyingKey, identified, first = !diffs_,
+            a = a_,
+            b = b_,
+            index = index_ || 0,
+            future_parent = future_parent_,
             diffs = diffs_ || {
-                mutations: [],
+                removing: [],
+                updating: [],
+                inserting: [],
+                mutations: {
+                    remove: function () {
+                        if (!diffs.removing[LENGTH]) {
+                            return;
+                        }
+                        var elided = [];
+                        var nonelided = [];
+                        duff(diffs.removing, function (el) {
+                            if (!_.find(diffs.keys, function (element, key) {
+                                return element === el;
+                            })) {
+                                (checkNeedForCustom(el) ? elided : nonelided).push(el);
+                            }
+                        });
+                        context.$(elided).remove();
+                        duff(nonelided, passesFirstArgument(removeChild));
+                        return !!(elided[LENGTH] || nonelided[LENGTH]);
+                    },
+                    update: function () {
+                        duff(diffs.updating, function (fn) {
+                            fn();
+                        });
+                    },
+                    insert: function () {
+                        if (!diffs.inserting[LENGTH]) {
+                            return;
+                        }
+                        duff(diffs.inserting.sort(function (a, b) {
+                            return a.index > b.index ? -1 : 1;
+                        }), function (list) {
+                            insertBefore(list.parent, list.el, list.index);
+                        });
+                        return BOOLEAN_TRUE;
+                    }
+                },
                 keys: {},
-                elIds: {}
+                ids: {},
+                group: {},
+                futureTree: {},
+                futureHash: {}
             },
             stopper = stopper_ || returnsTrue,
             keys = diffs.keys,
             mutations = diffs.mutations,
             layer_level = layer_level_ || 0,
             hash = hash_ || {},
-            diff = mutations[layer_level],
-            identifiers = b[3];
-        if (!diff) {
-            mutations.push([]);
-            diff = mutations[layer_level];
+            layerLength = b[LENGTH],
+            identifiers = b[3],
+            tagA = tag(a);
+        if (first) {
+            collectVirtualKeys(b, diffs, hash);
         }
-        if (tag(a) === b[0] && a.nodeType === returnsJSONNodeType(b[0])) {
-            if (identifiers && identifiers.key) {
-                diffs.keys[identifiers.key] = a;
-            }
-            if (isString(b[2])) {
-                if (a.innerHTML !== b[2]) {
-                    diff.push(context.deltas.resetHtml(a, b[2], context, hash));
-                }
-                return diffs;
-            }
-            // what is different.
-            collectAttributes(a, b, diff, context);
-            var aChildren = a.childNodes;
-            var bChildren = b[2];
-            if (isString(bChildren)) {
-                diff.push(context.deltas.resetHtml(a, bChildren, context, hash));
-                return first ? diffs : BOOLEAN_TRUE;
-            }
-            var aChildrenLength = aChildren && aChildren[LENGTH];
-            var bChildrenLength = bChildren && bChildren[LENGTH];
-            var maxLength = Math.max(aChildrenLength, bChildrenLength);
-            var finished, bChild, result, i = 0;
-            if (bChildrenLength) {
-                for (; i < maxLength && !finished; i++) {
-                    if (aChildrenLength <= i) {
-                        diff.push(context.deltas.addNodes(a, toArray(bChildren).slice(i), context, keys));
-                        finished = BOOLEAN_TRUE;
-                    } else {
-                        if (stopper(b)) {
-                            // do not do children
-                            if (bChildrenLength <= i) {
-                                diff.push(context.deltas.removeNodes(toArray(aChildren).slice(i), hash));
-                                // stops early
-                            } else {
-                                result = nodeComparison(aChildren[i], bChildren[i], hash, stopper, layer_level + 1, diffs, context);
-                                if (result === BOOLEAN_FALSE) {
-                                    diff.push(context.deltas.replaceNode(a, b, context, hash));
-                                }
-                            }
+        if (tagA === b[0] && a.nodeType === returnsJSONNodeType(b[0])) {
+            if (identifiers && (identifyingKey = identifiers.key)) {
+                current = hash[identifyingKey];
+                identified = diffs.ids[identifyingKey];
+                if (current) {
+                    if (current === a) {} else {
+                        if (identified.virtual[0] === tagA) {
+                            // has the effect of removing it at the same time as inserting it
+                            diffs.removing.push(a);
+                            // [identified, future_parent]
+                            identified.parent = future_parent;
+                            diffs.inserting.push(identified);
+                            // diffs.inserting.push(insertMapper([b], future_parent, context, index, diffs.keys));
+                            // identified.inserted = BOOLEAN_TRUE;
+                            a = diffs.keys[identifyingKey] = current;
+                        } else {
+                            diffs.removing.push(a);
+                            diffs.inserting.push(insertMapper([b], future_parent, context, index, diffs.keys));
+                            diffs.keys[identifyingKey] = a;
+                            return diffs;
                         }
                     }
+                } else {
+                    diffs.inserting.push(insertMapper([b], future_parent, context, index, diffs.keys));
+                    return diffs;
                 }
             }
+            // what is different.
+            diffAttributes(a, b, diffs, context);
+            return diffChildren(a, b, hash, stopper, layer_level + 1, diffs, context);
         } else {
             // instant fail
             if (first) {
@@ -2022,10 +2167,14 @@ app.scope(function (app) {
                             context.owner.returnsManager(target).html(newhtml);
                         };
                     },
-                    removeNodes: function (el) {
+                    removeNodes: function (els, diffs) {
                         return function () {
-                            duff(el, passesFirstArgument(removeChild));
-                            return BOOLEAN_TRUE;
+                            var removableEls = _.filter(els, function (el) {
+                                return !_.find(diffs.keys, function (element, key) {
+                                    return element === el;
+                                });
+                            });
+                            return removableEls[LENGTH] ? duff(removableEls, passesFirstArgument(removeChild)) : BOOLEAN_FALSE;
                         };
                     },
                     addNodes: function (parent, els, context, hash) {
@@ -2043,10 +2192,13 @@ app.scope(function (app) {
                             attributeApi.write(element, key, value);
                         };
                     },
-                    replaceNode: function (a, b, index, hash) {
-                        var parent = a[PARENT_NODE];
-                        var frag = doc.createDocumentFragment();
-                        deltas.create(b, frag, hash);
+                    replaceNode: function (a, b, index, hash, diffs, frag_) {
+                        var frag = frag_,
+                            parent = a[PARENT_NODE];
+                        if (!frag) {
+                            frag = doc.createDocumentFragment();
+                            deltas.create(b, frag, hash);
+                        }
                         return function () {
                             insertBefore(parent, frag, a);
                             var result = a[__ELID__] ? $(a).remove() : removeChild(a);
@@ -2087,8 +2239,8 @@ app.scope(function (app) {
                     return handler(one, manager, two, three);
                 };
             }), {
-                nodeComparison: function (a, b, hash_, stopper, layer_level_, diffs_) {
-                    return nodeComparison(a, b, hash_, stopper, layer_level_, diffs_, manager);
+                nodeComparison: function (a, b, hash_, stopper) {
+                    return nodeComparison(a, b, hash_, stopper, NULL, NULL, NULL, manager);
                 },
                 supports: {},
                 deltas: deltas,
@@ -2886,6 +3038,11 @@ app.scope(function (app) {
             constructor: function (el, hash, owner_) {
                 var elId, registeredOptions, isDocument, owner = owner_,
                     manager = this;
+                if (!el) {
+                    exception({
+                        message: 'element must be an element'
+                    });
+                }
                 if (DomManager.isInstance(el)) {
                     // extend what we already know
                     hash[DOM_MANAGER_STRING] = manager;
@@ -2961,7 +3118,7 @@ app.scope(function (app) {
                             found = rets[1];
                             next = rets[2];
                         }
-                        if (found) {
+                        if (found && parentElement) {
                             return owner.returnsManager(parentElement);
                         }
                     },
@@ -3516,7 +3673,7 @@ app.scope(function (app) {
             },
             elements: function () {
                 // to array of DOMAanagers
-                return this.mapCall(ELEMENT);
+                return this.results(ELEMENT);
             },
             /**
              * @func

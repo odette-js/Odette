@@ -433,17 +433,23 @@ var factories = {},
      * @func
      */
     createPredicateIndexFinder = function (dir) {
-        return eachProxy(function (array, predicate, context, index_) {
-            var length = array[LENGTH],
+        return function (obj, predicate, context, index_) {
+            var key, value, array = isArrayLike(obj) ? obj : keys(obj),
+                length = array[LENGTH],
                 callback = bindTo(predicate, context),
                 index = index_ || (dir > 0 ? 0 : length - 1);
             for (; index >= 0 && index < length; index += dir) {
-                if (callback(array[index], index, array)) {
-                    return index;
+                key = index;
+                if (obj !== array) {
+                    key = array[index];
+                }
+                value = obj[key];
+                if (callback(value, key, obj)) {
+                    return value;
                 }
             }
-            return -1;
-        });
+            return;
+        };
     },
     /**
      * @func
@@ -462,16 +468,16 @@ var factories = {},
         // any other data type ensures string
         return key !== -1 && key === key && key !== UNDEFINED && key !== NULL && key !== BOOLEAN_FALSE && key !== BOOLEAN_TRUE;
     },
-    finder = function (findHelper) {
-        return function (obj, predicate, context, startpoint) {
-            var key = findHelper(obj, predicate, context, startpoint);
-            if (validKey(key)) {
-                return obj[key];
-            }
-        };
-    },
-    find = finder(findIndex),
-    findLast = finder(findLastIndex),
+    // finder = function (findHelper) {
+    //     return function (obj, predicate, context, startpoint) {
+    //         return findHelper(obj, predicate, context, startpoint);
+    //         // if (validKey(key)) {
+    //         //     return obj[key];
+    //         // }
+    //     };
+    // },
+    find = findIndex,
+    findLast = findLastIndex,
     bind = function (func, context) {
         return arguments[LENGTH] < 3 ? bindTo(func, context) : bindWith(func, toArray(arguments).slice(1));
     },
@@ -1300,7 +1306,9 @@ var factories = {},
             returnValue = trythis();
         } catch (e) {
             err = e;
-            console.error(e);
+            if (app.logWrappedErrors) {
+                console.error(e);
+            }
             returnValue = errthat ? errthat(e) : returnValue;
         } finally {
             returnValue = finalfunction ? finalfunction(err, returnValue) : returnValue;
@@ -1440,7 +1448,7 @@ var factories = {},
         findIndex: findIndex,
         findLastIndex: findLastIndex,
         validKey: validKey,
-        finder: finder,
+        // finder: finder,
         find: find,
         findLast: findLast,
         console: console,
@@ -1452,6 +1460,7 @@ var factories = {},
             return Math[key];
         })
     };
+app.logWrappedErrors = BOOLEAN_TRUE;
 /**
  * @class Extendable
  */
