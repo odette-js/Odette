@@ -4,9 +4,16 @@ application.scope().run(window, function (app, _, factories, documentView, scope
             ui: {
                 there: '.here'
             },
+            events: {
+                'sometrigger': 'dosomething'
+            },
             elementEvents: {
                 'click @ui.there': 'doThis'
             },
+            elementTriggers: {
+                'click': 'sometrigger'
+            },
+            dosomething: function () {},
             doThis: function () {
                 count++;
             },
@@ -145,6 +152,21 @@ application.scope().run(window, function (app, _, factories, documentView, scope
             emptiedView.el.append(newdiv2);
             emptiedView.render();
             _.expect(emptiedView.el.children().length()).toEqual(0);
+        });
+        _.it('also allows for triggers to be connected and piped through from element to view', function () {
+            documentView.directive('RegionManager').get('main').add(complexView);
+            complexView.on('sometrigger', function () {
+                count++;
+            });
+            var el = complexView.el;
+            el.click();
+            _.expect(count).toEqual(2);
+            complexView.dispatchEvent('sometrigger');
+            _.expect(count).toEqual(3);
+            complexView.destroy();
+            _.expect(count).toEqual(3);
+            el.click();
+            _.expect(count).toEqual(3);
         });
     });
 });

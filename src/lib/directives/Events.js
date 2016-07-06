@@ -16,7 +16,7 @@ app.scope(function (app) {
         },
         PASSED_DATA = 'passedData',
         ObjectEvent = factories.ObjectEvent = factories.Directive.extend('ObjectEvent', {
-            constructor: function (target, data, name, options, when) {
+            constructor: function (data, target, name, options, when) {
                 var evnt = this;
                 evnt.unmark(PROPAGATION_HALTED);
                 evnt.unmark(PROPAGATION_STOPPED);
@@ -115,7 +115,7 @@ app.scope(function (app) {
                 eventsDirective.add(list, eventObject);
             },
             create: function (target, data, name, options) {
-                return ObjectEvent(target, data, name, options);
+                return ObjectEvent(data, target, name, options);
             },
             make: function (name, handler, origin) {
                 return {
