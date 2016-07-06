@@ -249,7 +249,7 @@ app.scope(function (app) {
                 if (!idModel || !isObject(idModel)) {
                     return retList;
                 }
-                models = idModel && idModel.unwrap ? idModel.unwrap() : idModel;
+                models = idModel && idModel.unwrap ? idModel.toArray() : idModel;
                 Collection(models).slice().each(function (model) {
                     var result, children, parent = model[PARENT];
                     retList.push(model);

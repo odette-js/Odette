@@ -155,7 +155,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 kids = divs.children(1);
                 _.expect(kids.length()).toEqual(5);
                 kids = divs.children('.span-2');
-                _.expect(kids.unwrap()).toEqual(divs.children().filter('.span-2').unwrap());
+                _.expect(kids.toArray()).toEqual(divs.children().filter('.span-2').toArray());
                 _.expect(kids.length()).toEqual(2);
                 _.expect(kids.element() === kids.item(1)).toEqual(false);
             });
@@ -599,7 +599,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 templatized = makeBasicTemplate([{
                     tag: 'li',
                     text: 'someothertext2',
-                    number: 1
+                    number: '1'
                 }]);
                 var $lis = $root.$('ul.container').children();
                 var $first = $lis.first();
@@ -614,7 +614,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 templatized = makeBasicTemplate([{
                     tag: 'li',
                     text: 'someothertext2',
-                    number: 1
+                    number: '1'
                 }]);
                 var diff = $.nodeComparison($root.element(), templatized);
                 applyMutations(diff.mutations);
@@ -648,28 +648,32 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 var diff = $.nodeComparison($root.element(), templatized);
                 applyMutations(diff.mutations);
                 var $lis = $root.$('ul.container').children();
-                var $first = $lis.last();
+                var list = $lis.elements().toArray();
                 templatized = makeBasicTemplate([{
                     tag: 'li',
                     text: 'first',
                     number: '0'
                 }, {
                     tag: 'li',
-                    text: 'someothertext2',
+                    text: 'someothertextfirstindex',
                     number: '1'
                 }, {
                     tag: 'li',
-                    text: 'another',
+                    text: 'anothersecondindex',
                     number: '2'
                 }, {
                     tag: 'li',
-                    text: 'anotherone',
+                    text: 'anotheronethird',
                     number: '3'
                 }]);
                 var diff2 = $.nodeComparison($root.element(), templatized, diff.keys);
                 applyMutations(diff2.mutations);
                 var $newChildren = $root.$('ul.container').children();
-                _.expect($first.element()).toBe($newChildren.first().element());
+                // should be strictly equal to since
+                _.expect(list[3]).toBe($newChildren.element(0));
+                _.expect(list[1]).toBe($newChildren.element(1));
+                _.expect(list[0]).toBe($newChildren.element(2));
+                _.expect(list[2]).toBe($newChildren.element(3));
                 _.expect($newChildren.length()).toEqual(4);
             });
         });

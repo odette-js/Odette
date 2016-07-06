@@ -21,7 +21,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
             _.expect(numberCollection.length()).toEqual(10);
         });
         _.it('can give you all of it\'s values at once', function () {
-            _.expect(collection.unwrap()).toEqual(collection.items);
+            _.expect(collection.toArray()).toEqual(collection.items);
         });
         _.it('or one at a time', function () {
             numberCollection.duff(function (item, idx) {
@@ -43,7 +43,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
         _.it('can also concatonate itself with collections and arrays just like a regular array', function () {
             var collection = factories.Collection([0, 1, 2, 3, 4]),
                 list = factories.Collection([5, 6, 7, 8, 9]);
-            _.expect(collection.concat(list, evenNumberList).unwrap()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 2, 4, 6, 8]);
+            _.expect(collection.concat(list, evenNumberList).toArray()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 2, 4, 6, 8]);
         });
         // _.it('can also reverse itself momentarily', function () {
         //     var test = [];
@@ -56,34 +56,34 @@ application.scope().run(window, function (app, _, factories, documentView, scope
         // });
         _.describe('but other methods need arrays... Collections also have a bunch of methods that they stole from the _ object such as:', function () {
             // _.it('addAll', function () {
-            //     _.expect(numberCollection.addAll([0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20]).unwrap()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16, 18, 20]);
+            //     _.expect(numberCollection.addAll([0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20]).toArray()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16, 18, 20]);
             // });
             // _.it('removeAll', function () {
-            //     _.expect(numberCollection.removeAll([0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20]).unwrap()).toEqual([1, 3, 5, 7, 9]);
+            //     _.expect(numberCollection.removeAll([0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20]).toArray()).toEqual([1, 3, 5, 7, 9]);
             // });
             _.it('sort', function () {
-                _.expect(numberCollection.sort().unwrap()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+                _.expect(numberCollection.sort().toArray()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
                 _.expect(numberCollection.sort(function (a, b) {
                     return (a % 3) - (b % 3);
-                }).unwrap()).toEqual([0, 3, 6, 9, 1, 4, 7, 2, 5, 8]);
+                }).toArray()).toEqual([0, 3, 6, 9, 1, 4, 7, 2, 5, 8]);
             });
             _.it('unshift', function () {
                 numberCollection.unshift(-1);
-                _.expect(numberCollection.unwrap()).toEqual([-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+                _.expect(numberCollection.toArray()).toEqual([-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
             });
             _.it('push', function () {
                 numberCollection.push(10);
-                _.expect(numberCollection.unwrap()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+                _.expect(numberCollection.toArray()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
                 numberCollection.push([11, 12, 13]);
-                _.expect(numberCollection.unwrap()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]);
+                _.expect(numberCollection.toArray()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]);
             });
             _.it('cycle', function () {
                 numberCollection.cycle(3);
-                _.expect(numberCollection.unwrap()).toEqual([3, 4, 5, 6, 7, 8, 9, 0, 1, 2]);
+                _.expect(numberCollection.toArray()).toEqual([3, 4, 5, 6, 7, 8, 9, 0, 1, 2]);
             });
             _.it('uncycle', function () {
                 numberCollection.uncycle(3);
-                _.expect(numberCollection.unwrap()).toEqual([7, 8, 9, 0, 1, 2, 3, 4, 5, 6]);
+                _.expect(numberCollection.toArray()).toEqual([7, 8, 9, 0, 1, 2, 3, 4, 5, 6]);
             });
             _.it('count', function () {
                 _.expect(numberCollection.count(function (item, idx, list) {
@@ -109,16 +109,16 @@ application.scope().run(window, function (app, _, factories, documentView, scope
             _.it('add', function () {
                 _.expect(numberCollection.add(61)).toEqual(true);
                 _.expect(numberCollection.add(5)).toEqual(false);
-                _.expect(numberCollection.unwrap()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 61]);
+                _.expect(numberCollection.toArray()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 61]);
                 _.expect(numberCollection.add(61)).toEqual(false);
             });
             _.it('insertAt', function () {
                 _.expect(numberCollection.insertAt(5, 1)).toEqual(true);
-                _.expect(numberCollection.unwrap()).toEqual([0, 5, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+                _.expect(numberCollection.toArray()).toEqual([0, 5, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
             });
             _.it('remove', function () {
                 _.expect(numberCollection.remove(5)).toEqual(true);
-                _.expect(numberCollection.unwrap()).toEqual([0, 1, 2, 3, 4, 6, 7, 8, 9]);
+                _.expect(numberCollection.toArray()).toEqual([0, 1, 2, 3, 4, 6, 7, 8, 9]);
                 _.expect(numberCollection.remove(5)).toEqual(false);
             });
             _.it('removeAt', function () {
@@ -195,24 +195,24 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 }, [])).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
             });
             _.it('merge', function () {
-                _.expect(numberCollection.merge([0, 1, 2, 6, 7, 8]).unwrap()).toEqual([0, 1, 2, 6, 7, 8, 6, 7, 8, 9]);
+                _.expect(numberCollection.merge([0, 1, 2, 6, 7, 8]).toArray()).toEqual([0, 1, 2, 6, 7, 8, 6, 7, 8, 9]);
             });
             _.it('range', function () {
-                _.expect(factories.Collection().range(4, 9).unwrap()).toEqual([4, 5, 6, 7, 8]);
+                _.expect(factories.Collection().range(4, 9).toArray()).toEqual([4, 5, 6, 7, 8]);
             });
             _.it('eq', function () {
-                _.expect(numberCollection.eq(4).unwrap()).toEqual([4]);
-                _.expect(numberCollection.eq([3, 9]).unwrap()).toEqual([3, 9]);
+                _.expect(numberCollection.eq(4).toArray()).toEqual([4]);
+                _.expect(numberCollection.eq([3, 9]).toArray()).toEqual([3, 9]);
             });
             _.it('map', function () {
                 _.expect(numberCollection.map(function (idx, item) {
                     return item * 2;
-                }).unwrap()).toEqual([0, 2, 4, 6, 8, 10, 12, 14, 16, 18]);
+                }).toArray()).toEqual([0, 2, 4, 6, 8, 10, 12, 14, 16, 18]);
             });
             _.it('filter', function () {
                 _.expect(numberCollection.filter(function (idx, item) {
                     return item % 2;
-                }).unwrap()).toEqual([1, 3, 5, 7, 9]);
+                }).toArray()).toEqual([1, 3, 5, 7, 9]);
             });
             _.it('pluck', function () {
                 _.expect(factories.Collection([{
@@ -223,7 +223,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                     one: 3
                 }, {
                     one: 4
-                }]).results('one').unwrap()).toEqual([1, 2, 3, 4]);
+                }]).results('one').toArray()).toEqual([1, 2, 3, 4]);
             });
             _.it('where', function () {
                 _.expect(factories.Collection([{
@@ -236,7 +236,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                     one: 4
                 }]).where({
                     one: 1
-                }).unwrap()).toEqual([{
+                }).toArray()).toEqual([{
                     one: 1
                 }, {
                     one: 1
@@ -247,7 +247,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                     [0, 1, 2, 3],
                     [4, 5, 6, 7, 8],
                     [9, 10, 11, 12]
-                ]).flatten().unwrap()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+                ]).flatten().toArray()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
             });
         });
     });

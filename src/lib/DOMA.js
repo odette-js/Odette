@@ -317,6 +317,7 @@ var ATTACHED = 'attached',
         }
         for (; i < maxLength && !finished; i++) {
             if (aChildrenLength <= i) {
+                // rethink this. it's a little weird
                 diffs.inserting.push(insertMapper(filtersAlreadyInserted(toArray(bChildren).slice(i), hash), a, context, i, diffs.keys));
                 return diffs;
             } else {
@@ -338,6 +339,81 @@ var ATTACHED = 'attached',
         }
         return diffs;
     },
+    newDiff = function (context) {
+        var diffs = {
+            removing: [],
+            updating: [],
+            inserting: [],
+            mutations: {
+                remove: function () {
+                    if (!diffs.removing[LENGTH]) {
+                        return;
+                    }
+                    // maintains attach state on dommanager
+                    context.$(diffs.removing).remove();
+                    return BOOLEAN_TRUE;
+                },
+                update: function () {
+                    // attributes and content
+                    duff(diffs.updating, function (fn) {
+                        fn();
+                    });
+                },
+                insert: function () {
+                    if (!diffs.inserting[LENGTH]) {
+                        return;
+                    }
+                    diffs.inserting.sort(function (a, b) {
+                        return a.index > b.index ? 1 : -1;
+                    });
+                    var target, index, currentFragment, actuallyInserting = [],
+                        inserting = diffs.inserting.slice(0);
+                    while (inserting[LENGTH]) {
+                        // shift off of the inserting list
+                        target = inserting.shift();
+                        // if no index is defined
+                        if (index === UNDEFINED) {
+                            // define an index
+                            index = target.index;
+                            // set a current fragment
+                            currentFragment = {
+                                index: target.index,
+                                el: context.createDocumentFragment(),
+                                parent: target.parent
+                            };
+                            // push it to the final insert list
+                            actuallyInserting.push(currentFragment);
+                            // append the target element to the fragment
+                            currentFragment.el.appendChild(target.el);
+                        } else {
+                            if (index + 1 === target.index) {
+                                // append to current fragment
+                                currentFragment.el.appendChild(target.el);
+                                // update index
+                                index = target.index;
+                            } else {
+                                // unshift target
+                                inserting.unshift(target);
+                                // reset index to undefined
+                                index = UNDEFINED;
+                            }
+                        }
+                    }
+                    duff(actuallyInserting, function (list, idx, lists) {
+                        // maintains attach state on dom manager
+                        context.returnsManager(list.parent).insertAt(list.el, list.index);
+                    });
+                    return BOOLEAN_TRUE;
+                }
+            },
+            keys: {},
+            ids: {},
+            group: {},
+            futureTree: {},
+            futureHash: {}
+        };
+        return diffs;
+    },
     // cannot start with a text node
     nodeComparison = function (a_, b_, hash_, stopper_, layer_level_, index_, diffs_, context, future_parent_) {
         var returns, resultant, current, inserting, identifyingKey, identified, first = !diffs_,
@@ -345,51 +421,7 @@ var ATTACHED = 'attached',
             b = b_,
             index = index_ || 0,
             future_parent = future_parent_,
-            diffs = diffs_ || {
-                removing: [],
-                updating: [],
-                inserting: [],
-                mutations: {
-                    remove: function () {
-                        if (!diffs.removing[LENGTH]) {
-                            return;
-                        }
-                        var elided = [];
-                        var nonelided = [];
-                        duff(diffs.removing, function (el) {
-                            if (!_.find(diffs.keys, function (element, key) {
-                                return element === el;
-                            })) {
-                                (checkNeedForCustom(el) ? elided : nonelided).push(el);
-                            }
-                        });
-                        context.$(elided).remove();
-                        duff(nonelided, passesFirstArgument(removeChild));
-                        return !!(elided[LENGTH] || nonelided[LENGTH]);
-                    },
-                    update: function () {
-                        duff(diffs.updating, function (fn) {
-                            fn();
-                        });
-                    },
-                    insert: function () {
-                        if (!diffs.inserting[LENGTH]) {
-                            return;
-                        }
-                        duff(diffs.inserting.sort(function (a, b) {
-                            return a.index > b.index ? -1 : 1;
-                        }), function (list) {
-                            insertBefore(list.parent, list.el, list.index);
-                        });
-                        return BOOLEAN_TRUE;
-                    }
-                },
-                keys: {},
-                ids: {},
-                group: {},
-                futureTree: {},
-                futureHash: {}
-            },
+            diffs = diffs_ || newDiff(context),
             stopper = stopper_ || returnsTrue,
             keys = diffs.keys,
             mutations = diffs.mutations,
@@ -477,6 +509,9 @@ var ATTACHED = 'attached',
             }
         }, []);
         return obj;
+    },
+    createDocumentFragment = function (nulled, context) {
+        return context.is(DOCUMENT) && context.element().createDocumentFragment();
     },
     isElement = function (object) {
         return !!(object && isNumber(object[NODE_TYPE]) && object[NODE_TYPE] === object.ELEMENT_NODE);
@@ -1212,7 +1247,7 @@ app.scope(function (app) {
             var div = createElement(DIV, manager);
             // collect custom element
             div.html(str);
-            return div.children().remove().unwrap();
+            return div.children().remove().toArray();
         },
         makeBranch = function (str, manager) {
             return makeTree(str, manager)[0];
@@ -1221,9 +1256,6 @@ app.scope(function (app) {
          * @private
          * @func
          */
-        createDocumentFragment = function (nulled, context) {
-            return context.is(DOCUMENT) && context.element().createDocumentFragment();
-        },
         /**
          * @private
          * @func
@@ -1245,7 +1277,7 @@ app.scope(function (app) {
                 frag = els;
             } else {
                 if (DOMA.isInstance(els)) {
-                    els = els.unwrap();
+                    els = els.toArray();
                 }
                 if (!isArrayLike(els)) {
                     els = els && toArray(els);
@@ -1276,7 +1308,7 @@ app.scope(function (app) {
         horizontalTraverser = function (method, _idxChange) {
             return attachPrevious(function (context, idxChange_) {
                 var collected = [],
-                    list = context.unwrap(),
+                    list = context.toArray(),
                     idxChange = _idxChange || idxChange_;
                 if (idxChange) {
                     context.duff(function (manager) {
@@ -2705,7 +2737,7 @@ app.scope(function (app) {
                     name = list.name,
                     mainHandler = elementHandlers[name],
                     capture = evnt.capturing,
-                    items = list.unwrap(),
+                    items = list.toArray(),
                     customEvents = evnt.origin.owner.events.custom;
                 for (; i < items[LENGTH] && !foundDuplicate; i++) {
                     obj = items[i];
@@ -2746,7 +2778,7 @@ app.scope(function (app) {
                             list.insertAt(evnt, mainHandler[CAPTURE_COUNT]);
                         }
                     } else {
-                        list.unwrap().push(evnt);
+                        list.toArray().push(evnt);
                     }
                 }
                 duff(evnt.nameStack, function (name) {
@@ -2950,6 +2982,9 @@ app.scope(function (app) {
             manager.remark(REMOVING, cachedRemoving);
             return manager;
         },
+        dommanagerunwrapper = function () {
+            return [this];
+        },
         DomManager = factories.DomManager = factories.Events.extend(DOM_MANAGER_STRING, extend({}, classApi, {
             'directive:creation:EventManager': DomEventsDirective,
             isValidDomManager: BOOLEAN_TRUE,
@@ -3080,9 +3115,9 @@ app.scope(function (app) {
                 }
                 if (manager.is(ELEMENT)) {
                     if (manager[REGISTERED_AS] && manager[REGISTERED_AS] !== BOOLEAN_TRUE) {
-                        wraptry(function () {
-                            manager = registerAs(manager, hash, owner);
-                        });
+                        manager = wraptry(function () {
+                            return registerAs(manager, hash, owner);
+                        }) || manager;
                     }
                     if (has(manager, REGISTERED_AS)) {
                         delete manager[REGISTERED_AS];
@@ -3103,9 +3138,8 @@ app.scope(function (app) {
             wrap: function (list) {
                 return this.owner.$(list || this);
             },
-            unwrap: function () {
-                return [this];
-            },
+            unwrap: dommanagerunwrapper,
+            toArray: dommanagerunwrapper,
             parent: (function () {
                 var finder = function (manager, fn, original) {
                         var rets, found, parentManager = manager,
@@ -3619,7 +3653,7 @@ app.scope(function (app) {
                                 els = [els];
                             } else {
                                 if (Collection.isInstance(els)) {
-                                    els = els.unwrap();
+                                    els = els.toArray();
                                 }
                                 if (canBeProcessed(els)) {
                                     els = [owner.returnsManager(els)];
@@ -3641,17 +3675,17 @@ app.scope(function (app) {
             changeValue: changeValue(domIterates),
             add: attachPrevious(function (context, query) {
                 var found = context.owner.$(query);
-                return concatUnique(context.unwrap(), found.unwrap());
+                return concatUnique(context.toArray(), found.toArray());
             }),
             addBack: attachPrevious(function (context, selector) {
                 var previous = context._previous;
                 if (!previous) {
-                    return context.unwrap().concat([]);
+                    return context.toArray().concat([]);
                 }
                 if (selector) {
                     previous = previous.filter(selector);
                 }
-                return context.unwrap().concat(previous.unwrap());
+                return context.toArray().concat(previous.toArray());
             }),
             wrap: function () {
                 return this;
@@ -3665,7 +3699,7 @@ app.scope(function (app) {
                     if (isWindow(el)) {
                         memo.push(el);
                     } else {
-                        memo = memo.concat(!isWindow(el) && isFunction(el.unwrap) ? el.unwrap() : owner.returnsManager(el));
+                        memo = memo.concat(!isWindow(el) && isFunction(el.unwrap) ? el.toArray() : owner.returnsManager(el));
                     }
                     return memo;
                 }, [], owner));
@@ -3688,7 +3722,7 @@ app.scope(function (app) {
              * @returns {Boolean}
              */
             fragment: function (els) {
-                return this.context.returnsManager(fragment(els || this.unwrap(), this.context));
+                return this.context.returnsManager(fragment(els || this.toArray(), this.context));
             },
             /**
              * @func
@@ -3697,11 +3731,11 @@ app.scope(function (app) {
              * @returns {DOMA} new DOMA instance object
              */
             filter: attachPrevious(function (context, filter) {
-                return domFilter(context.unwrap(), filter, context.owner);
+                return domFilter(context.toArray(), filter, context.owner);
             }),
             empty: attachPrevious(function (context, filtr) {
                 var filter = createDomFilter(filtr, context.owner);
-                return dataReconstructor(context.unwrap(), unwrapsOnLoop(function (memo, manager, idx, list) {
+                return dataReconstructor(context.toArray(), unwrapsOnLoop(function (memo, manager, idx, list) {
                     return !filter(manager, idx, list) && manager.remove();
                 }));
             }),
@@ -3717,7 +3751,7 @@ app.scope(function (app) {
                         matchers.push(context.owner.returnsManager(el));
                     };
                 // look into foldl so we do not get duplicate elements
-                return duff(context.unwrap(), function (manager) {
+                return duff(context.toArray(), function (manager) {
                     duff(query(str, manager.element(), manager), push);
                 }) && matchers;
             }),
@@ -3729,7 +3763,7 @@ app.scope(function (app) {
              */
             children: attachPrevious(function (context, eq) {
                 // this should be rewritten as context.foldl
-                return foldl(context.unwrap(), function (memo, manager) {
+                return foldl(context.toArray(), function (memo, manager) {
                     return manager.children(eq, memo);
                 }, []);
             }),
@@ -3754,7 +3788,7 @@ app.scope(function (app) {
              * @returns {Boolean} value indicating whether or not there were any non dom elements found in the collection
              */
             allElements: function () {
-                return !!(this[LENGTH]() && !find(this.unwrap(), function (manager) {
+                return !!(this[LENGTH]() && !find(this.toArray(), function (manager) {
                     return !manager.is(ELEMENT);
                 }));
             },
@@ -3792,7 +3826,7 @@ app.scope(function (app) {
              * @returns {DOMA} instance
              */
             eq: attachPrevious(function (context, num) {
-                return eq(context.unwrap(), num);
+                return eq(context.toArray(), num);
             }),
             /**
              * @func
@@ -3848,7 +3882,7 @@ app.scope(function (app) {
             skip: horizontalTraverser('skip', 0),
             siblings: attachPrevious(function (context, filtr) {
                 return mappedConcat(context, function (manager) {
-                    return manager.siblings(filtr).unwrap();
+                    return manager.siblings(filtr).toArray();
                 });
             }),
             /**
@@ -3893,7 +3927,7 @@ app.scope(function (app) {
                     parent = manager.parent();
                     parent.insertAt(elements, parent.children().indexOf(manager));
                     manager.remove();
-                    return elements.unwrap();
+                    return elements.toArray();
                 });
             }),
             contains: function (els) {
@@ -3958,10 +3992,10 @@ app.scope(function (app) {
              * @name DOMA#childOf
              */
             map: function (handler, context) {
-                return Collection(map(this.unwrap(), handler, context));
+                return Collection(map(this.toArray(), handler, context));
             },
             toJSON: function () {
-                return this.results(TO_JSON).unwrap();
+                return this.results(TO_JSON).toArray();
             },
             toString: function () {
                 return stringify(this);

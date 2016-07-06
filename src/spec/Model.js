@@ -308,12 +308,12 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 box.sort();
                 _.expect(box.directive('Children').map(function (model) {
                     return model.get('two');
-                }).unwrap()).toEqual([1, 2, 8]);
+                }).toArray()).toEqual([1, 2, 8]);
                 box.comparator = '!two';
                 box.sort();
                 _.expect(box.directive('Children').map(function (model) {
                     return model.get('two');
-                }).unwrap()).toEqual([8, 2, 1]);
+                }).toArray()).toEqual([8, 2, 1]);
             });
             _.it('set up events on their children', function () {
                 var counter = 0;

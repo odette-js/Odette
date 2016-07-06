@@ -128,7 +128,7 @@ app.scope(function (app) {
             },
             seekAndDestroy: function (list, handler, context) {
                 var obj, events = this,
-                    array = list.unwrap(),
+                    array = list.toArray(),
                     i = array[LENGTH] - 1;
                 for (; i >= 0; i--) {
                     obj = array[i];
@@ -213,7 +213,7 @@ app.scope(function (app) {
                 return each(this.handlers, this.scrub, this);
             },
             queue: function (stack, handler, evnt) {
-                return stack.unwrap().push(handler);
+                return stack.toArray().push(handler);
             },
             unQueue: function (stack, handler, evnt) {
                 return stack.pop();
@@ -242,7 +242,7 @@ app.scope(function (app) {
                     return;
                 }
                 running[name] = BOOLEAN_TRUE;
-                subset = events.subset(list.unwrap(), evnt);
+                subset = events.subset(list.toArray(), evnt);
                 subLength = subset[LENGTH];
                 for (; i < subLength && !stopped; i++) {
                     handler = subset[i];

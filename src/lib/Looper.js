@@ -108,10 +108,6 @@ app.scope(function (app) {
         }()),
         runner = function (tween, obj) {
             tween.current = obj;
-            if (obj.disabled) {
-                tween.dequeue(obj.id);
-                return;
-            }
             if (tween.is(HALTED)) {
                 // stops early
                 return BOOLEAN_TRUE;
@@ -119,6 +115,7 @@ app.scope(function (app) {
             wraptry(function () {
                 obj.fn(tween.lastRun);
             }, function () {
+                // takes queued object off of the queue
                 tween.dequeue(obj.id);
             });
         },
@@ -143,7 +140,7 @@ app.scope(function (app) {
                 if (tween.is(HALTED) || tween.is(STOPPED) || !tween[LENGTH]()) {
                     return;
                 }
-                sliced = Collection(tween.unwrap().slice(0));
+                sliced = Collection(tween.toArray().slice(0));
                 tween.lastRun = _nowish;
                 slicedLength = sliced[LENGTH]();
                 for (; i < slicedLength && !finished; i++) {
@@ -183,6 +180,7 @@ app.scope(function (app) {
                 var looper = this;
                 looper.unmark(STOPPED);
                 looper.unmark(HALTED);
+                start(looper);
                 return looper;
             },
             halt: function () {
@@ -190,23 +188,24 @@ app.scope(function (app) {
                 return this.stop();
             },
             queue: function (fn) {
-                var obj, id = uniqueId(BOOLEAN_FALSE),
+                var obj, len, id = uniqueId(BOOLEAN_FALSE),
                     tween = this;
                 if (!isFunction(fn)) {
                     return;
                 }
-                if (!tween[LENGTH]()) {
-                    tween.start();
-                }
+                len = tween[LENGTH]();
                 obj = {
                     fn: tween.bind(fn),
                     id: id,
-                    disabled: BOOLEAN_FALSE,
                     bound: tween
                 };
                 tween.push(obj);
                 tween.keep(ID, obj.id, obj);
-                start(tween);
+                if (len) {
+                    start(tween);
+                } else {
+                    tween.start();
+                }
                 return id;
             },
             bind: function (fn) {
@@ -332,6 +331,7 @@ app.scope(function (app) {
                 };
             }
         });
+    // use set timeout to play when visibility changes
     Looper.playWhileBlurred = BOOLEAN_TRUE;
     _.publicize({
         AF: Looper()

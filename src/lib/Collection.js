@@ -241,28 +241,28 @@ app.scope(function (app) {
             seeker: function (handler, context) {
                 var list = this,
                     bound = bindTo(handler, context);
-                return duffRight(list.unwrap(), function (one, two, three) {
+                return duffRight(list.toArray(), function (one, two, three) {
                     if (bound(one, two, three)) {
                         list.removeAt(two);
                     }
                 });
             },
             slice: function (one, two) {
-                return new Collection(this.unwrap().slice(one, two));
+                return new Collection(this.toArray().slice(one, two));
             }
         }, wrap(joinHandlers, function (name) {
             return function (arg) {
-                return this.unwrap()[name](arg);
+                return this.toArray()[name](arg);
             };
         }), wrap(indexers.concat(abstractedCanModify), function (name) {
             return function (one, two, three, four, five) {
                 var list = this;
-                return _[name](list.unwrap(), one, two, three, four, five);
+                return _[name](list.toArray(), one, two, three, four, five);
             };
         }), wrap(splatHandlers, function (name) {
             return function (args_) {
                 var args = isArray(args_) ? args_ : arguments,
-                    items = this.unwrap();
+                    items = this.toArray();
                 return items[name].apply(items, args);
             };
         }), wrap(nativeCannotModify, function (name) {
@@ -271,7 +271,7 @@ app.scope(function (app) {
                 if (list.iterating) {
                     return exception(cannotModifyMessage);
                 }
-                return list.unwrap()[name](one, two, three, four, five, six);
+                return list.toArray()[name](one, two, three, four, five, six);
             };
         }), wrap(abstractedCannotModify, function (name) {
             return function (one, two, three, four, five) {
@@ -279,18 +279,18 @@ app.scope(function (app) {
                 if (list.iterating) {
                     return exception(cannotModifyMessage);
                 }
-                return _[name](list.unwrap(), one, two, three, four, five);
+                return _[name](list.toArray(), one, two, three, four, five);
             };
         }), wrap(reverseCollection, function (name) {
             return function () {
                 var list = this;
                 list.remark(REVERSED, !list.is(REVERSED));
-                list.unwrap()[name]();
+                list.toArray()[name]();
                 return list;
             };
         }), wrap(eachHandlers, function (fn) {
             return marksIterating(function (list, handler, context) {
-                var args0 = list.unwrap(),
+                var args0 = list.toArray(),
                     args1 = handler,
                     args2 = arguments[LENGTH] > 1 ? context : list;
                 fn(args0, args1, args2);
@@ -298,16 +298,16 @@ app.scope(function (app) {
             });
         }), wrap(countingCollection, function (name) {
             return marksIterating(function (list, runner, fromHere, toThere) {
-                _[name](list.unwrap(), runner, list, fromHere, toThere);
+                _[name](list.toArray(), runner, list, fromHere, toThere);
                 return list;
             });
         }), wrap(recreatingSelfCollection, function (name) {
             return marksIterating(function (list, one, two, three) {
-                return new Collection[CONSTRUCTOR](_[name](list.unwrap(), one, two, three));
+                return new Collection[CONSTRUCTOR](_[name](list.toArray(), one, two, three));
             });
         }), wrap(foldFindIteration, function (name) {
             return marksIterating(function (list, one, two, three) {
-                return _[name](list.unwrap(), one, two, three);
+                return _[name](list.toArray(), one, two, three);
             });
         })),
         ret = _.publicize({
@@ -339,6 +339,9 @@ app.scope(function (app) {
             flatten: flatten,
             eq: eq
         }),
+        unwrapper = function () {
+            return this.items;
+        },
         Collection = factories[COLLECTION] = factories.Directive.extend(COLLECTION, extend({
             get: parody(REGISTRY, 'get'),
             keep: parody(REGISTRY, 'keep'),
@@ -355,7 +358,7 @@ app.scope(function (app) {
                 return this;
             },
             obliteration: function (handler, context) {
-                duffRight(this.unwrap(), handler, context === UNDEFINED ? this : context);
+                duffRight(this.toArray(), handler, context === UNDEFINED ? this : context);
                 return this;
             },
             empty: function () {
@@ -366,27 +369,26 @@ app.scope(function (app) {
             reset: function (items) {
                 // can be array like
                 var list = this,
-                    old = list.unwrap() || [];
+                    old = list.toArray() || [];
                 list.iterating = list.iterating ? exception(cannotModifyMessage) : 0;
-                list.items = items == NULL ? [] : (Collection.isInstance(items) ? items.unwrap().slice(0) : toArray(items));
+                list.items = items == NULL ? [] : (Collection.isInstance(items) ? items.toArray().slice(0) : toArray(items));
                 list.unmark(REVERSED);
                 return list;
             },
-            unwrap: function () {
-                return this.items;
-            },
+            toArray: unwrapper,
+            unwrap: unwrapper,
             length: function () {
-                return this.unwrap()[LENGTH];
+                return this.toArray()[LENGTH];
             },
             first: function () {
-                return this.unwrap()[0];
+                return this.toArray()[0];
             },
             last: function () {
-                var items = this.unwrap();
+                var items = this.toArray();
                 return items[items[LENGTH] - 1];
             },
             item: function (number) {
-                return this.unwrap()[number || 0];
+                return this.toArray()[number || 0];
             },
             has: function (object) {
                 return this.indexOf(object) !== -1;
@@ -394,14 +396,14 @@ app.scope(function (app) {
             sort: function (fn_) {
                 // normalization sort function for cross browsers
                 var list = this;
-                sort(list.unwrap(), fn_, list.is(REVERSED), list);
+                sort(list.toArray(), fn_, list.is(REVERSED), list);
                 return list;
             },
             toString: function () {
-                return stringify(this.unwrap());
+                return stringify(this.toArray());
             },
             toJSON: function () {
-                return map(this.unwrap(), function (item) {
+                return map(this.toArray(), function (item) {
                     return result(item, TO_JSON);
                 });
             },
@@ -411,9 +413,9 @@ app.scope(function (app) {
             range: recreateSelf(range),
             concat: recreateSelf(function () {
                 // this allows us to mix collections with regular arguments
-                var base = this.unwrap();
+                var base = this.toArray();
                 return base.concat.apply(base, map(arguments, function (arg) {
-                    return Collection(arg).unwrap();
+                    return Collection(arg).toArray();
                 }));
             })
         }, wrappedCollectionMethods)),
@@ -439,17 +441,17 @@ app.scope(function (app) {
                 return sorted;
             },
             closestIndex: function (value) {
-                return closestIndex(this.unwrap(), value);
+                return closestIndex(this.toArray(), value);
             },
             closest: function (value) {
-                var index, list = this.unwrap();
+                var index, list = this.toArray();
                 return (index = closestIndex(list, value)) === -1 ? UNDEFINED : list[index];
             },
             validIDType: function (id) {
                 return isNumber(id) || isString(id);
             },
             indexOf: function (object, min, max) {
-                return smartIndexOf(this.unwrap(), object, BOOLEAN_TRUE);
+                return smartIndexOf(this.toArray(), object, BOOLEAN_TRUE);
             },
             load: function (values) {
                 var sm = this;
@@ -550,7 +552,7 @@ app.scope(function (app) {
                         found.isValid(BOOLEAN_TRUE);
                     } else {
                         found = new sm.Child(string, sm);
-                        sm.unwrap().push(found);
+                        sm.toArray().push(found);
                         sm.keep(ID, string, found);
                     }
                 }
@@ -615,7 +617,7 @@ app.scope(function (app) {
                 if ((cachedValue = parentRegistry.get(DELIMITED, delimiter)) !== UNDEFINED) {
                     return cachedValue;
                 }
-                sliced = parent.unwrap().slice(0);
+                sliced = parent.toArray().slice(0);
                 parent.indexer = 0;
                 parent.delimiter = delimiter;
                 // sliced is thrown away,

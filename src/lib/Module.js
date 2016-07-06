@@ -196,24 +196,17 @@ app.scope(function (app) {
             }
         },
         // extraModuleArguments = [],
-        Module = factories.Module = factories.Model.extend(MODULE, extend({}, startableMethods, moduleMethods)),
+        Module = factories.Module = factories.Model.extend(CAPITAL_MODULE, extend({}, startableMethods, moduleMethods)),
         baseModuleArguments = function (app, windo) {
             var _ = app._;
             var documentView = app.directive(DOCUMENT_MANAGER).documents.get(ID, windo[DOCUMENT][__ELID__]);
             return [app, _, _ && _.factories, documentView, documentView.factories, documentView.$];
         },
         appextendresult = app.extend(extend({}, factories.Directive[CONSTRUCTOR][PROTOTYPE], factories.Events[CONSTRUCTOR][PROTOTYPE], factories.Parent[CONSTRUCTOR][PROTOTYPE], startableMethods, moduleMethods, {
-            // addModuleArguments: function (arr) {
-            //     _.addAll(extraModuleArguments, arr);
-            //     return this;
-            // },
-            // removeModuleArguments: function (arr) {
-            //     _.removeAll(extraModuleArguments, arr);
-            //     return this;
-            // },
             createArguments: function (windo) {
                 return baseModuleArguments(this, windo);
             }
         }));
+    // delete the prototype link from parent prototype
     delete app.fn;
 });
