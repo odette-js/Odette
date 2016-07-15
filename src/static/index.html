@@ -36,21 +36,20 @@
         </style>
     </head>
     <body>
-<!-- <script type="text/x-odette" id="employees-container">
-</script> -->
 
 <script type="text/x-odette" id="profile-summary">
 return [
-    ["span", null, first_name + ' ' + last_name, "full_name"],
-    ["p", null, clicks + '', "click_counter"]
+    ["span", null, first_name + ' ' + last_name, {
+        key: "full_name" }],
+    ["p", null, clicks + '', {
+        key: "click_counter" }]
 ];
 </script>
         <div id="main-region"></div>
         <script type="text/javascript" src="/js/odette.js"></script>
         <script type="text/javascript" src="/js/application.js"></script>
         <script type="text/javascript" src="/js/library.js"></script>
-        <script type="text/javascript">application.definition(application.scope().VERSION, this);</script>
-        <!-- <script src="/js/extra.js"></script> -->
-        <script src="/js/playground.js"></script>
+        <script type="text/javascript">application.definition(this);</script>
+        <script type="text/javascript" src="/js/playground.js"></script>
     </body>
 </html>

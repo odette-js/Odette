@@ -56,9 +56,6 @@ app.scope(function (app) {
                 this[STOP](e);
             }
         },
-        // createArguments = function (module, windo, args) {
-        //     return ;
-        // },
         checks = function (app, list) {
             var exporting = [];
             duff(list, function (path) {
@@ -112,10 +109,10 @@ app.scope(function (app) {
                     if (parent === app) {
                         module = Module({}, arg2);
                         parentModulesDirective.add(module);
+                        parentModulesDirective.keep(ID, name, module);
                     } else {
-                        module = parent.add({}, arg2)[0];
+                        module = parent.add({}, arg2).item(0);
                     }
-                    parentModulesDirective.keep(ID, name, module);
                     app[CHILDREN].keep(ID, globalname, module);
                 }
                 if (isWindow(windo) || isFunction(windo) || isFunction(fn)) {
@@ -144,13 +141,9 @@ app.scope(function (app) {
                 }
                 return result === UNDEFINED ? module : result;
             },
-            publicize: function (one, two) {
-                var module = this;
-                intendedObject(one, two, function (key, value) {
-                    module[EXPORTS][key] = value;
-                });
-                return module;
-            },
+            publicize: intendedApi(function (key, value) {
+                this[EXPORTS][key] = value;
+            }),
             constructor: function (attrs, opts) {
                 var module = this;
                 module.startWithParent = BOOLEAN_TRUE;
@@ -166,15 +159,25 @@ app.scope(function (app) {
             topLevel: function () {
                 return !this[APPLICATION] || this[APPLICATION] === this[PARENT];
             },
+            require: function (key, fn) {
+                return this.application.require(this.globalname + PERIOD + key, fn);
+            }
+        },
+        Module = factories.Module = factories.Model.extend(CAPITAL_MODULE, extend({}, startableMethods, moduleMethods)),
+        appextendresult = app.extend(extend({}, factories.Directive[CONSTRUCTOR][PROTOTYPE], factories.Events[CONSTRUCTOR][PROTOTYPE], factories.Parent[CONSTRUCTOR][PROTOTYPE], startableMethods, moduleMethods, {
+            createArguments: function (windo) {
+                var app = this;
+                var _ = app._;
+                var documentView = app.directive(DOCUMENT_MANAGER).documents.get(ID, windo[DOCUMENT][__ELID__]);
+                return [app, _, _ && _.factories, documentView, documentView.factories, documentView.$];
+            },
             require: function (modulename, handler) {
                 var promise, module, list, mappedArguments, app = this;
                 if (!isFunction(handler)) {
                     module = app.module(modulename);
-                    return module.is(DEFINED) ? module[EXPORTS] : exception({
-                        message: 'that module has not been ' + DEFINED + ' yet'
-                    });
+                    return module.is(DEFINED) ? module[EXPORTS] : exception('that module has not been ' + DEFINED + ' yet');
                 } else {
-                    promise = _.Promise();
+                    promise = Promise();
                     list = toArray(modulename, SPACE);
                     if (!isArray(list) || !list[LENGTH]) {
                         return promise;
@@ -184,7 +187,7 @@ app.scope(function (app) {
                     if ((mappedArguments = checks(app, list))) {
                         promise.fulfill(mappedArguments);
                     } else {
-                        app[APPLICATION].on(INITIALIZED_COLON_SUBMODULE, function () {
+                        app.on(INITIALIZED_COLON_SUBMODULE, function () {
                             if ((mappedArguments = checks(app, list))) {
                                 app.off();
                                 promise.fulfill(mappedArguments);
@@ -193,18 +196,6 @@ app.scope(function (app) {
                     }
                     return promise;
                 }
-            }
-        },
-        // extraModuleArguments = [],
-        Module = factories.Module = factories.Model.extend(CAPITAL_MODULE, extend({}, startableMethods, moduleMethods)),
-        baseModuleArguments = function (app, windo) {
-            var _ = app._;
-            var documentView = app.directive(DOCUMENT_MANAGER).documents.get(ID, windo[DOCUMENT][__ELID__]);
-            return [app, _, _ && _.factories, documentView, documentView.factories, documentView.$];
-        },
-        appextendresult = app.extend(extend({}, factories.Directive[CONSTRUCTOR][PROTOTYPE], factories.Events[CONSTRUCTOR][PROTOTYPE], factories.Parent[CONSTRUCTOR][PROTOTYPE], startableMethods, moduleMethods, {
-            createArguments: function (windo) {
-                return baseModuleArguments(this, windo);
             }
         }));
     // delete the prototype link from parent prototype

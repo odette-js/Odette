@@ -84,9 +84,7 @@ app.scope(function (app) {
                 return this;
             },
             when: function (key) {
-                return this[PARENT] ? this[PARENT].when(key) : exception({
-                    message: 'this sequencer has been destroyed'
-                });
+                return this[PARENT] ? this[PARENT].when(key) : exception('this sequencer has been destroyed');
             },
             and: function (key) {
                 var sequencer = this;

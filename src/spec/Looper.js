@@ -95,7 +95,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
         });
         _.it('will also give you closures that you can call multiple times to defer an original function, much like the _.defer method', function (done) {
             var counter = 0,
-                closure = _.AF.defer(100, function () {
+                closure = _.AF.defer(0, function () {
                     _.expect(counter).toEqual(2);
                     done();
                 });

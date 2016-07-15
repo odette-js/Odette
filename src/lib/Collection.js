@@ -6,15 +6,9 @@ var COLLECTION = 'Collection',
     SORTED_COLLECTION = 'Sorted' + COLLECTION;
 // now we start with some privacy
 app.scope(function (app) {
-    var isNullMessage = {
-            message: 'object must not be null or ' + UNDEFINED
-        },
-        validIdMessage = {
-            message: 'objects in sorted collections must have either a number or string for their valueOf result'
-        },
-        cannotModifyMessage = {
-            message: 'list cannot be modified while it is being iterated over'
-        },
+    var isNullMessage = 'object must not be null or ' + UNDEFINED,
+        validIdMessage = 'objects in sorted collections must have either a number or string for their valueOf result',
+        cannotModifyMessage = 'list cannot be modified while it is being iterated over',
         /**
          * @func
          */
@@ -211,6 +205,7 @@ app.scope(function (app) {
             duff: duff,
             forEach: duff,
             eachCall: eachCall,
+            eachCallTry: eachCallTry,
             eachRight: duffRight,
             duffRight: duffRight,
             forEachRight: duffRight,
@@ -403,9 +398,7 @@ app.scope(function (app) {
                 return stringify(this.toArray());
             },
             toJSON: function () {
-                return map(this.toArray(), function (item) {
-                    return result(item, TO_JSON);
-                });
+                return results(this.toArray(), TO_JSON);
             },
             copy: function () {
                 return this.items.slice(0);
@@ -428,7 +421,7 @@ app.scope(function (app) {
         SortedCollection = factories.SortedCollection = Collection.extend(SORTED_COLLECTION, {
             constructor: function (list_, skip) {
                 var sorted = this;
-                Collection[CONSTRUCTOR].call(sorted);
+                sorted[CONSTRUCTOR + COLON + COLLECTION]();
                 if (list_ && !skip) {
                     sorted.load(isArrayLike(list_) ? list_ : [list_]);
                 }

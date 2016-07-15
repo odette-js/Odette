@@ -100,9 +100,7 @@ app.scope(function (app) {
                         url = stringifyQuery(url);
                     }
                     if (!url || !type) {
-                        return exception({
-                            message: 'http object must have a url and a type'
-                        });
+                        return exception('http object must have a url and a type');
                     }
                     ajax.attachResponseHandler();
                     xhrReq.open(type, url, ajax.options.async);

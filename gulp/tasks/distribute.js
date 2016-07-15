@@ -10,7 +10,6 @@ var gulp = require('gulp'),
     minName = function (filename) {
         var name = filename.split('.');
         name.splice(name.length - 1, 0, 'min');
-        console.log(name.join('.'));
         return name.join('.');
     };
 module.exports = function (settings, paths) {

@@ -71,9 +71,7 @@ app.scope(function (app) {
             }
             return promise;
         },
-        unknownStateErrorMessage = {
-            message: 'promise cannot resolve to an unknown or invalid ("", false, null, 0, etc.) state. Please check your resolution tree as well as your resolveAs method input'
-        },
+        unknownStateErrorMessage = 'promise cannot resolve to an unknown or invalid ("", false, null, 0, etc.) state. Please check your resolution tree as well as your resolveAs method input',
         dispatch = function (promise, name, opts_) {
             var finalName = name,
                 allstates = result(promise, ALL_STATES),

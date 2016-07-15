@@ -416,8 +416,45 @@ var cacheable = function (fn) {
             }
         });
         return time;
-    });
+    }),
+    escapes = {
+        "'": "'",
+        '\\': '\\',
+        '\r': 'r',
+        '\n': 'n',
+        '\u2028': 'u2028',
+        '\u2029': 'u2029'
+    },
+    escapeRegExp = /\\|'|\r|\n|\u2028|\u2029/g,
+    escapeChar = function (match) {
+        return '\\' + escapes[match];
+    },
+    escapeMap = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#x27;',
+        '`': '&#x60;'
+    },
+    unescapeMap = invert(escapeMap),
+    createEscaper = function (map) {
+        var escaper = function (match) {
+            return map[match];
+        };
+        var source = '(?:' + keys(map).join('|') + ')';
+        var testRegexp = RegExp(source);
+        var replaceRegexp = RegExp(source, 'g');
+        return function (string) {
+            string = string == NULL ? EMPTY_STRING : EMPTY_STRING + string;
+            return testRegexp.test(string) ? string.replace(replaceRegexp, escaper) : string;
+        };
+    },
+    escape = createEscaper(escapeMap),
+    unescape = createEscaper(unescapeMap);
 _.publicize({
+    escape: escape,
+    unescape: unescape,
     monthIndex: monthsIndex,
     monthHash: monthsHash,
     months: months,
@@ -434,7 +471,7 @@ _.publicize({
     prefix: prefix,
     prefixAll: prefixAll,
     capitalize: capitalize,
-    capitalize: capitalize,
+    // capitalize: capitalize,
     unCamelCase: unCamelCase,
     spinalCase: unCamelCase,
     camelCase: camelCase,

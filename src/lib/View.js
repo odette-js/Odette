@@ -1,13 +1,12 @@
 var REGION_MANAGER = 'RegionManager',
     DOCUMENT_VIEW = 'DocumentView',
     DOCUMENT_MANAGER = 'DocumentManager',
+    RENDER_LOOP = 'renderLoop',
     verifyOwner$ = function (instance) {
         if (instance.owner$) {
             return;
         }
-        exception({
-            message: 'object needs an owner$ function to scope itself against a document'
-        });
+        exception('object needs an owner$ function to scope itself against a ' + DOCUMENT);
     };
 app.scope(function (app) {
     var protoProp = _.protoProp,
@@ -17,25 +16,19 @@ app.scope(function (app) {
         isArrayLike = _.isArrayLike,
         reverseParams = _.reverseParams,
         intendedObject = _.intendedObject,
-        createDocumentFragment = _.createDocumentFragment,
         RENDER = 'render',
         RENDERING = RENDER + 'ing',
         RENDERED = RENDER + 'ed',
         OPTIONS = 'options',
+        MODEL_ID = 'modelId',
         ESTABLISHED = 'established',
         PARENT_NODE = 'parentNode',
         CONSTRUCTOR = 'constructor',
         BUFFERED_VIEWS = 'bufferedViews',
-        noRegionMessage = {
-            message: 'that region does not exist'
-        },
-        invalidRegionMessage = {
-            message: 'invalid key passed for region name'
-        },
+        noRegionMessage = 'that region does not exist',
+        invalidRegionMessage = 'invalid key passed for region name',
         elementDoesNotExistAt = function (key) {
-            return exception({
-                message: 'an element does not exist at ' + key
-            });
+            return exception('an element does not exist at ' + key);
         },
         /**
          * @class View
@@ -52,14 +45,14 @@ app.scope(function (app) {
             var isModel, child, Child, isView, model = view_,
                 children = region.directive(CHILDREN);
             if ((isView = View.isInstance(view_))) {
-                if ((child = children.get('modelId', view_.model.id))) {
+                if ((child = children.get(MODEL_ID, view_.model.id))) {
                     return child;
                 } else {
                     return view_;
                 }
             }
             if ((isModel = Model.isInstance(model))) {
-                if ((child = children.get('modelId', model.id))) {
+                if ((child = children.get(MODEL_ID, model.id))) {
                     return child;
                 }
             } else {
@@ -76,7 +69,7 @@ app.scope(function (app) {
             model = view.model;
             children.drop('viewCid', view.cid);
             children.drop('modelCid', model.cid);
-            children.drop('modelId', model.id);
+            children.drop(MODEL_ID, model.id);
             return region;
         },
         Region = factories.Region = Parent.extend('Region', {
@@ -126,7 +119,7 @@ app.scope(function (app) {
                 model = view.model;
                 children.keep('viewCid', view.cid, view);
                 children.keep('modelCid', model.cid, view);
-                children.keep('modelId', model.id, view);
+                children.keep(MODEL_ID, model.id, view);
                 return view;
             },
             buffer: function (view) {
@@ -290,11 +283,11 @@ app.scope(function (app) {
                 view[DISPATCH_EVENT](BEFORE_COLON + RENDER);
                 // renders the html
                 // mark the view as rendered
-                establishRegions(view, BOOLEAN_TRUE);
                 // pass buffered views up to region
                 if (view[REGION_MANAGER]) {
                     view[REGION_MANAGER].list.eachCall(RENDER, isFunction(preventChain) ? preventChain : returnsTrue);
                 }
+                establishRegions(view, BOOLEAN_TRUE);
                 element = view[PARENT] && view[PARENT].buffer(view);
                 return view;
             }
@@ -416,59 +409,63 @@ app.scope(function (app) {
             constructor: function (options) {
                 var documentView = this;
                 extend(documentView, options);
-                documentView.modifications = Collection();
                 return documentView;
             },
+            chunk: function (id, fn) {
+                var docViewManager = this.parent,
+                    modifications = docViewManager.modifications,
+                    alreadyQueued = modifications.get(ID, id),
+                    chunk = alreadyQueued || {
+                        id: id,
+                        fn: fn,
+                        counter: 0
+                    };
+                if (alreadyQueued) {
+                    alreadyQueued.counter += 1;
+                }
+                modifications.keep(ID, id, chunk);
+                modifications.push(chunk);
+                docViewManager.checkRenderLoop();
+            }
+        }),
+        DocumentManager = factories[DOCUMENT_MANAGER] = factories.Model.extend(DOCUMENT_MANAGER, {
+            checkRenderLoop: function () {
+                if (!this.get(RENDER_LOOP)) {
+                    this.modify();
+                }
+            },
+            dependency: function () {
+                var docViewManager = this;
+                docViewManager.set(RENDER_LOOP, docViewManager.get(RENDER_LOOP) + 1);
+                return function () {
+                    docViewManager.set(RENDER_LOOP, docViewManager.get(RENDER_LOOP) - 1);
+                    docViewManager.checkRenderLoop();
+                };
+            },
             modify: function () {
-                var data, documentView = this,
+                var finisher, documentView = this,
                     modifications = documentView.modifications;
                 if (!modifications.length()) {
                     return;
                 }
-                data = documentView.directive(DATA);
+                modifications = modifications.slice(0);
+                documentView.modifications = Collection();
                 // silently set write
-                data.set('write', BOOLEAN_TRUE);
-                modifications.eachCall('fn');
+                finisher = documentView.dependency();
+                documentView.mark('writing');
+                modifications.eachCallTry('fn');
                 // let everyone know when
                 // you're done writing
-                documentView.set('write', BOOLEAN_FALSE);
+                documentView.unmark('writing');
+                finisher();
             },
-            dependency: function () {
-                var documentView = this,
-                    data = documentView.directive(DATA);
-                data.set('renderLoop', documentView.get('renderLoop') + 1);
-                return function () {
-                    data.set('renderLoop', documentView.get('renderLoop') - 1);
-                    if (documentView.get('renderLoop') !== 0) {
-                        return;
-                    }
-                    documentView.modify();
-                };
-            },
-            chunk: function (id, fn) {
-                var documentView = this,
-                    modifications = documentView.modifications,
-                    alreadyQueued = modifications.get(ID, id),
-                    chunk = {
-                        id: id,
-                        fn: fn,
-                        origin: documentView
-                    };
-                if (documentView.get('write')) {
-                    exception({
-                        message: 'renders should not trigger more renders. stop that.'
-                    });
-                }
-                modifications.keep(ID, id, chunk);
-                modifications.push(chunk);
-                documentView.checkRenderLoop();
-            }
-        }),
-        DocumentManager = factories[DOCUMENT_MANAGER] = factories.Directive.extend(DOCUMENT_MANAGER, {
             constructor: function (app) {
+                // all managed and connected externally. no api
                 var documentManager = this;
                 documentManager.parent = app;
                 documentManager.documents = Collection();
+                documentManager.modifications = Collection();
+                factories.Model[CONSTRUCTOR].apply(this, arguments);
                 return documentManager;
             }
         });
@@ -497,20 +494,8 @@ app.scope(function (app) {
         // Returns a new, non-mutated, parsed events hash.
         normalizeUIKeys = function (hash, ui) {
             return reduce(hash, function (memo, val, key) {
-                var normalizedKey = normalizeUIString(key, ui);
-                memo[normalizedKey] = val;
-                return memo;
+                memo[normalizeUIString(key, ui)] = val;
             }, {});
-        },
-        canBeSaved = function (element, tagName, attributes) {
-            var manager = element.el;
-            if (manager.tagName !== tagName) {
-                return BOOLEAN_FALSE;
-            }
-            var value = manager.attr('key');
-        },
-        createVirtual = function (element, el) {
-            //
         },
         Element = factories.Directive.extend(CAPITAL_ELEMENT, {
             constructor: function (view) {
@@ -524,7 +509,7 @@ app.scope(function (app) {
                 if (selector) {
                     element[SELECTOR] = selector;
                 }
-                if (isInstance(selector, factories.DOMA)) {
+                if (factories.DOMA.isInstance(selector)) {
                     return;
                 }
                 if (isString(selector)) {
@@ -548,8 +533,7 @@ app.scope(function (app) {
             },
             set: function (el) {
                 var directive = this;
-                var view = directive.view;
-                view.el = directive.el = el;
+                directive.view.el = directive.el = el;
             },
             diff: function () {
                 var element = this,
@@ -559,36 +543,44 @@ app.scope(function (app) {
                     json = (view.model && view.model.toJSON()) || {},
                     // try to generate template
                     virtual = element.virtual = [view.tagName(), element.attributes(), view.template(json, result(view, 'helpers') || {})],
-                    comparison = view.owner$.nodeComparison(el, virtual, element.cachedKeys, bindTo(element.comparisonFilter, element)),
+                    comparison = view.owner$.nodeComparison(el, virtual, element.hashed, bindTo(element.comparisonFilter, element)),
                     keys = element.hashed = comparison.keys,
                     mutations = element.mutations = comparison.mutations,
-                    modifiers = element.modifiers = view.modifiers();
+                    modifiers = element.modifiers = extend({
+                        remove: noop,
+                        update: noop,
+                        insert: noop
+                    }, isFunction(modifiers = view.modifiers()) ? {
+                        insert: modifiers
+                    } : modifiers);
             },
             comparisonFilter: function (node) {
-                var element = this,
-                    view = element.view,
-                    regionManager = view.directive(REGION_MANAGER),
+                // node is a virtual node, so json
+                var regionManager = this.view.directive(REGION_MANAGER),
+                    // get the 3rd index, where all the data is stored
                     id = node[3] || {},
                     key = id.key;
+                // if you don't have an identifying key, and are not registered as a region, then go ahead
                 return !key || !regionManager.get(ID, key);
             },
             delta: function () {
-                var element = this,
+                var result, element = this,
                     view = element.view,
                     mutations = element.mutations,
                     modifiers = element.modifiers,
                     memo = BOOLEAN_FALSE;
+                if (!element.mutations) {
+                    return BOOLEAN_FALSE;
+                }
                 delete element.mutations;
                 delete element.modifiers;
-                if (!isObject(modifiers)) {
-                    modifiers = {
-                        insert: modifiers
-                    };
-                }
-                mutations = [mutations.remove, modifiers.remove || noop, mutations.update, modifiers.update || noop, mutations.insert, modifiers.insert || noop];
-                return foldl(mutations, function (memo, fn) {
-                    return fn(view) || memo;
-                }, memo);
+                // if it's a function, then do it last
+                result = mutations.remove() || memo;
+                result = modifiers.remove() || result;
+                result = mutations.update() || result;
+                result = modifiers.update() || result;
+                result = mutations.insert() || result;
+                return modifiers.insert() || result;
             },
             renderEl: function () {
                 var replacing, elementsSwapped, element = this,
@@ -611,22 +603,38 @@ app.scope(function (app) {
                 element.delegateEvents();
                 element.delegateTriggers();
             },
-            renderTemplate: function () {
+            setState: function () {
                 var elementsSwapped, element = this,
                     view = element.view;
-                if (!(elementsSwapped = element.delta())) {
-                    return;
+                view.unmark('asyncRendering');
+                // prevent future from triggering
+                view.owner$.documentView.chunk(view.cid, noop);
+                if ((elementsSwapped = element.delta())) {
+                    // ui objects changed. need to update groups
+                    element.bindUI();
                 }
-                element.bindUI();
                 view.unmark(RENDERING);
                 view.mark(RENDERED);
                 // dispatch the render event
                 view[DISPATCH_EVENT](RENDER);
+                return element;
+            },
+            renderTemplate: function () {
+                var element = this,
+                    view = element.view;
+                // if it is attached and the documentview is not writing already, then queue it up
+                if (view.el.is('attached')) {
+                    view.mark('asyncRendering');
+                    view.owner$.documentView.chunk(view.cid, bindTo(element.setState, element));
+                } else {
+                    element.setState();
+                }
+                return element;
             },
             degenerateUIBindings: function () {
                 var directive = this;
                 if (!directive.ui) {
-                    return;
+                    return NULL;
                 }
                 directive.ui = directive.view.ui = directive.uiBindings;
                 delete directive.uiBindings;
@@ -695,6 +703,7 @@ app.scope(function (app) {
                     el.on(object.events, object[SELECTOR], bound, object.capture, object.group);
                 });
                 directive.cachedElementTriggers = __events;
+                return directive;
             },
             undelegateTriggers: function () {
                 var key, method, match, directive = this,
@@ -736,9 +745,7 @@ app.scope(function (app) {
         var documents = documentManager.documents;
         var documentView = documents.get(ID, doc[__ELID__]);
         if (documentView) {
-            exception({
-                message: 'document has already been setup'
-            });
+            exception('document has already been setup');
         }
         var $ = opts.$,
             owner = $.document,

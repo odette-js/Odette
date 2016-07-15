@@ -1,4 +1,5 @@
-var DISPATCH_EVENT = 'dispatchEvent',
+var EVENTS_STRING = 'Events',
+    DISPATCH_EVENT = 'dispatchEvent',
     EVENTS = 'EventManager',
     STOP_LISTENING = 'stopListening',
     TALKER_ID = 'talkerId',
@@ -10,9 +11,7 @@ var DISPATCH_EVENT = 'dispatchEvent',
 app.scope(function (app) {
     var methodExchange = function (eventer, handler) {
             var fn = isString(handler) ? eventer[handler] : handler,
-                valid = !isFunction(fn) && exception({
-                    message: 'handler must be a function or a string with a method on the originating object'
-                });
+                valid = !isFunction(fn) && exception('handler must be a function or a string with a method on the originating object');
             return fn;
         },
         iterateOverList = function (eventer, directive, names, handler, args, iterator) {
@@ -173,7 +172,7 @@ app.scope(function (app) {
             listenToHandler(eventer, directive, obj, list, onceModification);
         },
         uniqueKey = 'c',
-        Events = factories.Events = factories.Directive.extend('Events', {
+        Events = factories[EVENTS_STRING] = factories.Directive.extend(EVENTS_STRING, {
             /**
              * @description attach event handlers to the Model event loop
              * @func
@@ -199,13 +198,13 @@ app.scope(function (app) {
             reply: parody('Messenger', 'reply'),
             when: parody('Linguistics', 'when'),
             constructor: function (opts) {
-                var model = this;
-                extend(model, opts);
-                model[uniqueKey + ID] = model[uniqueKey + ID] || uniqueId(uniqueKey);
+                var eventer = this;
+                extend(eventer, opts);
+                eventer[uniqueKey + ID] = eventer[uniqueKey + ID] || uniqueId(uniqueKey);
                 // reacting to self
-                model.on(result(model, 'events'));
-                model.initialize(opts);
-                return model;
+                eventer.on(result(eventer, 'events'));
+                eventer.initialize(opts);
+                return eventer;
             },
             /**
              * @description attaches an event handler to the events object, and takes it off as soon as it runs once

@@ -152,9 +152,7 @@ app.scope(function (app) {
                         list.push(next);
                     }
                     if (previous === next) {
-                        exception({
-                            message: 'bubbling discerners must return a different object each time it is run'
-                        });
+                        exception('bubbling discerners must return a different object each time it is run');
                     }
                 }
                 duff(list, function (target) {
@@ -219,7 +217,7 @@ app.scope(function (app) {
                 return stack.pop();
             },
             has: function (key) {
-                return this.handlers[key] && this.handlers[key][LENGTH]();
+                return !!((this.handlers[key] && this.handlers[key][LENGTH]()) || this.proxyStack[LENGTH]());
             },
             dispatch: function (name, evnt) {
                 var subset, subLength, handler, i = 0,
@@ -234,9 +232,7 @@ app.scope(function (app) {
                     bus = events.proxyStack;
                 // make sure setup is proper
                 if (cached) {
-                    return exception({
-                        message: 'cannot stack events coming from the same object'
-                    });
+                    return exception('cannot stack events coming from the same object');
                 }
                 if (stopped || !list || !list[LENGTH]()) {
                     return;
@@ -254,6 +250,8 @@ app.scope(function (app) {
                 }
                 if (stopped) {
                     events.cancelled(stack, evnt);
+                } else {
+                    bus.eachCall('run', evnt);
                 }
                 evnt.finished();
                 running[name] = !!cached;
@@ -261,6 +259,39 @@ app.scope(function (app) {
             },
             subset: function (list) {
                 return list.slice(0);
+            },
+            addBus: function (key, target, prefix, filter) {
+                var bus, eventer = this,
+                    proxyStack = eventer.proxyStack;
+                if (!(bus = proxyStack.get(key))) {
+                    if (eventer.target === target) {
+                        exception('bus target cannot be the same as delegated target');
+                    }
+                    bus = {
+                        prefix: prefix || EMPTY_STRING,
+                        target: target,
+                        filter: filter || returnsTrue,
+                        run: function (evnt) {
+                            if (!this.filter(evnt)) {
+                                return;
+                            }
+                            this.target[DISPATCH_EVENT](this.prefix ? (this.prefix + evnt.name) : evnt.name, evnt);
+                        }
+                    };
+                    proxyStack.push(bus);
+                    proxyStack.keep(ID, key, bus);
+                }
+                return this;
+            },
+            removeBus: function (key) {
+                var eventer = this,
+                    proxyStack = eventer.proxyStack;
+                if ((bus = proxyStack.get(key))) {
+                    proxyStack.remove(bus);
+                    proxyStack.drop(ID, key);
+                    bus.filter = returnsFalse;
+                }
+                return !!bus;
             }
         });
     app.defineDirective(EVENTS, factories.EventsDirective[CONSTRUCTOR]);

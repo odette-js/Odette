@@ -368,6 +368,7 @@ var ATTACHED = 'attached',
                     });
                     var target, index, currentFragment, actuallyInserting = [],
                         inserting = diffs.inserting.slice(0);
+                    // group sections into document fragments
                     while (inserting[LENGTH]) {
                         // shift off of the inserting list
                         target = inserting.shift();
@@ -384,17 +385,17 @@ var ATTACHED = 'attached',
                             // push it to the final insert list
                             actuallyInserting.push(currentFragment);
                             // append the target element to the fragment
-                            currentFragment.el.appendChild(target.el);
+                            appendChild(currentFragment.el, target.el);
                         } else {
-                            if (index + 1 === target.index) {
+                            if (target.parent === currentFragment.parent && index + 1 === target.index) {
                                 // append to current fragment
-                                currentFragment.el.appendChild(target.el);
+                                appendChild(currentFragment.el, target.el);
                                 // update index
                                 index = target.index;
                             } else {
                                 // unshift target
                                 inserting.unshift(target);
-                                // reset index to undefined
+                                // reset index to undefined to start new document fragment
                                 index = UNDEFINED;
                             }
                         }
@@ -438,15 +439,14 @@ var ATTACHED = 'attached',
                 current = hash[identifyingKey];
                 identified = diffs.ids[identifyingKey];
                 if (current) {
-                    if (current === a) {} else {
+                    if (current === a) {
+                        diffs.keys[identifyingKey] = current;
+                    } else {
                         if (identified.virtual[0] === tagA) {
                             // has the effect of removing it at the same time as inserting it
                             diffs.removing.push(a);
-                            // [identified, future_parent]
                             identified.parent = future_parent;
                             diffs.inserting.push(identified);
-                            // diffs.inserting.push(insertMapper([b], future_parent, context, index, diffs.keys));
-                            // identified.inserted = BOOLEAN_TRUE;
                             a = diffs.keys[identifyingKey] = current;
                         } else {
                             diffs.removing.push(a);
@@ -466,9 +466,7 @@ var ATTACHED = 'attached',
         } else {
             // instant fail
             if (first) {
-                exception({
-                    message: 'at least the first node must match tagName and nodeType'
-                });
+                exception('at least the first node must match tagName and nodeType');
             }
             return BOOLEAN_FALSE;
         }
@@ -543,41 +541,6 @@ app.scope(function (app) {
             return data[DOM_MANAGER_STRING];
         },
         noMatch = /(.)^/,
-        escapes = {
-            "'": "'",
-            '\\': '\\',
-            '\r': 'r',
-            '\n': 'n',
-            '\u2028': 'u2028',
-            '\u2029': 'u2029'
-        },
-        escapeRegExp = /\\|'|\r|\n|\u2028|\u2029/g,
-        escapeChar = function (match) {
-            return '\\' + escapes[match];
-        },
-        escapeMap = {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#x27;',
-            '`': '&#x60;'
-        },
-        unescapeMap = invert(escapeMap),
-        createEscaper = function (map) {
-            var escaper = function (match) {
-                return map[match];
-            };
-            var source = '(?:' + keys(map).join('|') + ')';
-            var testRegexp = RegExp(source);
-            var replaceRegexp = RegExp(source, 'g');
-            return function (string) {
-                string = string == NULL ? EMPTY_STRING : EMPTY_STRING + string;
-                return testRegexp.test(string) ? string.replace(replaceRegexp, escaper) : string;
-            };
-        },
-        escape = createEscaper(escapeMap),
-        unescape = createEscaper(unescapeMap),
         templateMiddleware = function (string) {
             var split = string.split('<');
             var pseudo = foldl(split, function (memo, splitstring) {
@@ -613,20 +576,19 @@ app.scope(function (app) {
             if (templateIsFunction) {
                 render = text;
             } else {
-                if (text.match(/return(\s*)\[/igm)) {
-                    trimmed = text.trim();
-                    if (trimmed[trimmed[LENGTH] - 1] !== ';') {
-                        trimmed += ';';
-                    }
-                    trimmed = text;
-                    render = wraptry(function () {
-                        return new FUNCTION_CONSTRUCTOR_CONSTRUCTOR('helpers', '_', blockWrapper(trimmed));
-                    });
-                } else {
-                    exception({
-                        message: 'templates must return a json structure'
-                    });
+                // text = text.trim();
+                // if (text.match(/return(\s*)\[/igm)) {
+                trimmed = text.trim();
+                if (trimmed[trimmed[LENGTH] - 1] !== ';') {
+                    trimmed += ';';
                 }
+                trimmed = text;
+                render = wraptry(function () {
+                    return new FUNCTION_CONSTRUCTOR_CONSTRUCTOR('helpers', '_', blockWrapper(trimmed));
+                });
+                // } else {
+                //     exception('templates must return a json structure');
+                // }
             }
             return function (data, helpers) {
                 return render.call(data, helpers, _);
@@ -1212,9 +1174,7 @@ app.scope(function (app) {
             elementName = foundElement === BOOLEAN_TRUE ? tag : foundElement;
             // native create
             if (!elementName) {
-                exception({
-                    message: 'custom tag names must be registered before they can be used'
-                });
+                exception('custom tag names must be registered before they can be used');
             }
             newElement = documnt.createElement(elementName);
             if (foundElement && foundElement !== BOOLEAN_TRUE) {
@@ -1957,16 +1917,18 @@ app.scope(function (app) {
                 }
             }
         },
+        arrayAdds = _.add,
+        arrayRemoves = _.remove,
         classApiShim = {
             add: classApplicationWrapper('add', function (element, list) {
                 element.classList.add.apply(element.classList, list);
             }, function (element, current, list) {
-                duff(list, passesFirstArgument(bind(add, NULL, current)));
+                duff(list, passesFirstArgument(bind(arrayAdds, NULL, current)));
             }),
             remove: classApplicationWrapper('remove', function (element, list) {
                 element.classList.remove.apply(element.classList, list);
             }, function (element, current, list) {
-                duff(list, passesFirstArgument(bind(remove, NULL, current)));
+                duff(list, passesFirstArgument(bind(arrayRemoves, NULL, current)));
             }),
             // mess with toggle here so that you
             toggle: classApplicationWrapper('toggler', noop, function (element, current, list, direction) {
@@ -1984,8 +1946,8 @@ app.scope(function (app) {
                 element.classList.remove.apply(element.classList, list);
                 element.classList.add.apply(element.classList, toArray(second, SPACE));
             }, function (element, current, list, second) {
-                duff(list, passesFirstArgument(bind(remove, NULL, current)));
-                duff(second, passesFirstArgument(bind(add, NULL, toArray(current, SPACE))));
+                duff(list, passesFirstArgument(bind(arrayRemoves, NULL, current)));
+                duff(second, passesFirstArgument(bind(arrayAdds, NULL, toArray(current, SPACE))));
             })
         },
         passer = function (key) {
@@ -2185,9 +2147,7 @@ app.scope(function (app) {
                         data = virtual[3];
                         if (data && data.key) {
                             if (hash[data.key]) {
-                                exception({
-                                    message: 'can\'t have a non unique key at ' + data.key
-                                });
+                                exception('can\'t have a non unique key at ' + data.key);
                             }
                             hash[data.key] = created;
                         }
@@ -2403,13 +2363,9 @@ app.scope(function (app) {
                         newName = manager.registeredElementName(name);
                     if (registeredElements[name]) {
                         if (registeredElements[name] === BOOLEAN_TRUE) {
-                            exception({
-                                message: 'custom element names must not be used natively by browsers'
-                            });
+                            exception('custom element names must not be used natively by browsers');
                         } else {
-                            exception({
-                                message: 'custom element names can only be registered once per document'
-                            });
+                            exception('custom element names can only be registered once per document');
                         }
                     } else {
                         registeredElements[name] = extendss ? registeredElements[extendss] : DIV;
@@ -2959,9 +2915,7 @@ app.scope(function (app) {
             name = manager.owner.registeredElementName(registeredAs);
             Wrapper = manager.owner.registeredConstructors[registeredAs];
             if (!Wrapper) {
-                exception({
-                    message: 'custom elements must be registered before they can be used'
-                });
+                exception('custom elements must be registered before they can be used');
             }
             manager = new Wrapper[CONSTRUCTOR](manager, data, owner);
             return manager;
@@ -3074,9 +3028,7 @@ app.scope(function (app) {
                 var elId, registeredOptions, isDocument, owner = owner_,
                     manager = this;
                 if (!el) {
-                    exception({
-                        message: 'element must be an element'
-                    });
+                    exception('element must be an element');
                 }
                 if (DomManager.isInstance(el)) {
                     // extend what we already know
@@ -3315,9 +3267,7 @@ app.scope(function (app) {
                 wraptry(function () {
                     // do not parse message so it can be sent as is
                     if (!referrer_) {
-                        exception({
-                            message: 'missing referrer: ' + windo.address
-                        });
+                        exception('missing referrer: ' + windo.address);
                     } else {
                         element.postMessage(message_, referrer_);
                     }
@@ -3480,9 +3430,7 @@ app.scope(function (app) {
                     owner = manager.owner,
                     node = manager.element();
                 if (manager.is(WINDOW) || manager.is(DOCUMENT)) {
-                    exception({
-                        message: 'cannot serialize documents and windows'
-                    });
+                    exception('cannot serialize documents and windows');
                 }
                 return nodeToJSON(node, preventDeep === UNDEFINED ? returnsTrue : (isFunction(preventDeep) ? preventDeep : returns(preventDeep)), BOOLEAN_TRUE);
             }

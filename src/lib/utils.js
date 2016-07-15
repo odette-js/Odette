@@ -597,8 +597,8 @@ var factories = {},
     /**
      * @func
      */
-    constructorExtend = function (name, protoProps, attach) {
-        var nameString, child, passedParent, hasConstructor, constructor, parent = this,
+    constructorExtend = function (name, protoProps) {
+        var nameString, constructorKeyName, child, passedParent, hasConstructor, constructor, parent = this,
             nameIsStr = isString(name);
         if (name === BOOLEAN_FALSE) {
             extend(parent[PROTOTYPE], protoProps);
@@ -629,6 +629,14 @@ var factories = {},
         // don't call the function if nothing exists
         if (protoProps) {
             extend(child[PROTOTYPE], protoProps);
+        }
+        constructorKeyName = CONSTRUCTOR + COLON + name;
+        if (nameIsStr) {
+            if (child[PROTOTYPE][constructorKeyName]) {
+                exception(CONSTRUCTOR + 's with names cannot extend constructors with the same name');
+            } else {
+                child[PROTOTYPE][constructorKeyName] = child;
+            }
         }
         constructor = child;
         child = constructorWrapper(constructor, parent);
@@ -1163,12 +1171,17 @@ var factories = {},
         };
     },
     intendedObject = function (key, value, fn_, ctx) {
-        var fn = ctx ? bind(fn_, ctx) : fn_,
-            obj = isObject(key) ? key : BOOLEAN_FALSE;
-        if (obj) {
-            each(obj, reverseParams(fn));
+        var obj, fn = ctx ? bind(fn_, ctx) : fn_;
+        if (isArray(key)) {
+            duff(key, function (first) {
+                fn(first, value);
+            });
         } else {
-            fn(key, value);
+            if ((obj = isObject(key) ? key : BOOLEAN_FALSE)) {
+                each(obj, reverseParams(fn));
+            } else {
+                fn(key, value);
+            }
         }
     },
     reverseParams = function (iteratorFn) {
@@ -1197,13 +1210,13 @@ var factories = {},
     },
     eachCallBound = function (array, arg) {
         return duff(array, function (fn) {
-            fn();
+            fn(arg);
         });
     },
     eachCallTry = function (array, method, arg, catcher, finallyer) {
         return duff(array, function (item) {
             wraptry(function () {
-                result(item, method, arg);
+                item[method](arg);
             }, catcher, finallyer);
         });
     },
@@ -1285,11 +1298,11 @@ var factories = {},
     console = extend(wrap(toArray('trace,warn,log,dir,error,clear,table,profile,profileEnd,time,timeEnd,timeStamp'), function (key) {
         var method = _console[key] || _log;
         return function () {
-            return method.apply(_console, arguments);
+            return method && method.apply && method.apply(_console, arguments);
         };
     }), {
-        exception: function (options) {
-            throw new Error(options && options.message || options);
+        exception: function (msg) {
+            throw new Error(msg);
         },
         assert: function (boolean_, options) {
             if (!boolean_) {
@@ -1328,7 +1341,8 @@ var factories = {},
             return thing;
         };
     },
-    returnsTrue = returns(BOOLEAN_TRUE),
+    returnsTrue = returns.true = returns(BOOLEAN_TRUE),
+    returnsFalse = returns.false = returns(BOOLEAN_FALSE),
     returnsArray = returns.array = function () {
         return [];
     },

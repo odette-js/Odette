@@ -1,10 +1,8 @@
 app.scope(function (app) {
-    var lastAFId, lastTId, lastOverrideId, _ = app._,
-        factories = _.factories,
-        x = 0,
+    var lastAFId, lastTId, lastOverrideId, x = 0,
         lastTime = 0,
         frameTime = 0,
-        pI = _.pI,
+        int = _.pI,
         nowish = _.now,
         vendors = toArray('ms,moz,webkit,o'),
         RUNNING = 'running',
@@ -53,9 +51,12 @@ app.scope(function (app) {
             win[CLEAR_TIMEOUT](lastTId);
             win[CLEAR_TIMEOUT](lastOverrideId);
             // run the handlers
+            var docManager = app.DocumentManager;
+            var dependant = docManager && docManager.dependency();
             eachCall(runningLoopers, 'run', frameTime);
             // do it all over again
             teardown();
+            return dependant && dependant();
         },
         setup = function () {
             running = BOOLEAN_TRUE;
@@ -106,18 +107,28 @@ app.scope(function (app) {
                 };
             }
         }()),
-        runner = function (tween, obj) {
+        runner = function (tween, obj, lastrun) {
             tween.current = obj;
-            if (tween.is(HALTED)) {
-                // stops early
-                return BOOLEAN_TRUE;
+            if (!obj.filter(lastrun)) {
+                return;
             }
             wraptry(function () {
-                obj.fn(tween.lastRun);
+                obj.fn(lastrun);
             }, function () {
                 // takes queued object off of the queue
                 tween.dequeue(obj.id);
             });
+        },
+        returnsNext = function () {
+            return this.tween.lastRun;
+        },
+        actuallyDequeue = function (tween, obj) {
+            tween.drop(ID, obj.id);
+            return tween.remove(obj);
+        },
+        sorter = function (a, b) {
+            var aVal, bVal;
+            return (aVal = a.sort()) === (bVal = b.sort()) ? 0 : (isNaN(aVal) ? 1 : (isNaN(bVal) ? -1 : aVal < bVal ? -1 : 1));
         },
         Looper = factories[LOOPER] = Collection.extend(LOOPER, {
             constructor: function () {
@@ -126,7 +137,7 @@ app.scope(function (app) {
                 looper.unmark(HALTED);
                 looper.unmark(DESTROYED);
                 looper.unmark(RUNNING);
-                Collection[CONSTRUCTOR].call(looper);
+                looper['constructor:Collection']();
                 add(looper);
                 return looper;
             },
@@ -137,14 +148,15 @@ app.scope(function (app) {
             run: function (_nowish) {
                 var sliced, slicedLength, finished, i = 0,
                     tween = this;
-                if (tween.is(HALTED) || tween.is(STOPPED) || !tween[LENGTH]()) {
-                    return;
-                }
-                sliced = Collection(tween.toArray().slice(0));
-                tween.lastRun = _nowish;
-                slicedLength = sliced[LENGTH]();
-                for (; i < slicedLength && !finished; i++) {
-                    finished = runner(tween, sliced.item(i), i);
+                if (!tween.is(HALTED) && !tween.is(STOPPED) && tween[LENGTH]()) {
+                    // stop early if it is halted, stopped, or there's nothing to run
+                    tween.lastRun = _nowish;
+                    tween.sort(sorter);
+                    sliced = tween.toArray().slice(0);
+                    slicedLength = sliced[LENGTH];
+                    for (; i < slicedLength && !finished; i++) {
+                        finished = !tween.is(HALTED) && runner(tween, sliced[i], _nowish);
+                    }
                 }
                 tween.current = NULL;
                 tween.unmark(RUNNING);
@@ -156,8 +168,7 @@ app.scope(function (app) {
                     ret = BOOLEAN_FALSE;
                 if (id === UNDEFINED && !arguments[LENGTH]) {
                     if (tween.current) {
-                        tween.drop(ID, tween.current.id);
-                        id = tween.remove(tween.current);
+                        id = actuallyDequeue(tween, tween.current);
                     }
                     return !!id;
                 }
@@ -168,8 +179,7 @@ app.scope(function (app) {
                 if (!found) {
                     return BOOLEAN_FALSE;
                 }
-                tween.drop(ID, id);
-                tween.remove(found);
+                actuallyDequeue(tween, found);
                 return BOOLEAN_TRUE;
             },
             stop: function () {
@@ -187,36 +197,37 @@ app.scope(function (app) {
                 this.mark(HALTED);
                 return this.stop();
             },
-            queue: function (fn) {
-                var obj, len, id = uniqueId(BOOLEAN_FALSE),
-                    tween = this;
-                if (!isFunction(fn)) {
+            queue: function (fn_) {
+                var len, id = uniqueId(BOOLEAN_FALSE),
+                    tween = this,
+                    obj = fn_;
+                if (isFunction(obj)) {
+                    obj = {
+                        fn: tween.bind(obj)
+                    };
+                }
+                if (!isObject(obj)) {
                     return;
                 }
                 len = tween[LENGTH]();
-                obj = {
-                    fn: tween.bind(fn),
-                    id: id,
-                    bound: tween
-                };
+                obj.tween = tween;
+                obj.sort = obj.sort || returnsNext;
+                obj.filter = obj.filter || returnsTrue;
+                obj.id = id;
                 tween.push(obj);
-                tween.keep(ID, obj.id, obj);
-                if (len) {
-                    start(tween);
-                } else {
-                    tween.start();
-                }
+                tween.keep(ID, id, obj);
+                len = len ? start(tween) : tween.start();
                 return id;
             },
             bind: function (fn) {
-                return bind(fn, this);
+                return bindTo(fn, this);
             },
-            once: function (fn, time_) {
+            once: function (fn) {
                 return this.frames(1, fn);
             },
             frames: function (timey, fn_) {
                 var fn, count = 0,
-                    times = pI(timey) || 1;
+                    times = int(timey) || 1;
                 if (!fn_ && isFunction(times)) {
                     fn_ = timey;
                     times = 1;
@@ -242,13 +253,11 @@ app.scope(function (app) {
                 var fn, added = nowish(),
                     time_ = time(time__),
                     tween = this;
-                if (!time_) {
-                    time_ = 0;
-                }
                 if (!isFunction(fn_)) {
                     return;
                 }
                 fn = tween.bind(fn_);
+                // continuous update
                 return tween.timeout(0, function (ms) {
                     var finished = BOOLEAN_FALSE,
                         diff = ms - added;
@@ -285,21 +294,15 @@ app.scope(function (app) {
                     lastDate = ms;
                 });
             },
-            timeout: function (time, fn_) {
-                var fn, tweener = this,
-                    last = nowish();
+            timeout: function (time_, fn_) {
+                var fn, tweener = this;
                 if (!isFunction(fn_)) {
                     return;
                 }
-                if (!time) {
-                    time = 0;
-                }
                 fn = tweener.bind(fn_);
-                return tweener.queue(function (ms) {
-                    if (ms - time >= last) {
-                        tweener.dequeue();
-                        fn(ms);
-                    }
+                return tweener.interval(time_, function (ms) {
+                    tweener.dequeue();
+                    fn(ms);
                 });
             },
             interval: function (time_, handler) {
@@ -313,11 +316,17 @@ app.scope(function (app) {
                 if (!isNumber(timey)) {
                     timey = 0;
                 }
-                bound = bind(handler, tweener);
-                return tweener.queue(function (t) {
-                    if (t - timey >= last) {
+                bound = tweener.bind(handler);
+                return tweener.queue({
+                    filter: function (t) {
+                        return t - timey >= last;
+                    },
+                    fn: function (t) {
                         last = t;
                         bound(t);
+                    },
+                    sort: function () {
+                        return last + timey;
                     }
                 });
             },

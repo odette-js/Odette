@@ -32,11 +32,7 @@ var STATUS = 'Status',
         };
     },
     defineDirective = function (name, creation, destruction_) {
-        var alreadyCreated, err = (!isString(name) && exception({
-            message: 'directives must be registered with a string for a name'
-        })) || (!isFunction(creation)) && exception({
-            message: 'directives must be registered with at least a create function'
-        });
+        var alreadyCreated, err = (!isString(name) && exception('directives must be registered with a string for a name')) || (!isFunction(creation)) && exception('directives must be registered with at least a create function');
         directives.creation[name] = (alreadyCreated = directives.creation[name]) || creation;
         directives.destruction[name] = directives.destruction[name] || destruction_;
         // returns whether or not that directive is new or not
@@ -45,9 +41,7 @@ var STATUS = 'Status',
     extendDirective = function (oldName, newName, handler_, destruction_) {
         var Destruction = destruction_ || returnsThird;
         var Handler = handler_ || returnsThird;
-        var oldDirective = directives.creation[oldName] || exception({
-            message: 'directives must exist before they can be extended'
-        });
+        var oldDirective = directives.creation[oldName] || exception('directives must exist before they can be extended');
         return app.defineDirective(newName, function (instance, name, third) {
             var directive = new directives.creation[oldName](instance, name, third);
             return new Handler(instance, name, directive);

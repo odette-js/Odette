@@ -35,6 +35,7 @@ this.Odette = this.Odette || function (global, WHERE, version, fn, alt) {
         isString = typeConstructor('string'),
         isNumber = typeConstructor('number'),
         isFunction = typeConstructor('function'),
+        isObject = typeConstructor('object'),
         executionTime = now(),
         makeParody = function (parent, fn) {
             return function () {
@@ -191,6 +192,7 @@ this.Odette = this.Odette || function (global, WHERE, version, fn, alt) {
     var app, application = global_[WHERE] = global_[WHERE] || (function () {
         Odette.where.push(WHERE);
         return {
+            Application: Application,
             EXECUTED_AT: executionTime,
             WHERE: WHERE,
             VERSION: odette_version,
@@ -212,11 +214,19 @@ this.Odette = this.Odette || function (global, WHERE, version, fn, alt) {
                 }
                 return newApp;
             },
-            definition: function (version, globl, options) {
-                var opts, context, application = this,
-                    app = application.registerVersion(version),
-                    odebt = globl.Odette,
-                    definitionOptions = odebt.options;
+            definition: function (version_, globl_, options_) {
+                var app, odebt, definitionOptions, opts, context, application = this,
+                    version = version_,
+                    globl = globl_,
+                    options = options_;
+                if (isObject(version)) {
+                    options = globl;
+                    globl = version;
+                    version = application.scope().VERSION;
+                }
+                app = application.registerVersion(version);
+                odebt = globl.Odette;
+                definitionOptions = odebt.options;
                 if (!definitionOptions) {
                     return app;
                 }
@@ -269,9 +279,9 @@ this.Odette = this.Odette || function (global, WHERE, version, fn, alt) {
                 if (!isFunction(fn)) {
                     return scoped;
                 }
-                this.wraptry(function () {
-                    fn.apply(app, [scoped]);
-                });
+                // this.wraptry(function () {
+                fn.apply(app, [scoped]);
+                // });
                 return scoped;
             },
             map: map,

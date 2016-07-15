@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-// console.log('once');
 module.exports = function (settings) {
     // dependencies
     var express = require('express');
@@ -19,7 +18,7 @@ module.exports = function (settings) {
     app.use(bodyParser.json());
     // view engine setup
     // uncomment after placing your favicon in /public
-    app.use(logger(settings.env.logger));
+    // app.use(logger(settings.env.logger));
     app.ws('/echo', function (ws, req) {
         console.log('connected to someone');
         ws.on('message', function (msg_) {
@@ -38,13 +37,10 @@ module.exports = function (settings) {
     app.get('/gibberish/:status', function (req, res, next) {
         res.status(req.params.status).send('');
     });
-    // app.get('/json/reporting.json', function (req, res) {
-    //     res.send('{}');
-    // });
     app.use(expressive(publicroot));
     app.use(express.static(publicroot));
     app.use(function (req, res, next) {
-        console.log(req.url);
+        // console.log(req.url);
         next();
     });
     // catch 404 and forward to error handler

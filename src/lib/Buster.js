@@ -422,7 +422,7 @@ app.scope(function (app) {
                     command: command,
                     packet: packet
                 }, defaultMessage(buster), extra));
-            return message[0];
+            return message.item(0);
         },
         /**
          * shorthand for creating a function that gets called after the buster's partner has responded

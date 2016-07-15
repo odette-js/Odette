@@ -1,7 +1,6 @@
 app.scope(function (app) {
-    var current, pollerTimeout, allIts, describes, successfulIts, failedIts, stack, queue, allExpectations, successful, failures, successfulExpectations, failedExpectations, globalBeforeEachStack, globalAfterEachStack, failedTests = 0,
+    var current, pollerTimeout, allIts, describes, successfulIts, failedIts, stack, queue, allExpectations, successful, failures, successfulExpectations, failedExpectations, globalBeforeEachStack, globalAfterEachStack, currentItFocus, failedTests = 0,
         testisrunning = BOOLEAN_FALSE,
-        // _ = app._,
         EXPECTED = 'expected',
         SPACE_NOT = ' not',
         TO_EQUAL = ' to equal ',
@@ -17,13 +16,16 @@ app.scope(function (app) {
                 }
                 if ((result = handler(current, arg))) {
                     successfulExpectations.push(expectation);
+                    expectation.success = BOOLEAN_TRUE;
                 } else {
                     ++failedTests;
                     expectation = new Error(makemessage.call(this, current, arg));
-                    // console.error(expectation);
+                    expectation.message = expectation.toString();
+                    expectation.success = BOOLEAN_FALSE;
                     failedExpectations.push(expectation);
                 }
                 allExpectations.push(expectation);
+                expectation.tiedTo = currentItFocus;
                 return result;
             };
         },
@@ -115,6 +117,7 @@ app.scope(function (app) {
             testisrunning = BOOLEAN_TRUE;
             expectation.runId = setTimeout(function () {
                 var errThat, doThis, errThis, err, finallyThis;
+                currentItFocus = expectation;
                 testisrunning = BOOLEAN_TRUE;
                 runningEach(expectation.beforeStack);
                 errThis = errHandler(expectation);
@@ -201,6 +204,35 @@ app.scope(function (app) {
             globalBeforeEachStack = [];
             globalAfterEachStack = [];
         },
+        createResults = function (duration) {
+            return {
+                passed: successfulExpectations[LENGTH],
+                failed: failedExpectations[LENGTH],
+                total: allExpectations[LENGTH],
+                duration: duration,
+                tests: map(allExpectations, function (expectation) {
+                    var target, string, delimiter = '\n',
+                        tiedIt = expectation.tiedTo,
+                        stringList = tiedIt.current.slice(0),
+                        stringListLength = stringList.length;
+                    while (stringList.length) {
+                        target = stringList.shift();
+                        if (string) {
+                            string = string + delimiter + target;
+                        } else {
+                            string = target;
+                        }
+                        delimiter = delimiter + '\t';
+                    }
+                    return {
+                        name: expectation.success ? string : string + '\n',
+                        duration: 0,
+                        result: expectation.success,
+                        message: expectation.message
+                    };
+                })
+            };
+        },
         setupPoller = function () {
             pollerTimeout = pollerTimeout === void 0 ? setTimeout(function loops() {
                 var theIt, string, i = 0,
@@ -217,12 +249,18 @@ app.scope(function (app) {
                         });
                     }
                     string = successfulExpectations[LENGTH] + ' successful expectations\n' + failedExpectations[LENGTH] + ' failed expectations\n' + allExpectations[LENGTH] + ' expectations ran\n' + successfulIts[LENGTH] + ' out of ' + allIts[LENGTH] + ' tests passed\nin ' + totalTime + 'ms';
+                    results = createResults(totalTime);
                     resetTests();
-                    console.log(string);
+                    eachCallBound(afters, results);
+                    console.log(string, results);
                 } else {
                     pollerTimeout = setTimeout(loops, 100);
                 }
             }, 100) : pollerTimeout;
+        },
+        afters = [],
+        testFinished = function (fn) {
+            afters.push(fn);
         };
     resetTests();
     _.publicize({
@@ -230,6 +268,7 @@ app.scope(function (app) {
         beforeEach: beforeEach,
         expect: expect,
         describe: describe,
-        it: it
+        it: it,
+        testFinished: testFinished
     });
 });

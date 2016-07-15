@@ -7,6 +7,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 count += (expects === this);
             };
         },
+        framed_pathway = '/test/' + (app.BROWSERSTACKING ? 'browserstack/' : '') + 'framed.html',
         pagePromise = factories.HTTP.get('/test/framed.html');
     _.describe('Buster', function () {
         _.beforeEach(function () {
@@ -17,7 +18,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 var iframe = $.createElement('iframe');
                 documentView.directive('RegionManager').get('main').el.append(iframe);
                 var buster = scopedFactories.Buster(window, iframe, {
-                    iframeSrc: 'http://localhost:8000/test/framed.html'
+                    iframeSrc: 'http://localhost:8000' + framed_pathway
                 });
                 buster.connected(handler);
                 buster.sync(function (e) {
@@ -51,7 +52,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 var iframe = $.createElement('iframe');
                 documentView.directive('RegionManager').get('main').el.append(iframe);
                 var buster = scopedFactories.Buster(window, iframe, {
-                    iframeSrc: 'http://localhost:8080/test/framed.html'
+                    iframeSrc: 'http://localhost:8080' + framed_pathway
                 });
                 buster.connected(handler);
                 buster.sync(function (e) {

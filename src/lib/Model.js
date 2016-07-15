@@ -1,6 +1,6 @@
 var CHILDREN = capitalize(CHILD + 'ren'),
     CHILD_OPTIONS = CHILD + 'Options',
-    CHILD_EVENTS = CHILD + 'Events';
+    CHILD_EVENTS = CHILD + EVENTS_STRING;
 app.scope(function (app) {
     var Events = factories.Events,
         List = factories.Collection,
@@ -55,9 +55,7 @@ app.scope(function (app) {
                 var syncer = this,
                     type = type + 'Type';
                 if (!url) {
-                    exception({
-                        message: 'syncer methods must have a url'
-                    });
+                    exception('syncer methods must have a url');
                 }
                 return successful(syncer, url, type);
             };
@@ -79,15 +77,15 @@ app.scope(function (app) {
             stringify: stringify,
             // base method for xhr things
             constructor: function (target) {
-                this.target = target;
+                this[TARGET] = target;
                 return this;
             }
         }, wrap(['destroy', 'fetch', 'update', 'create'], sendWithData, BOOLEAN_TRUE))),
         SyncerDirective = app.defineDirective(SYNCER, Syncer[CONSTRUCTOR]),
-        Children = factories[CHILDREN] = factories.Collection.extend(CHILDREN, {
+        Children = factories[CHILDREN] = Collection.extend(CHILDREN, {
             constructor: function (instance) {
                 this[TARGET] = instance;
-                factories.Collection[CONSTRUCTOR].call(this);
+                this[CONSTRUCTOR + COLON + COLLECTION]();
                 return this;
             },
             // this one forcefully adds
@@ -116,7 +114,7 @@ app.scope(function (app) {
                 var parent, directive = this;
                 // go through the model to get the correct parent
                 if (!(parent = model[PARENT])) {
-                    return model;
+                    return BOOLEAN_FALSE;
                 }
                 // let everyone know that this object is about to be removed
                 model[DISPATCH_EVENT](BEFORE_COLON + REMOVED);
@@ -132,7 +130,7 @@ app.scope(function (app) {
                 // let everyone know that you've offically separated
                 model[DISPATCH_EVENT](REMOVED);
                 // notify the child that the remove pipeline is done
-                return model;
+                return BOOLEAN_TRUE;
             },
             addToHash: function (newModel) {
                 var children = this,
@@ -162,31 +160,17 @@ app.scope(function (app) {
              * @param {Object} attributes - non circular hash that is extended onto what the defaults object produces
              * @returns {Model} instance the method was called on
              */
-            // reset: function (newChildren) {
-            //     var length, child, directive = this,
-            //         model = directive[TARGET],
-            //         arr = directive[UNWRAP]();
-            //     // this can be made far more efficient
-            //     while (arr[LENGTH]) {
-            //         child = arr[0];
-            //         length = arr[LENGTH];
-            //         // if (child) {
-            //         result(child, DESTROY);
-            //         // }
-            //         // if it didn't remove itself,
-            //         // then you should remove it here
-            //         // this gets run if the child is a basic data type
-            //         if (arr[0] === child && arr[LENGTH] === length) {
-            //             remove(arr, child);
-            //         }
-            //     }
-            //     model.add(newChildren);
-            //     return model;
-            // },
             // set attrs, sync with update or create
             save: function () {},
             fetch: function () {}
         }),
+        setMemo = function () {
+            return {
+                add: [],
+                remove: [],
+                update: []
+            };
+        },
         Parent = factories.Parent = factories.Events.extend('Parent', {
             Child: BOOLEAN_TRUE,
             childOptions: noop,
@@ -198,9 +182,57 @@ app.scope(function (app) {
             isChildType: function (child) {
                 return isInstance(child, this.childConstructor());
             },
+            diff: function (opts_, secondary_) {
+                var models, remove, parent = this,
+                    opts = opts_,
+                    secondary = secondary_ || {},
+                    children = parent.directive(CHILDREN),
+                    memo = setMemo(),
+                    diff = Collection(opts.add).foldl(function (memo, obj) {
+                        var isChildType = parent.isChildType(obj),
+                            // create a new model
+                            // call it with new in case they use a constructor
+                            Constructor = parent.childConstructor(),
+                            newModel = isChildType ? obj : new Constructor(obj, secondary.shared),
+                            // unfortunately we can only find by the newly created's id
+                            // which we only know for sure after the child has been created ^
+                            foundModel = children.get(ID, newModel.id);
+                        if (foundModel) {
+                            // update the old
+                            foundModel.set(isChildType ? obj[TO_JSON]() : obj);
+                            memo.update.push(foundModel);
+                        } else {
+                            // add the new
+                            children.attach(newModel);
+                            memo.add.push(newModel);
+                        }
+                    }, opts.remove ? Collection(opts.remove).foldl(function (memo, model) {
+                        var children, parent = model && model[PARENT];
+                        if (!parent) {
+                            return;
+                        }
+                        children = parent[CHILDREN];
+                        if (children && children.detach(model)) {
+                            memo.remove.push(model);
+                        }
+                    }, memo) : memo);
+                if (secondary.silent) {
+                    return diff;
+                }
+                if (diff.remove.length) {
+                    parent[DISPATCH_EVENT](CHILD + COLON + REMOVED, diff);
+                }
+                if (diff.add.length) {
+                    parent[DISPATCH_EVENT](CHILD + COLON + ADDED, diff);
+                }
+                if (diff.add.length || diff.remove.length) {
+                    parent[DISPATCH_EVENT](CHANGE_COLON + CHILD + COLON + 'count', diff);
+                }
+                return diff;
+            },
             // public facing version filters
             add: function (objs_, secondary_) {
-                var childAdded, parent = this,
+                var childAdded, diff, parent = this,
                     children = parent.directive(CHILDREN),
                     secondary = extend(result(parent, CHILD_OPTIONS), secondary_ || {}),
                     list = Collection(objs_);
@@ -208,61 +240,30 @@ app.scope(function (app) {
                 if (!list[LENGTH]()) {
                     return list[UNWRAP]();
                 }
-                list = list.foldl(function (memo, obj) {
-                    var isChildType = parent.isChildType(obj),
-                        // create a new model
-                        // call it with new in case they use a constructor
-                        Constructor = parent.childConstructor(),
-                        newModel = isChildType ? obj : new Constructor(obj, secondary),
-                        // unfortunately we can only find by the newly created's id
-                        // which we only know for sure after the child has been created ^
-                        foundModel = children.get(ID, newModel.id);
-                    if (foundModel) {
-                        // update the old
-                        foundModel.set(isChildType ? obj[TO_JSON]() : obj);
-                        newModel = foundModel;
-                    } else {
-                        // add the new
-                        childAdded = BOOLEAN_TRUE;
-                        children.attach(newModel);
-                    }
-                    memo.push(newModel);
-                    return memo;
-                }, []);
-                if (childAdded) {
-                    parent[DISPATCH_EVENT](CHILD + COLON + ADDED);
-                }
-                return list;
+                return Collection(parent.diff({
+                    add: list
+                }, {
+                    shared: secondary
+                }).add);
             },
             remove: function (idModel_) {
-                var retList, children, models, parent = this,
+                var children, models, parent = this,
                     idModel = idModel_;
                 if (idModel == NULL) {
                     parent = parent[PARENT];
                     return parent.remove(this);
                 }
-                retList = Collection();
                 if (!isObject(idModel) && (children = parent.directive(CHILDREN))) {
                     // it's an id
                     idModel = children.get(ID, idModel);
                 }
                 if (!idModel || !isObject(idModel)) {
-                    return retList;
+                    return setMemo();
                 }
-                models = idModel && idModel.unwrap ? idModel.toArray() : idModel;
-                Collection(models).slice().each(function (model) {
-                    var result, children, parent = model[PARENT];
-                    retList.push(model);
-                    if (!parent) {
-                        return;
-                    }
-                    children = parent[CHILDREN];
-                    result = children && children.detach(model);
-                });
-                if (retList[LENGTH]()) {
-                    parent[DISPATCH_EVENT](CHILD + COLON + REMOVED);
-                }
-                return retList;
+                return Collection(parent.diff({
+                    // make sure you get a copy
+                    remove: (idModel && Collection.isInstance(idModel) ? idModel.toArray() : toArray(idModel)).slice(0)
+                }).remove);
             },
             /**
              * @description basic sort function
@@ -333,7 +334,16 @@ app.scope(function (app) {
              * @func
              * @name Model#unset
              */
-            unset: checkParody(DATA, 'unset', BOOLEAN_FALSE),
+            unset: function (key) {
+                var dataDirective = this[DATA];
+                if (!dataDirective) {
+                    return BOOLEAN_FALSE;
+                }
+                var result = dataDirective.unset(key);
+                this.modified([key]);
+                return result;
+            },
+            // checkParody(DATA, 'unset', BOOLEAN_FALSE),
             /**
              * @description returns attribute passed into
              * @param {String} attr - property string that is being gotten from the attributes object
@@ -342,6 +352,9 @@ app.scope(function (app) {
              * @name Model#get
              */
             get: checkParody(DATA, 'get'),
+            escape: function (key) {
+                return escape(this.get(key));
+            },
             /**
              * @func
              * @param {String} attr - property string that is being gotten from the attributes object
@@ -356,7 +369,7 @@ app.scope(function (app) {
             constructor: function (attributes, secondary) {
                 var model = this;
                 model.reset(attributes);
-                Events[CONSTRUCTOR].call(this, secondary);
+                this[CONSTRUCTOR + COLON + EVENTS_STRING](secondary);
                 return model;
             },
             defaults: function () {
@@ -416,16 +429,21 @@ app.scope(function (app) {
                         changedList.push(key);
                     }
                 });
+                model.modified(changedList);
+                return model;
+            },
+            modified: function (list) {
+                var dataDirective, model = this;
                 // do not digest... this time
-                if (!changedList[LENGTH]) {
+                if (!list[LENGTH]) {
                     return model;
                 }
-                // list
+                dataDirective = model.directive(DATA);
                 model.digest(function () {
-                    duff(changedList, function (name) {
-                        var eventName = CHANGE_COLON + name;
+                    duff(list, function (name) {
+                        var eventName = CHANGE_COLON + name,
+                            previous = dataDirective.changing[name];
                         dataDirective.changing[name] = BOOLEAN_TRUE;
-                        // eventsDirective.unQueueStack(eventName);
                         model[DISPATCH_EVENT](eventName);
                         dataDirective.changing[name] = BOOLEAN_FALSE;
                     });
