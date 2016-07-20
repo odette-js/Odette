@@ -7,6 +7,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 count += (expects === this);
             };
         },
+        protocol = window.location.protocol,
         framed_pathway = '/test/' + (app.BROWSERSTACKING ? 'browserstack/' : '') + 'framed.html',
         pagePromise = factories.HTTP.get('/test/framed.html');
     _.describe('Buster', function () {
@@ -17,8 +18,9 @@ application.scope().run(window, function (app, _, factories, documentView, scope
             _.it('unfriendly windows', function (done) {
                 var iframe = $.createElement('iframe');
                 documentView.directive('RegionManager').get('main').el.append(iframe);
+                var split = window.location.origin.split(':');
                 var buster = scopedFactories.Buster(window, iframe, {
-                    iframeSrc: 'http://localhost:8000' + framed_pathway
+                    iframeSrc: window.location.protocol + '//' + window.location.hostname + ':' + 8000 + framed_pathway
                 });
                 buster.connected(handler);
                 buster.sync(function (e) {
@@ -52,7 +54,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 var iframe = $.createElement('iframe');
                 documentView.directive('RegionManager').get('main').el.append(iframe);
                 var buster = scopedFactories.Buster(window, iframe, {
-                    iframeSrc: 'http://localhost:8080' + framed_pathway
+                    iframeSrc: window.location.origin + framed_pathway
                 });
                 buster.connected(handler);
                 buster.sync(function (e) {
@@ -67,4 +69,3 @@ application.scope().run(window, function (app, _, factories, documentView, scope
         });
     });
 });
-//

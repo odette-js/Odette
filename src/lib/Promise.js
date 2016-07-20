@@ -105,7 +105,7 @@ app.scope(function (app) {
                         }
                     } else {
                         // terminate the chain
-                        exception(unknownStateErrorMessage);
+                        exception(1 + unknownStateErrorMessage);
                     }
                 }
             } while (isString(finalName));

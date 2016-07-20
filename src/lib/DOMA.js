@@ -52,7 +52,71 @@ var ATTACHED = 'attached',
             el.setAttribute(key, (val_ === BOOLEAN_TRUE ? EMPTY_STRING : stringify(val_)) + EMPTY_STRING);
         }
     },
-    matchesSelector = function (element, selector) {
+    registeredElementName = function (name, manager) {
+        return capitalize(ELEMENT) + HYPHEN + manager[__ELID__] + HYPHEN + name;
+    },
+    iframeContent = function (head, body) {
+        return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="user-scalable=no,width=device-width,initial-scale=1"><meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">' + head + '</head><body>' + body + '</body></html>';
+    },
+    filtersParentNotMe = function (parent) {
+        return function (element) {
+            return element[PARENT_NODE] === parent;
+        };
+    },
+    returnsSelector = function (string, owner) {
+        var registeredElements = owner.registeredElements;
+        return registeredElements[string] === BOOLEAN_TRUE ? string : createAttributeFromTag(string);
+    },
+    convertSelector = function (str, owner) {
+        // removes custom tag names and replaces them with [is="tag"]
+        // if anyone knows some regexp that would be better than this, then take a stab at it
+        return map(toArray(str, SPACE), function (level) {
+            return level.replace(/^(\S*?)([\.|\#|\[])/i, function (match_) {
+                var match = match_;
+                var last = match[LENGTH] - 1;
+                return last ? (returnsSelector(match.slice(0, last), owner) + match.slice(last)) : match;
+            });
+        }).join(SPACE);
+    },
+    superElements = function (context, key) {
+        return isElement(context[key]) ? [context[key]] : [];
+    },
+    superElementsHash = {
+        body: BOOLEAN_TRUE,
+        head: BOOLEAN_TRUE
+    },
+    dataReconstructor = function (list, fn) {
+        return foldl(list, function (memo, arg1, arg2, arg3) {
+            if (fn(arg1, arg2, arg3)) {
+                memo.push(arg1);
+            }
+            return memo;
+        }, []);
+    },
+    // takes string to query for, subset of tree to query for and manager so it can always get to the document
+    query = function (str_, ctx, manager) {
+        var directSelector, elements, str = str_,
+            context = ctx,
+            returnsArray = returns.first,
+            owner = manager.owner;
+        if (manager && manager === owner) {
+            if (superElementsHash[str]) {
+                return superElements(context, 'body');
+            }
+        }
+        if (manager && str[0] === '>') {
+            directSelector = BOOLEAN_TRUE;
+            str = manager.queryString() + str;
+        }
+        str = convertSelector(str, owner);
+        elements = context.querySelectorAll(str);
+        if (directSelector) {
+            return dataReconstructor(elements, filtersParentNotMe(context));
+        } else {
+            return toArray(elements);
+        }
+    },
+    matchesSelector = function (element, selector, owner) {
         var match, parent, matchesSelector;
         if (!selector || !element || element[NODE_TYPE] !== 1) {
             return BOOLEAN_FALSE;
@@ -67,7 +131,7 @@ var ATTACHED = 'attached',
             parent = createElement(DIV, ensure(element.ownerDocument, BOOLEAN_TRUE));
             parent[APPEND_CHILD](element);
         }
-        return indexOf(query(selector, parent), element) !== -1;
+        return indexOf(query(selector, parent, owner), element) !== -1;
     },
     readAttribute = function (el, key) {
         var coerced, val = el.getAttribute(key);
@@ -1621,12 +1685,13 @@ app.scope(function (app) {
          * @func
          */
         testIframe = function (manager, element_) {
-            var contentWindow, contentWindowManager, element;
+            var src, contentWindow, contentWindowManager, element;
             manager.remark(IFRAME, manager.tagName === IFRAME);
             if (!manager.is(IFRAME)) {
                 return;
             }
             element = element_ || manager.element();
+            src = element.src;
             contentWindow = element.contentWindow;
             manager.remark('windowReady', !!contentWindow);
             if (!contentWindow) {
@@ -1634,7 +1699,7 @@ app.scope(function (app) {
             }
             contentWindowManager = manager.owner.returnsManager(contentWindow);
             contentWindowManager.iframe = manager;
-            markGlobal(contentWindowManager, contentWindow);
+            markGlobal(contentWindowManager, contentWindow, src);
             if (!manager.cachedContent || !contentWindowManager.is(ACCESSABLE)) {
                 return;
             }
@@ -1890,10 +1955,10 @@ app.scope(function (app) {
         },
         classApplicationWrapper = function (key, hasList, noList) {
             return function (element, list, second) {
-                if (element.classList && element.classList[key]) {
+                if (element.classList && element.classList[key] && !isIE) {
                     return hasList(element, list, second);
                 } else {
-                    return noList(element, toArray(element[CLASSNAME], SPACE), list, second);
+                    return noList(element, toArray(element[CLASSNAME] ? element[CLASSNAME] : [], SPACE), list, second);
                 }
             };
         },
@@ -1919,27 +1984,39 @@ app.scope(function (app) {
         },
         arrayAdds = _.add,
         arrayRemoves = _.remove,
+        // ua = (win.navigator && win.navigator.userAgent),
+        isIE = !!(function () {
+            var sAgent = window.navigator.userAgent;
+            var Idx = sAgent.indexOf("MSIE");
+            // If IE, return version number.
+            if (Idx > 0) return parseInt(sAgent.substring(Idx + 5, sAgent.indexOf(".", Idx)));
+            // If IE 11 then look for Updated user agent string.
+            else if (!!navigator.userAgent.match(/Trident\/7\./)) return 11;
+            else return 0; //It is not IE
+        }()),
         classApiShim = {
             add: classApplicationWrapper('add', function (element, list) {
                 element.classList.add.apply(element.classList, list);
             }, function (element, current, list) {
                 duff(list, passesFirstArgument(bind(arrayAdds, NULL, current)));
+                element[CLASSNAME] = current.join(SPACE);
             }),
             remove: classApplicationWrapper('remove', function (element, list) {
                 element.classList.remove.apply(element.classList, list);
             }, function (element, current, list) {
                 duff(list, passesFirstArgument(bind(arrayRemoves, NULL, current)));
+                element[CLASSNAME] = current.join(SPACE);
             }),
             // mess with toggle here so that you
             toggle: classApplicationWrapper('toggler', noop, function (element, current, list, direction) {
-                duff(list, passesFirstArgument(bindWith(toggles, [NULL, current, direction])));
+                duff(list, passesFirstArgument(bind(toggles, NULL, current, direction)));
                 element[CLASSNAME] = current.join(SPACE);
             }),
             contains: classApplicationWrapper('contains', function (element, list) {
                 return !element.classList.contains.apply(element.classList, list);
             }, function (element, current, list) {
-                return find(current, function (item) {
-                    return !has(list, item, BOOLEAN_TRUE);
+                return find(list, function (item) {
+                    return !has(current, item, BOOLEAN_TRUE);
                 });
             }),
             change: classApplicationWrapper('add', function (element, list, second) {
@@ -1948,6 +2025,7 @@ app.scope(function (app) {
             }, function (element, current, list, second) {
                 duff(list, passesFirstArgument(bind(arrayRemoves, NULL, current)));
                 duff(second, passesFirstArgument(bind(arrayAdds, NULL, toArray(current, SPACE))));
+                element[CLASSNAME] = current.join(SPACE);
             })
         },
         passer = function (key) {
@@ -1964,7 +2042,6 @@ app.scope(function (app) {
                     return this;
                 };
             };
-            return memo;
         }, {
             has: function (manipulator) {
                 return function (classes) {
@@ -1973,7 +2050,6 @@ app.scope(function (app) {
             }
         }), function (memo, handler, key) {
             memo[key + 'Class'] = handler(passer(key === 'has' ? 'contains' : key));
-            return memo;
         }, {}),
         markCustom = function (manager, forceCustom, element_) {
             var resultant, isCustom, isCustomValue = manager.is(ELEMENT) && attributeApi.read(element_ || manager.element(), CUSTOM_KEY);
@@ -2001,7 +2077,7 @@ app.scope(function (app) {
                 markCustom(manager, BOOLEAN_FALSE, element);
             }
         },
-        markGlobal = function (manager, element) {
+        markGlobal = function (manager, element, src) {
             var isAccessable;
             manager.remark(WINDOW, isWindow(element));
             if (!manager.is(WINDOW) || !manager.owner) {
@@ -2042,62 +2118,6 @@ app.scope(function (app) {
                 return;
             }
             manager.remark(ATTACHED, isAttached(manager, owner, element));
-        },
-        registeredElementName = function (name, manager) {
-            return capitalize(ELEMENT) + HYPHEN + manager[__ELID__] + HYPHEN + name;
-        },
-        iframeContent = function (head, body) {
-            return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="user-scalable=no,width=device-width,initial-scale=1"><meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">' + head + '</head><body>' + body + '</body></html>';
-        },
-        filtersParentNotMe = function (parent) {
-            return function (element) {
-                return element[PARENT_NODE] === parent;
-            };
-        },
-        returnsSelector = function (string, owner) {
-            var registeredElements = owner.registeredElements;
-            return registeredElements[string] === BOOLEAN_TRUE ? string : createAttributeFromTag(string);
-        },
-        convertSelector = function (str, owner) {
-            // removes custom tag names and replaces them with [is="tag"]
-            // if anyone knows some regexp that would be better than this, then take a stab at it
-            return map(toArray(str, SPACE), function (level) {
-                return level.replace(/^(\S*?)([\.|\#|\[])/i, function (match_) {
-                    var match = match_;
-                    var last = match[LENGTH] - 1;
-                    return last ? (returnsSelector(match.slice(0, last), owner) + match.slice(last)) : match;
-                });
-            }).join(SPACE);
-        },
-        superElements = function (context, key) {
-            return isElement(context[key]) ? [context[key]] : [];
-        },
-        superElementsHash = {
-            body: BOOLEAN_TRUE,
-            head: BOOLEAN_TRUE
-        },
-        // takes string to query for, subset of tree to query for and manager so it can always get to the document
-        query = function (str_, ctx, manager) {
-            var directSelector, elements, str = str_,
-                context = ctx,
-                returnsArray = returns.first,
-                owner = manager.owner;
-            if (manager && manager === owner) {
-                if (superElementsHash[str]) {
-                    return superElements(context, 'body');
-                }
-            }
-            if (manager && str[0] === '>') {
-                directSelector = BOOLEAN_TRUE;
-                str = manager.queryString() + str;
-            }
-            str = convertSelector(str, owner);
-            elements = context.querySelectorAll(str);
-            if (directSelector) {
-                return dataReconstructor(elements, filtersParentNotMe(context));
-            } else {
-                return toArray(elements);
-            }
         },
         DOMA_SETUP = factories.DOMA_SETUP = function (windo_) {
             var registeredElements, $, setup, wrapped, windo = windo_,
@@ -2437,7 +2457,11 @@ app.scope(function (app) {
             return els.isValidDomManager || isElement(els) || isFragment(els);
         },
         iframeChangeHandler = function () {
-            testIframe(this);
+            var windo;
+            if ((windo = this.window())) {
+                windo.unmark(ACCESSABLE);
+                testIframe(this);
+            }
         },
         childByTraversal = function (manager, parent, element, idxChange_, ask_, isString) {
             var target, found,
@@ -2451,7 +2475,7 @@ app.scope(function (app) {
                 ask = convertSelector(ask, manager.owner);
                 while (target && !found) {
                     target = children[(startIndex = (startIndex += idxChange))];
-                    found = matchesSelector(target, ask);
+                    found = matchesSelector(target, ask, parent.owner);
                 }
             } else {
                 target = element;
@@ -2846,7 +2870,7 @@ app.scope(function (app) {
                     parent = target;
                     while (!found && parent && isElement(parent) && parent !== el) {
                         ++counter;
-                        if (matchesSelector(parent, selector)) {
+                        if (matchesSelector(parent, selector, manager.owner)) {
                             found = parent;
                             // hold on to the temporary target
                             first.temporaryTarget = found;
@@ -2921,7 +2945,7 @@ app.scope(function (app) {
             return manager;
         },
         removeHandler = function (fragment, handler) {
-            var el, parent, manager = this,
+            var el, timeoutId, parent, manager = this,
                 cachedRemoving = manager.is(REMOVING) || BOOLEAN_FALSE;
             if (cachedRemoving || !(el = manager.element()) || !(parent = el[PARENT_NODE])) {
                 // can't remove because already removed
@@ -2929,7 +2953,9 @@ app.scope(function (app) {
             }
             manager.mark(REMOVING);
             if (manager.is(IFRAME) && handler && isFunction(handler)) {
-                manager.owner.window().element().setTimeout(bind(handler, NULL, manager));
+                // use the parent window's setTimeout
+                // do we need a way to cancel it if it gets reattached?
+                manager.owner.window().element().setTimeout(bind(handler, manager, manager));
             }
             removeChild(el, fragment);
             dispatchDetached([el], manager.owner);
@@ -2939,10 +2965,11 @@ app.scope(function (app) {
         dommanagerunwrapper = function () {
             return [this];
         },
-        DomManager = factories.DomManager = factories.Events.extend(DOM_MANAGER_STRING, extend({}, classApi, {
+        DomManager = factories[DOM_MANAGER_STRING] = factories.Events.extend(DOM_MANAGER_STRING, extend({}, classApi, {
             'directive:creation:EventManager': DomEventsDirective,
             isValidDomManager: BOOLEAN_TRUE,
             $: manager_query,
+            // this is here to be an alias
             querySelectorAll: manager_query,
             orderEventsByHeirarchy: function () {
                 return this.owner.orderEventsByHeirarchy;
@@ -3118,7 +3145,7 @@ app.scope(function (app) {
                     string = function (element, original_, next, owner) {
                         var parent = element[PARENT_NODE];
                         var original = convertSelector(original_, owner);
-                        return [parent, matchesSelector(parent, original)];
+                        return [parent, matchesSelector(parent, original, owner)];
                     },
                     speshal = {
                         document: function (element, original, next) {
@@ -3237,7 +3264,7 @@ app.scope(function (app) {
                 }
                 if (manager.is(IFRAME)) {
                     // it's an iframe, so return the manager relative to the outside
-                    return manager.owner.returnsManager(manager.element().contentWindow);
+                    return manager.is(ATTACHED) && manager.owner.returnsManager(manager.element().contentWindow);
                 }
                 // it's an element so go up
                 return manager.owner.window();
@@ -3283,7 +3310,9 @@ app.scope(function (app) {
                     return BOOLEAN_TRUE;
                 }
                 if (manager.is(ACCESSABLE)) {
-                    parsedReference = reference(element[LOCATION].href);
+                    parsedReference = reference(wraptry(function () {
+                        return manager.parent('iframe').element().src || element[LOCATION].href;
+                    }) || element[LOCATION].href);
                     if (!parsedReference && manager.iframe) {
                         parsedReference = reference(manager.iframe.src());
                     }
@@ -3476,7 +3505,7 @@ app.scope(function (app) {
         createDomFilter = function (filtr_, owner) {
             var filtr = filtr_;
             return isFunction(filtr) ? filtr : (isString(filtr) ? (filterExpressions[filtr] || (filtr = convertSelector(filtr, owner)) && function (item) {
-                return matchesSelector(item, filtr);
+                return matchesSelector(item, filtr, owner);
             }) : (isNumber(filtr) ? function (el, idx) {
                 return idx === filtr;
             } : (isObject(filtr) ? objectMatches(filtr) : function () {
@@ -3487,14 +3516,6 @@ app.scope(function (app) {
             return function (manager, index, list) {
                 return fn(manager.element(), index, list);
             };
-        },
-        dataReconstructor = function (list, fn) {
-            return foldl(list, function (memo, arg1, arg2, arg3) {
-                if (fn(arg1, arg2, arg3)) {
-                    memo.push(arg1);
-                }
-                return memo;
-            }, []);
         },
         domFilter = function (items, filtr, owner) {
             var filter = createDomFilter(filtr, owner);
@@ -3654,7 +3675,7 @@ app.scope(function (app) {
                 return this;
             },
             elements: function () {
-                // to array of DOMAanagers
+                // to array of elements
                 return this.results(ELEMENT);
             },
             /**
@@ -3954,9 +3975,6 @@ app.scope(function (app) {
     app.undefine(function (app, windo, passed) {
         var setup = DOMA_SETUP(windo);
         allSetups.push(setup);
-        // windo.DOMA = windo.DOMA || setup;
-        // windo.returnsElement = returnsElement;
-        // windo.$ = has(windo, '$') ? windo.$ : setup;
         duff(plugins, function (plugin) {
             plugin(setup);
         });

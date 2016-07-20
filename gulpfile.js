@@ -8,6 +8,8 @@ var content = ['browserify', 'distribute'],
     _ = require('underscore'),
     fs = require('fs'),
     path = require('path'),
+    // jsonpretty = require('json-pretty'),
+    spawn = require('child_process').spawn,
     makePath = function (obj) {
         return _.each(obj, function (val, key) {
             if (_.isObject(val)) {
@@ -17,8 +19,9 @@ var content = ['browserify', 'distribute'],
             }
         });
     },
-    modules = 'scopeStart constants utils shims Strings Directives Collection Messenger Events Model directives/Events directives/Data directives/Children directives/Linguistics Promise Associator HTTP Module DOMA Looper directives/Element View Buster directives/swipe tests scopeEnd'.split(' '),
-    specModules = modules.concat(['evaluation']),
+    modules = 'scopeStart constants utils shims Strings Directives Collection Messenger Events Model directives/Events directives/Data directives/Children directives/Linguistics Promise Associator HTTP Module DOMA Looper directives/Element View Buster tests scopeEnd'.split(' '),
+    // just to make a new one
+    specModules = modules.concat(['odette']),
     extraModules = 'Socket Router LocalStorage NoSock'.split(' '),
     framedModules = 'index'.split(' '),
     makeSpecPath = function (name) {
@@ -46,7 +49,7 @@ var content = ['browserify', 'distribute'],
         jspublic: './dist/js/',
         jsTestsPublic: './dist/js/',
         serverIndex: './index.js',
-        ignoreFiles: ['.git/', 'node_modules/', './gulp', 'gulpfile.js', './dist']
+        ignoreFiles: ['.git/', 'node_modules/', './gulp', 'gulpfile.js', './dist', './results']
     }), {
         src: './src/**/*',
         publicized: './src/static/**/*',
@@ -67,11 +70,7 @@ gulp.task('build', content);
 gulp.task('dev', devTasks);
 gulp.task('default', allTasks);
 var BrowserStack = require("browserstack");
-// var _ = require('underscore');
-// var gulp = require('gulp');
-// var webserver = require('gulp-webserver');
 var webdriver = require('browserstack-webdriver');
-// var exit = require('gulp-exit');
 var client = BrowserStack.createClient({
     username: "shashank@gospecless.com",
     password: "Specless@BrowserStack"
@@ -79,14 +78,6 @@ var client = BrowserStack.createClient({
 var log = function () {
     console.log.apply(console, arguments);
 };
-// gulp.task('serve', function () {
-//     gulp.src('.').pipe(webserver({
-//         livereload: true,
-//         directoryListing: true,
-//         open: './index.html',
-//         port: 9000
-//     }));
-// });
 var prebrowsers;
 gulp.task('stack', function () {
     // Input capabilities
@@ -119,7 +110,12 @@ gulp.task('stack', function () {
             ios: true
         },
         writeToResults = function (name, result) {
-            fs.writeFile(path.join(__dirname, 'results', name + '.json'), result);
+            var filename = path.join(__dirname, 'results', name + '.json');
+            fs.writeFile(filename, result, function () {
+                spawn('json-prettify', [filename]).on('data', function (data) {
+                    console.log(data);
+                });
+            });
         },
         queueNext = function (driver) {
             driver.quit().then(function () {
@@ -140,18 +136,16 @@ gulp.task('stack', function () {
             }
             log('testing: ' + browser.browserName + ' v' + (browser.browser_version) + ' on ' + browser.os + ' ' + browser.os_version);
             driver = new webdriver.Builder().usingServer('http://hub.browserstack.com/wd/hub').withCapabilities(_.extend({}, capabilities, browser)).build();
+            var waits = function () {
+                driver.findElements(webdriver.By.className('test-output')).then(function (els) {
+                    return els.length ? els[0].getText().then(function (text) {
+                        writeToResults(browser.browserName.split(' ').join('') + '_' + browser.browser_version.split(' ').join('') + '_' + browser.os.split(' ').join('') + '_' + browser.os_version, text);
+                        queueNext(driver);
+                    }) : setTimeout(waits, 2000);
+                });
+            };
             driver.get('http://localhost:8080/test/browserstack/').then(function () {
                 // wait for the tests to complete
-                var waitcount = 0;
-                var waits = function () {
-                    driver.findElements(webdriver.By.className('test-output')).then(function (els) {
-                        return els.length ? els[0].getText().then(function (text) {
-                            // console.log(text);
-                            writeToResults('browser_' + browser.browserName.split(' ').join('') + '_browserVersion_' + browser.browser_version.split(' ').join('') + '_os_' + browser.os.split(' ').join(''), text);
-                            queueNext(driver);
-                        }) : setTimeout(waits, 2000);
-                    });
-                };
                 setTimeout(waits, 10000);
             });
         };
@@ -169,5 +163,6 @@ gulp.task('stackie9', function () {
     });
     gulp.start('stack');
 });
+gulp.task('browserstack', ['default', 'stack']);
 gulp.task('browserstackie', ['default', 'stackie']);
 gulp.task('browserstackie9', ['default', 'stackie9']);

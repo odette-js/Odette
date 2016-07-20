@@ -1,6 +1,6 @@
 application.scope().run(window, function (app, _, factories, documentView, scopedFactories, $) {
     _.describe('Events', function () {
-        var blank, box,
+        var count, blank, box,
             Model = factories.Model,
             handler = function () {
                 count++;

@@ -506,5 +506,6 @@ app.scope(function (app) {
         if (app.global.touch(win, win[TOP])) {
             documentView.$(win[TOP]).on(MESSAGE, receivePostMessage);
         }
+        documentView.$(win).on(MESSAGE, receivePostMessage);
     });
 });

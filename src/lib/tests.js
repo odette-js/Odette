@@ -1,20 +1,25 @@
 app.scope(function (app) {
     var current, pollerTimeout, allIts, describes, successfulIts, failedIts, stack, queue, allExpectations, successful, failures, successfulExpectations, failedExpectations, globalBeforeEachStack, globalAfterEachStack, currentItFocus, failedTests = 0,
         testisrunning = BOOLEAN_FALSE,
+        expectationRunning = BOOLEAN_FALSE,
         EXPECTED = 'expected',
         SPACE_NOT = ' not',
         TO_EQUAL = ' to equal ',
         TO_EVALUATE_TO = ' to evaluate to ',
         AN_ERROR = ' an error',
         TO_BE_THROWN = ' to be thrown',
-        TO_BE_STRICTLY_EQUAL_STRING = ' to be strictly equal to ',
+        TO_BE_STRICTLY_EQUAL_TO_STRING = ' to be strictly equal to ',
         errIfFalse = function (handler, makemessage, execute) {
             return function (arg) {
                 var result, expectation = {};
                 if (execute) {
                     current = current();
                 }
-                if ((result = handler(current, arg))) {
+                result = handler(current, arg);
+                if (result !== BOOLEAN_TRUE && result !== BOOLEAN_FALSE) {
+                    exception('expectation results from the maker method must be of type boolean.');
+                }
+                if (result) {
                     successfulExpectations.push(expectation);
                     expectation.success = BOOLEAN_TRUE;
                 } else {
@@ -26,6 +31,7 @@ app.scope(function (app) {
                 }
                 allExpectations.push(expectation);
                 expectation.tiedTo = currentItFocus;
+                expectationRunning = BOOLEAN_FALSE;
                 return result;
             };
         },
@@ -33,6 +39,10 @@ app.scope(function (app) {
             not: {}
         },
         expect = function (start) {
+            if (expectationRunning) {
+                return exception('expectations cannot be nested or be running at the same time');
+            }
+            expectationRunning = BOOLEAN_TRUE;
             current = start;
             return expectationsHash;
         },
@@ -55,19 +65,19 @@ app.scope(function (app) {
         internalToBeResult = maker('toBe', function (current, comparison) {
             return current === comparison;
         }, function (current, comparison) {
-            return EXPECTED + SPACE + stringify(current) + TO_BE_STRICTLY_EQUAL_STRING + stringify(comparison);
+            return EXPECTED + SPACE + stringify(current) + TO_BE_STRICTLY_EQUAL_TO_STRING + stringify(comparison);
         }, function (current, comparison) {
-            return EXPECTED + SPACE + stringify(current) + SPACE_NOT + TO_BE_STRICTLY_EQUAL_STRING + stringify(comparison);
+            return EXPECTED + SPACE + stringify(current) + SPACE_NOT + TO_BE_STRICTLY_EQUAL_TO_STRING + stringify(comparison);
         }),
         internalToEqualResult = maker('toEqual', function (current, comparison) {
-            return _.isEqual(current, comparison);
+            return isEqual(current, comparison);
         }, function (current, comparison) {
             return EXPECTED + SPACE + stringify(current) + TO_EQUAL + stringify(comparison);
         }, function (current, comparison) {
             return EXPECTED + SPACE + stringify(current) + SPACE_NOT + TO_EQUAL + stringify(comparison);
         }),
         internalToEvaluateTo = maker('toEvaluateTo', function (current, comparison) {
-            return _.isEqual(current, comparison);
+            return isEqual(current, comparison);
         }, function (current, comparison) {
             return EXPECTED + SPACE + 'function' + TO_EVALUATE_TO + stringify(comparison);
         }, function (current, comparison) {
@@ -161,12 +171,12 @@ app.scope(function (app) {
                 current: copy,
                 afterStack: globalAfterEachStack.slice(0),
                 beforeStack: globalBeforeEachStack.slice(0),
-                promise: _.Promise()
+                promise: Promise()
             };
             allIts.push(expectation);
             if (testisrunning) {
                 queue.push(expectation);
-                return;
+                return expectation.promise;
             }
             setup(expectation);
             return expectation.promise;
@@ -222,7 +232,7 @@ app.scope(function (app) {
                         } else {
                             string = target;
                         }
-                        delimiter = delimiter + '\t';
+                        delimiter = delimiter + '    ';
                     }
                     return {
                         name: expectation.success ? string : string + '\n',
@@ -254,7 +264,7 @@ app.scope(function (app) {
                     eachCallBound(afters, results);
                     console.log(string, results);
                 } else {
-                    pollerTimeout = setTimeout(loops, 100);
+                    pollerTimeout = setTimeout(loops, 500);
                 }
             }, 100) : pollerTimeout;
         },

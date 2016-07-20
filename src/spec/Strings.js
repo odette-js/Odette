@@ -30,13 +30,7 @@ application.scope().run(function (app, _) {
             });
         });
         _.it('_.reference', function () {
-            _.expect(_.reference(document)).toEqual('');
-            // var expectation = _.expect(_.reference(document));
-            // if (app.global.touch(window, window.top)) {
-            //     expectation.toEqual('');
-            // } else {
-            //     expectation.not.toEqual('');
-            // }
+            _.expect(_.isString(_.reference(document))).toEqual(true);
         });
         _.it('_.string.match', function () {
             _.expect(_.string.match('strings are my stringy friends', 'string')).toEqual(['string']);

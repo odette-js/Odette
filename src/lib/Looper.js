@@ -92,7 +92,7 @@ app.scope(function (app) {
             }
             if (!win[REQUEST_ANIMATION_FRAME]) {
                 win[REQUEST_ANIMATION_FRAME] = function (callback) {
-                    var currTime = new Date().getTime(),
+                    var currTime = now(),
                         timeToCall = Math.max(0, 16 - (currTime - lastTime)),
                         id = win.setTimeout(function () {
                             callback(currTime + timeToCall);
@@ -137,7 +137,7 @@ app.scope(function (app) {
                 looper.unmark(HALTED);
                 looper.unmark(DESTROYED);
                 looper.unmark(RUNNING);
-                looper['constructor:Collection']();
+                looper[CONSTRUCTOR + COLON + COLLECTION]();
                 add(looper);
                 return looper;
             },

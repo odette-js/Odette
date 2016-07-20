@@ -265,7 +265,7 @@ var cacheable = function (fn) {
         if (isString(str)) {
             // gives it a chance to match
             str += SLASH;
-            match = str.match(/^http?:\/\/.*?\//);
+            match = str.match(/^https?:\/\/.*?\//im);
             if (match) {
                 match = match[0].slice(0, match[0][LENGTH] - 1);
             }

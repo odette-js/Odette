@@ -8,12 +8,12 @@ application.scope().run(window, function (app, _, factories, documentView, scope
             allstates = ajax.allStates();
             _.expect(isObject(ajax)).toEqual(BOOLEAN_TRUE);
         });
-        _.it('can accept an object as a first argument', function (done) {
-            factories.HTTP('/json/reporting.json').success(function (json) {
-                _.expect(isObject(json)).toEqual(BOOLEAN_TRUE);
-                done();
-            });
-        });
+        // _.it('can accept an object as a first argument', function (done) {
+        //     factories.HTTP('/json/reporting.json').success(function (json) {
+        //         _.expect(isObject(json)).toEqual(BOOLEAN_TRUE);
+        //         done();
+        //     });
+        // });
         _.it('can accept a string as a first argument', function (done) {
             var original, handlerCounter = 0;
             factories.HTTP('/json/reporting.json').success(function (json) {

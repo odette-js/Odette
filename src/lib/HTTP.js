@@ -1,7 +1,5 @@
 app.scope(function (app) {
-    var _ = app._,
-        factories = _.factories,
-        CATCH = 'catch',
+    var CATCH = 'catch',
         ERROR = 'error',
         STATUS = 'status',
         FAILURE = 'failure',
@@ -13,6 +11,13 @@ app.scope(function (app) {
         PROGRESS = 'progress',
         validTypes = toArray(GET + ',POST,PUT,DELETE,HEAD,TRACE,OPTIONS,CONNECT'),
         baseEvents = toArray(PROGRESS + ',timeout,abort,' + ERROR),
+        readAndApply = function (ajax) {},
+        basehandlers = {
+            progress: function () {},
+            timeout: function () {},
+            abort: function () {},
+            error: readAndApply
+        },
         attachBaseListeners = function (ajax) {
             var prog = 0,
                 req = ajax.options.requestObject;
@@ -21,6 +26,9 @@ app.scope(function (app) {
                     // we put it directly on the xhr object so we can
                     // account for certain ie bugs that show up
                     req['on' + evnt] = function (e) {
+                        if (!e) {
+                            return;
+                        }
                         var percent = (e.loaded / e.total);
                         prog++;
                         ajax[DISPATCH_EVENT](PROGRESS, {
@@ -32,7 +40,7 @@ app.scope(function (app) {
                     };
                 } else {
                     req['on' + evnt] = function (e) {
-                        ajax.resolveAs(evnt, e);
+                        basehandlers[evnt](ajax, evnt, e);
                     };
                 }
             });
@@ -89,7 +97,8 @@ app.scope(function (app) {
                     async: BOOLEAN_TRUE,
                     method: method,
                     type: type,
-                    requestObject: xhrReq
+                    requestObject: xhrReq,
+                    withCredentials: BOOLEAN_TRUE
                 }, str);
                 Promise[CONSTRUCTOR].call(ajax, function () {
                     var type = ajax.options.type,
@@ -103,7 +112,12 @@ app.scope(function (app) {
                         return exception('http object must have a url and a type');
                     }
                     ajax.attachResponseHandler();
-                    xhrReq.open(type, url, ajax.options.async);
+                    wraptry(function () {
+                        // if (!win.XDomainRequest || !isInstance(xhrReq, win.XDomainRequest)) {
+                        //     xhrReq.withCredentials = ajax.options.withCredentials;
+                        // }
+                        xhrReq.open(type, url, ajax.options.async);
+                    });
                     if (data) {
                         args.push(stringify(data));
                     }
@@ -176,7 +190,7 @@ app.scope(function (app) {
                             allStates = result(ajax, 'allStates');
                             rawData = ajax.options.preventParse ? rawData : ajax.parse(rawData);
                             hasFinished = BOOLEAN_TRUE;
-                            ajax.resolveAs(STATUS + COLON + xhrReqObj[STATUS], rawData);
+                            ajax.resolveAs(STATUS + COLON + (xhrReqObj[STATUS] === UNDEFINED ? 200 : xhrReqObj[STATUS]), rawData);
                         }
                     };
                 if (!xhrReqObj[method]) {

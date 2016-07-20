@@ -23,6 +23,7 @@
     "gulp-uglify": "^1.5.3",
     "jade": "^1.11.0",
     "jsdoc": "^3.4.0",
+    "json-pretty": "0.0.1",
     "morgan": "^1.7.0",
     "serve-favicon": "^2.3.0",
     "underscore": "^1.8.3"

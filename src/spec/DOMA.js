@@ -85,14 +85,14 @@ application.scope().run(window, function (app, _, factories, documentView, scope
         });
         _.describe('except it has some methods that are highly pertinant to DOM manipulation... ergo: DOMA', function () {
             // _.it('can check if its items are windows', function () {
-            //     _.expect($win.isWindow()).toEqual(true);
-            //     _.expect($doc.isWindow()).toEqual(false);
-            //     _.expect($body.isWindow()).toEqual(false);
+            //     _.expect($win.is('window')).toEqual(true);
+            //     _.expect($doc.is('window')).toEqual(false);
+            //     _.expect($body.is('window')).toEqual(false);
             // });
             // _.it('can check if its items are documents', function () {
-            //     _.expect($win.isDocument()).toEqual(false);
-            //     _.expect($doc.isDocument()).toEqual(true);
-            //     _.expect($body.isDocument()).toEqual(false);
+            //     _.expect($win.is('document')).toEqual(false);
+            //     _.expect($doc.is('document')).toEqual(true);
+            //     _.expect($body.is('document')).toEqual(false);
             // });
             _.it('can check if its items are actually elements', function () {
                 _.expect($win.allElements()).toEqual(false);
@@ -103,11 +103,11 @@ application.scope().run(window, function (app, _, factories, documentView, scope
             // _.it('can check if its items are document fragments', function () {
             //     var frag = document.createDocumentFragment();
             //     frag.appendChild(document.createElement('div'));
-            //     _.expect($win.isFragment()).toEqual(false);
-            //     _.expect($doc.isFragment()).toEqual(false);
-            //     _.expect($body.isFragment()).toEqual(false);
-            //     _.expect($('div').isFragment()).toEqual(false);
-            //     _.expect($(frag).isFragment()).toEqual(true);
+            //     _.expect($win.is('fragment')).toEqual(false);
+            //     _.expect($doc.is('fragment')).toEqual(false);
+            //     _.expect($body.is('fragment')).toEqual(false);
+            //     _.expect($('div').is('fragment')).toEqual(false);
+            //     _.expect($(frag).is('fragment')).toEqual(true);
             // });
         });
         _.describe('it can filter itself', function () {
@@ -120,16 +120,16 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                     return ((idx % 3) - 1) === 0;
                 });
                 _.expect(newDivs.length()).toEqual(2);
-                _.expect(newDivs.get()).toEqual(divs.get(1));
-                _.expect(newDivs.get(1)).toEqual(divs.get(4));
+                _.expect(newDivs.item()).toEqual(divs.item(1));
+                _.expect(newDivs.item(1)).toEqual(divs.item(4));
             });
-            _.it('by passing in an object', function () {
-                var newDivs = divs.filter({
-                    className: 'one not'
-                });
-                _.expect(newDivs.length()).toEqual(3);
-            });
-            _.it('can also get the first', function () {
+            // _.it('by passing in an object', function () {
+            //     var newDivs = divs.filter({
+            //         className: 'one not'
+            //     });
+            //     _.expect(newDivs.length()).toEqual(3);
+            // });
+            _.it('can also get the first item', function () {
                 _.expect(divs.first()).toEqual(divs.item(0));
             });
             _.it('and the last element in the list', function () {
@@ -294,7 +294,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 divs.each(function (el, idx) {
                     _.expect(_.isInstance(el, factories.DOMA)).toEqual(false);
                     _.expect(factories.DomManager.isInstance(el)).toEqual(true);
-                    _.expect(divs.item(idx) === el.element());
+                    _.expect(el.element()).toBe(divs.item(idx).element());
                 });
             });
             _.it('where the duff and forEach function just gives you the element at each index, just like a collection', function () {
@@ -475,6 +475,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
             _.expect(function () {
                 $.createElement('unregistered-test');
             }).toThrow();
+            _.expect($.registeredElements['unregistered-test']).toEqual(undefined);
             $.registerElement('unregistered-test');
             _.expect(function () {
                 $.createElement('unregistered-test');
@@ -491,7 +492,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
         _.it('can traverse horizontally for it\'s siblings', function () {
             var $branch = $('.branch');
             var $item2 = $branch.item(2);
-            _.expect(factories.DomManager.isInstance($item2));
+            _.expect(factories.DomManager.isInstance($item2)).toBe(true);
             _.expect($item2.prev()).toEqual($branch.item(1));
         });
         _.it('establishes dom managers immediately after an element\'s html is changed', function () {

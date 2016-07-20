@@ -690,7 +690,9 @@ var factories = {},
         // if (b instanceof _) b = b._wrapped;
         // Compare `[[Class]]` names.
         className = objectToString.call(a);
-        if (className !== objectToString.call(b)) return BOOLEAN_FALSE;
+        if (className !== objectToString.call(b)) {
+            return BOOLEAN_FALSE;
+        }
         switch (className) {
             // Strings, numbers, regular expressions, dates, and booleans are compared by value.
         case BRACKET_OBJECT_SPACE + 'RegExp]':
@@ -906,18 +908,24 @@ var factories = {},
         undefined: UNDEFINED
     },
     parse = function (val_) {
-        var coerced, val = val_;
+        var valTrimmed, valLength, coerced, val = val_;
         if (!isString(val)) {
+            // already parsed
             return val;
         }
-        val = val.trim();
-        if (!val[LENGTH]) {
+        val = valTrimmed = val.trim();
+        valLength = val[LENGTH];
+        if (!valLength) {
             return val;
         }
-        if ((val[0] === '{' && val[val[LENGTH] - 1] === '}') || (val[0] === '[' && val[val[LENGTH] - 1] === ']')) {
-            return wraptry(function () {
+        if ((val[0] === '{' && val[valLength - 1] === '}') || (val[0] === '[' && val[valLength - 1] === ']')) {
+            if ((val = wraptry(function () {
                 return JSON.parse(val);
-            });
+            }, function () {
+                return val;
+            })) !== valTrimmed) {
+                return val;
+            }
         }
         coerced = +val;
         if (!isNaN(coerced)) {
@@ -973,7 +981,7 @@ var factories = {},
         }, []);
     },
     toArray = function (object, delimiter) {
-        return isArrayLike(object) ? isArray(object) ? object : arrayLikeToArray(object) : (isString(object) ? object.split(isString(delimiter) ? delimiter : COMMA) : [object]);
+        return isArrayLike(object) ? isArray(object) ? object.slice(0) : arrayLikeToArray(object) : (isString(object) ? object.split(isString(delimiter) ? delimiter : COMMA) : [object]);
     },
     nonEnumerableProps = toArray('valueOf,isPrototypeOf,' + TO_STRING + ',propertyIsEnumerable,hasOwnProperty,toLocaleString'),
     flattenArray = function (list, deep_, handle) {
@@ -1322,7 +1330,7 @@ var factories = {},
             if (app.logWrappedErrors) {
                 console.error(e);
             }
-            returnValue = errthat ? errthat(e) : returnValue;
+            returnValue = errthat ? errthat(e, returnValue) : returnValue;
         } finally {
             returnValue = finalfunction ? finalfunction(err, returnValue) : returnValue;
         }

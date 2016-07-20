@@ -48,7 +48,7 @@ this.Odette = this.Odette || function (global, WHERE, version, fn, alt) {
                 returnValue = trythis();
             } catch (e) {
                 err = e;
-                returnValue = errthat ? errthat(e) : returnValue;
+                returnValue = errthat ? errthat(e, returnValue) : returnValue;
             } finally {
                 returnValue = finalfunction ? finalfunction(err, returnValue) : returnValue;
             }
@@ -188,7 +188,6 @@ this.Odette = this.Odette || function (global, WHERE, version, fn, alt) {
         var fn = name_ && (isFunction(name_) ? name_ : (isFunction(fn_) ? fn_ : NULL));
         return this[PARENT].scope(name, fn);
     };
-    if (!WHERE || !global_) {}
     var app, application = global_[WHERE] = global_[WHERE] || (function () {
         Odette.where.push(WHERE);
         return {
@@ -352,15 +351,14 @@ this.Odette = this.Odette || function (global, WHERE, version, fn, alt) {
         };
     }());
     app = application.get(version);
-    if (app) {
+    if (!app) {
         // there is already an app with this same version that originated from this global object
-        if (alt) {
-            alt.apply(global_, [application, app]);
-        }
-    } else {
         app = application.registerVersion(version);
         // call is used because apply is finicky and bind is not universal
         fn.apply(global_, [application, app]);
+    }
+    if (alt) {
+        alt.apply(global_, [application, app]);
     }
     return app;
 };
