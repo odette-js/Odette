@@ -1,8 +1,5 @@
 app.scope(function (app) {
-    var _ = app._,
-        factories = _.factories,
-        Collection = factories.Collection,
-        SUCCESS = 'success',
+    var SUCCESS = 'success',
         REGISTERED = 'registered',
         STATE = 'state',
         EVERY = 'every',

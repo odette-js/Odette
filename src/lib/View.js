@@ -243,7 +243,7 @@ app.scope(function (app) {
             constructor: function (secondary_) {
                 var view = this;
                 var secondary = secondary_ || {};
-                view.id = uniqueId(BOOLEAN_FALSE, BOOLEAN_TRUE);
+                view.id = app.counter(BOOLEAN_FALSE, BOOLEAN_TRUE);
                 view.bindModel(secondary.model);
                 delete secondary.model;
                 Parent[CONSTRUCTOR].call(view, secondary);

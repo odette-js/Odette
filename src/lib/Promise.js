@@ -252,12 +252,12 @@ app.scope(function (app) {
             when: function () {
                 return this.all(arguments);
             },
-            thenable: function (handler) {
-                return Promise(handler);
+            thenable: function () {
+                return Promise.apply(NULL, arguments);
             },
-            then: function (handler) {
+            then: function (one, two, three) {
                 var promise = this;
-                var thenable = promise.thenable(handler);
+                var thenable = promise.thenable.apply(promise, arguments);
                 promise.always(function (value) {
                     return promise.is(FULFILLED) ? thenable.resolve(value) : thenable.reject(value);
                 });
@@ -268,15 +268,16 @@ app.scope(function (app) {
             stash: intendedApi(function (name, list) {
                 var promise = this,
                     stashedHandlers = promise[STASHED_HANDLERS];
+                // do the hard work now so later you can
+                // iterate through the stack quickly
                 flatten(isFunction(list) ? [list] : list, BOOLEAN_TRUE, function (fn) {
                     if (!isFunction(fn)) {
                         return;
                     }
-                    // do the hard work now so later you can
-                    // iterate through the stack quickly
                     stashedHandlers.push({
                         key: name,
-                        fn: bind(fn, promise)
+                        fn: bind(fn, promise),
+                        handler: fn
                     });
                 });
             }),

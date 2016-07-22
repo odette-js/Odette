@@ -152,7 +152,7 @@ app.scope(function (app) {
             }
             // This talkerect is not listening to any other events on `talker` yet.
             // Setup the necessary references to track the listening callbacks.
-            listenerDirective[TALKER_ID] = listenerDirective[TALKER_ID] || uniqueId(LISTENING_PREFIX);
+            listenerDirective[TALKER_ID] = listenerDirective[TALKER_ID] || app.counter(LISTENING_PREFIX);
             listening = listeningTo[talkerId] = {
                 talker: talker,
                 talkerId: talkerId,
@@ -200,7 +200,7 @@ app.scope(function (app) {
             constructor: function (opts) {
                 var eventer = this;
                 extend(eventer, opts);
-                eventer[uniqueKey + ID] = eventer[uniqueKey + ID] || uniqueId(uniqueKey);
+                eventer[uniqueKey + ID] = eventer[uniqueKey + ID] || app.counter(uniqueKey);
                 // reacting to self
                 eventer.on(result(eventer, 'events'));
                 eventer.initialize(opts);

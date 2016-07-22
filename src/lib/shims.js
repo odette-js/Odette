@@ -46,7 +46,7 @@ app.shims = function (win) {
                 }
                 gap += indent;
                 partial = [];
-                if (Object.prototype.toString.apply(value) === "[object Array]") {
+                if (Object[PROTOTYPE].toString.apply(value) === "[object Array]") {
                     length = value[lengthString];
                     for (i = 0; i < length; i += 1) {
                         partial[i] = str(i, value) || "null";
@@ -68,7 +68,7 @@ app.shims = function (win) {
                     }
                 } else {
                     for (k in value) {
-                        if (Object.prototype.hasOwnProperty.call(value, k)) {
+                        if (Object[PROTOTYPE].hasOwnProperty.call(value, k)) {
                             v = str(k, value);
                             if (v) {
                                 partial.push(quote(k) + (gap ? ": " : ":") + v);
@@ -82,11 +82,11 @@ app.shims = function (win) {
             }
         }
         if (!JSON) {
-            if (typeof Date.prototype.toJSON !== "function") {
-                Date.prototype.toJSON = function (key) {
+            if (typeof Date[PROTOTYPE].toJSON !== "function") {
+                Date[PROTOTYPE].toJSON = function (key) {
                     return isFinite(this.valueOf()) ? this.getUTCFullYear() + "-" + f(this.getUTCMonth() + 1) + "-" + f(this.getUTCDate()) + "T" + f(this.getUTCHours()) + ":" + f(this.getUTCMinutes()) + ":" + f(this.getUTCSeconds()) + "Z" : null;
                 };
-                String.prototype.toJSON = Number.prototype.toJSON = Boolean.prototype.toJSON = function (key) {
+                String[PROTOTYPE].toJSON = Number[PROTOTYPE].toJSON = Boolean[PROTOTYPE].toJSON = function (key) {
                     return this.valueOf();
                 };
             }
@@ -133,7 +133,7 @@ app.shims = function (win) {
                         var k, v, value = holder[key];
                         if (value && typeof value === "object") {
                             for (k in value) {
-                                if (Object.prototype.hasOwnProperty.call(value, k)) {
+                                if (Object[PROTOTYPE].hasOwnProperty.call(value, k)) {
                                     v = walk(value, k);
                                     if (v !== undefined) {
                                         value[k] = v;
@@ -153,7 +153,7 @@ app.shims = function (win) {
                         });
                     }
                     if (/^[\],:{}\s]*$/.test(text.replace(/\\(?:["\\\/bfnrt]|u[0-9a-fA-F]{4})/g, "@").replace(/"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g, "]").replace(/(?:^|:|,)(?:\s*\[)+/g, ""))) {
-                        j = Function.prototype.constructor("(" + text + ")");
+                        j = Function[PROTOTYPE].constructor("(" + text + ")");
                         return typeof reviver === "function" ? walk({
                             "": j
                         }, "") : j;
@@ -162,24 +162,24 @@ app.shims = function (win) {
                 };
             }
         }
-        if (!Function.prototype.bind) {
-            Function.prototype.bind = function (oThis) {
+        if (!Function[PROTOTYPE].bind) {
+            Function[PROTOTYPE].bind = function (oThis) {
                 if (typeof this !== 'function') {
                     // closest thing possible to the ECMAScript 5
                     // internal IsCallable function
-                    throw new TypeError('Function.prototype.bind - what is trying to be bound is not callable');
+                    throw new TypeError('Function[PROTOTYPE].bind - what is trying to be bound is not callable');
                 }
-                var aArgs = Array.prototype.slice.call(arguments, 1),
+                var aArgs = Array[PROTOTYPE].slice.call(arguments, 1),
                     fToBind = this,
                     FNOP = function () {},
                     fBound = function () {
-                        return fToBind.apply(this instanceof FNOP ? this : oThis, aArgs.concat(Array.prototype.slice.call(arguments)));
+                        return fToBind.apply(this instanceof FNOP ? this : oThis, aArgs.concat(Array[PROTOTYPE].slice.call(arguments)));
                     };
-                if (this.prototype) {
+                if (this[PROTOTYPE]) {
                     // native functions don't have a prototype
-                    FNOP.prototype = this.prototype;
+                    FNOP[PROTOTYPE] = this[PROTOTYPE];
                 }
-                fBound.prototype = new FNOP();
+                fBound[PROTOTYPE] = new FNOP();
                 return fBound;
             };
         }
@@ -223,4 +223,3 @@ app.shims = function (win) {
     fn.call(win);
 };
 app.shims(win);
-// });

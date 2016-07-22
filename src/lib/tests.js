@@ -1,7 +1,6 @@
 app.scope(function (app) {
-    var current, pollerTimeout, allIts, describes, successfulIts, failedIts, stack, queue, allExpectations, successful, failures, successfulExpectations, failedExpectations, globalBeforeEachStack, globalAfterEachStack, currentItFocus, failedTests = 0,
-        testisrunning = BOOLEAN_FALSE,
-        expectationRunning = BOOLEAN_FALSE,
+    var testisrunning,
+        expectationRunning, current, expectationCount, pollerTimeout, allIts, describes, successfulIts, failedIts, stack, queue, allExpectations, successful, failures, successfulExpectations, failedExpectations, globalBeforeEachStack, globalAfterEachStack, currentItFocus, failedTests = 0,
         EXPECTED = 'expected',
         SPACE_NOT = ' not',
         TO_EQUAL = ' to equal ',
@@ -126,7 +125,8 @@ app.scope(function (app) {
         setup = function (expectation) {
             testisrunning = BOOLEAN_TRUE;
             expectation.runId = setTimeout(function () {
-                var errThat, doThis, errThis, err, finallyThis;
+                var errThat, doThis, errThis, err, finallyThis,
+                    current = expectation.current.slice(0);
                 currentItFocus = expectation;
                 testisrunning = BOOLEAN_TRUE;
                 runningEach(expectation.beforeStack);
@@ -134,7 +134,7 @@ app.scope(function (app) {
                 if (expectation.handler[LENGTH] === 1) {
                     err = new Error();
                     expectation.timeoutId = setTimeout(function () {
-                        console.error('timeout:\n' + expectation.current.join('\n'));
+                        console.error('timeout:\n' + current.join('\n'));
                         errThat(err);
                         executedone(expectation);
                     }, 5000);
@@ -176,15 +176,16 @@ app.scope(function (app) {
             allIts.push(expectation);
             if (testisrunning) {
                 queue.push(expectation);
-                return expectation.promise;
+            } else {
+                setup(expectation);
             }
-            setup(expectation);
             return expectation.promise;
         },
         runningEach = function (globalStack) {
-            for (var i = 0; i < globalStack[LENGTH]; i++) {
-                var itemized = globalStack[i];
-                for (var j = 0; j < itemized[LENGTH]; j++) {
+            var i, j, itemized;
+            for (i = 0; i < globalStack[LENGTH]; i++) {
+                itemized = globalStack[i];
+                for (j = 0; j < itemized[LENGTH]; j++) {
                     itemized[j]();
                 }
             }
@@ -200,6 +201,7 @@ app.scope(function (app) {
             _.each(describes, function (promise) {
                 promise.resolve();
             });
+            expectationCount = 0;
             describes = [];
             allIts = [];
             successfulIts = [];
@@ -213,6 +215,22 @@ app.scope(function (app) {
             failedExpectations = [];
             globalBeforeEachStack = [];
             globalAfterEachStack = [];
+            testisrunning = BOOLEAN_FALSE;
+            expectationRunning = BOOLEAN_FALSE;
+        },
+        makesItName = function (current, delimiter_) {
+            var target, string, delimiter = delimiter_ || '\n',
+                stringList = current.slice(0);
+            while (stringList.length) {
+                target = stringList.shift();
+                if (string) {
+                    string = string + delimiter + target;
+                } else {
+                    string = target;
+                }
+                delimiter = delimiter + '    ';
+            }
+            return string;
         },
         createResults = function (duration) {
             return {
@@ -221,19 +239,8 @@ app.scope(function (app) {
                 total: allExpectations[LENGTH],
                 duration: duration,
                 tests: map(allExpectations, function (expectation) {
-                    var target, string, delimiter = '\n',
-                        tiedIt = expectation.tiedTo,
-                        stringList = tiedIt.current.slice(0),
-                        stringListLength = stringList.length;
-                    while (stringList.length) {
-                        target = stringList.shift();
-                        if (string) {
-                            string = string + delimiter + target;
-                        } else {
-                            string = target;
-                        }
-                        delimiter = delimiter + '    ';
-                    }
+                    var target, tiedIt = expectation.tiedTo,
+                        string = makesItName(tiedIt.current);
                     return {
                         name: expectation.success ? string : string + '\n',
                         duration: 0,
@@ -269,16 +276,18 @@ app.scope(function (app) {
             }, 100) : pollerTimeout;
         },
         afters = [],
-        testFinished = function (fn) {
+        finished = function (fn) {
             afters.push(fn);
         };
     resetTests();
     _.publicize({
-        afterEach: afterEach,
-        beforeEach: beforeEach,
-        expect: expect,
-        describe: describe,
-        it: it,
-        testFinished: testFinished
+        test: {
+            afterEach: afterEach,
+            beforeEach: beforeEach,
+            expect: expect,
+            describe: describe,
+            it: it,
+            finished: finished
+        }
     });
 });

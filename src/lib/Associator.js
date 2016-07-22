@@ -20,7 +20,7 @@ app.scope(function (app) {
                     dataArray = current[DATA] = current[DATA] || [];
                 if (objIsObj) {
                     if (obj && current.readData) {
-                        key = obj[__ELID__] = obj[__ELID__] || uniqueId('el');
+                        key = obj[__ELID__] = obj[__ELID__] || app.counter();
                         if (key) {
                             data = eldata[key] = eldata[key] || {};
                         }

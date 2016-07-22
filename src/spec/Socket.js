@@ -1,39 +1,39 @@
 application.scope().run(window, function (app, _, factories, documentView, scopedFactories, $) {
-    _.describe('WebSocket', function () {
+    _.test.describe('WebSocket', function () {
         var socket, count = 0;
-        _.beforeEach(function () {
+        _.test.beforeEach(function () {
             count = 0;
             socket = _.Socket();
             socket.connect('/echo');
         });
-        _.afterEach(function () {
+        _.test.afterEach(function () {
             socket.disconnect();
         });
-        _.it('can connect', function (done) {
-            _.expect(count).toEqual(0);
+        _.test.it('can connect', function (done) {
+            _.test.expect(count).toEqual(0);
             var socket = _.Socket();
             socket.connect('/echo').success(function () {
-                _.expect(count).toEqual(1);
+                _.test.expect(count).toEqual(1);
                 done();
             });
             count++;
         });
-        _.it('can send messages', function (done) {
+        _.test.it('can send messages', function (done) {
             socket.on('connect', function () {
                 socket.emit('here', {
                     and: 'there'
                 }).success(function () {
-                    _.expect(count).toEqual(1);
+                    _.test.expect(count).toEqual(1);
                     done();
                 });
                 count++;
             });
         });
-        _.it('can disconnect', function () {
+        _.test.it('can disconnect', function () {
             socket.on('connect', function () {
-                _.expect(socket.isConnected).toEqual(true);
+                _.test.expect(socket.isConnected).toEqual(true);
                 socket.disconnect();
-                _.expect(socket.isConnected).toEqual(false);
+                _.test.expect(socket.isConnected).toEqual(false);
             });
         });
     });

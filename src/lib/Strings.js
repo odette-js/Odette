@@ -70,22 +70,22 @@ var cacheable = function (fn) {
             return found();
         };
     }()),
-    uniqueId = (function () {
-        var stash = {};
-        var globalPrefix = 0;
-        return function (prefix) {
-            var value;
-            if (prefix) {
-                stash[prefix] = stash[prefix] || 0;
-                ++stash[prefix];
-                value = stash[prefix];
-            } else {
-                ++globalPrefix;
-                value = globalPrefix;
-            }
-            return prefix ? prefix + value : value;
-        };
-    }()),
+    // uniqueId = (function () {
+    //     var stash = {};
+    //     var globalPrefix = 0;
+    //     return function (prefix) {
+    //         var value;
+    //         if (prefix) {
+    //             stash[prefix] = stash[prefix] || 0;
+    //             ++stash[prefix];
+    //             value = stash[prefix];
+    //         } else {
+    //             ++globalPrefix;
+    //             value = globalPrefix;
+    //         }
+    //         return prefix ? prefix + value : value;
+    //     };
+    // }()),
     /**
      * @func
      */
@@ -461,8 +461,6 @@ _.publicize({
     weekdays: weekdays,
     // constants
     customUnits: customUnits,
-    // cache makers
-    uniqueId: uniqueId,
     cacheable: cacheable,
     categoricallyCacheable: categoricallyCacheable,
     // cacheable

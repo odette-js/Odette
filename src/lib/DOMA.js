@@ -534,7 +534,7 @@ var ATTACHED = 'attached',
             }
             return BOOLEAN_FALSE;
         }
-        return diffs;
+        // return diffs;
     },
     nodeToJSON = function (node, shouldStop_, includeComments) {
         var obj, children, childrenLength, shouldStop = shouldStop_ || noop;
@@ -616,7 +616,6 @@ app.scope(function (app) {
                 }
                 var nexttext = endsplit[1];
                 var contained = endsplit[0];
-                if (nexttext) {}
             }, {
                 layer: 0,
                 list: []
@@ -2024,7 +2023,7 @@ app.scope(function (app) {
                 element.classList.add.apply(element.classList, toArray(second, SPACE));
             }, function (element, current, list, second) {
                 duff(list, passesFirstArgument(bind(arrayRemoves, NULL, current)));
-                duff(second, passesFirstArgument(bind(arrayAdds, NULL, toArray(current, SPACE))));
+                duff(second, passesFirstArgument(bind(arrayAdds, NULL, current)));
                 element[CLASSNAME] = current.join(SPACE);
             })
         },
@@ -2399,7 +2398,7 @@ app.scope(function (app) {
                     return registeredConstructors[name];
                 }
             });
-            // manager.documentId = uniqueId('doc');
+            // manager.documentId = app.counter('doc');
             extend(manager, wrapped);
             extend($, wrapped);
             runSupport(manager.supports, manager);
@@ -3081,7 +3080,7 @@ app.scope(function (app) {
                         manager[__ELID__] = elId = el[__ELID__];
                     } else {
                         hash[DOM_MANAGER_STRING] = manager;
-                        manager[__ELID__] = uniqueId('win');
+                        manager[__ELID__] = app.counter('win');
                     }
                 }
                 manager.owner = owner || BOOLEAN_FALSE;

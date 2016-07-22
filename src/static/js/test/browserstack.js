@@ -15,7 +15,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
             }, [])
         };
     };
-    _.testFinished(function (results) {
+    _.test.finished(function (results) {
         $('body').append($.createElement('div').addClass('test-output').html(JSON.stringify(subset(results))));
     });
     // _.console.log = function (singleton, results) {

@@ -198,7 +198,7 @@ app.scope(function (app) {
                 return this.stop();
             },
             queue: function (fn_) {
-                var len, id = uniqueId(BOOLEAN_FALSE),
+                var len, id = app.counter(BOOLEAN_FALSE),
                     tween = this,
                     obj = fn_;
                 if (isFunction(obj)) {

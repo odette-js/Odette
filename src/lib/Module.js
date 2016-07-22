@@ -10,6 +10,7 @@ app.scope(function (app) {
         INITIALIZED = 'initialized',
         INITIALIZED_COLON_SUBMODULE = INITIALIZED + COLON + 'sub' + MODULE,
         DEFINED = 'defined',
+        notDefinedYetMessage = 'that module has not been ' + DEFINED + ' yet',
         startableMethods = {
             start: function (evnt) {
                 var startable = this;
@@ -175,7 +176,7 @@ app.scope(function (app) {
                 var promise, module, list, mappedArguments, app = this;
                 if (!isFunction(handler)) {
                     module = app.module(modulename);
-                    return module.is(DEFINED) ? module[EXPORTS] : exception('that module has not been ' + DEFINED + ' yet');
+                    return module.is(DEFINED) ? module[EXPORTS] : exception(notDefinedYetMessage);
                 } else {
                     promise = Promise();
                     list = toArray(modulename, SPACE);
