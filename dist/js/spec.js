@@ -2965,6 +2965,10 @@ application.scope().run(window, function (app, _, factories, documentView, scope
         protocol = window.location.protocol,
         framed_pathway = '/test/' + (app.BROWSERSTACKING ? 'browserstack/' : '') + 'framed.html',
         pagePromise = factories.HTTP.get('/test/framed.html');
+    // testing from same server across different origins
+    if (!window.location.port) {
+        return;
+    }
     _.test.describe('Buster', function () {
         _.test.beforeEach(function () {
             count = 0;
@@ -2975,7 +2979,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 documentView.directive('RegionManager').get('main').el.append(iframe);
                 var split = window.location.origin.split(':');
                 var buster = scopedFactories.Buster(window, iframe, {
-                    iframeSrc: window.location.protocol + '//' + window.location.hostname + ':' + 8000 + framed_pathway
+                    iframeSrc: window.location.protocol + '//' + window.location.hostname + ':' + 9000 + framed_pathway
                 });
                 buster.connected(handler);
                 buster.sync(function (e) {

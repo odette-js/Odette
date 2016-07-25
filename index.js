@@ -2,7 +2,7 @@
 
 require('./server')({
     http: {
-        port: 8080
+        port: 9080
     },
     env: {
         type: process.env.SPICE_ENV,
@@ -12,7 +12,7 @@ require('./server')({
 });
 require('./server')({
     http: {
-        port: 8000
+        port: 9000
     },
     env: {
         type: process.env.SPICE_ENV,

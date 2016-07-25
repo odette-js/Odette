@@ -26,14 +26,9 @@ var busterGroupHash = {},
         }
     };
 app.scope(function (app) {
-    var _ = app._,
-        factories = _.factories,
-        parse = _.parse,
-        stringify = _.stringify,
-        ENCODED_BRACKET = '%7B',
+    var ENCODED_BRACKET = '%7B',
         IS_LATE = 'isLate',
         DOCUMENT_READY = 'documentReady',
-        //.is(WINDOW)= 'isWindow',
         DEFERRED = 'deferred',
         RESOLVED = 'resolved',
         IS_DEFERRED = 'is' + capitalize(DEFERRED),
