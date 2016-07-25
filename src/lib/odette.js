@@ -192,6 +192,12 @@
         Application[PROTOTYPE].counter = function (thing) {
             return Odette.counter(thing);
         };
+        Application[PROTOTYPE].libraryUrl = function () {
+            return './library.js';
+        };
+        Application[PROTOTYPE].loadLibrary = function (fn) {
+            return this[PARENT].loadLibrary(this, this.libraryUrl(), fn);
+        };
         var app, application = global_[WHERE] = global_[WHERE] || (function () {
             Odette.where.push(WHERE);
             return {
@@ -348,6 +354,51 @@
                             });
                         }
                         return application;
+                    }
+                },
+                makeScript: function (src, onload, docu_, preventappend) {
+                    var docu = docu_ || doc,
+                        script = docu.createElement('script');
+                    script.type = 'text/javascript';
+                    if (!preventappend) {
+                        docu.head.appendChild(script);
+                    }
+                    if (src) {
+                        if (onload) {
+                            script.onload = onload;
+                        }
+                        if (isString(src)) {
+                            // src applied last for ie
+                            script.src = src;
+                        } else {
+                            script.innerHTML = src.join('\n');
+                        }
+                    }
+                    return script;
+                },
+                loadLibrary: function (version, url, fn) {
+                    var cachedContext, result, app = version,
+                        application = this;
+                    if (isString(version)) {
+                        app = application.get(version);
+                    }
+                    if (!app) {
+                        Application[PROTOTYPE].exception('Application must have been created already.');
+                    }
+                    if (application.defined) {
+                        return fn && fn(app);
+                    }
+                    if (isString(url)) {
+                        cachedContext = application.buildContext;
+                        application.makeScript(url, function () {
+                            application.definition(cachedContext);
+                            return fn && fn(app);
+                        }, cachedContext.document);
+                    } else {
+                        // it's a window
+                        result = application.definition(url);
+                        app = fn && fn(app);
+                        return result;
                     }
                 }
             };
