@@ -8,7 +8,6 @@ var content = ['browserify', 'distribute'],
     _ = require('underscore'),
     fs = require('fs'),
     path = require('path'),
-    // jsonpretty = require('json-pretty'),
     spawn = require('child_process').spawn,
     makePath = function (obj) {
         return _.each(obj, function (val, key) {
@@ -151,7 +150,7 @@ gulp.task('stack', function () {
         };
     setTimeout(function () {
         browserTest(browsers[browserIdx]);
-    }, 100);
+    }, 1000);
 });
 gulp.task('stackie', function () {
     prebrowsers = require('./gulp/browsers-ie.js')();
