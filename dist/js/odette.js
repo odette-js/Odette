@@ -352,6 +352,7 @@
                 }
             };
         }());
+        application.buildContext = global;
         app = application.get(version);
         if (!app) {
             // there is already an app with this same version that originated from this global object
