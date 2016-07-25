@@ -140,6 +140,9 @@
                     }
                 }
                 return parms;
+            },
+            exception = function (message) {
+                throw new Error(message);
             };
 
         function Application(name, parent) {
@@ -150,13 +153,10 @@
             this.missedDefinitions = [];
             return this;
         }
+        Application[PROTOTYPE].exception = exception;
         Application[PROTOTYPE].destroy = noop;
         Application[PROTOTYPE].wraptry = wraptry;
         Application[PROTOTYPE].now = now;
-        Application[PROTOTYPE].execute = function () {
-            var fn = this[PARENT].lastLoaded;
-            fn(this.scope());
-        };
         Application[PROTOTYPE].extend = function (obj) {
             var n, app = this;
             for (n in obj) {
