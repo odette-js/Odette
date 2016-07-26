@@ -383,7 +383,7 @@
                         push = function () {
                             application.waitingForLibrary.push({
                                 app: app,
-                                context: buildContext,
+                                context: cachedContext,
                                 handler: function (app) {
                                     fn(app);
                                 }
