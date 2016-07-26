@@ -379,7 +379,16 @@
                 waitingForLibrary: [],
                 loadLibrary: function (version, url, fn) {
                     var cachedContext, result, app = version,
-                        application = this;
+                        application = this,
+                        push = function () {
+                            application.waitingForLibrary.push({
+                                app: app,
+                                context: buildContext,
+                                handler: function (app) {
+                                    fn(app);
+                                }
+                            });
+                        };
                     if (isString(version)) {
                         app = application.get(version);
                     }
@@ -390,17 +399,12 @@
                         return fn && fn(app);
                     }
                     if (application.loadingLibrary) {
-                        application.waitingForLibrary.push({
-                            app: app,
-                            context: buildContext,
-                            handler: function (app) {
-                                fn(app);
-                            }
-                        });
+                        push();
                     } else {
                         if (isString(url)) {
                             application.loadingLibrary = BOOLEAN_TRUE;
                             cachedContext = application.buildContext;
+                            push();
                             application.makeScript(url, function () {
                                 var waiting = application.waitingForLibrary;
                                 application.loadingLibrary = BOOLEAN_FALSE;
