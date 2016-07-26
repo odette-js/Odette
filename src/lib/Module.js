@@ -167,9 +167,14 @@ app.scope(function (app) {
         Module = factories.Module = factories.Model.extend(CAPITAL_MODULE, extend({}, startableMethods, moduleMethods)),
         appextendresult = app.extend(extend({}, factories.Directive[CONSTRUCTOR][PROTOTYPE], factories.Events[CONSTRUCTOR][PROTOTYPE], factories.Parent[CONSTRUCTOR][PROTOTYPE], startableMethods, moduleMethods, {
             createArguments: function (windo) {
-                var app = this;
-                var _ = app._;
-                var documentView = app.directive(DOCUMENT_MANAGER).documents.get(ID, windo[DOCUMENT][__ELID__]);
+                var app = this,
+                    _ = app._,
+                    id = windo[DOCUMENT][__ELID__],
+                    documentManagerDocuments = app.directive(DOCUMENT_MANAGER).documents,
+                    documentView = documentManagerDocuments.get(ID, id);
+                if (!documentView) {
+                    documentView = app.global.definition(app.VERSION, windo);
+                }
                 return [app, _, _ && _.factories, documentView, documentView.factories, documentView.$];
             },
             require: function (modulename, handler) {

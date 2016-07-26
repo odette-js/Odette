@@ -5273,9 +5273,14 @@ app.scope(function (app) {
         Module = factories.Module = factories.Model.extend(CAPITAL_MODULE, extend({}, startableMethods, moduleMethods)),
         appextendresult = app.extend(extend({}, factories.Directive[CONSTRUCTOR][PROTOTYPE], factories.Events[CONSTRUCTOR][PROTOTYPE], factories.Parent[CONSTRUCTOR][PROTOTYPE], startableMethods, moduleMethods, {
             createArguments: function (windo) {
-                var app = this;
-                var _ = app._;
-                var documentView = app.directive(DOCUMENT_MANAGER).documents.get(ID, windo[DOCUMENT][__ELID__]);
+                var app = this,
+                    _ = app._,
+                    id = windo[DOCUMENT][__ELID__],
+                    documentManagerDocuments = app.directive(DOCUMENT_MANAGER).documents,
+                    documentView = documentManagerDocuments.get(ID, id);
+                if (!documentView) {
+                    documentView = app.global.definition(app.VERSION, windo);
+                }
                 return [app, _, _ && _.factories, documentView, documentView.factories, documentView.$];
             },
             require: function (modulename, handler) {
@@ -9774,15 +9779,21 @@ app.scope(function (app) {
                 return view;
             },
             buffer: function (view) {
-                var parentNode, bufferDirective, region = this,
-                    el = view.el && view.el.element();
-                if (!el) {
+                var currentParentNode, bufferDirective, region = this,
+                    viewEl = view.el && view.el.element(),
+                    regionElement = region.el.element(),
+                    viewParentElement = view.parentElement(region);
+                if (!viewEl) {
                     return region;
                 }
-                parentNode = el.parentNode;
-                if (!parentNode || parentNode !== region.el.element()) {
-                    bufferDirective = region.directive(BUFFERED_VIEWS);
-                    bufferDirective.els.append(el);
+                currentParentNode = viewEl.parentNode;
+                if (!currentParentNode || currentParentNode !== viewParentElement) {
+                    if (viewParentElement === regionElement) {
+                        bufferDirective = region.directive(BUFFERED_VIEWS);
+                        bufferDirective.els.append(viewEl);
+                    } else {
+                        $(viewParentElement).append(viewEl);
+                    }
                 }
                 return region;
             },
@@ -9822,6 +9833,7 @@ app.scope(function (app) {
                 // buffer region element
                 // appends child elements
                 elementDirective.el.append(bufferDirective.els);
+                region[DISPATCH_EVENT]('buffered');
                 // pass the buffered views up
                 // mark the view as rendered
                 region.mark(RENDERED);
@@ -9870,6 +9882,10 @@ app.scope(function (app) {
             removeChildView: removeChildView,
             tagName: returns('div'),
             template: returns(BOOLEAN_FALSE),
+            // elementParent: returns(BOOLEAN_TRUE),
+            parentElement: function (region) {
+                return region.el.element();
+            },
             childrenOf: function (key) {
                 return this.directive(REGION_MANAGER).get(key).directive(CHILDREN);
             },

@@ -376,6 +376,7 @@
                     }
                     return script;
                 },
+                waitingForLibrary: [],
                 loadLibrary: function (version, url, fn) {
                     var cachedContext, result, app = version,
                         application = this;
@@ -388,17 +389,33 @@
                     if (application.defined) {
                         return fn && fn(app);
                     }
-                    if (isString(url)) {
-                        cachedContext = application.buildContext;
-                        application.makeScript(url, function () {
-                            application.definition(cachedContext);
-                            return fn && fn(app);
-                        }, cachedContext.document);
+                    if (application.loadingLibrary) {
+                        application.waitingForLibrary.push({
+                            app: app,
+                            context: buildContext,
+                            handler: function (app) {
+                                fn(app);
+                            }
+                        });
                     } else {
-                        // it's a window
-                        result = application.definition(url);
-                        app = fn && fn(app);
-                        return result;
+                        if (isString(url)) {
+                            application.loadingLibrary = BOOLEAN_TRUE;
+                            cachedContext = application.buildContext;
+                            application.makeScript(url, function () {
+                                var waiting = application.waitingForLibrary;
+                                application.loadingLibrary = BOOLEAN_FALSE;
+                                application.waitingForLibrary = [];
+                                application.map(waiting, function (item) {
+                                    application.definition(item.context);
+                                    return item.handler && item.handler(item.app);
+                                });
+                            }, cachedContext.document);
+                        } else {
+                            // it's a window
+                            result = application.definition(url);
+                            app = fn && fn(app);
+                            return result;
+                        }
                     }
                 }
             };
