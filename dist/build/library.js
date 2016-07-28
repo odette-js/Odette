@@ -7427,8 +7427,12 @@ app.scope(function (app) {
             }
             manager.remark(DOCUMENT, isDocument(element));
             manager.remark(FRAGMENT, isFragment(element));
-            if (manager.is(DOCUMENT) || manager.is(FRAGMENT)) {
+            if (manager.is(DOCUMENT)) {
                 manager.mark(ATTACHED);
+                return;
+            }
+            if (manager.is(FRAGMENT)) {
+                manager.unmark(ATTACHED);
                 return;
             }
             manager.remark(ATTACHED, isAttached(manager, owner, element));
@@ -10170,7 +10174,6 @@ app.scope(function (app) {
         Element = factories.Directive.extend(CAPITAL_ELEMENT, {
             constructor: function (view) {
                 this.view = view;
-                // this.renderEl();
                 return this;
             },
             ensure: function () {

@@ -2117,7 +2117,7 @@ app.scope(function (app) {
                 return;
             }
             if (manager.is(FRAGMENT)) {
-                manager.unmark(FRAGMENT);
+                manager.unmark(ATTACHED);
                 return;
             }
             manager.remark(ATTACHED, isAttached(manager, owner, element));

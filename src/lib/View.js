@@ -514,7 +514,6 @@ app.scope(function (app) {
         Element = factories.Directive.extend(CAPITAL_ELEMENT, {
             constructor: function (view) {
                 this.view = view;
-                // this.renderEl();
                 return this;
             },
             ensure: function () {
