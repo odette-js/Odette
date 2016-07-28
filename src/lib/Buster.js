@@ -277,7 +277,7 @@ app.scope(function (app) {
             busterData.set(RECEIVED_REFERRER, receiveReferrer);
             if (iframeSrc) {
                 emitReferrer = busterData.set(EMIT_REFERRER, _.reference(iframeSrc));
-                data.receiveReferrer = emitReferrer;
+                data[RECEIVED_REFERRER] = emitReferrer;
             }
             if (iframeSrc) {
                 iframe.src(stringifyQuery({

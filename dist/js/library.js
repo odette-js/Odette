@@ -10027,7 +10027,9 @@ app.scope(function (app) {
                     }
                     $selected = parentView.owner$.returnsManager(element);
                 }
-                region.el = $selected;
+                if (!region.el) {
+                    region.el = $selected;
+                }
             }),
             remove: function (region_) {
                 // var regionManager = this;
@@ -10167,6 +10169,7 @@ app.scope(function (app) {
         Element = factories.Directive.extend(CAPITAL_ELEMENT, {
             constructor: function (view) {
                 this.view = view;
+                this.renderEl();
                 return this;
             },
             ensure: function () {
@@ -10445,21 +10448,22 @@ var busterGroupHash = {},
     receivePostMessage = function (evt) {
         var buster, data = evt.data(),
             postTo = data.postTo;
-        if (app.isDestroyed || !data || !postTo || (app[UPPERCASE_VERSION] !== data[VERSION] && data[VERSION] !== '*')) {
+        if (evt.busted || app.isDestroyed || !data || !postTo || (app[UPPERCASE_VERSION] !== data[VERSION] && data[VERSION] !== '*')) {
             return;
         }
         buster = (busterGroupHash[data.group] || {})[data.postTo];
         if (!buster) {
             return;
         }
+        evt.busted = BOOLEAN_TRUE;
         var originalMessage, runCount = data.runCount,
             children = buster.directive(CHILDREN);
         if (runCount) {
             originalMessage = children.get(ID, data.messageId);
             if (!originalMessage) {
-                return buster;
+                return;
             }
-            // found the message that i originally sent you
+            // found the message that I originally sent you
             // allow the buster to set some things up
             buster.response(originalMessage, data);
         } else {
@@ -10717,7 +10721,7 @@ app.scope(function (app) {
             busterData.set(RECEIVED_REFERRER, receiveReferrer);
             if (iframeSrc) {
                 emitReferrer = busterData.set(EMIT_REFERRER, _.reference(iframeSrc));
-                data.receiveReferrer = emitReferrer;
+                data[RECEIVED_REFERRER] = emitReferrer;
             }
             if (iframeSrc) {
                 iframe.src(stringifyQuery({
@@ -10930,19 +10934,28 @@ app.scope(function (app) {
             }).send();
         }
     });
+    Buster.receivePostMessage = receivePostMessage;
     app.undefine(function (app, win, opts) {
-        // var $ = opts.$;
         var documentManager = app.directive(DOCUMENT_MANAGER);
         var documentView = documentManager.documents.get(ID, win[DOCUMENT][__ELID__]);
         var $ = documentView.$;
         var scopedFactories = documentView.factories;
+        var winTop = win.top;
+        var windo = win.parent;
         scopedFactories[UPCASED_BUSTER] = Buster.extend({
             owner$: $
         });
-        if (app.global.touch(win, win[TOP])) {
-            documentView.$(win[TOP]).on(MESSAGE, receivePostMessage);
+        if (app.global.touch(win, winTop)) {
+            documentView.$(winTop).on(MESSAGE, receivePostMessage);
         }
-        documentView.$(win).on(MESSAGE, receivePostMessage);
+        // documentView.$(win).on(MESSAGE, receivePostMessage);
+        wraptry(function () {
+            var windo;
+            while (windo !== winTop) {
+                documentView.$(windo).on(MESSAGE, receivePostMessage);
+                windo = win.parent;
+            }
+        });
     });
 });
 app.scope(function (app) {
