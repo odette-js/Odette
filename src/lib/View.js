@@ -412,6 +412,7 @@ app.scope(function (app) {
             addChildView: intendedApi(function (key, view_) {
                 var regionManager = this.directive(REGION_MANAGER);
                 var region = regionManager.get(key);
+                view_.render();
                 region.add(view_, NULL, returnsTrue);
             }),
             render: function (preventChain) {
@@ -513,7 +514,7 @@ app.scope(function (app) {
         Element = factories.Directive.extend(CAPITAL_ELEMENT, {
             constructor: function (view) {
                 this.view = view;
-                this.renderEl();
+                // this.renderEl();
                 return this;
             },
             ensure: function () {
