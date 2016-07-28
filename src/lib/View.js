@@ -371,7 +371,9 @@ app.scope(function (app) {
                     }
                     $selected = parentView.owner$.returnsManager(element);
                 }
-                region.el = $selected;
+                if (!region.el) {
+                    region.el = $selected;
+                }
             }),
             remove: function (region_) {
                 // var regionManager = this;
