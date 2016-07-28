@@ -143,6 +143,15 @@ var factories = {},
     //   }), 'value');
     // };
     // sortBy = function (list, string) {},
+    // arg1 is usually a string or number
+    sortBy = function (list, arg1, handler_, reversed, context) {
+        var handler = handler_ || function (obj, arg1) {
+            return obj[arg1];
+        };
+        return sort(list, function (a, b) {
+            return handler(a, arg1) > handler(b, arg1);
+        }, reversed, context);
+    },
     /**
      * @func
      */
@@ -1456,6 +1465,7 @@ var factories = {},
         eachRight: eachRight,
         iterates: iterates,
         sort: sort,
+        sortBy: sortBy,
         wrap: wrap,
         uuid: uuid,
         keys: keys,

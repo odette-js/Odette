@@ -394,6 +394,12 @@ app.scope(function (app) {
                 sort(list.toArray(), fn_, list.is(REVERSED), list);
                 return list;
             },
+            sortBy: function (key, fn_) {
+                // normalization sort function for cross browsers
+                var list = this;
+                sortBy(list.toArray(), key, fn_, list.is(REVERSED), list);
+                return list;
+            },
             toString: function () {
                 return stringify(this.toArray());
             },
