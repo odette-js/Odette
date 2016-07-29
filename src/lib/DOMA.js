@@ -299,13 +299,29 @@ var ATTACHED = 'attached',
             return;
         }
         diffs.updating.push(function () {
-            var props = {};
-            each(updates, function () {});
+            var manager, props;
+            each(updates, function (value, key) {
+                if (!propsHash[key]) {
+                    return;
+                }
+                delete updates[key];
+                props = props || {};
+                props[key] = value;
+            });
             if (checkNeedForCustom(a)) {
-                context.returnsManager(a).attr(updates);
+                manager = context.returnsManager(a);
+                if (keys(updates)[LENGTH]) {
+                    manager.attr(updates);
+                }
+                if (props) {
+                    manager.prop(props);
+                }
             } else {
                 each(updates, function (value, key) {
                     attributeApi.write(a, kebabCase(key), value);
+                });
+                each(props, function (value, key) {
+                    propertyApi.write(a, kebabCase(key), value);
                 });
             }
         });
@@ -2122,7 +2138,11 @@ app.scope(function (app) {
                     update: function (node, attrs, children, hash) {
                         var results;
                         each(attrs, function (value, key) {
-                            attributeApi.write(node, kebabCase(key), value);
+                            if (propsHash[key]) {
+                                propertyApi.write(node, kebabCase(key), value);
+                            } else {
+                                attributeApi.write(node, kebabCase(key), value);
+                            }
                         });
                         results = isString(children) ? (node.innerHTML = children) : duff(children, function (child) {
                             appendChild(node, deltas.create(child, node, hash));
