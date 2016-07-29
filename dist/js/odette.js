@@ -198,6 +198,54 @@
         Application[PROTOTYPE].loadLibrary = function (fn) {
             return this[PARENT].loadLibrary(this, this.libraryUrl(), fn);
         };
+        var loadScriptWithQueue = function (handle) {
+            var queue = [];
+            return function (version, url, fn) {
+                var cachedContext, item, result, app = version,
+                    application = this,
+                    push = function () {
+                        queue.push(item);
+                    };
+                if (isString(version)) {
+                    app = application.get(version);
+                }
+                if (!app) {
+                    Application[PROTOTYPE].exception('Application must have been created already.');
+                }
+                if (application.defined) {
+                    return fn && fn(app);
+                }
+                if (application.loadingLibrary) {
+                    push();
+                } else {
+                    item = {
+                        app: app,
+                        context: cachedContext,
+                        handler: function (app) {
+                            fn(app);
+                        }
+                    };
+                    if (isString(url)) {
+                        application.loadingLibrary = BOOLEAN_TRUE;
+                        cachedContext = application.buildContext;
+                        push();
+                        application.makeScript(url, function () {
+                            application.loadingLibrary = BOOLEAN_FALSE;
+                            application.waitingForLibrary = [];
+                            application.map(queue, function (item) {
+                                handle.apply(application, [item]);
+                                return item.handler && item.handler(item.app);
+                            });
+                        }, cachedContext.document);
+                    } else {
+                        // it's a window
+                        handle.apply(application, [item]);
+                        app = fn && fn(app);
+                        return result;
+                    }
+                }
+            };
+        };
         var app, application = global_[WHERE] = global_[WHERE] || (function () {
             Odette.where.push(WHERE);
             return {
@@ -212,6 +260,7 @@
                 wraptry: wraptry,
                 maxVersion: maxVersion,
                 map: map,
+                loadScriptWithQueue: loadScriptWithQueue,
                 registerVersion: function (scopedV, app) {
                     var defaultVersion, application = this,
                         cachedOrPassed = application.versions[scopedV],
@@ -376,52 +425,9 @@
                     }
                     return script;
                 },
-                waitingForLibrary: [],
-                loadLibrary: function (version, url, fn) {
-                    var cachedContext, result, app = version,
-                        application = this,
-                        push = function () {
-                            application.waitingForLibrary.push({
-                                app: app,
-                                context: cachedContext,
-                                handler: function (app) {
-                                    fn(app);
-                                }
-                            });
-                        };
-                    if (isString(version)) {
-                        app = application.get(version);
-                    }
-                    if (!app) {
-                        Application[PROTOTYPE].exception('Application must have been created already.');
-                    }
-                    if (application.defined) {
-                        return fn && fn(app);
-                    }
-                    if (application.loadingLibrary) {
-                        push();
-                    } else {
-                        if (isString(url)) {
-                            application.loadingLibrary = BOOLEAN_TRUE;
-                            cachedContext = application.buildContext;
-                            push();
-                            application.makeScript(url, function () {
-                                var waiting = application.waitingForLibrary;
-                                application.loadingLibrary = BOOLEAN_FALSE;
-                                application.waitingForLibrary = [];
-                                application.map(waiting, function (item) {
-                                    application.definition(item.context);
-                                    return item.handler && item.handler(item.app);
-                                });
-                            }, cachedContext.document);
-                        } else {
-                            // it's a window
-                            result = application.definition(url);
-                            app = fn && fn(app);
-                            return result;
-                        }
-                    }
-                }
+                loadLibrary: loadScriptWithQueue(function (item) {
+                    this.definition(item.context);
+                })
             };
         }());
         application.buildContext = global;
