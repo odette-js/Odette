@@ -5360,6 +5360,8 @@ var ATTACHED = 'attached',
     DIV = 'div',
     CUSTOM_ATTRIBUTE = '[' + CUSTOM_KEY + ']',
     devicePixelRatio = (win.devicePixelRatio || 1),
+    propsList = toArray('src,type,href,className,height,width,id,tabIndex,title,alt'),
+    propsHash = wrap(propsList, BOOLEAN_TRUE),
     createAttributeFromTag = function (tag) {
         return '[' + CUSTOM_KEY + '="' + tag + '"]';
     },
@@ -5623,6 +5625,8 @@ var ATTACHED = 'attached',
             return;
         }
         diffs.updating.push(function () {
+            var props = {};
+            each(updates, function () {});
             if (checkNeedForCustom(a)) {
                 context.returnsManager(a).attr(updates);
             } else {
@@ -7126,12 +7130,14 @@ app.scope(function (app) {
                 return returnValue;
             };
         },
-        queueAttributeValues = function (attribute_, second_, third_, api, domHappy_, merge, passedTrigger_) {
+        queueAttributeValues = function (attribute_, second_, third_, api_, domHappy_, merge, passedTrigger_) {
             var attribute = attribute_ === CLASS ? CLASSNAME : attribute_,
                 domHappy = domHappy_ || unCamelCase,
+                api = api_,
                 unCamelCased = api.preventUnCamel ? attribute : domHappy(attribute),
                 withClass = unCamelCased === CLASSNAME || unCamelCased === CLASS__NAME,
                 trigger = (withClass ? (api = propertyApi) && (unCamelCased = CLASSNAME) && CLASSNAME : passedTrigger_) || unCamelCased;
+            api = propsHash[camelCase(trigger)] ? propertyApi : attributeApi;
             return function (manager, idx) {
                 var converted, generated, el = manager.element(),
                     read = api.read(el, unCamelCased),
