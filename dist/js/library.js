@@ -9896,6 +9896,9 @@ app.scope(function (app) {
             removeRegion: removeRegion,
             addChildView: addChildView,
             removeChildView: removeChildView,
+            getChildViews: function (key) {
+                return this.getRegion(key).directive(CHILDREN);
+            },
             tagName: returns('div'),
             template: returns(BOOLEAN_FALSE),
             // elementParent: returns(BOOLEAN_TRUE),
