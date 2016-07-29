@@ -971,7 +971,7 @@ app.scope(function (app) {
             }
             // var bound = bind(styleIteration, this);
             intendedObject(key, value, function (key, value_) {
-                bound(key, convertStyleValue(value_));
+                bound(key, convertStyleValue(key, value_));
             });
         },
         /**
@@ -2211,7 +2211,7 @@ app.scope(function (app) {
                             baseSelector.pop();
                         } else {
                             // always on the same line
-                            memo.push('\n' + trimmed + ':' + convertStyleValue(block) + ';');
+                            memo.push('\n' + trimmed + ':' + convertStyleValue(trimmed, block) + ';');
                         }
                         // }
                     }, memo);
