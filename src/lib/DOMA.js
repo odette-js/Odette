@@ -2218,7 +2218,7 @@ app.scope(function (app) {
                             }
                             opensBlock = openBlock(baseSelector, memo);
                             baseSelector.push(trimmed);
-                            memo.push(buildCss(block, baseSelector, memo));
+                            buildCss(block, baseSelector, memo);
                             baseSelector.pop();
                         } else {
                             opensBlock();
