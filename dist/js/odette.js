@@ -158,13 +158,18 @@
         Application[PROTOTYPE].wraptry = wraptry;
         Application[PROTOTYPE].now = now;
         Application[PROTOTYPE].extend = function (obj) {
-            var n, app = this;
-            for (n in obj) {
-                if (obj.hasOwnProperty(n)) {
-                    app[n] = obj[n];
+            return this.merge(this, obj);
+        };
+        Application[PROTOTYPE].merge = function (obj1, obj2) {
+            var n;
+            if (isObject(obj2)) {
+                for (n in obj2) {
+                    if (obj2.hasOwnProperty(n)) {
+                        obj1[n] = obj2[n];
+                    }
                 }
             }
-            return app;
+            return obj1;
         };
         Application[PROTOTYPE].undefine = function (handler) {
             this.missedDefinitions.push(handler);
@@ -199,7 +204,7 @@
             return this[PARENT].loadLibrary(this, this.libraryUrl(), fn);
         };
         var loadScriptWithQueue = function (handle) {
-            var queue = [];
+            var loading, queue = [];
             return function (version, url, fn) {
                 var cachedContext, item, result, app = version,
                     application = this,
@@ -223,15 +228,16 @@
                         fn(app);
                     }
                 };
-                if (application.loadingLibrary) {
+                if (loading) {
                     push();
                 } else {
                     if (isString(url)) {
-                        application.loadingLibrary = BOOLEAN_TRUE;
+                        loading = BOOLEAN_TRUE;
                         push();
                         application.makeScript(url, function () {
-                            application.loadingLibrary = BOOLEAN_FALSE;
-                            application.waitingForLibrary = [];
+                            loading = BOOLEAN_FALSE;
+                            queue = [];
+                            application.registerVersion(app.VERSION);
                             application.map(queue, function (item) {
                                 handle.apply(application, [item]);
                                 return item.handler && item.handler(item.app);
@@ -239,6 +245,7 @@
                         }, cachedContext.document);
                     } else {
                         // it's a window
+                        application.registerVersion(app.VERSION);
                         handle.apply(application, [item]);
                         app = fn && fn(app);
                         return result;
