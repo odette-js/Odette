@@ -2190,7 +2190,7 @@ app.scope(function (app) {
                 },
                 closeBlock = function (total) {
                     return function () {
-                        total.push('}');
+                        total.push('}\n');
                     };
                 },
                 buildCss = function (json, selector_, memo_) {
