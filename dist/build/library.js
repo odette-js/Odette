@@ -9877,13 +9877,13 @@ app.scope(function (app) {
             if (!force && regionManager.is(ESTABLISHED)) {
                 return;
             }
-            var regions = result(view, 'regions');
+            // var regions = result(view, 'regions');
             var element = view.directive(CAPITAL_ELEMENT);
             regionManager.mark(ESTABLISHED);
             element.renderEl();
             element.diff();
             element.renderTemplate();
-            var regionsResult = keys(regions)[LENGTH] && regionManager.establish(regions);
+            // var regionsResult = keys(regions)[LENGTH] && regionManager.establish(regions);
             return view;
         },
         addChildView = intendedApi(function (regionKey, views) {
@@ -10305,7 +10305,7 @@ app.scope(function (app) {
                 element.delegateTriggers();
             },
             setState: function () {
-                var elementsSwapped, element = this,
+                var elementsSwapped, regions, regionsResult, element = this,
                     view = element.view;
                 view.unmark('asyncRendering');
                 // prevent future from triggering
@@ -10316,6 +10316,8 @@ app.scope(function (app) {
                 }
                 view.unmark(RENDERING);
                 view.mark(RENDERED);
+                regions = result(view, 'regions');
+                regionsResult = keys(regions)[LENGTH] && view.RegionManager.establish(regions);
                 // dispatch the render event
                 view[DISPATCH_EVENT](RENDER);
                 return element;
