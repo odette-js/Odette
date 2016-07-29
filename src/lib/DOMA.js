@@ -2207,7 +2207,7 @@ app.scope(function (app) {
                                 trimmed = ' ' + trimmed.slice(1);
                             }
                             baseSelector.push(trimmed);
-                            memo.push(buildCss(block, selector_, memo));
+                            memo.push(buildCss(block, baseSelector, memo));
                             baseSelector.pop();
                         } else {
                             // always on the same line
