@@ -7522,7 +7522,7 @@ app.scope(function (app) {
                         openBlock(selector, memo);
                     }
                     result = foldl(json, function (memo, block, key) {
-                        var timmed = key.trim();
+                        var trimmed = key.trim();
                         // var media = trimmed[0] === '@';
                         // if (media) {
                         // return total_.concat(medium[trimmed.split(' ').shift()](json, trimmed, total));
