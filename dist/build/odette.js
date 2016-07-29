@@ -215,7 +215,7 @@
         Application[PROTOTYPE].counter = function (thing) {
             return Odette.counter(thing);
         };
-        var loadScriptWithQueue = function (handle, url) {
+        var loadScriptWithQueue = function (url, handle) {
             var loading, finished, queue = [];
             return function (fn_) {
                 var fn = fn_ || noop,
