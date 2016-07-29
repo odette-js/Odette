@@ -235,9 +235,9 @@
                 if (!app) {
                     Application[PROTOTYPE].exception('Application must have been created already.');
                 }
-                if (application.defined) {
-                    return fn && fn(app);
-                }
+                // if (application.defined) {
+                //     return fn && fn(app);
+                // }
                 cachedContext = application.buildContext;
                 item = {
                     app: app,
@@ -254,9 +254,10 @@
                         push();
                         application.makeScript(url, function () {
                             loading = BOOLEAN_FALSE;
+                            var queued = queue.slice(0);
                             queue = [];
                             application.registerVersion(app.VERSION);
-                            application.map(queue, function (item) {
+                            application.map(queued, function (item) {
                                 handle.apply(application, [item]);
                                 return item.handler && item.handler(item.app);
                             });
