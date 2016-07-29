@@ -2216,6 +2216,7 @@ app.scope(function (app) {
                                     trimmed = trimmed.slice(1);
                                 }
                             }
+                            opensBlock = openBlock(baseSelector, memo);
                             baseSelector.push(trimmed);
                             memo.push(buildCss(block, baseSelector, memo));
                             baseSelector.pop();
@@ -2229,7 +2230,7 @@ app.scope(function (app) {
                     }, memo);
                     // if (memo_) {
                     closesBlock(memo);
-                    return result.join('\n');
+                    return result.join('');
                 };
             if (manager.is('setupComplete')) {
                 return manager.$;
