@@ -5627,7 +5627,7 @@ var ATTACHED = 'attached',
                 context.returnsManager(a).attr(updates);
             } else {
                 each(updates, function (value, key) {
-                    attributeApi.write(a, key, value);
+                    attributeApi.write(a, kebabCase(key), value);
                 });
             }
         });
