@@ -2193,7 +2193,7 @@ app.scope(function (app) {
                     var result, baseSelector = selector_ || [],
                         memo = memo_ || [];
                     if (memo_) {
-                        openBlock(selector, memo);
+                        openBlock(baseSelector, memo);
                     }
                     result = foldl(json, function (memo, block, key) {
                         var trimmed = key.trim();
