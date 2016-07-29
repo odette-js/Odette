@@ -2116,7 +2116,7 @@ app.scope(function (app) {
                     update: function (node, attrs, children, hash) {
                         var results;
                         each(attrs, function (value, key) {
-                            attributeApi.write(node, key, value);
+                            attributeApi.write(node, kebabCase(key), value);
                         });
                         results = isString(children) ? (node.innerHTML = children) : duff(children, function (child) {
                             appendChild(node, deltas.create(child, node, hash));
