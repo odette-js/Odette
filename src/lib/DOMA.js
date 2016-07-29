@@ -2195,7 +2195,7 @@ app.scope(function (app) {
                     if (memo_) {
                         openBlock(selector, memo);
                     }
-                    result = reduce(json, function (memo, block, key) {
+                    result = foldl(json, function (memo, block, key) {
                         var timmed = key.trim();
                         // var media = trimmed[0] === '@';
                         // if (media) {
