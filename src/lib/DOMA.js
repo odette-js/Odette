@@ -2226,9 +2226,9 @@ app.scope(function (app) {
                         }
                         // }
                     }, memo);
-                    if (memo_) {
-                        closeBlock(memo);
-                    }
+                    // if (memo_) {
+                    closeBlock(memo);
+                    // }
                     return result.join('\n');
                 };
             if (manager.is('setupComplete')) {
