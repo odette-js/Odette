@@ -2190,7 +2190,7 @@ app.scope(function (app) {
                 },
                 closeBlock = function (total) {
                     return function () {
-                        total.push('}\n');
+                        total.push(' }\n');
                     };
                 },
                 buildCss = function (json, selector_, memo_) {
@@ -2224,7 +2224,7 @@ app.scope(function (app) {
                             opensBlock();
                             closesBlock = closeBlock(memo);
                             // always on the same line
-                            memo.push('\n' + trimmed + ':' + convertStyleValue(trimmed, block) + ';');
+                            memo.push('\n\t' + trimmed + ':' + convertStyleValue(trimmed, block) + ';');
                         }
                         // }
                     }, memo);
