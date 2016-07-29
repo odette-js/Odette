@@ -2221,14 +2221,14 @@ app.scope(function (app) {
                             baseSelector.pop();
                         } else {
                             opensBlock();
+                            closesBlock = closeBlock(memo);
                             // always on the same line
                             memo.push('\n' + trimmed + ':' + convertStyleValue(trimmed, block) + ';');
                         }
                         // }
                     }, memo);
                     // if (memo_) {
-                    closeBlock(memo);
-                    // }
+                    closesBlock(memo);
                     return result.join('\n');
                 };
             if (manager.is('setupComplete')) {
