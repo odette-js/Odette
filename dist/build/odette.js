@@ -215,61 +215,46 @@
         Application[PROTOTYPE].counter = function (thing) {
             return Odette.counter(thing);
         };
-        Application[PROTOTYPE].libraryUrl = function () {
-            return './library.js';
-        };
-        Application[PROTOTYPE].loadLibrary = function (fn) {
-            return this[PARENT].loadLibrary(this, this.libraryUrl(), fn);
-        };
-        var loadScriptWithQueue = function (handle) {
-            var loading, queue = [];
-            return function (version, url, fn) {
-                var cachedContext, item, result, app = version,
-                    application = this,
+        var loadScriptWithQueue = function (handle, url) {
+            var loading, finished, queue = [];
+            return function (fn_) {
+                var fn = fn_ || noop,
+                    app = this,
+                    application = this.global,
+                    cachedContext = application.buildContext,
                     push = function () {
                         queue.push(item);
+                    },
+                    item = {
+                        app: app,
+                        context: cachedContext,
+                        handler: function (app) {
+                            fn(app);
+                        }
                     };
-                if (isString(version)) {
-                    app = application.get(version);
-                }
-                if (!app) {
-                    Application[PROTOTYPE].exception('Application must have been created already.');
-                }
-                // if (application.defined) {
-                //     return fn && fn(app);
-                // }
-                cachedContext = application.buildContext;
-                item = {
-                    app: app,
-                    context: cachedContext,
-                    handler: function (app) {
-                        fn(app);
-                    }
-                };
-                if (loading) {
-                    push();
+                if (finished) {
+                    handle.apply(application, [item]);
+                    fn.apply(item, [app]);
                 } else {
-                    if (isString(url)) {
+                    if (loading) {
+                        push();
+                    } else {
                         loading = BOOLEAN_TRUE;
                         push();
                         application.makeScript(url, function () {
-                            loading = BOOLEAN_FALSE;
                             var queued = queue.slice(0);
+                            loading = BOOLEAN_FALSE;
+                            finished = BOOLEAN_TRUE;
                             queue = [];
                             application.registerVersion(app.VERSION);
                             application.map(queued, function (item) {
                                 handle.apply(application, [item]);
-                                return item.handler && item.handler(item.app);
+                                item.handler(item.app);
                             });
                         }, cachedContext.document);
-                    } else {
-                        // it's a window
-                        application.registerVersion(app.VERSION);
-                        handle.apply(application, [item]);
-                        app = fn && fn(app);
-                        return result;
                     }
                 }
+                return app;
             };
         };
         var app, application = global_[WHERE] = global_[WHERE] || (function () {
@@ -450,10 +435,7 @@
                         }
                     }
                     return script;
-                },
-                loadLibrary: loadScriptWithQueue(function (item) {
-                    this.definition(item.context);
-                })
+                }
             };
         }());
         application.buildContext = global;
