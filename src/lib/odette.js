@@ -23,8 +23,9 @@
             now = function () {
                 return +(new Date());
             },
-            map = function (arra, fn) {
+            map = function (arra_, fn) {
                 var i = 0,
+                    arra = arra_.slice(0),
                     len = arra[LENGTH],
                     arr = [];
                 while (len > i) {
@@ -173,10 +174,7 @@
             var n, keys, obj = obj_;
             if (isObject(obj)) {
                 if (isArray(obj)) {
-                    obj = obj.slice(0);
-                    for (; n < obj[LENGTH]; n++) {
-                        fn.apply(ctx || this, [obj[n], n, obj]);
-                    }
+                    map(obj, fn);
                 } else {
                     keys = [];
                     for (n in obj) {
