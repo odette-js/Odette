@@ -967,7 +967,7 @@ var factories = {},
         fn.call(context, '"use strict";\n' + string);
     },
     returnBaseType = function (obj) {
-        return isArrayLike(obj) ? [] : {};
+        return !isObject(obj) || isArrayLike(obj) ? [] : {};
     },
     map = function (objs, iteratee, context) {
         var collection = returnBaseType(objs),
@@ -977,16 +977,11 @@ var factories = {},
         }) && collection;
     },
     arrayLikeToArray = function (arrayLike) {
-        if (arrayLike[LENGTH] === 1) {
-            return [arrayLike[0]];
-        } else {
-            return ARRAY_CONSTRUCTOR.apply(NULL, arrayLike);
-        }
+        return arrayLike[LENGTH] === 1 ? [arrayLike[0]] : ARRAY_CONSTRUCTOR.apply(NULL, arrayLike);
     },
     objectToArray = function (obj) {
         return !obj ? [] : foldl(obj, function (memo, item) {
             memo.push(item);
-            return memo;
         }, []);
     },
     toArray = function (object, delimiter) {

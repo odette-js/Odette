@@ -1368,43 +1368,6 @@ app.scope(function (app) {
                 }
             }
         },
-        // styleValueModifiers = {
-        //     '-webkit-transform': function (val) {
-        //         return val;
-        //     }
-        // },
-        // modifyFinalStyle = function (prop, val) {
-        //     if (styleValueModifiers[prop]) {
-        //         val = styleValueModifiers[prop](val);
-        //     }
-        //     return val;
-        // },
-        // DomManagerRunsInstances = function (handler, key, value, list, hash, diffHandler, isProperty) {
-        //     return function (manager) {
-        //         return handler(manager, key, value, list, hash, diffHandler, isProperty);
-        //     };
-        // },
-        // ManagerProducesKeyValues = function (context, list, hash, totalHandler, handler, isProperty) {
-        //     return function (key, value) {
-        //         DomManagerRunsInstances(totalHandler, key, value, list, hash, handler, isProperty)(context);
-        //     };
-        // },
-        // DOMproducesKeyValues = function (context, list, hash, totalHandler, handler, isProperty) {
-        //     return function (key, value) {
-        //         context.duff(DomManagerRunsInstances(totalHandler, key, value, list, hash, handler, isProperty));
-        //     };
-        // },
-        // domAttributeManipulator = function (totalHandler, innerHandler, isProperty) {
-        //     return function (understandsContext) {
-        //         return function (key, value) {
-        //             var context = this,
-        //                 hash = {},
-        //                 list = [];
-        //             intendedObject(key, value, understandsContext(context, list, hash, totalHandler, innerHandler, isProperty));
-        //             return list[LENGTH] === 1 ? hash[list[0]] : context;
-        //         };
-        //     };
-        // },
         attachPrevious = function (fn) {
             return function (one, two, three, four, five) {
                 var prev = this,
@@ -2219,6 +2182,43 @@ app.scope(function (app) {
                             var result = a[__ELID__] ? $(a).remove() : removeChild(a);
                         };
                     }
+                },
+                openBlock = function (selector, total) {
+                    total.push(selector.join('') + ' {');
+                },
+                closeBlock = function (total) {
+                    total.push('}');
+                },
+                buildCss = function (json, selector_, memo_) {
+                    var result, baseSelector = selector_ || [],
+                        memo = memo_ || [];
+                    if (memo_) {
+                        openBlock(selector, memo);
+                    }
+                    result = reduce(json, function (memo, block, key) {
+                        var timmed = key.trim();
+                        // var media = trimmed[0] === '@';
+                        // if (media) {
+                        // return total_.concat(medium[trimmed.split(' ').shift()](json, trimmed, total));
+                        // handle one way... possible with an extendable handler?
+                        // } else {
+                        if (isObject(block)) {
+                            if (trimmed[0] !== '&') {
+                                trimmed = ' ' + trimmed.slice(1);
+                            }
+                            baseSelector.push(trimmed);
+                            memo.push(buildCss(block, selector_, memo));
+                            baseSelector.pop();
+                        } else {
+                            // always on the same line
+                            memo.push('\n' + trimmed + ':' + convertStyleValue(block) + ';');
+                        }
+                        // }
+                    }, memo);
+                    if (memo_) {
+                        closeBlock(memo);
+                    }
+                    return result.join('\n');
                 };
             if (manager.is('setupComplete')) {
                 return manager.$;
@@ -2254,6 +2254,7 @@ app.scope(function (app) {
                     return handler(one, manager, two, three);
                 };
             }), {
+                buildCss: buildCss,
                 nodeComparison: function (a, b, hash_, stopper) {
                     return nodeComparison(a, b, hash_, stopper, NULL, NULL, NULL, manager);
                 },
