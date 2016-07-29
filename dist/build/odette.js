@@ -90,6 +90,29 @@
                     return string1 > string2 ? string1 : string2;
                 }
             },
+            stringifyQuery = function (obj) {
+                var val, n, base = obj.url,
+                    query = [];
+                if (isObject(obj)) {
+                    each(obj.query, function (val, n) {
+                        if (val !== UNDEFINED) {
+                            val = encodeURIComponent(stringify(val));
+                            query.push(n + '=' + val);
+                        }
+                    });
+                    if (query[LENGTH]) {
+                        base += '?';
+                    }
+                    base += query.join('&');
+                    if (obj.hash) {
+                        obj.hash = isObject(obj.hash) ? encodeURI(stringify(obj.hash)) : hash;
+                        base += ('#' + obj.hash);
+                    }
+                } else {
+                    base = obj;
+                }
+                return base;
+            },
             convertVersionString = function (string_) {
                 var converted, string = string_;
                 if (isNumber(string)) {
@@ -182,39 +205,41 @@
                             keys.push(n);
                         }
                     }
-                    this.each(keys, function (key) {
+                    map(keys, function (key) {
                         fn.apply(ctx || this, [obj[key], key, obj]);
                     });
                 }
             }
             return obj;
         };
-        Application[PROTOTYPE].undefine = function (handler) {
-            this.missedDefinitions.push(handler);
-            if (this.defining) {
-                handler.apply(this, [this, this.definingAgainst, this.definingWith]);
+        Application[PROTOTYPE].extend({
+            undefine: function (handler) {
+                this.missedDefinitions.push(handler);
+                if (this.defining) {
+                    handler.apply(this, [this, this.definingAgainst, this.definingWith]);
+                }
+                return this;
+            },
+            parody: function (list) {
+                var app = this,
+                    i = 0,
+                    extendor = {},
+                    parent = app[PARENT];
+                for (; i < list[LENGTH]; i++) {
+                    extendor[list[i]] = makeParody(parent, parent[list[i]]);
+                }
+                app.extend(extendor);
+                return app;
+            },
+            scope: function (name_, fn_) {
+                var name = name_ && isString(name_) ? name_ : this.VERSION;
+                var fn = name_ && (isFunction(name_) ? name_ : (isFunction(fn_) ? fn_ : NULL));
+                return this[PARENT].scope(name, fn);
+            },
+            counter: function (thing) {
+                return Odette.counter(thing);
             }
-            return this;
-        };
-        Application[PROTOTYPE].parody = function (list) {
-            var app = this,
-                i = 0,
-                extendor = {},
-                parent = app[PARENT];
-            for (; i < list[LENGTH]; i++) {
-                extendor[list[i]] = makeParody(parent, parent[list[i]]);
-            }
-            app.extend(extendor);
-            return app;
-        };
-        Application[PROTOTYPE].scope = function (name_, fn_) {
-            var name = name_ && isString(name_) ? name_ : this.VERSION;
-            var fn = name_ && (isFunction(name_) ? name_ : (isFunction(fn_) ? fn_ : NULL));
-            return this[PARENT].scope(name, fn);
-        };
-        Application[PROTOTYPE].counter = function (thing) {
-            return Odette.counter(thing);
-        };
+        });
         var loadScriptWithQueue = function (url, handle) {
             var loading, finished, queue = [];
             return function (fn_) {
@@ -254,7 +279,7 @@
                         }, cachedContext.document);
                     }
                 }
-                return app;
+                return queue;
             };
         };
         var app, application = global_[WHERE] = global_[WHERE] || (function () {
