@@ -5500,6 +5500,9 @@ var ATTACHED = 'attached',
         return el[property];
     },
     writeProperty = function (el, property, value) {
+        if (value == NULL) {
+            return removeProperty(el, property);
+        }
         el[property] = value;
     },
     removeProperty = function (el, property) {
