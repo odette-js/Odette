@@ -213,6 +213,7 @@
             return obj;
         };
         Application[PROTOTYPE].extend({
+            stringifyQuery: stringifyQuery,
             undefine: function (handler) {
                 this.missedDefinitions.push(handler);
                 if (this.defining) {
