@@ -215,19 +215,19 @@
                 if (application.defined) {
                     return fn && fn(app);
                 }
+                cachedContext = application.buildContext;
+                item = {
+                    app: app,
+                    context: cachedContext,
+                    handler: function (app) {
+                        fn(app);
+                    }
+                };
                 if (application.loadingLibrary) {
                     push();
                 } else {
-                    item = {
-                        app: app,
-                        context: cachedContext,
-                        handler: function (app) {
-                            fn(app);
-                        }
-                    };
                     if (isString(url)) {
                         application.loadingLibrary = BOOLEAN_TRUE;
-                        cachedContext = application.buildContext;
                         push();
                         application.makeScript(url, function () {
                             application.loadingLibrary = BOOLEAN_FALSE;
