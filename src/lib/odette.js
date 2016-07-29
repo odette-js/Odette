@@ -180,10 +180,10 @@
             this.missedDefinitions = [];
             return this;
         }
-        Application[PROTOTYPE].exception = exception;
-        Application[PROTOTYPE].destroy = noop;
-        Application[PROTOTYPE].wraptry = wraptry;
-        Application[PROTOTYPE].now = now;
+        // Application[PROTOTYPE].exception = exception;
+        // Application[PROTOTYPE].destroy = noop;
+        // Application[PROTOTYPE].wraptry = wraptry;
+        // Application[PROTOTYPE].now = now;
         Application[PROTOTYPE].extend = function (obj) {
             return this.merge(this, obj);
         };
@@ -213,7 +213,12 @@
             return obj;
         };
         Application[PROTOTYPE].extend({
+            exception: exception,
+            destroy: noop,
+            wraptry: wraptry,
+            now: now,
             stringifyQuery: stringifyQuery,
+            parseSearch: parseSearch,
             undefine: function (handler) {
                 this.missedDefinitions.push(handler);
                 if (this.defining) {
