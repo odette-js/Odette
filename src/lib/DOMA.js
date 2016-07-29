@@ -2204,7 +2204,9 @@ app.scope(function (app) {
                         // } else {
                         if (isObject(block)) {
                             if (trimmed[0] !== '&') {
-                                trimmed = ' ' + trimmed.slice(1);
+                                trimmed = ' ' + trimmed;
+                            } else {
+                                trimmed = trimmed.slice(1);
                             }
                             baseSelector.push(trimmed);
                             memo.push(buildCss(block, baseSelector, memo));
