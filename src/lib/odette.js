@@ -37,6 +37,9 @@
             isNumber = typeConstructor('number'),
             isFunction = typeConstructor('function'),
             isObject = typeConstructor('object'),
+            isArray = function (array) {
+                return Array.isArray(array);
+            },
             executionTime = now(),
             makeParody = function (parent, fn) {
                 return function () {
@@ -161,15 +164,32 @@
             return this.merge(this, obj);
         };
         Application[PROTOTYPE].merge = function (obj1, obj2) {
-            var n;
-            if (isObject(obj2)) {
-                for (n in obj2) {
-                    if (obj2.hasOwnProperty(n)) {
-                        obj1[n] = obj2[n];
+            this.each(obj2, function (value, key) {
+                obj1[key] = value;
+            });
+            return obj1;
+        };
+        Application[PROTOTYPE].each = function (obj_, fn, ctx) {
+            var n, keys, obj = obj_;
+            if (isObject(obj)) {
+                if (isArray(obj)) {
+                    obj = obj.slice(0);
+                    for (; n < obj[LENGTH]; n++) {
+                        fn.apply(ctx || this, [obj[n], n, obj]);
                     }
+                } else {
+                    keys = [];
+                    for (n in obj) {
+                        if (obj.hasOwnProperty(n)) {
+                            keys.push(n);
+                        }
+                    }
+                    this.each(keys, function (key) {
+                        fn.apply(ctx || this, [obj[key], key, obj]);
+                    });
                 }
             }
-            return obj1;
+            return obj;
         };
         Application[PROTOTYPE].undefine = function (handler) {
             this.missedDefinitions.push(handler);
