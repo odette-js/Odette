@@ -2184,16 +2184,22 @@ app.scope(function (app) {
                     }
                 },
                 openBlock = function (selector, total) {
-                    total.push(selector.join('') + ' {');
+                    return once(function () {
+                        total.push(selector.join('') + ' {');
+                    });
                 },
                 closeBlock = function (total) {
-                    total.push('}');
+                    return function () {
+                        total.push('}');
+                    };
                 },
                 buildCss = function (json, selector_, memo_) {
                     var result, baseSelector = selector_ || [],
-                        memo = memo_ || [];
+                        memo = memo_ || [],
+                        opensBlock = noop,
+                        closesBlock = noop;
                     if (memo_) {
-                        openBlock(baseSelector, memo);
+                        opensBlock = openBlock(baseSelector, memo);
                     }
                     result = foldl(json, function (memo, block, key) {
                         var trimmed = key.trim();
@@ -2203,15 +2209,18 @@ app.scope(function (app) {
                         // handle one way... possible with an extendable handler?
                         // } else {
                         if (isObject(block)) {
-                            if (trimmed[0] !== '&') {
-                                trimmed = ' ' + trimmed;
-                            } else {
-                                trimmed = trimmed.slice(1);
+                            if (baseSelector[LENGTH]) {
+                                if (trimmed[0] !== '&') {
+                                    trimmed = ' ' + trimmed;
+                                } else {
+                                    trimmed = trimmed.slice(1);
+                                }
                             }
                             baseSelector.push(trimmed);
                             memo.push(buildCss(block, baseSelector, memo));
                             baseSelector.pop();
                         } else {
+                            opensBlock();
                             // always on the same line
                             memo.push('\n' + trimmed + ':' + convertStyleValue(trimmed, block) + ';');
                         }
