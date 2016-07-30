@@ -68,7 +68,7 @@
                 var cvs2Result = convertVersionString(string2);
                 // keyword checks
                 if (cvs1Result === BOOLEAN_TRUE) {
-                    return BOOLEAN_FALSE;
+                    return BOOLEAN_TRUE;
                 }
                 if (cvs2Result === BOOLEAN_TRUE) {
                     return BOOLEAN_TRUE;
