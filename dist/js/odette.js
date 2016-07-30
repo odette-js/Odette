@@ -68,10 +68,10 @@
                 var cvs2Result = convertVersionString(string2);
                 // keyword checks
                 if (cvs1Result === BOOLEAN_TRUE) {
-                    return cvs1Result;
+                    return BOOLEAN_FALSE;
                 }
                 if (cvs2Result === BOOLEAN_TRUE) {
-                    return cvs2Result;
+                    return BOOLEAN_TRUE;
                 }
                 if (cvs1Result === BOOLEAN_FALSE && cvs2Result === BOOLEAN_FALSE) {
                     // compare them as version strings
@@ -82,12 +82,18 @@
                             provenLarger = BOOLEAN_TRUE;
                         }
                     });
+                    if (split1[LENGTH] === 1 && split2[LENGTH] === 3) {
+                        return BOOLEAN_TRUE;
+                    }
+                    if (split1[LENGTH] === 3 && split2[LENGTH] === 1) {
+                        return BOOLEAN_FALSE;
+                    }
                     if (provenLarger === UNDEFINED && split2[LENGTH] > split1[LENGTH]) {
                         provenLarger = BOOLEAN_TRUE;
                     }
-                    return !!provenLarger ? string2 : string1;
+                    return !!provenLarger;
                 } else {
-                    return string1 > string2 ? string1 : string2;
+                    return string1 <= string2;
                 }
             },
             stringifyQuery = function (obj) {
