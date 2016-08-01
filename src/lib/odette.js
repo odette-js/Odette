@@ -275,6 +275,9 @@
                     url = returns(url);
                 }
                 url = url(app);
+                if (!url) {
+                    return BOOLEAN_FALSE;
+                }
                 // now url is a string
                 focused = endpoints[url] = endpoints[url] || {};
                 if (focused.finished) {
