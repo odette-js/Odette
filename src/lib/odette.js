@@ -96,6 +96,11 @@
                     return string1 <= string2;
                 }
             },
+            returns = function (item) {
+                return function () {
+                    return item;
+                };
+            },
             stringifyQuery = function (obj) {
                 var val, n, base = obj.url,
                     query = [];
@@ -186,10 +191,6 @@
             this.missedDefinitions = [];
             return this;
         }
-        // Application[PROTOTYPE].exception = exception;
-        // Application[PROTOTYPE].destroy = noop;
-        // Application[PROTOTYPE].wraptry = wraptry;
-        // Application[PROTOTYPE].now = now;
         Application[PROTOTYPE].extend = function (obj) {
             return this.merge(this, obj);
         };
@@ -252,37 +253,44 @@
                 return Odette.counter(thing);
             }
         });
-        var loadScriptWithQueue = function (url, handle) {
-            var loading, finished, queue = [];
+        var loadScriptWithQueue = function (url_, handle) {
+            var loading, finished, endpoints = {};
             return function (fn_) {
-                var fn = fn_ || noop,
+                var url, focused, fn = fn_ || noop,
                     app = this,
                     application = this.global,
                     cachedContext = application.buildContext,
                     push = function () {
-                        queue.push(item);
+                        focused.queue.push(item);
                     },
                     item = {
                         app: app,
                         context: cachedContext,
-                        handler: function (app) {
-                            fn(app);
+                        handler: function () {
+                            fn.apply(item, [app]);
                         }
                     };
-                if (finished) {
+                if (isString(url_)) {
+                    url = returns(url_);
+                }
+                url = url(app);
+                // now url is a string
+                focused = endpoints[url] = endpoints[url] || {};
+                if (focused.finished) {
                     handle.apply(application, [item]);
                     fn.apply(item, [app]);
                 } else {
-                    if (loading) {
+                    if (focused.loading) {
                         push();
                     } else {
-                        loading = BOOLEAN_TRUE;
+                        focused.queue = [];
+                        focused.loading = BOOLEAN_TRUE;
                         push();
                         application.makeScript(url, function () {
-                            var queued = queue.slice(0);
-                            loading = BOOLEAN_FALSE;
-                            finished = BOOLEAN_TRUE;
-                            queue = [];
+                            var queued = focused.queue.slice(0);
+                            focused.loading = BOOLEAN_FALSE;
+                            focused.finished = BOOLEAN_TRUE;
+                            focused.queue = [];
                             application.registerVersion(app.VERSION);
                             application.map(queued, function (item) {
                                 handle.apply(application, [item]);
@@ -291,7 +299,7 @@
                         }, cachedContext.document);
                     }
                 }
-                return queue;
+                return focused.queue;
             };
         };
         var app, application = global_[WHERE] = global_[WHERE] || (function () {
