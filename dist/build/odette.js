@@ -256,7 +256,8 @@
         var loadScriptWithQueue = function (url_, handle) {
             var loading, finished, endpoints = {};
             return function (fn_) {
-                var url, focused, fn = fn_ || noop,
+                var focused, fn = fn_ || noop,
+                    url = url_,
                     app = this,
                     application = this.global,
                     cachedContext = application.buildContext,
@@ -270,8 +271,8 @@
                             fn.apply(item, [app]);
                         }
                     };
-                if (isString(url_)) {
-                    url = returns(url_);
+                if (isString(url)) {
+                    url = returns(url);
                 }
                 url = url(app);
                 // now url is a string
