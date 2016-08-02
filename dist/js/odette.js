@@ -267,9 +267,7 @@
                     item = {
                         app: app,
                         context: cachedContext,
-                        handler: function () {
-                            fn.apply(item, [app]);
-                        }
+                        handler: fn
                     };
                 if (isString(url)) {
                     url = returns(url);
