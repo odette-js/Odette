@@ -1423,7 +1423,10 @@ var factories = {},
     console = extend(wrap(toArray('trace,warn,log,dir,error,clear,table,profile,profileEnd,time,timeEnd,timeStamp'), function (key) {
         var method = _console[key] || _log;
         return function () {
-            return method && method.apply && method.apply(_console, arguments);
+            var consoled = method && method.apply && method.apply(_console, arguments);
+            if (key !== 'trace' && _console.trace) {
+                _console.trace();
+            }
         };
     }), {
         exception: function (msg) {
