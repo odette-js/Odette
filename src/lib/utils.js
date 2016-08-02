@@ -1389,7 +1389,6 @@ var factories = {},
     },
     _ = app._ = {
         is: is,
-        isInt: isInt,
         blockWrapper: blockWrapper,
         unwrapBlock: unwrapBlock,
         passes: passes,
