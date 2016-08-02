@@ -214,6 +214,9 @@ var factories = {},
      * @func
      */
     isBoolean = isWrap(BOOLEAN),
+    isInt = function (num) {
+        return isNumber(num) && num === Math.round(num);
+    },
     /**
      * @func
      */
@@ -1374,6 +1377,7 @@ var factories = {},
         string: isString,
         object: isObject,
         nan: isNaN,
+        int: isInt,
         array: isArray,
         'function': isFunction,
         boolean: isBoolean,
