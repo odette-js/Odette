@@ -323,7 +323,7 @@
                 queue: function (context, handler) {
                     queue.push({
                         context: context,
-                        handler: handlers
+                        handler: handler
                     });
                     return this;
                 },
