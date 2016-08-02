@@ -1201,7 +1201,7 @@ var factories = {},
     },
     reverseParams = function (iteratorFn) {
         return function (value, key, third) {
-            iteratorFn(key, value, third);
+            return iteratorFn(key, value, third);
         };
     },
     /**
