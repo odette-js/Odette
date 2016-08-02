@@ -7588,7 +7588,7 @@ app.scope(function (app) {
                             opensBlock();
                             closesBlock = closeBlock(memo);
                             // always on the same line
-                            memo.push('\n\t' + trimmed + ':' + convertStyleValue(trimmed, block) + ';');
+                            memo.push('\n\t' + kebabCase(trimmed) + ':' + convertStyleValue(trimmed, block) + ';');
                         }
                         // }
                     }, memo);
