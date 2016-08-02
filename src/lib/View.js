@@ -14,7 +14,6 @@ app.scope(function (app) {
         isInstance = _.isInstance,
         isFunction = _.isFunction,
         isArrayLike = _.isArrayLike,
-        reverseParams = _.reverseParams,
         intendedObject = _.intendedObject,
         RENDER = 'render',
         RENDERING = RENDER + 'ing',
