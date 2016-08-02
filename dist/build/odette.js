@@ -304,6 +304,7 @@
                 return focused.queue;
             };
         };
+        var queue = [];
         var app, application = global_[WHERE] = global_[WHERE] || (function () {
             Odette.where.push(WHERE);
             return {
@@ -319,6 +320,23 @@
                 maxVersion: maxVersion,
                 map: map,
                 loadScriptWithQueue: loadScriptWithQueue,
+                queue: function (context, handler) {
+                    queue.push({
+                        context: context,
+                        handler: handlers
+                    });
+                    return this;
+                },
+                emptyQueue: function (fn) {
+                    var queued = queue.slice(0);
+                    var shared = this;
+                    var current = shared.scope();
+                    queue = [];
+                    map(queued, fn || function (q) {
+                        q.handler.apply(q.context, [shared, current]);
+                    });
+                    return shared;
+                },
                 registerVersion: function (scopedV, app) {
                     var defaultVersion, application = this,
                         cachedOrPassed = application.versions[scopedV],
