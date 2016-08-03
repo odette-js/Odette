@@ -2218,9 +2218,9 @@ app.scope(function (app) {
                     });
                 },
                 closeBlock = function (total) {
-                    return function () {
+                    return once(function () {
                         total.push(' }\n');
-                    };
+                    });
                 },
                 buildCss = function (json, selector_, memo_, beforeAnyMore) {
                     var result, baseSelector = selector_ || [],
