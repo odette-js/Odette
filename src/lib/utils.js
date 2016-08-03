@@ -1314,7 +1314,7 @@ var factories = {},
         var method = _console[key] || _log;
         return function () {
             var consoled = method && method.apply && method.apply(_console, arguments);
-            if (key !== 'trace' && _console.trace) {
+            if (key !== 'trace' && key !== 'error' && _console.trace) {
                 _console.trace();
             }
         };
