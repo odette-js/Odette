@@ -2222,13 +2222,16 @@ app.scope(function (app) {
                         total.push(' }\n');
                     };
                 },
-                buildCss = function (json, selector_, memo_) {
+                buildCss = function (json, selector_, memo_, beforeAnyMore) {
                     var result, baseSelector = selector_ || [],
                         memo = memo_ || [],
                         opensBlock = noop,
                         closesBlock = noop;
                     if (memo_) {
                         opensBlock = openBlock(baseSelector, memo);
+                    }
+                    if (beforeAnyMore) {
+                        beforeAnyMore();
                     }
                     result = foldl(json, function (memo, block, key) {
                         var trimmed = key.trim();
@@ -2247,7 +2250,7 @@ app.scope(function (app) {
                             }
                             opensBlock = openBlock(baseSelector, memo);
                             baseSelector.push(trimmed);
-                            buildCss(block, baseSelector, memo);
+                            buildCss(block, baseSelector, memo, closesBlock);
                             baseSelector.pop();
                         } else {
                             opensBlock();

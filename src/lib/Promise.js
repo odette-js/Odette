@@ -263,6 +263,12 @@ app.scope(function (app) {
                 });
                 return thenable;
             },
+            toJSON: function () {
+                return {};
+            },
+            toString: function () {
+                return JSON.stringify(this);
+            },
             all: distillAllRaces(checkAll),
             race: distillAllRaces(checkAny),
             stash: intendedApi(function (name, list) {
