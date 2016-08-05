@@ -7618,7 +7618,7 @@ app.scope(function (app) {
                 return DOMA(sel, context, BOOLEAN_FALSE, manager === context, manager);
             };
             wrapped = extend(wrap({
-                $: $,
+                // $: $,
                 createElements: createElements,
                 createDocumentFragment: createDocumentFragment,
                 registeredElementName: registeredElementName,
@@ -7639,6 +7639,7 @@ app.scope(function (app) {
                     return handler(one, manager, two, three);
                 };
             }), {
+                $: $,
                 buildCss: buildCss,
                 nodeComparison: function (a, b, hash_, stopper) {
                     return nodeComparison(a, b, hash_, stopper, NULL, NULL, NULL, manager);
