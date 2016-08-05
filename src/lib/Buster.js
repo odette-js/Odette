@@ -26,6 +26,8 @@ var busterGroupHash = {},
             buster.receive(data);
         }
     };
+// tie it to the app so we can check it and see if it is void
+receivePostMessage.app = app;
 app.scope(function (app) {
     var ENCODED_BRACKET = '%7B',
         IS_LATE = 'isLate',
@@ -414,6 +416,7 @@ app.scope(function (app) {
          */
         create: function (command, packet, extra) {
             var buster = this,
+                // returns collection
                 message = buster.add(extend({
                     command: command,
                     packet: packet
@@ -501,15 +504,12 @@ app.scope(function (app) {
         scopedFactories[UPCASED_BUSTER] = Buster.extend({
             owner$: $
         });
-        if (app.global.touch(win, winTop)) {
-            documentView.$(winTop).on(MESSAGE, receivePostMessage);
-        }
-        // documentView.$(win).on(MESSAGE, receivePostMessage);
         wraptry(function () {
-            var windo;
-            while (windo !== winTop) {
-                documentView.$(windo).on(MESSAGE, receivePostMessage);
-                windo = win.parent;
+            var parent, win = windo;
+            while (win !== parent && app.global.touch(win)) {
+                documentView.$(win).on(MESSAGE, receivePostMessage);
+                parent = win;
+                win = win.parent;
             }
         });
     });

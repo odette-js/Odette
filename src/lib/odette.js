@@ -1,206 +1,196 @@
-(function (that) {
-    var Odette = that.Odette = that.Odette || function (global, WHERE, version, fn, alt) {
-        'use strict';
-        var UNDEFINED, odette_version = Odette.VERSION = '0.0.0',
-            EMPTY_STRING = '',
-            LENGTH = 'length',
-            PARENT = 'global',
-            PROTOTYPE = 'prototype',
-            TOUCH = 'touch',
-            HAS_ACCESS = 'hasAccess',
-            PERIOD = '.',
-            global_ = this || window || this,
-            doc = global_.document,
-            BOOLEAN_TRUE = !0,
-            BOOLEAN_FALSE = !1,
-            NULL = null,
-            noop = function () {},
-            typeConstructor = function (str) {
-                return function (thing) {
-                    return typeof thing === str;
-                };
-            },
-            now = function () {
-                return +(new Date());
-            },
-            map = function (arra_, fn) {
-                var i = 0,
-                    arra = arra_.slice(0),
-                    len = arra[LENGTH],
-                    arr = [];
-                while (len > i) {
-                    arr[i] = fn(arra[i], i, arra);
-                    i++;
-                }
-                return arr;
-            },
-            isString = typeConstructor('string'),
-            isNumber = typeConstructor('number'),
-            isFunction = typeConstructor('function'),
-            isObject = typeConstructor('object'),
-            isArray = function (array) {
-                return Array.isArray(array);
-            },
-            executionTime = now(),
-            makeParody = function (parent, fn) {
-                return function () {
-                    return fn.apply(parent, arguments);
-                };
-            },
-            wraptry = function (trythis, errthat, finalfunction) {
-                var returnValue, err = NULL;
-                try {
-                    returnValue = trythis();
-                } catch (e) {
-                    err = e;
-                    returnValue = errthat ? errthat(e, returnValue) : returnValue;
-                } finally {
-                    returnValue = finalfunction ? finalfunction(err, returnValue) : returnValue;
-                }
-                return returnValue;
-            },
-            isVersionString = function (string) {
-                return isNumber(string) || (isString(string) && (string.split(PERIOD)[LENGTH] > 1 || +string === +string)) ? BOOLEAN_TRUE : BOOLEAN_FALSE;
-            },
-            maxVersion = function (string1, string2) {
-                // string 2 is always the underdogl
-                var split1, split2, provenLarger, cvs1Result = convertVersionString(string1);
-                var cvs2Result = convertVersionString(string2);
-                // keyword checks
-                if (cvs1Result === BOOLEAN_TRUE) {
-                    return BOOLEAN_TRUE;
-                }
-                if (cvs2Result === BOOLEAN_TRUE) {
-                    return BOOLEAN_TRUE;
-                }
-                if (cvs1Result === BOOLEAN_FALSE && cvs2Result === BOOLEAN_FALSE) {
-                    // compare them as version strings
-                    split1 = string1.split(PERIOD);
-                    split2 = string2.split(PERIOD);
-                    map(split1, function (value, index) {
-                        if (+value < +(split2[index] || 0)) {
-                            provenLarger = BOOLEAN_TRUE;
-                        }
-                    });
-                    if (split1[LENGTH] === 1 && split2[LENGTH] === 3) {
-                        return BOOLEAN_TRUE;
-                    }
-                    if (split1[LENGTH] === 3 && split2[LENGTH] === 1) {
-                        return BOOLEAN_FALSE;
-                    }
-                    if (provenLarger === UNDEFINED && split2[LENGTH] > split1[LENGTH]) {
+(function (root, KEY, factory) {
+    if (typeof define === 'function' && define.amd) {
+        define([], factory);
+    } else if (typeof exports === 'object') {
+        module.exports = factory();
+    } else {
+        root.Odette = factory();
+    }
+}(this, 'Odette', function (context) {
+    'use strict';
+    var UNDEFINED, odette_version = '0.0.0',
+        EMPTY_STRING = '',
+        noFailures = 'definitions cannot fail due to errors',
+        LENGTH = 'length',
+        PARENT = 'global',
+        PROTOTYPE = 'prototype',
+        HAS_ACCESS = 'hasAccess',
+        PERIOD = '.',
+        // figure all this out later to allow for server side use... if appropriate
+        global_ = this || window,
+        doc = global_.document,
+        BOOLEAN_TRUE = !0,
+        BOOLEAN_FALSE = !1,
+        NULL = null,
+        noop = function () {},
+        typeConstructor = function (str) {
+            return function (thing) {
+                return typeof thing === str;
+            };
+        },
+        now = function () {
+            return +(new Date());
+        },
+        map = function (arra_, fn) {
+            var i = 0,
+                arra = arra_ && arra_.slice(0),
+                len = arra && arra[LENGTH],
+                arr = [];
+            while (len > i) {
+                arr[i] = fn(arra[i], i, arra);
+                i++;
+            }
+            return arr;
+        },
+        isString = typeConstructor('string'),
+        isNumber = typeConstructor('number'),
+        isFunction = typeConstructor('function'),
+        isObject = typeConstructor('object'),
+        isArray = function (array) {
+            return Array.isArray(array);
+        },
+        executionTime = now(),
+        makeParody = function (parent, fn) {
+            return function () {
+                return fn.apply(parent, arguments);
+            };
+        },
+        wraptry = function (trythis, errthat, finalfunction) {
+            var returnValue, err = NULL;
+            try {
+                returnValue = trythis();
+            } catch (e) {
+                err = e;
+                returnValue = errthat ? errthat(e, returnValue) : returnValue;
+            } finally {
+                returnValue = finalfunction ? finalfunction(err, returnValue) : returnValue;
+            }
+            return returnValue;
+        },
+        isVersionString = function (string) {
+            return isNumber(string) || (isString(string) && (string.split(PERIOD)[LENGTH] > 1 || +string === +string)) ? BOOLEAN_TRUE : BOOLEAN_FALSE;
+        },
+        maxVersion = function (string1, string2) {
+            // string 2 is always the underdogl
+            var split1, split2, provenLarger, cvs1Result = convertVersionString(string1);
+            var cvs2Result = convertVersionString(string2);
+            // keyword checks
+            if (cvs1Result === BOOLEAN_TRUE) {
+                return BOOLEAN_TRUE;
+            }
+            if (cvs2Result === BOOLEAN_TRUE) {
+                return BOOLEAN_TRUE;
+            }
+            if (cvs1Result === BOOLEAN_FALSE && cvs2Result === BOOLEAN_FALSE) {
+                // compare them as version strings
+                split1 = string1.split(PERIOD);
+                split2 = string2.split(PERIOD);
+                map(split1, function (value, index) {
+                    if (+value < +(split2[index] || 0)) {
                         provenLarger = BOOLEAN_TRUE;
                     }
-                    return !!provenLarger;
-                } else {
-                    return string1 <= string2;
+                });
+                if (split1[LENGTH] === 1 && split2[LENGTH] === 3) {
+                    return BOOLEAN_TRUE;
                 }
-            },
-            returns = function (item) {
-                return function () {
-                    return item;
-                };
-            },
-            stringifyQuery = function (obj) {
-                var val, n, base = obj.url,
-                    query = [];
-                if (isObject(obj)) {
-                    each(obj.query, function (val, n) {
-                        if (val !== UNDEFINED) {
-                            val = encodeURIComponent(stringify(val));
-                            query.push(n + '=' + val);
-                        }
-                    });
-                    if (query[LENGTH]) {
-                        base += '?';
-                    }
-                    base += query.join('&');
-                    if (obj.hash) {
-                        obj.hash = isObject(obj.hash) ? encodeURI(stringify(obj.hash)) : hash;
-                        base += ('#' + obj.hash);
-                    }
-                } else {
-                    base = obj;
+                if (split1[LENGTH] === 3 && split2[LENGTH] === 1) {
+                    return BOOLEAN_FALSE;
                 }
-                return base;
-            },
-            convertVersionString = function (string_) {
-                var converted, string = string_;
-                if (isNumber(string)) {
-                    return string;
-                } else {
-                    string += EMPTY_STRING;
-                    converted = +string;
-                    // could be a number hiding as a string
-                    if (converted === converted) {
-                        return converted;
-                    } else {
-                        return string.split(PERIOD)[LENGTH] === 1;
-                    }
+                if (provenLarger === UNDEFINED && split2[LENGTH] > split1[LENGTH]) {
+                    provenLarger = BOOLEAN_TRUE;
                 }
-            },
-            parseSearch = function (search_) {
-                var parms, temp, items, val, converted, i = 0,
-                    search = search_,
-                    dcUriComp = global_.decodeURIComponent;
-                if (!isString(search)) {
-                    search = search[LOCATION].search;
-                }
-                if (search[0] === '?') {
-                    search = search.slice(1);
-                }
-                items = search.split('&');
-                parms = {};
-                for (; i < items[LENGTH]; i++) {
-                    temp = items[i].split('=');
-                    if (temp[0]) {
-                        if (temp[LENGTH] < 2) {
-                            temp[PUSH](EMPTY_STRING);
-                        }
-                        val = temp[1];
-                        val = dcUriComp(val);
-                        if (val[0] === "'" || val[0] === '"') {
-                            val = val.slice(1, val[LENGTH] - 1);
-                        }
-                        if (val === BOOLEAN_TRUE + EMPTY_STRING) {
-                            val = BOOLEAN_TRUE;
-                        }
-                        if (val === BOOLEAN_FALSE + EMPTY_STRING) {
-                            val = BOOLEAN_FALSE;
-                        }
-                        if (isString(val)) {
-                            converted = +val;
-                            if (converted == val && converted + EMPTY_STRING === val) {
-                                val = converted;
-                            }
-                        }
-                        parms[dcUriComp(temp[0])] = val;
-                    }
-                }
-                return parms;
-            },
-            exception = function (message) {
-                throw new Error(message);
+                return !!provenLarger;
+            } else {
+                return string1 <= string2;
+            }
+        },
+        returns = function (item) {
+            return function () {
+                return item;
             };
-
-        function Application(name, parent) {
-            this.SCOPED = BOOLEAN_TRUE;
-            this.CREATED_AT = now();
-            this.VERSION = name;
-            this.application = this;
-            this.missedDefinitions = [];
-            return this;
-        }
-        Application[PROTOTYPE].extend = function (obj) {
-            return this.merge(this, obj);
-        };
-        Application[PROTOTYPE].merge = function (obj1, obj2) {
-            this.each(obj2, function (value, key) {
-                obj1[key] = value;
-            });
-            return obj1;
-        };
-        Application[PROTOTYPE].each = function (obj_, fn, ctx) {
+        },
+        stringifyQuery = function (obj) {
+            var val, n, base = obj.url,
+                query = [];
+            if (isObject(obj)) {
+                each(obj.query, function (val, n) {
+                    if (val !== UNDEFINED) {
+                        val = encodeURIComponent(stringify(val));
+                        query.push(n + '=' + val);
+                    }
+                });
+                if (query[LENGTH]) {
+                    base += '?';
+                }
+                base += query.join('&');
+                if (obj.hash) {
+                    obj.hash = isObject(obj.hash) ? encodeURI(stringify(obj.hash)) : hash;
+                    base += ('#' + obj.hash);
+                }
+            } else {
+                base = obj;
+            }
+            return base;
+        },
+        convertVersionString = function (string_) {
+            var converted, string = string_;
+            if (isNumber(string)) {
+                return string;
+            } else {
+                string += EMPTY_STRING;
+                converted = +string;
+                // could be a number hiding as a string
+                if (converted === converted) {
+                    return converted;
+                } else {
+                    return string.split(PERIOD)[LENGTH] === 1;
+                }
+            }
+        },
+        parseSearch = function (search_) {
+            var parms, temp, items, val, converted, i = 0,
+                search = search_,
+                dcUriComp = global_.decodeURIComponent;
+            if (!isString(search)) {
+                search = search[LOCATION].search;
+            }
+            if (search[0] === '?') {
+                search = search.slice(1);
+            }
+            items = search.split('&');
+            parms = {};
+            for (; i < items[LENGTH]; i++) {
+                temp = items[i].split('=');
+                if (temp[0]) {
+                    if (temp[LENGTH] < 2) {
+                        temp[PUSH](EMPTY_STRING);
+                    }
+                    val = temp[1];
+                    val = dcUriComp(val);
+                    if (val[0] === "'" || val[0] === '"') {
+                        val = val.slice(1, val[LENGTH] - 1);
+                    }
+                    if (val === BOOLEAN_TRUE + EMPTY_STRING) {
+                        val = BOOLEAN_TRUE;
+                    }
+                    if (val === BOOLEAN_FALSE + EMPTY_STRING) {
+                        val = BOOLEAN_FALSE;
+                    }
+                    if (isString(val)) {
+                        converted = +val;
+                        if (converted == val && converted + EMPTY_STRING === val) {
+                            val = converted;
+                        }
+                    }
+                    parms[dcUriComp(temp[0])] = val;
+                }
+            }
+            return parms;
+        },
+        exception = function (message) {
+            throw new Error(message);
+        },
+        each = function (obj_, fn, ctx) {
             var n, keys, obj = obj_;
             if (isObject(obj)) {
                 if (isArray(obj)) {
@@ -218,7 +208,40 @@
                 }
             }
             return obj;
+        },
+        merge = function (obj1, obj2) {
+            each(obj2, function (value, key) {
+                obj1[key] = value;
+            });
+            return obj1;
+        },
+        touchable = function (touchHere) {
+            // assume you have top access
+            return wraptry(function () {
+                // always errs
+                var doc = touchHere.document;
+                // overwrite the scoped application variable
+                // doc has to be true, if it is undefined (safari) then we did not make it
+                return !!doc;
+            }, function () {
+                return BOOLEAN_FALSE;
+            });
+        },
+        definitions = [];
+    return merge(function (global, WHERE, version, fn, alt, hoistFrom) {
+        function Application(name, parent) {
+            this.SCOPED = BOOLEAN_TRUE;
+            this.CREATED_AT = now();
+            this.VERSION = name;
+            this.application = this;
+            this.missedDefinitions = [];
+            return this;
+        }
+        Application[PROTOTYPE].extend = function (obj) {
+            return this.merge(this, obj);
         };
+        Application[PROTOTYPE].merge = merge;
+        Application[PROTOTYPE].each = each;
         Application[PROTOTYPE].extend({
             exception: exception,
             destroy: noop,
@@ -304,11 +327,21 @@
                 return focused.queue;
             };
         };
+        wraptry(function () {
+            var hoisted, alreadyTried = [];
+            map(hoistFrom, function (hoistFrom) {
+                if (!global_[WHERE] && touchable(hoistFrom) && hoistFrom[WHERE]) {
+                    hoisted = BOOLEAN_TRUE;
+                    global_[WHERE] = hoistFrom[WHERE];
+                }
+            });
+        });
         var queue = [];
         var app, application = global_[WHERE] = global_[WHERE] || (function () {
             Odette.where.push(WHERE);
             return {
                 Application: Application,
+                LOADED_CONTEXT: window,
                 EXECUTED_AT: executionTime,
                 WHERE: WHERE,
                 VERSION: odette_version,
@@ -320,6 +353,7 @@
                 maxVersion: maxVersion,
                 map: map,
                 loadScriptWithQueue: loadScriptWithQueue,
+                loadedAgainst: [global],
                 queue: function (context, handler) {
                     queue.push({
                         context: context,
@@ -350,7 +384,7 @@
                     return newApp;
                 },
                 definition: function (version_, globl_, options_) {
-                    var app, odebt, definitionOptions, opts, context, application = this,
+                    var app, odebt, defs, definitionOptions, opts, context, application = this,
                         version = version_,
                         globl = globl_,
                         options = options_;
@@ -361,24 +395,30 @@
                     }
                     app = application.registerVersion(version);
                     odebt = globl.Odette;
-                    definitionOptions = odebt.options;
-                    if (!definitionOptions) {
-                        return app;
-                    }
-                    context = globl || definitionOptions.context;
+                    defs = definitions.slice(0);
+                    definitions = [];
                     opts = options || {};
                     if (app.defined) {
-                        application.map(app.missedDefinitions, function (handler) {
-                            handler.apply(app, [app, context, opts]);
+                        map(app.missedDefinitions, function (handler) {
+                            handler.apply(app, [app, globl, opts]);
                         });
                     } else {
-                        app.defined = BOOLEAN_TRUE;
-                        app.defining = BOOLEAN_TRUE;
-                        app.definingAgainst = context;
-                        app.definingWith = opts;
-                        definitionOptions.handler.apply(app, [app, context, opts]);
-                        app.defining = BOOLEAN_FALSE;
-                        delete odebt.options;
+                        map(defs, function (definitionOptions) {
+                            if (app.defining) {
+                                exception(noFailures);
+                            }
+                            app.defining = BOOLEAN_TRUE;
+                            app.definingAgainst = globl;
+                            app.definingWith = opts;
+                            wraptry(function () {
+                                definitionOptions.handler.apply(app, [app, globl, opts]);
+                                app.defining = BOOLEAN_FALSE;
+                                app.defined = BOOLEAN_TRUE;
+                            });
+                        });
+                    }
+                    if (app.defining) {
+                        exception(noFailures);
                     }
                     return app;
                 },
@@ -417,6 +457,24 @@
                     fn.apply(app, [scoped]);
                     return scoped;
                 },
+                hoist: function (windo) {
+                    if (!windo) {
+                        return BOOLEAN_FALSE;
+                    }
+                    if (windo === this.LOADED_CONTEXT) {
+                        return BOOLEAN_TRUE;
+                    }
+                    // it has already been hoisted
+                    if (this.loadedAgainst.indexOf(windo) + 1) {
+                        return BOOLEAN_TRUE;
+                    }
+                    // we have access
+                    if (this.touch(windo)) {
+                        //
+                    } else {
+                        return BOOLEAN_FALSE;
+                    }
+                },
                 registerScopedMethod: function (name, expects_) {
                     var application = this,
                         expects = expects_ || 3,
@@ -454,33 +512,7 @@
                         lastScript = allScripts[allScripts[LENGTH] - 1];
                     return currentScript || lastScript;
                 },
-                touch: function (fromHere, toHere, preventMap) {
-                    // assume you have top access
-                    var hasAccess, origin = this,
-                        application = origin;
-                    if (wraptry(function () {
-                        // always errs
-                        var doc = toHere.document;
-                        // overwrite the scoped application variable
-                        application = (toHere && toHere[WHERE]) || application;
-                        // doc has to be true, if it is undefined (safari) then we did not make it
-                        return !!doc;
-                    }, function () {
-                        return BOOLEAN_FALSE;
-                    })) {
-                        toHere[WHERE] = application;
-                        if (toHere.Odette.where.indexOf(application.WHERE) === -1) {
-                            toHere.Odette.where.push(application.WHERE);
-                        }
-                        if (!preventMap && fromHere[WHERE] !== application) {
-                            fromHere[WHERE] = application;
-                            map(origin.versionOrder, function (version) {
-                                application.registerVersion(version, origin.versions[version]);
-                            });
-                        }
-                        return application;
-                    }
-                },
+                touch: touchable,
                 makeScript: function (src, onload, docu_, preventappend) {
                     var docu = docu_ || doc,
                         script = docu.createElement('script');
@@ -515,28 +547,31 @@
             alt.apply(global_, [application, app]);
         }
         return app;
-    };
-    Odette.where = Odette.where || [];
-    Odette.counter = Odette.counter || (function () {
-        var stash = {};
-        var globalPrefix = 0;
-        return function (prefix) {
-            var value;
-            if (prefix) {
-                stash[prefix] = stash[prefix] || 0;
-                ++stash[prefix];
-                value = stash[prefix];
-            } else {
-                ++globalPrefix;
-                value = globalPrefix;
-            }
-            return prefix ? prefix + value : value;
-        };
-    }());
-    Odette.definition = Odette.definition || function (context, handler) {
-        this.options = {
-            context: context,
-            handler: handler
-        };
-    };
-}(this));
+    }, {
+        VERSION: odette_version,
+        where: [],
+        touchable: touchable,
+        counter: (function () {
+            var stash = {};
+            var globalPrefix = 0;
+            return function (prefix) {
+                var value;
+                if (prefix) {
+                    stash[prefix] = stash[prefix] || 0;
+                    ++stash[prefix];
+                    value = stash[prefix];
+                } else {
+                    ++globalPrefix;
+                    value = globalPrefix;
+                }
+                return prefix ? prefix + value : value;
+            };
+        }()),
+        definition: function (context, handler) {
+            definitions.push({
+                context: context,
+                handler: handler
+            });
+        }
+    });
+}));
