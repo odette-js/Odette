@@ -235,6 +235,7 @@
             this.VERSION = name;
             this.application = this;
             this.missedDefinitions = [];
+            this.definedAgainst = [];
             return this;
         }
         Application[PROTOTYPE].extend = function (obj) {
@@ -395,6 +396,10 @@
                         version = application.scope().VERSION;
                     }
                     app = application.registerVersion(version);
+                    if (app.definedAgainst.indexOf(item.context) > -1) {
+                        return;
+                    }
+                    app.definedAgainst.push(item.context);
                     odebt = globl.Odette;
                     defs = definitions.slice(0);
                     definitions = [];
