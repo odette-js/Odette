@@ -314,7 +314,6 @@
                         push();
                         application.makeScript(url, function () {
                             var queued = focused.queue.slice(0);
-                            console.log(this);
                             focused.loading = BOOLEAN_FALSE;
                             focused.finished = BOOLEAN_TRUE;
                             focused.queue = [];
