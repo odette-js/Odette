@@ -313,6 +313,7 @@
                         push();
                         application.makeScript(url, function () {
                             var queued = focused.queue.slice(0);
+                            console.log(this);
                             focused.loading = BOOLEAN_FALSE;
                             focused.finished = BOOLEAN_TRUE;
                             focused.queue = [];
@@ -457,7 +458,9 @@
                     fn.apply(app, [scoped]);
                     return scoped;
                 },
-                hoist: function (windo) {
+                hoist: function (windo, toHere) {
+                    var application = this,
+                        target = (toHere || window);
                     if (!windo) {
                         return BOOLEAN_FALSE;
                     }
@@ -465,12 +468,15 @@
                         return BOOLEAN_TRUE;
                     }
                     // it has already been hoisted
-                    if (this.loadedAgainst.indexOf(windo) + 1) {
+                    if (application.loadedAgainst.indexOf(windo) + 1) {
                         return BOOLEAN_TRUE;
                     }
                     // we have access
-                    if (this.touch(windo)) {
-                        //
+                    if (application.touch(windo)) {
+                        if (windo[application.WHERE]) {
+                            target[application.WHERE] = windo[application.WHERE];
+                        }
+                        return target[application.WHERE];
                     } else {
                         return BOOLEAN_FALSE;
                     }
