@@ -395,10 +395,10 @@
                         version = application.scope().VERSION;
                     }
                     app = application.registerVersion(version);
-                    if (app.definedAgainst.indexOf(item.context) > -1) {
+                    if (app.definedAgainst.indexOf(globl) > -1) {
                         return;
                     }
-                    app.definedAgainst.push(item.context);
+                    app.definedAgainst.push(globl);
                     odebt = globl.Odette;
                     defs = definitions.slice(0);
                     definitions = [];
