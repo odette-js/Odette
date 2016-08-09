@@ -7590,7 +7590,7 @@ app.scope(function (app) {
                         // handle one way... possible with an extendable handler?
                         // } else {
                         if (isObject(block)) {
-                            duff(toArray(trimmed, COMMA), function (timmd_) {
+                            duff(toArray(trimmed, COMMA), function (trimmd_) {
                                 trimmed = trimmd_.trim();
                                 if (baseSelector[LENGTH]) {
                                     if (trimmed[0] !== '&') {
