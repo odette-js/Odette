@@ -226,6 +226,9 @@ app.scope(function (app) {
             getChildViews: function (key) {
                 return this.getRegion(key).directive(CHILDREN);
             },
+            getChildView: function (region, category, key) {
+                return this.getChildViews(region).directive('Registry').get(category, key);
+            },
             tagName: returns('div'),
             template: returns(BOOLEAN_FALSE),
             // elementParent: returns(BOOLEAN_TRUE),
