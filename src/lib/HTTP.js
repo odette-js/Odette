@@ -11,11 +11,11 @@ app.scope(function (app) {
         PROGRESS = 'progress',
         validTypes = toArray(GET + ',POST,PUT,DELETE,HEAD,TRACE,OPTIONS,CONNECT'),
         baseEvents = toArray(PROGRESS + ',timeout,abort,' + ERROR),
-        readAndApply = function (ajax) {},
+        readAndApply = function () {},
         basehandlers = {
-            progress: function () {},
-            timeout: function () {},
-            abort: function () {},
+            progress: readAndApply,
+            timeout: readAndApply,
+            abort: readAndApply,
             error: readAndApply
         },
         attachBaseListeners = function (ajax) {
@@ -60,6 +60,10 @@ app.scope(function (app) {
          * @augments Model
          * @classdesc XHR object wrapper Triggers events based on xhr state changes and abstracts many anomalies that have to do with IE
          */
+        STATUS_200s = 'status:2xx',
+        STATUS_300s = 'status:3xx',
+        STATUS_400s = 'status:4xx',
+        STATUS_500s = 'status:5xx',
         HTTP = factories.HTTP = Promise.extend('HTTP', {
             /**
              * @func
@@ -154,23 +158,28 @@ app.scope(function (app) {
                 return {
                     // cross domain error
                     'status:0': FAILURE,
-                    'status:200': SUCCESS,
-                    'status:202': SUCCESS,
-                    'status:204': SUCCESS,
-                    'status:205': SUCCESS,
-                    'status:302': SUCCESS,
-                    'status:304': SUCCESS,
-                    'status:400': FAILURE,
-                    'status:401': FAILURE,
-                    'status:403': FAILURE,
-                    'status:404': FAILURE,
-                    'status:405': FAILURE,
-                    'status:406': FAILURE,
-                    'status:500': FAILURE,
-                    'status:502': FAILURE,
-                    'status:505': FAILURE,
-                    'status:511': FAILURE,
-                    'timeout': FAILURE,
+                    'status:2xx': SUCCESS,
+                    'status:200': STATUS_200s,
+                    'status:202': STATUS_200s,
+                    'status:204': STATUS_200s,
+                    'status:205': STATUS_200s,
+                    'status:3xx': SUCCESS,
+                    'status:302': STATUS_300s,
+                    'status:304': STATUS_300s,
+                    'status:4xx': FAILURE,
+                    'status:400': STATUS_400s,
+                    'status:401': STATUS_400s,
+                    'status:403': STATUS_400s,
+                    'status:404': STATUS_400s,
+                    'status:405': STATUS_400s,
+                    'status:406': STATUS_400s,
+                    'timeout': STATUS_400s,
+                    'status:408': 'timeout',
+                    'status:5xx': FAILURE,
+                    'status:500': STATUS_500s,
+                    'status:502': STATUS_500s,
+                    'status:505': STATUS_500s,
+                    'status:511': STATUS_500s,
                     'abort': FAILURE
                 };
             },
