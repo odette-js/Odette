@@ -2968,6 +2968,9 @@ app.scope(function (app) {
         dimensionFinder = function (element, doc, win) {
             return function (num) {
                 var ret, body, manager = this[ITEM](num);
+                if (!manager) {
+                    return 0;
+                }
                 if (manager.is(ELEMENT)) {
                     ret = clientRect(manager.element())[element];
                 } else {
