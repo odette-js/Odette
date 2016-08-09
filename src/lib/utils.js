@@ -1492,6 +1492,8 @@ var factories = {},
         max: mathArray('max'),
         arrayLikeToArray: arrayLikeToArray,
         objectToArray: objectToArray,
+        BIG_INTEGER: BIG_INTEGER,
+        NEGATIVE_BIG_INTEGER: NEGATIVE_BIG_INTEGER,
         math: wrap(toArray('E,LN2,LN10,LOG2E,LOG10E,PI,SQRT1_2,SQRT2,abs,acos,acosh,asin,asinh,atan,atan2,atanh,cbrt,ceil,clz32,cos,cosh,exp,expm1,floor,fround,hypot,imul,log,log1p,log2,log10,pow,random,round,sign,sin,sinh,sqrt,tan,tanh,trunc'), function (key) {
             return Math[key];
         })
