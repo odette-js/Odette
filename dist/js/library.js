@@ -7590,17 +7590,20 @@ app.scope(function (app) {
                         // handle one way... possible with an extendable handler?
                         // } else {
                         if (isObject(block)) {
-                            if (baseSelector[LENGTH]) {
-                                if (trimmed[0] !== '&') {
-                                    trimmed = ' ' + trimmed;
-                                } else {
-                                    trimmed = trimmed.slice(1);
+                            duff(toArray(trimmed, COMMA), function (timmd_) {
+                                trimmed = trimmd_.trim();
+                                if (baseSelector[LENGTH]) {
+                                    if (trimmed[0] !== '&') {
+                                        trimmed = ' ' + trimmed;
+                                    } else {
+                                        trimmed = trimmed.slice(1);
+                                    }
                                 }
-                            }
-                            opensBlock = openBlock(baseSelector, memo);
-                            baseSelector.push(trimmed);
-                            buildCss(block, baseSelector, memo, closesBlock);
-                            baseSelector.pop();
+                                opensBlock = openBlock(baseSelector, memo);
+                                baseSelector.push(trimmed);
+                                buildCss(block, baseSelector, memo, closesBlock);
+                                baseSelector.pop();
+                            });
                         } else {
                             opensBlock();
                             closesBlock = closeBlock(memo);
