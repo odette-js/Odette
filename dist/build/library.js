@@ -4715,6 +4715,11 @@ app.scope(function (app) {
             promise.remark(REJECTED, !bool);
         },
         Events = factories.Events,
+        followAndResolve = function (newP, key) {
+            if (!promise.isChildType(watch)) {
+                return promise;
+            }
+        },
         Promise = factories.Promise = _.Promise = Events.extend('Promise', {
             addHandler: addHandler,
             fulfillKey: 'success',
@@ -4774,16 +4779,42 @@ app.scope(function (app) {
             thenable: function () {
                 return Promise.apply(NULL, arguments);
             },
-            then: function (thenner) {
-                var promise = this;
-                var stashedValue = promise.stashedArgument;
-                var result = thenner(stashedValue);
-                if (!promise.isChildType(result)) {
-                    result = promise.__constructor__(function (success) {
-                        success(result);
-                    });
-                }
-                return result;
+            // trail: function (watch, resolutionTree) {
+            //     var promise = this;
+            //     if (!promise.isChildType(watch)) {
+            //         return promise;
+            //     }
+            //     watch.always(function () {
+            //         promise.resolveAs(watch.state);
+            //     });
+            //     return promise;
+            // },
+            valid: function (key) {
+                //
+            },
+            then: function (success, failure) {
+                var promise = this,
+                    newPromise = promise.__constructor__(),
+                    capture = function (bool) {
+                        return function (val) {
+                            var result, proxy;
+                            if (bool) {
+                                result = success(val);
+                            } else {
+                                result = failure(val);
+                            }
+                            proxy = result;
+                            if (promise.isChildType(proxy)) {
+                                proxy.always(function (a) {
+                                    newPromise.resolveAs(proxy.state, a);
+                                });
+                            } else {
+                                newPromise.resolveAs(bool ? SUCCESS : FAILURE, val);
+                            }
+                        };
+                    };
+                promise.success(capture(BOOLEAN_TRUE)).failure(capture());
+                return newPromise;
             },
             toJSON: function () {
                 return {};
