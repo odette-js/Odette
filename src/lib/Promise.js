@@ -186,8 +186,11 @@ app.scope(function (app) {
                 if (promise[STATE] !== PENDING) {
                     return promise;
                 }
-                collect(promise, arguments);
+                collect(promise, toArray(arguments));
                 listen(promise, check);
+                if (!promise.Children.length()) {
+                    promise.resolve();
+                }
                 return promise;
             };
         },
@@ -221,7 +224,7 @@ app.scope(function (app) {
                 return promise;
             },
             isChildType: function (promise) {
-                return promise[SUCCESS] && promise[FAILURE] && promise[ALWAYS] && promise[CATCH];
+                return promise && promise[SUCCESS] && promise[FAILURE] && promise[ALWAYS] && promise[CATCH];
             },
             allStates: function () {
                 return extend({}, baseStates, result(this, 'auxiliaryStates'));
