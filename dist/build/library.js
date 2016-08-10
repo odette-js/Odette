@@ -6147,10 +6147,8 @@ app.scope(function (app) {
             var img = new Image();
             url = stringifyQuery(url);
             if (callback) {
-                img.onload = function () {
-                    var list = toArray(arguments);
-                    ARRAY_PROTOTYPE.unshift.apply(list, url);
-                    callback.apply(this, list);
+                img.onload = function (e) {
+                    callback.apply(this, [url, e]);
                 };
             }
             img.src = url;
