@@ -4779,19 +4779,6 @@ app.scope(function (app) {
             thenable: function () {
                 return Promise.apply(NULL, arguments);
             },
-            // trail: function (watch, resolutionTree) {
-            //     var promise = this;
-            //     if (!promise.isChildType(watch)) {
-            //         return promise;
-            //     }
-            //     watch.always(function () {
-            //         promise.resolveAs(watch.state);
-            //     });
-            //     return promise;
-            // },
-            valid: function (key) {
-                //
-            },
             then: function (success, failure) {
                 var promise = this,
                     newPromise = promise.__constructor__(),
