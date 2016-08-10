@@ -4704,7 +4704,7 @@ app.scope(function (app) {
                 }
                 collect(promise, toArray(arguments));
                 listen(promise, check);
-                if (!promise.Children.length()) {
+                if (!promise.Collection.length()) {
                     promise.resolve();
                 }
                 return promise;
