@@ -10238,7 +10238,9 @@ app.scope(function (app) {
         });
     var CAPITAL_ELEMENT = capitalize(ELEMENT);
     var basicViewTrigger = function (name, e) {
-            return this[DISPATCH_EVENT](name, e);
+            return this[DISPATCH_EVENT](name, e.data(), {
+                instigator: e
+            });
         },
         makeDelegateEventKeys = function (cid, bindings, key) {
             var viewNamespace = 'delegateEvents' + cid,
