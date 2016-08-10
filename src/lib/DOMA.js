@@ -794,7 +794,7 @@ app.scope(function (app) {
             if (callback) {
                 img.onload = function () {
                     var list = toArray(arguments);
-                    ARRAY_PROTOTYPE.unshift(list, url);
+                    ARRAY_PROTOTYPE.unshift.apply(list, url);
                     callback.apply(this, list);
                 };
             }
