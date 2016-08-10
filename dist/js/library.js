@@ -4823,7 +4823,7 @@ app.scope(function (app) {
         instanceExposure = function (key) {
             return function () {
                 var promise = Promise();
-                return promise.race.apply(promise, arguments);
+                return promise[key].apply(promise, arguments);
             };
         };
     app.extend({
