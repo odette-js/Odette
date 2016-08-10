@@ -4774,13 +4774,16 @@ app.scope(function (app) {
             thenable: function () {
                 return Promise.apply(NULL, arguments);
             },
-            then: function (one, two, three) {
+            then: function (thenner) {
                 var promise = this;
-                var thenable = promise.thenable.apply(promise, arguments);
-                promise.always(function (value) {
-                    return promise.is(FULFILLED) ? thenable.resolve(value) : thenable.reject(value);
-                });
-                return thenable;
+                var stashedValue = promise.stashedArgument;
+                var result = thenner(stashedValue);
+                if (!promise.isChildType(result)) {
+                    result = promise.__constructor__(function (success) {
+                        success(result);
+                    });
+                }
+                return result;
             },
             toJSON: function () {
                 return {};
