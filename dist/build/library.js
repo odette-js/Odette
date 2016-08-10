@@ -9866,7 +9866,7 @@ app.scope(function (app) {
                     }
                 }
                 view[PARENT] = region;
-                children.add(view);
+                children.attach(view);
                 model = view.model;
                 children.keep('viewCid', view.cid, view);
                 children.keep('modelCid', model.cid, view);

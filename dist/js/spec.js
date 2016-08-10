@@ -445,13 +445,13 @@ application.scope().run(function (app, _) {
             _.test.expect(_.capitalize('Some')).toEqual('Some');
             _.test.expect(_.capitalize('sOmE')).toEqual('SOmE');
         });
-        _.test.it('_.unCamelCase', function () {
-            var thatIsCamelCased = 'thisIsUnCamelCased';
-            _.test.expect(_.unCamelCase(thatIsCamelCased)).toEqual('this-is-un-camel-cased');
-            _.test.expect(_.unCamelCase(thatIsCamelCased, ' ')).toEqual('this is un camel cased');
-            _.test.expect(_.unCamelCase(thatIsCamelCased, '_')).toEqual('this_is_un_camel_cased');
-            _.test.expect(_.unCamelCase(thatIsCamelCased, '1')).toEqual('this1is1un1camel1cased');
-        });
+        // _.test.it('_.unCamelCase', function () {
+        //     var thatIsCamelCased = 'thisIsUnCamelCased';
+        //     _.test.expect(_.unCamelCase(thatIsCamelCased)).toEqual('this-is-un-camel-cased');
+        //     _.test.expect(_.unCamelCase(thatIsCamelCased, ' ')).toEqual('this is un camel cased');
+        //     _.test.expect(_.unCamelCase(thatIsCamelCased, '_')).toEqual('this_is_un_camel_cased');
+        //     _.test.expect(_.unCamelCase(thatIsCamelCased, '1')).toEqual('this1is1un1camel1cased');
+        // });
         _.test.describe('_.customUnits', function () {
             _.test.it('does not use any root, or base units', function () {
                 _.test.expect(_.customUnits('1000whats', ['evers', 'whats'])).toEqual('whats');
@@ -1872,56 +1872,57 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 });
             });
         });
-        _.test.describe('status codes are used as a layer over success and failure', function () {
-            _.test.it('200 is success', function () {
-                _.test.expect(allstates['status:200']).toEqual('success');
-            });
-            _.test.it('202 is success', function () {
-                _.test.expect(allstates['status:202']).toEqual('success');
-            });
-            _.test.it('204 is success', function () {
-                _.test.expect(allstates['status:204']).toEqual('success');
-            });
-            _.test.it('205 is success', function () {
-                _.test.expect(allstates['status:205']).toEqual('success');
-            });
-            _.test.it('302 is success', function () {
-                _.test.expect(allstates['status:302']).toEqual('success');
-            });
-            _.test.it('304 is success', function () {
-                _.test.expect(allstates['status:304']).toEqual('success');
-            });
-            _.test.it('400 is failure', function () {
-                _.test.expect(allstates['status:400']).toEqual('failure');
-            });
-            _.test.it('401 is failure', function () {
-                _.test.expect(allstates['status:401']).toEqual('failure');
-            });
-            _.test.it('403 is failure', function () {
-                _.test.expect(allstates['status:403']).toEqual('failure');
-            });
-            _.test.it('404 is failure', function () {
-                _.test.expect(allstates['status:404']).toEqual('failure');
-            });
-            _.test.it('405 is failure', function () {
-                _.test.expect(allstates['status:405']).toEqual('failure');
-            });
-            _.test.it('406 is failure', function () {
-                _.test.expect(allstates['status:406']).toEqual('failure');
-            });
-            _.test.it('500 is failure', function () {
-                _.test.expect(allstates['status:500']).toEqual('failure');
-            });
-            _.test.it('502 is failure', function () {
-                _.test.expect(allstates['status:502']).toEqual('failure');
-            });
-            _.test.it('505 is failure', function () {
-                _.test.expect(allstates['status:505']).toEqual('failure');
-            });
-            _.test.it('511 is failure', function () {
-                _.test.expect(allstates['status:511']).toEqual('failure');
-            });
-        });
+        // rewrite this to recursively go through each key and make sure it resolves to always
+        // _.test.describe('status codes are used as a layer over success and failure', function () {
+        //     _.test.it('200 is success', function () {
+        //         _.test.expect(allstates['status:200']).toEqual('success');
+        //     });
+        //     _.test.it('202 is success', function () {
+        //         _.test.expect(allstates['status:202']).toEqual('success');
+        //     });
+        //     _.test.it('204 is success', function () {
+        //         _.test.expect(allstates['status:204']).toEqual('success');
+        //     });
+        //     _.test.it('205 is success', function () {
+        //         _.test.expect(allstates['status:205']).toEqual('success');
+        //     });
+        //     _.test.it('302 is success', function () {
+        //         _.test.expect(allstates['status:302']).toEqual('success');
+        //     });
+        //     _.test.it('304 is success', function () {
+        //         _.test.expect(allstates['status:304']).toEqual('success');
+        //     });
+        //     _.test.it('400 is failure', function () {
+        //         _.test.expect(allstates['status:400']).toEqual('failure');
+        //     });
+        //     _.test.it('401 is failure', function () {
+        //         _.test.expect(allstates['status:401']).toEqual('failure');
+        //     });
+        //     _.test.it('403 is failure', function () {
+        //         _.test.expect(allstates['status:403']).toEqual('failure');
+        //     });
+        //     _.test.it('404 is failure', function () {
+        //         _.test.expect(allstates['status:404']).toEqual('failure');
+        //     });
+        //     _.test.it('405 is failure', function () {
+        //         _.test.expect(allstates['status:405']).toEqual('failure');
+        //     });
+        //     _.test.it('406 is failure', function () {
+        //         _.test.expect(allstates['status:406']).toEqual('failure');
+        //     });
+        //     _.test.it('500 is failure', function () {
+        //         _.test.expect(allstates['status:500']).toEqual('failure');
+        //     });
+        //     _.test.it('502 is failure', function () {
+        //         _.test.expect(allstates['status:502']).toEqual('failure');
+        //     });
+        //     _.test.it('505 is failure', function () {
+        //         _.test.expect(allstates['status:505']).toEqual('failure');
+        //     });
+        //     _.test.it('511 is failure', function () {
+        //         _.test.expect(allstates['status:511']).toEqual('failure');
+        //     });
+        // });
     });
 });
 application.scope().run(window, function (app, _, factories, documentView, scopedFactories, $) {

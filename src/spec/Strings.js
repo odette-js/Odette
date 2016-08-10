@@ -16,13 +16,13 @@ application.scope().run(function (app, _) {
             _.test.expect(_.capitalize('Some')).toEqual('Some');
             _.test.expect(_.capitalize('sOmE')).toEqual('SOmE');
         });
-        _.test.it('_.unCamelCase', function () {
-            var thatIsCamelCased = 'thisIsUnCamelCased';
-            _.test.expect(_.unCamelCase(thatIsCamelCased)).toEqual('this-is-un-camel-cased');
-            _.test.expect(_.unCamelCase(thatIsCamelCased, ' ')).toEqual('this is un camel cased');
-            _.test.expect(_.unCamelCase(thatIsCamelCased, '_')).toEqual('this_is_un_camel_cased');
-            _.test.expect(_.unCamelCase(thatIsCamelCased, '1')).toEqual('this1is1un1camel1cased');
-        });
+        // _.test.it('_.unCamelCase', function () {
+        //     var thatIsCamelCased = 'thisIsUnCamelCased';
+        //     _.test.expect(_.unCamelCase(thatIsCamelCased)).toEqual('this-is-un-camel-cased');
+        //     _.test.expect(_.unCamelCase(thatIsCamelCased, ' ')).toEqual('this is un camel cased');
+        //     _.test.expect(_.unCamelCase(thatIsCamelCased, '_')).toEqual('this_is_un_camel_cased');
+        //     _.test.expect(_.unCamelCase(thatIsCamelCased, '1')).toEqual('this1is1un1camel1cased');
+        // });
         _.test.describe('_.customUnits', function () {
             _.test.it('does not use any root, or base units', function () {
                 _.test.expect(_.customUnits('1000whats', ['evers', 'whats'])).toEqual('whats');
