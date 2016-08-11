@@ -2268,6 +2268,7 @@ app.scope(function (app) {
             if (manager.is('setupComplete')) {
                 return manager.$;
             }
+            manager.remark('ie', isIE);
             registeredElements = clone(validTagsNamesHash);
             setup = function (e) {
                 manager.DOMContentLoadedEvent = e;
@@ -2303,6 +2304,9 @@ app.scope(function (app) {
                 buildCss: buildCss,
                 nodeComparison: function (a, b, hash_, stopper) {
                     return nodeComparison(a, b, hash_, stopper, NULL, NULL, NULL, manager);
+                },
+                ready: function () {
+                    // ready
                 },
                 supports: {},
                 deltas: deltas,
