@@ -3306,7 +3306,7 @@ app.scope(function (app) {
         },
         listenToHandler = function (eventer, directive, evnt, list, modifier) {
             var target = list[0];
-            var targetDirective = listenToModifier(eventer, directive, evnt, target);
+            var targetDirective = listenToModifier(eventer, target.directive(EVENTS), evnt, target);
             evnt.handler = methodExchange(eventer, evnt.handler);
             attachEventObject(target, targetDirective, evnt, list.slice(1), modifier);
         },
