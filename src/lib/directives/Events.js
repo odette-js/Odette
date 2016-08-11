@@ -191,7 +191,8 @@ app.scope(function (app) {
                     // if that is the extent of the listening events, then detach it completely
                     if (!listening.count) {
                         listeningTo = listening.listeningTo;
-                        listeningTo[listening[TALKER_ID]] = UNDEFINED;
+                        delete listeningTo[listening[TALKER_ID]];
+                        // listeningTo[listening[TALKER_ID]] = UNDEFINED;
                     }
                 }
                 return BOOLEAN_TRUE;

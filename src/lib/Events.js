@@ -155,7 +155,6 @@ app.scope(function (app) {
             listening = listeningTo[talkerId] = {
                 talker: talker,
                 talkerId: talkerId,
-                id: listenerDirective[TALKER_ID],
                 listeningTo: listeningTo,
                 count: 0
             };
