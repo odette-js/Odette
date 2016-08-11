@@ -3411,7 +3411,7 @@ app.scope(function (app) {
                     if (listening) {
                         listening.talker.off(name, callback);
                     }
-                    stillListening = listening[id] ? 1 : 0;
+                    stillListening = (stillListening || (listening && listening[id])) ? 1 : 0;
                 });
                 if (!stillListening && !find(target ? keys(listeningTo) : ids, function (id, key) {
                     return listeningTo[id];
