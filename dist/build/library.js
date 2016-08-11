@@ -4719,6 +4719,9 @@ app.scope(function (app) {
                 return promise;
             }
         },
+        isPromise = function (promise) {
+            return promise && promise[SUCCESS] && promise[FAILURE] && promise[ALWAYS] && promise[CATCH];
+        },
         Promise = factories.Promise = _.Promise = Events.extend('Promise', {
             addHandler: addHandler,
             fulfillKey: 'success',
@@ -4743,9 +4746,7 @@ app.scope(function (app) {
                 // return the promise
                 return promise;
             },
-            isChildType: function (promise) {
-                return promise && promise[SUCCESS] && promise[FAILURE] && promise[ALWAYS] && promise[CATCH];
-            },
+            isChildType: isPromise,
             allStates: function () {
                 return extend({}, baseStates, result(this, 'auxiliaryStates'));
             },
@@ -4851,6 +4852,9 @@ app.scope(function (app) {
     });
     Promise.all = instanceExposure('all');
     Promise.race = instanceExposure('race');
+    _.publicize({
+        isPromise: isPromise
+    });
 });
 var Promise = _.Promise;
 app.scope(function (app) {
