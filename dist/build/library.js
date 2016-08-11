@@ -3990,6 +3990,9 @@ app.scope(function (app) {
                 }
                 return evnt;
             },
+            toJSON: function () {
+                return this.data();
+            },
             isStopped: function () {
                 return this.is(PROPAGATION_STOPPED) || this.is(IMMEDIATE_PROP_STOPPED);
             },
