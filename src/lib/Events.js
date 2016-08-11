@@ -142,17 +142,16 @@ app.scope(function (app) {
         onFiller = onFillerMaker(2),
         listenToFiller = onFillerMaker(3),
         retreiveListeningObject = function (listener, talker) {
-            var listenerDirective = listener.directive(EVENTS),
+            var listening, listenerDirective = listener.directive(EVENTS),
                 talkerDirective = talker.directive(EVENTS),
                 talkerId = talkerDirective[TALKER_ID],
-                listeningTo = listenerDirective[LISTENING_TO],
-                listening = listeningTo[talkerId];
-            if (listening) {
+                listeningTo = listenerDirective[LISTENING_TO];
+            if (talkerId && (listening = listeningTo[talkerId])) {
                 return listening;
             }
             // This talkerect is not listening to any other events on `talker` yet.
             // Setup the necessary references to track the listening callbacks.
-            listenerDirective[TALKER_ID] = listenerDirective[TALKER_ID] || app.counter(LISTENING_PREFIX);
+            talkerId = listenerDirective[TALKER_ID] = listenerDirective[TALKER_ID] || app.counter(LISTENING_PREFIX);
             listening = listeningTo[talkerId] = {
                 talker: talker,
                 talkerId: talkerId,
@@ -164,7 +163,7 @@ app.scope(function (app) {
         },
         listenToHandler = function (eventer, directive, evnt, list, modifier) {
             var target = list[0];
-            var targetDirective = listenToModifier(eventer, target.directive(EVENTS), evnt, target);
+            var targetDirective = listenToModifier(eventer, directive, evnt, target);
             evnt.handler = methodExchange(eventer, evnt.handler);
             attachEventObject(target, targetDirective, evnt, list.slice(1), modifier);
         },
