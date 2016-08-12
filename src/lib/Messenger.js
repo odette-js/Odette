@@ -1,14 +1,14 @@
 var Messenger = factories.Directive.extend('Messenger', {
     constructor: function () {
-        var messenger = this;
+        var messenger = this,
+            hash = {};
         factories.Directive[CONSTRUCTOR].apply(this, arguments);
-        hash = {};
         messenger.request = function (key, arg, prefix) {
-            return hash[key] && hash[key](arg);
+            return hash && hash[key] && hash[key](arg);
         };
         messenger.reply = function (key, handler, prefix) {
             intendedObject(key, handler, function (key, handler) {
-                hash[key] = bind(isFunction(handler) ? handler : returns(handler), NULL);
+                return hash && (hash[key] = bind(isFunction(handler) ? handler : returns(handler), NULL));
             });
             return messenger;
         };
