@@ -3582,6 +3582,7 @@ app.scope(function (app) {
             return element && !isWindow(element) && element.isValidDomManager ? element : ensure(element, owner);
         },
         exportResult = _.publicize({
+            isIE: isIE,
             covers: covers,
             center: center,
             closer: closer,
