@@ -5059,10 +5059,10 @@ app.scope(function (app) {
                 ajax[CONSTRUCTOR + COLON + 'Promise']();
                 // function () {
                 var sending,
-                    // type = ajax.options.type,
-                    // url = ajax.options.url,
                     args = [],
                     data = ajax.options.data;
+                type = ajax.options.type;
+                url = ajax.options.url;
                 if (isObject(url) && !isArray(url)) {
                     url = stringifyQuery(url);
                 }
