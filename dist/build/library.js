@@ -5056,32 +5056,39 @@ app.scope(function (app) {
                     requestObject: xhrReq,
                     withCredentials: BOOLEAN_TRUE
                 }, str);
-                Promise[CONSTRUCTOR].call(ajax, function () {
-                    var type = ajax.options.type,
-                        url = ajax.options.url,
-                        args = [],
-                        data = ajax.options.data;
-                    if (isObject(url) && !isArray(url)) {
-                        url = stringifyQuery(url);
-                    }
-                    if (!url || !type) {
-                        return exception('http object must have a url and a type');
-                    }
-                    ajax.attachResponseHandler();
-                    wraptry(function () {
-                        // if (!win.XDomainRequest || !isInstance(xhrReq, win.XDomainRequest)) {
-                        //     xhrReq.withCredentials = ajax.options.withCredentials;
-                        // }
-                        xhrReq.open(type, url, ajax.options.async);
-                    });
-                    if (data) {
-                        args.push(stringify(data));
-                    }
-                    ajax.headers(ajax.options.headers);
-                    attachBaseListeners(ajax);
-                    // have to wrap in set timeout for ie
-                    setTimeout(sendthething(xhrReq, args, ajax));
+                ajax[CONSTRUCTOR + COLON + 'Promise']();
+                // function () {
+                var sending,
+                    // type = ajax.options.type,
+                    // url = ajax.options.url,
+                    args = [],
+                    data = ajax.options.data;
+                if (isObject(url) && !isArray(url)) {
+                    url = stringifyQuery(url);
+                }
+                if (!url || !type) {
+                    return exception('http object must have a url and a type');
+                }
+                ajax.attachResponseHandler();
+                wraptry(function () {
+                    // if (!win.XDomainRequest || !isInstance(xhrReq, win.XDomainRequest)) {
+                    //     xhrReq.withCredentials = ajax.options.withCredentials;
+                    // }
+                    xhrReq.open(type, url, ajax.options.async);
                 });
+                if (data) {
+                    args.push(stringify(data));
+                }
+                ajax.headers(ajax.options.headers);
+                attachBaseListeners(ajax);
+                // have to wrap in set timeout for ie
+                sending = sendthething(xhrReq, args, ajax);
+                if (_.isIE) {
+                    setTimeout(sending);
+                } else {
+                    sending();
+                }
+                // );
                 return ajax;
             },
             status: function (code, handler) {
