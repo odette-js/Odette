@@ -7011,7 +7011,7 @@ app.scope(function (app) {
             }
             return returnValue;
         },
-        setInnard = function (attribute, manager, value) {
+        setInnard = function (attribute, manager, value, vars) {
             var children, cachedValue, win, doc, windo, doTheThing, parentElement,
                 owner = manager.owner;
             if (manager.is(IFRAME)) {
@@ -7021,6 +7021,9 @@ app.scope(function (app) {
                     parentElement = windo.element();
                     doc = parentElement[DOCUMENT];
                     doc.open();
+                    each(vars, function (value, key) {
+                        parentElement[key] = value;
+                    });
                     doc.write(value);
                     doc.close();
                     doTheThing = BOOLEAN_TRUE;
@@ -7042,13 +7045,13 @@ app.scope(function (app) {
             }
         },
         innardManipulator = function (attribute) {
-            return function (value) {
+            return function (value, vars) {
                 var manager = this,
                     returnValue = manager;
                 if (value === UNDEFINED) {
                     return getInnard(attribute, manager);
                 } else {
-                    setInnard(attribute, manager, value);
+                    setInnard(attribute, manager, value, vars);
                     return manager;
                 }
             };
