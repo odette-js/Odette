@@ -245,7 +245,7 @@ var ATTACHED = 'attached',
                     if (!el[STYLE]) {
                         return;
                     }
-                    applyStyle(el, key, val);
+                    applyStyle(el, val);
                     return;
                 } else {
                     val = foldl(val_, function (memo, value, key) {
