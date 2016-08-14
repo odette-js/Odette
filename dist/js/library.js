@@ -10682,6 +10682,11 @@ app.scope(function (app) {
                 documentManager.modifications = Collection();
                 factories.Model[CONSTRUCTOR].apply(this, arguments);
                 return documentManager;
+            },
+            getByDocument: function (doc) {
+                return this.documents.find(function (documentViews) {
+                    return documentViews.el.element() === doc;
+                });
             }
         });
     var CAPITAL_ELEMENT = capitalize(ELEMENT);
