@@ -173,7 +173,8 @@ app.scope(function (app) {
                     documentManagerDocuments = app.directive(DOCUMENT_MANAGER).documents,
                     documentView = documentManagerDocuments.get(ID, id);
                 if (!documentView) {
-                    documentView = app.global.definition(app.VERSION, windo);
+                    app.global.definition(app.VERSION, windo);
+                    documentView = documentManagerDocuments.get(ID, id);
                 }
                 return [app, _, _ && _.factories, documentView, documentView.factories, documentView.$];
             },
