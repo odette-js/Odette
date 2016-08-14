@@ -5777,6 +5777,35 @@ var ATTACHED = 'attached',
     devicePixelRatio = (win.devicePixelRatio || 1),
     propsList = toArray('type,href,className,height,width,id,tabIndex,title,alt'),
     propsHash = wrap(propsList, BOOLEAN_TRUE),
+    Events = toArray('abort,afterprint,beforeprint,blocked,cached,canplay,canplaythrough,change,chargingchange,chargingtimechange,checking,close,complete,dischargingtimechange,DOMContentLoaded,downloading,durationchange,emptied,ended,error,fullscreenchange,fullscreenerror,input,invalid,languagechange,levelchange,loadeddata,loadedmetadata,message,noupdate,obsolete,offline,online,open,pagehide,pageshow,paste,pause,pointerlockchange,pointerlockerror,play,playing,ratechange,reset,seeked,seeking,stalled,storage,submit,success,suspend,timeupdate,updateready,upgradeneeded,versionchange,visibilitychange'),
+    SVGEvent = toArray('SVGAbort,SVGError,SVGLoad,SVGResize,SVGScroll,SVGUnload,SVGZoom,volumechange,waiting'),
+    KeyboardEvent = toArray('keydown,keypress,keyup'),
+    GamePadEvent = toArray('gamepadconnected,gamepadisconnected'),
+    CompositionEvent = toArray('compositionend,compositionstart,compositionupdate,drag,dragend,dragenter,dragleave,dragover,dragstart,drop'),
+    MouseEvents = toArray('click,contextmenu,dblclick,mousedown,mouseenter,mouseleave,mousemove,mouseout,mouseover,mouseup,show,wheel'),
+    TouchEvents = toArray('touchcancel,touchend,touchenter,touchleave,touchmove,touchstart'),
+    DeviceEvents = toArray('devicemotion,deviceorientation,deviceproximity,devicelight'),
+    FocusEvent = toArray('blur,focus'),
+    TimeEvent = toArray('beginEvent,endEvent,repeatEvent'),
+    AnimationEvent = toArray('animationend,animationiteration,animationstart,transitionend'),
+    AudioProcessingEvent = toArray('audioprocess,complete'),
+    UIEvents = toArray('abort,error,hashchange,load,orientationchange,readystatechange,resize,scroll,select,unload,beforeunload'),
+    ProgressEvent = toArray('abort,error,load,loadend,loadstart,popstate,progress,timeout'),
+    AllEvents = concatUnique(Events, SVGEvent, KeyboardEvent, CompositionEvent, GamePadEvent, MouseEvents, TouchEvents, DeviceEvents, FocusEvent, TimeEvent, AnimationEvent, AudioProcessingEvent, UIEvents, ProgressEvent),
+    knownPrefixes = toArray('-o-,-ms-,-moz-,-webkit-,mso-,-xv-,-atsc-,-wap-,-khtml-,-apple-,prince-,-ah-,-hp-,-ro-,-rim-,-tc-'),
+    validTagNames = toArray('a,abbr,address,area,article,aside,audio,b,base,bdi,bdo,blockquote,body,br,button,canvas,caption,cite,code,col,colgroup,data,datalist,dd,del,dfn,div,dl,dt,em,embed,fieldset,figcaption,figure,footer,form,h1,h2,h3,h4,h5,h6,head,header,hr,html,i,iframe,img,input,ins,kbd,keygen,label,legend,li,link,main,map,mark,meta,meter,nav,noscript,object,ol,optgroup,option,output,p,param,pre,progress,q,rb,rp,rt,rtc,ruby,s,samp,script,section,select,small,source,span,strong,style,sub,sup,table,tbody,td,template,textarea,tfoot,th,thead,time,title,tr,track,u,ul,var,video,wbr'),
+    validTagsNamesHash = wrap(validTagNames, BOOLEAN_TRUE),
+    ALL_EVENTS_HASH = wrap(AllEvents, BOOLEAN_TRUE),
+    knownPrefixesHash = wrap(knownPrefixes, BOOLEAN_TRUE),
+    getClosestWindow = function (windo_) {
+        var windo = windo_ || win;
+        return isWindow(windo) ? windo : (windo && windo[DEFAULT_VIEW] ? windo[DEFAULT_VIEW] : (windo.ownerGlobal ? windo.ownerGlobal : DOMA(windo).parent(WINDOW)[ITEM](0) || win));
+    },
+    getComputed = function (el, ctx) {
+        var ret = getClosestWindow(ctx).getComputedStyle(el);
+        return ret ? ret : getClosestWindow(el).getComputedStyle(el) || clone(el[STYLE]) || {};
+    },
+    allStyles = getComputed(doc[BODY], win),
     createAttributeFromTag = function (tag) {
         return '[' + CUSTOM_KEY + '="' + tag + '"]';
     },
@@ -5787,6 +5816,165 @@ var ATTACHED = 'attached',
         }
         tag = el[LOCAL_NAME].toLowerCase();
         return str ? tag === str.toLowerCase() : tag;
+    },
+    numberBasedCss = {
+        columnCount: BOOLEAN_TRUE,
+        columns: BOOLEAN_TRUE,
+        fontWeight: BOOLEAN_TRUE,
+        lineHeight: BOOLEAN_TRUE,
+        opacity: BOOLEAN_TRUE,
+        zIndex: BOOLEAN_TRUE,
+        zoom: BOOLEAN_TRUE,
+        animationIterationCount: BOOLEAN_TRUE,
+        boxFlex: BOOLEAN_TRUE,
+        boxFlexGroup: BOOLEAN_TRUE,
+        boxOrdinalGroup: BOOLEAN_TRUE,
+        flex: BOOLEAN_TRUE,
+        flexGrow: BOOLEAN_TRUE,
+        flexPositive: BOOLEAN_TRUE,
+        flexShrink: BOOLEAN_TRUE,
+        flexNegative: BOOLEAN_TRUE,
+        flexOrder: BOOLEAN_TRUE,
+        lineClamp: BOOLEAN_TRUE,
+        order: BOOLEAN_TRUE,
+        orphans: BOOLEAN_TRUE,
+        tabSize: BOOLEAN_TRUE,
+        widows: BOOLEAN_TRUE,
+        // SVG-related properties
+        fillOpacity: BOOLEAN_TRUE,
+        stopOpacity: BOOLEAN_TRUE,
+        strokeDashoffset: BOOLEAN_TRUE,
+        strokeOpacity: BOOLEAN_TRUE,
+        strokeWidth: BOOLEAN_TRUE
+    },
+    timeBasedCss = {
+        transitionDuration: BOOLEAN_TRUE,
+        animationDuration: BOOLEAN_TRUE,
+        transitionDelay: BOOLEAN_TRUE,
+        animationDelay: BOOLEAN_TRUE
+    },
+    /**
+     * @private
+     * @func
+     */
+    // prefixedStyles,
+    prefixedStyles = (function () {
+        var i, j, n, found, prefixIndex, __prefix, styleName, currentCheck, deprefixed, currentLen,
+            validCssNames = [],
+            prefixed = {},
+            len = 0,
+            addPrefix = function (list, prefix) {
+                if (indexOf(list, __prefix) === -1) {
+                    list.push(__prefix);
+                }
+            };
+        for (i = 0; i < knownPrefixes[LENGTH]; i++) {
+            currentLen = knownPrefixes[i][LENGTH];
+            if (len < currentLen) {
+                len = currentLen;
+            }
+        }
+        for (n in allStyles) {
+            found = 0;
+            currentCheck = EMPTY_STRING;
+            __prefix = EMPTY_STRING;
+            if (isNumber(+n)) {
+                styleName = allStyles[n];
+            } else {
+                styleName = kebabCase(n);
+            }
+            kebabCase(styleName);
+            camelCase(styleName);
+            deprefixed = styleName;
+            for (j = 0; j < len && styleName[j] && !found; j++) {
+                currentCheck += styleName[j];
+                prefixIndex = indexOf(knownPrefixes, currentCheck);
+                if (prefixIndex !== -1) {
+                    __prefix = knownPrefixes[prefixIndex];
+                    deprefixed = styleName.split(__prefix).join(EMPTY_STRING);
+                    found = 1;
+                }
+                prefixIndex = indexOf(knownPrefixes, HYPHEN + currentCheck);
+                if (prefixIndex !== -1) {
+                    __prefix = knownPrefixes[prefixIndex];
+                    deprefixed = styleName.split(currentCheck).join(EMPTY_STRING);
+                    found = 1;
+                }
+            }
+            deprefixed = camelCase(deprefixed);
+            validCssNames.push(deprefixed);
+            if (!prefixed[deprefixed]) {
+                prefixed[deprefixed] = [];
+            }
+            addPrefix(prefixed[deprefixed], __prefix);
+        }
+        return prefixed;
+    }()),
+    convertStyleValue = function (key, value) {
+        return +value !== +value ? value : (timeBasedCss[key] ? value + 'ms' : (!numberBasedCss[key] ? value + PIXELS : value));
+    },
+    updateStyleWithImportant = function (string, key_, value) {
+        var newStyles, found, key = kebabCase(key_);
+        return (newStyles = foldl(string.split(';'), function (memo, item_, index, items) {
+            var item = item_.trim(),
+                itemSplit = item.split(COLON),
+                property = itemSplit[0].trim(),
+                shifted = itemSplit.shift(),
+                setValue = itemSplit.join(COLON).trim();
+            if (property === key) {
+                found = BOOLEAN_TRUE;
+                setValue = value + ' !important';
+            }
+            if (key === property) {
+                memo.push(property + ': ' + setValue);
+            } else {
+                if ((!item_ && !index) || (index === items[LENGTH] - 1 && !found)) {
+                    memo.push(key + ': ' + value + ' !important');
+                } else {
+                    //
+                }
+            }
+            return memo;
+        }, []).join('; ')) ? newStyles + ';' : newStyles;
+    },
+    updateStyle = function (element, key_, value_) {
+        var changed, key = key_,
+            value = value_ !== '' ? convertStyleValue(key, value_) : value_;
+        duff(prefixedStyles[camelCase(key)], function (prefix) {
+            var styleKey = prefix + kebabCase(key),
+                styleVal = element[STYLE][styleKey];
+            if (styleVal !== value) {
+                element[STYLE][styleKey] = value;
+                changed = BOOLEAN_TRUE;
+            }
+        });
+        return changed;
+    },
+    applyStyle = function (element, key_, value_, important_) {
+        var newStyles, found, cached, changed, updatedStyle,
+            key = key_,
+            value = value_,
+            important = important_;
+        if (!isElement(element)) {
+            return BOOLEAN_FALSE;
+        }
+        cached = attributeApi.read(element, STYLE);
+        if (isObject(key_)) {
+            important = value_;
+            value = NULL;
+        }
+        if (important) {
+            // write with importance
+            intendedObject(key, value, function (key, value) {
+                updatedStyle = updateStyleWithImportant(element, key, value);
+            });
+            return updateStyle !== cached;
+        } else {
+            intendedObject(key, value, function (key_, value_) {
+                changed = updateStyle(element, key_, value_) ? BOOLEAN_TRUE : changed;
+            });
+        }
+        return changed;
     },
     writeAttribute = function (el, key, val_) {
         var val = val_;
@@ -6499,15 +6687,6 @@ app.scope(function (app) {
          * @private
          * @func
          */
-        getClosestWindow = function (windo_) {
-            var windo = windo_ || win;
-            return isWindow(windo) ? windo : (windo && windo[DEFAULT_VIEW] ? windo[DEFAULT_VIEW] : (windo.ownerGlobal ? windo.ownerGlobal : DOMA(windo).parent(WINDOW)[ITEM](0) || win));
-        },
-        getComputed = function (el, ctx) {
-            var ret = getClosestWindow(ctx).getComputedStyle(el);
-            return ret ? ret : getClosestWindow(el).getComputedStyle(el) || clone(el[STYLE]) || {};
-        },
-        allStyles = getComputed(doc[BODY], win),
         rkeyEvent = /^key/,
         rmouseEvent = /^(?:mouse|pointer|contextmenu)|click/,
         rfocusMorph = /^(?:focusinfocus|focusoutblur)$/,
@@ -6599,26 +6778,6 @@ app.scope(function (app) {
                 return manager;
             };
         },
-        Events = toArray('abort,afterprint,beforeprint,blocked,cached,canplay,canplaythrough,change,chargingchange,chargingtimechange,checking,close,complete,dischargingtimechange,DOMContentLoaded,downloading,durationchange,emptied,ended,error,fullscreenchange,fullscreenerror,input,invalid,languagechange,levelchange,loadeddata,loadedmetadata,message,noupdate,obsolete,offline,online,open,pagehide,pageshow,paste,pause,pointerlockchange,pointerlockerror,play,playing,ratechange,reset,seeked,seeking,stalled,storage,submit,success,suspend,timeupdate,updateready,upgradeneeded,versionchange,visibilitychange'),
-        SVGEvent = toArray('SVGAbort,SVGError,SVGLoad,SVGResize,SVGScroll,SVGUnload,SVGZoom,volumechange,waiting'),
-        KeyboardEvent = toArray('keydown,keypress,keyup'),
-        GamePadEvent = toArray('gamepadconnected,gamepadisconnected'),
-        CompositionEvent = toArray('compositionend,compositionstart,compositionupdate,drag,dragend,dragenter,dragleave,dragover,dragstart,drop'),
-        MouseEvents = toArray('click,contextmenu,dblclick,mousedown,mouseenter,mouseleave,mousemove,mouseout,mouseover,mouseup,show,wheel'),
-        TouchEvents = toArray('touchcancel,touchend,touchenter,touchleave,touchmove,touchstart'),
-        DeviceEvents = toArray('devicemotion,deviceorientation,deviceproximity,devicelight'),
-        FocusEvent = toArray('blur,focus'),
-        TimeEvent = toArray('beginEvent,endEvent,repeatEvent'),
-        AnimationEvent = toArray('animationend,animationiteration,animationstart,transitionend'),
-        AudioProcessingEvent = toArray('audioprocess,complete'),
-        UIEvents = toArray('abort,error,hashchange,load,orientationchange,readystatechange,resize,scroll,select,unload,beforeunload'),
-        ProgressEvent = toArray('abort,error,load,loadend,loadstart,popstate,progress,timeout'),
-        AllEvents = concatUnique(Events, SVGEvent, KeyboardEvent, CompositionEvent, GamePadEvent, MouseEvents, TouchEvents, DeviceEvents, FocusEvent, TimeEvent, AnimationEvent, AudioProcessingEvent, UIEvents, ProgressEvent),
-        knownPrefixes = toArray('-o-,-ms-,-moz-,-webkit-,mso-,-xv-,-atsc-,-wap-,-khtml-,-apple-,prince-,-ah-,-hp-,-ro-,-rim-,-tc-'),
-        validTagNames = toArray('a,abbr,address,area,article,aside,audio,b,base,bdi,bdo,blockquote,body,br,button,canvas,caption,cite,code,col,colgroup,data,datalist,dd,del,dfn,div,dl,dt,em,embed,fieldset,figcaption,figure,footer,form,h1,h2,h3,h4,h5,h6,head,header,hr,html,i,iframe,img,input,ins,kbd,keygen,label,legend,li,link,main,map,mark,meta,meter,nav,noscript,object,ol,optgroup,option,output,p,param,pre,progress,q,rb,rp,rt,rtc,ruby,s,samp,script,section,select,small,source,span,strong,style,sub,sup,table,tbody,td,template,textarea,tfoot,th,thead,time,title,tr,track,u,ul,var,video,wbr'),
-        validTagsNamesHash = wrap(validTagNames, BOOLEAN_TRUE),
-        ALL_EVENTS_HASH = wrap(AllEvents, BOOLEAN_TRUE),
-        knownPrefixesHash = wrap(knownPrefixes, BOOLEAN_TRUE),
         StringManager = factories.StringManager,
         ensureManager = function (manager, attribute, currentValue) {
             var _attributeManager = getStringManager(manager, attribute);
@@ -6644,102 +6803,6 @@ app.scope(function (app) {
                 right: clientRect[LEFT] + clientRect[WIDTH] + marginRight,
                 bottom: clientRect[TOP] + clientRect[HEIGHT] + marginBottom
             };
-        },
-        numberBasedCss = {
-            columnCount: BOOLEAN_TRUE,
-            columns: BOOLEAN_TRUE,
-            fontWeight: BOOLEAN_TRUE,
-            lineHeight: BOOLEAN_TRUE,
-            opacity: BOOLEAN_TRUE,
-            zIndex: BOOLEAN_TRUE,
-            zoom: BOOLEAN_TRUE,
-            animationIterationCount: BOOLEAN_TRUE,
-            boxFlex: BOOLEAN_TRUE,
-            boxFlexGroup: BOOLEAN_TRUE,
-            boxOrdinalGroup: BOOLEAN_TRUE,
-            flex: BOOLEAN_TRUE,
-            flexGrow: BOOLEAN_TRUE,
-            flexPositive: BOOLEAN_TRUE,
-            flexShrink: BOOLEAN_TRUE,
-            flexNegative: BOOLEAN_TRUE,
-            flexOrder: BOOLEAN_TRUE,
-            lineClamp: BOOLEAN_TRUE,
-            order: BOOLEAN_TRUE,
-            orphans: BOOLEAN_TRUE,
-            tabSize: BOOLEAN_TRUE,
-            widows: BOOLEAN_TRUE,
-            // SVG-related properties
-            fillOpacity: BOOLEAN_TRUE,
-            stopOpacity: BOOLEAN_TRUE,
-            strokeDashoffset: BOOLEAN_TRUE,
-            strokeOpacity: BOOLEAN_TRUE,
-            strokeWidth: BOOLEAN_TRUE
-        },
-        timeBasedCss = {
-            transitionDuration: BOOLEAN_TRUE,
-            animationDuration: BOOLEAN_TRUE,
-            transitionDelay: BOOLEAN_TRUE,
-            animationDelay: BOOLEAN_TRUE
-        },
-        /**
-         * @private
-         * @func
-         */
-        // prefixedStyles,
-        prefixedStyles = (function () {
-            var i, j, n, found, prefixIndex, __prefix, styleName, currentCheck, deprefixed, currentLen,
-                validCssNames = [],
-                prefixed = {},
-                len = 0,
-                addPrefix = function (list, prefix) {
-                    if (indexOf(list, __prefix) === -1) {
-                        list.push(__prefix);
-                    }
-                };
-            for (i = 0; i < knownPrefixes[LENGTH]; i++) {
-                currentLen = knownPrefixes[i][LENGTH];
-                if (len < currentLen) {
-                    len = currentLen;
-                }
-            }
-            for (n in allStyles) {
-                found = 0;
-                currentCheck = EMPTY_STRING;
-                __prefix = EMPTY_STRING;
-                if (isNumber(+n)) {
-                    styleName = allStyles[n];
-                } else {
-                    styleName = kebabCase(n);
-                }
-                kebabCase(styleName);
-                camelCase(styleName);
-                deprefixed = styleName;
-                for (j = 0; j < len && styleName[j] && !found; j++) {
-                    currentCheck += styleName[j];
-                    prefixIndex = indexOf(knownPrefixes, currentCheck);
-                    if (prefixIndex !== -1) {
-                        __prefix = knownPrefixes[prefixIndex];
-                        deprefixed = styleName.split(__prefix).join(EMPTY_STRING);
-                        found = 1;
-                    }
-                    prefixIndex = indexOf(knownPrefixes, HYPHEN + currentCheck);
-                    if (prefixIndex !== -1) {
-                        __prefix = knownPrefixes[prefixIndex];
-                        deprefixed = styleName.split(currentCheck).join(EMPTY_STRING);
-                        found = 1;
-                    }
-                }
-                deprefixed = camelCase(deprefixed);
-                validCssNames.push(deprefixed);
-                if (!prefixed[deprefixed]) {
-                    prefixed[deprefixed] = [];
-                }
-                addPrefix(prefixed[deprefixed], __prefix);
-            }
-            return prefixed;
-        }()),
-        convertStyleValue = function (key, value) {
-            return +value !== +value ? value : (timeBasedCss[key] ? value + 'ms' : (!numberBasedCss[key] ? value + PIXELS : value));
         },
         /**
          * @private
@@ -7519,69 +7582,6 @@ app.scope(function (app) {
         },
         dispatchDetached = dispatchDomEvent('detach', BOOLEAN_FALSE),
         dispatchAttached = dispatchDomEvent('attach', BOOLEAN_TRUE),
-        updateStyleWithImportant = function (string, key_, value) {
-            var newStyles, found, key = kebabCase(key_);
-            return (newStyles = foldl(string.split(';'), function (memo, item_, index, items) {
-                var item = item_.trim(),
-                    itemSplit = item.split(COLON),
-                    property = itemSplit[0].trim(),
-                    shifted = itemSplit.shift(),
-                    setValue = itemSplit.join(COLON).trim();
-                if (property === key) {
-                    found = BOOLEAN_TRUE;
-                    setValue = value + ' !important';
-                }
-                if (key === property) {
-                    memo.push(property + ': ' + setValue);
-                } else {
-                    if ((!item_ && !index) || (index === items[LENGTH] - 1 && !found)) {
-                        memo.push(key + ': ' + value + ' !important');
-                    } else {
-                        //
-                    }
-                }
-                return memo;
-            }, []).join('; ')) ? newStyles + ';' : newStyles;
-        },
-        updateStyle = function (element, key_, value_) {
-            var changed, key = key_,
-                value = value_ !== '' ? convertStyleValue(key, value_) : value_;
-            duff(prefixedStyles[camelCase(key)], function (prefix) {
-                var styleKey = prefix + kebabCase(key),
-                    styleVal = element[STYLE][styleKey];
-                if (styleVal !== value) {
-                    element[STYLE][styleKey] = value;
-                    changed = BOOLEAN_TRUE;
-                }
-            });
-            return changed;
-        },
-        applyStyle = function (element, key_, value_, important_) {
-            var newStyles, found, cached, changed, updatedStyle,
-                key = key_,
-                value = value_,
-                important = important_;
-            if (!isElement(element)) {
-                return BOOLEAN_FALSE;
-            }
-            cached = attributeApi.read(element, STYLE);
-            if (isObject(key_)) {
-                important = value_;
-                value = NULL;
-            }
-            if (important) {
-                // write with importance
-                intendedObject(key, value, function (key, value) {
-                    updatedStyle = updateStyleWithImportant(element, key, value);
-                });
-                return updateStyle !== cached;
-            } else {
-                intendedObject(key, value, function (key_, value_) {
-                    changed = updateStyle(element, key_, value_) ? BOOLEAN_TRUE : changed;
-                });
-            }
-            return changed;
-        },
         attributeValuesHash = {
             set: function (attributeManager, set, nulled, read) {
                 attributeManager.refill(set === BOOLEAN_TRUE ? [] : set);
