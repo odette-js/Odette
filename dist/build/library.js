@@ -10949,7 +10949,7 @@ app.scope(function (app) {
             bindUI: function () {
                 var directive = this,
                     uiBindings = directive.uiBindings;
-                directive.ui = directive.view.ui = map(uiBindings, directive.el.$, directive.el);
+                directive.ui = directive.view.ui = uiBindings ? map(uiBindings, directive.el.$, directive.el) : {};
                 return directive;
             }
         });
