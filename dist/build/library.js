@@ -1898,7 +1898,7 @@ var cacheable = function (fn) {
             if (camelcase) {
                 myStr = camelCase(myStr, splitter);
             } else {
-                myStr = unCamelCase(myStr, splitter);
+                myStr = kebabCase(myStr, splitter);
             }
         }
         return myStr;
@@ -1913,70 +1913,417 @@ var cacheable = function (fn) {
             }
             return found();
         };
-    }()),
-    // uniqueId = (function () {
-    //     var stash = {};
-    //     var globalPrefix = 0;
-    //     return function (prefix) {
-    //         var value;
-    //         if (prefix) {
-    //             stash[prefix] = stash[prefix] || 0;
-    //             ++stash[prefix];
-    //             value = stash[prefix];
-    //         } else {
-    //             ++globalPrefix;
-    //             value = globalPrefix;
-    //         }
-    //         return prefix ? prefix + value : value;
-    //     };
-    // }()),
-    /**
-     * @func
-     */
-    camelCase = categoricallyCacheable(function (splitter) {
-        return function (str) {
-            var i, s, val;
-            if (isString(str)) {
-                if (str[0] === splitter) {
-                    str = str.slice(1);
-                }
-                s = str.split(splitter);
-                for (i = s[LENGTH] - 1; i >= 1; i--) {
-                    if (s[i]) {
-                        s[i] = capitalize(s[i]);
-                    }
-                }
-                val = s.join(EMPTY_STRING);
-            }
-            return val;
-        };
-    }, HYPHEN),
-    /**
-     * @func
-     */
-    capitalize = cacheable(function (s) {
-        return s[0].toUpperCase() + s.slice(1);
-    }),
-    /**
-     * @func
-     */
-    unCamelCase = categoricallyCacheable(function (splitter) {
-        return function (str) {
-            return str.replace(/([a-z])([A-Z])/g, '$1' + splitter + '$2').replace(/[A-Z]/g, function (s) {
-                return s.toLowerCase();
-            });
-        };
-    }, HYPHEN),
-    snakeCase = function (string) {
-        return unCamelCase(string, '_');
-    },
-    kebabCase = function (string) {
-        return unCamelCase(string, HYPHEN);
-    },
-    /**
-     * @func
-     */
-    customUnits = categoricallyCacheable(function (unitList_) {
+    }());
+/** Used to match empty string literals in compiled template source. */
+var reEmptyStringLeading = /\b__p \+= EMPTY_STRING;/g,
+    reEmptyStringMiddle = /\b(__p \+=) EMPTY_STRING \+/g,
+    reEmptyStringTrailing = /(__e\(.*?\)|\b__t\)) \+\nEMPTY_STRING;/g;
+/** Used to match HTML entities and HTML characters. */
+var reEscapedHtml = /&(?:amp|lt|gt|quot|#39|#96);/g,
+    reUnescapedHtml = /[&<>"'`]/g,
+    reHasEscapedHtml = RegExp(reEscapedHtml.source),
+    reHasUnescapedHtml = RegExp(reUnescapedHtml.source);
+/** Used to match template delimiters. */
+var reEscape = /<%-([\s\S]+?)%>/g,
+    reEvaluate = /<%([\s\S]+?)%>/g,
+    reInterpolate = /<%=([\s\S]+?)%>/g;
+/** Used to match property names within property paths. */
+var reIsDeepProp = /\.|\[(?:[^[\]]*|(["'])(?:(?!\1)[^\\]|\\.)*?\1)\]/,
+    reIsPlainProp = /^\w*$/,
+    reLeadingDot = /^\./,
+    rePropName = /[^.[\]]+|\[(?:(-?\d+(?:\.\d+)?)|(["'])((?:(?!\2)[^\\]|\\.)*?)\2)\]|(?=(?:\.|\[\])(?:\.|\[\]|$))/g;
+/**
+ * Used to match `RegExp`
+ * [syntax characters](http://ecma-international.org/ecma-262/7.0/#sec-patterns).
+ */
+var reRegExpChar = /[\\^$.*+?()[\]{}|]/g,
+    reHasRegExpChar = RegExp(reRegExpChar.source);
+/** Used to match leading and trailing whitespace. */
+var reTrim = /^\s+|\s+$/g,
+    reTrimStart = /^\s+/,
+    reTrimEnd = /\s+$/;
+/** Used to match wrap detail comments. */
+var reWrapComment = /\{(?:\n\/\* \[wrapped with .+\] \*\/)?\n?/,
+    reWrapDetails = /\{\n\/\* \[wrapped with (.+)\] \*/,
+    reSplitDetails = /,? & /;
+/** Used to match words composed of alphanumeric characters. */
+var reAsciiWord = /[^\x00-\x2f\x3a-\x40\x5b-\x60\x7b-\x7f]+/g;
+/** Used to match backslashes in property paths. */
+var reEscapeChar = /\\(\\)?/g;
+/**
+ * Used to match
+ * [ES template delimiters](http://ecma-international.org/ecma-262/7.0/#sec-template-literal-lexical-components).
+ */
+var reEsTemplate = /\$\{([^\\}]*(?:\\.[^\\}]*)*)\}/g;
+/** Used to match `RegExp` flags from their coerced string values. */
+var reFlags = /\w*$/;
+/** Used to detect hexadecimal string values. */
+var reHasHexPrefix = /^0x/i;
+/** Used to detect bad signed hexadecimal string values. */
+var reIsBadHex = /^[-+]0x[0-9a-f]+$/i;
+/** Used to detect binary string values. */
+var reIsBinary = /^0b[01]+$/i;
+/** Used to detect host constructors (Safari). */
+var reIsHostCtor = /^\[object .+?Constructor\]$/;
+/** Used to detect octal string values. */
+var reIsOctal = /^0o[0-7]+$/i;
+/** Used to detect unsigned integer values. */
+var reIsUint = /^(?:0|[1-9]\d*)$/;
+/** Used to match Latin Unicode letters (excluding mathematical operators). */
+var reLatin = /[\xc0-\xd6\xd8-\xf6\xf8-\xff\u0100-\u017f]/g;
+/** Used to ensure capturing order of template delimiters. */
+var reNoMatch = /($^)/;
+/** Used to match unescaped characters in compiled string literals. */
+var reUnescapedString = /['\n\r\u2028\u2029\\]/g,
+    /** Used to compose unicode character classes. */
+    rsAstralRange = '\\ud800-\\udfff',
+    rsComboMarksRange = '\\u0300-\\u036f\\ufe20-\\ufe23',
+    rsComboSymbolsRange = '\\u20d0-\\u20f0',
+    rsDingbatRange = '\\u2700-\\u27bf',
+    rsLowerRange = 'a-z\\xdf-\\xf6\\xf8-\\xff',
+    rsMathOpRange = '\\xac\\xb1\\xd7\\xf7',
+    rsNonCharRange = '\\x00-\\x2f\\x3a-\\x40\\x5b-\\x60\\x7b-\\xbf',
+    rsPunctuationRange = '\\u2000-\\u206f',
+    rsSpaceRange = ' \\t\\x0b\\f\\xa0\\ufeff\\n\\r\\u2028\\u2029\\u1680\\u180e\\u2000\\u2001\\u2002\\u2003\\u2004\\u2005\\u2006\\u2007\\u2008\\u2009\\u200a\\u202f\\u205f\\u3000',
+    rsUpperRange = 'A-Z\\xc0-\\xd6\\xd8-\\xde',
+    rsVarRange = '\\ufe0e\\ufe0f',
+    rsBreakRange = rsMathOpRange + rsNonCharRange + rsPunctuationRange + rsSpaceRange;
+/** Used to compose unicode capture groups. */
+var rsApos = "['\u2019]",
+    rsAstral = '[' + rsAstralRange + ']',
+    rsBreak = '[' + rsBreakRange + ']',
+    rsCombo = '[' + rsComboMarksRange + rsComboSymbolsRange + ']',
+    rsDigits = '\\d+',
+    rsDingbat = '[' + rsDingbatRange + ']',
+    rsLower = '[' + rsLowerRange + ']',
+    rsMisc = '[^' + rsAstralRange + rsBreakRange + rsDigits + rsDingbatRange + rsLowerRange + rsUpperRange + ']',
+    rsFitz = '\\ud83c[\\udffb-\\udfff]',
+    rsModifier = '(?:' + rsCombo + '|' + rsFitz + ')',
+    rsNonAstral = '[^' + rsAstralRange + ']',
+    rsRegional = '(?:\\ud83c[\\udde6-\\uddff]){2}',
+    rsSurrPair = '[\\ud800-\\udbff][\\udc00-\\udfff]',
+    rsUpper = '[' + rsUpperRange + ']',
+    rsZWJ = '\\u200d';
+/** Used to compose unicode regexes. */
+var rsLowerMisc = '(?:' + rsLower + '|' + rsMisc + ')',
+    rsUpperMisc = '(?:' + rsUpper + '|' + rsMisc + ')',
+    rsOptLowerContr = '(?:' + rsApos + '(?:d|ll|m|re|s|t|ve))?',
+    rsOptUpperContr = '(?:' + rsApos + '(?:D|LL|M|RE|S|T|VE))?',
+    reOptMod = rsModifier + '?',
+    rsOptVar = '[' + rsVarRange + ']?',
+    rsOptJoin = '(?:' + rsZWJ + '(?:' + [rsNonAstral, rsRegional, rsSurrPair].join('|') + ')' + rsOptVar + reOptMod + ')*',
+    rsSeq = rsOptVar + reOptMod + rsOptJoin,
+    rsEmoji = '(?:' + [rsDingbat, rsRegional, rsSurrPair].join('|') + ')' + rsSeq,
+    rsSymbol = '(?:' + [rsNonAstral + rsCombo + '?', rsCombo, rsRegional, rsSurrPair, rsAstral].join('|') + ')',
+    reUnicodeWord = RegExp([
+        rsUpper + '?' + rsLower + '+' + rsOptLowerContr + '(?=' + [rsBreak, rsUpper, '$'].join('|') + ')',
+        rsUpperMisc + '+' + rsOptUpperContr + '(?=' + [rsBreak, rsUpper + rsLowerMisc, '$'].join('|') + ')',
+        rsUpper + '?' + rsLowerMisc + '+' + rsOptLowerContr,
+        rsUpper + '+' + rsOptUpperContr,
+        rsDigits,
+        rsEmoji
+    ].join('|'), 'g');
+
+function asciiWords(string) {
+    return string.match(reAsciiWord) || [];
+}
+
+function basePropertyOf(object) {
+    return function (key) {
+        return object == NULL ? UNDEFINED : object[key];
+    };
+}
+var reComboMark = RegExp(rsCombo, 'g');
+/** Used to map Latin Unicode letters to basic Latin letters. */
+var deburredLetters = {
+    // Latin-1 Supplement block.
+    '\xc0': 'A',
+    '\xc1': 'A',
+    '\xc2': 'A',
+    '\xc3': 'A',
+    '\xc4': 'A',
+    '\xc5': 'A',
+    '\xe0': 'a',
+    '\xe1': 'a',
+    '\xe2': 'a',
+    '\xe3': 'a',
+    '\xe4': 'a',
+    '\xe5': 'a',
+    '\xc7': 'C',
+    '\xe7': 'c',
+    '\xd0': 'D',
+    '\xf0': 'd',
+    '\xc8': 'E',
+    '\xc9': 'E',
+    '\xca': 'E',
+    '\xcb': 'E',
+    '\xe8': 'e',
+    '\xe9': 'e',
+    '\xea': 'e',
+    '\xeb': 'e',
+    '\xcc': 'I',
+    '\xcd': 'I',
+    '\xce': 'I',
+    '\xcf': 'I',
+    '\xec': 'i',
+    '\xed': 'i',
+    '\xee': 'i',
+    '\xef': 'i',
+    '\xd1': 'N',
+    '\xf1': 'n',
+    '\xd2': 'O',
+    '\xd3': 'O',
+    '\xd4': 'O',
+    '\xd5': 'O',
+    '\xd6': 'O',
+    '\xd8': 'O',
+    '\xf2': 'o',
+    '\xf3': 'o',
+    '\xf4': 'o',
+    '\xf5': 'o',
+    '\xf6': 'o',
+    '\xf8': 'o',
+    '\xd9': 'U',
+    '\xda': 'U',
+    '\xdb': 'U',
+    '\xdc': 'U',
+    '\xf9': 'u',
+    '\xfa': 'u',
+    '\xfb': 'u',
+    '\xfc': 'u',
+    '\xdd': 'Y',
+    '\xfd': 'y',
+    '\xff': 'y',
+    '\xc6': 'Ae',
+    '\xe6': 'ae',
+    '\xde': 'Th',
+    '\xfe': 'th',
+    '\xdf': 'ss',
+    // Latin Extended-A block.
+    '\u0100': 'A',
+    '\u0102': 'A',
+    '\u0104': 'A',
+    '\u0101': 'a',
+    '\u0103': 'a',
+    '\u0105': 'a',
+    '\u0106': 'C',
+    '\u0108': 'C',
+    '\u010a': 'C',
+    '\u010c': 'C',
+    '\u0107': 'c',
+    '\u0109': 'c',
+    '\u010b': 'c',
+    '\u010d': 'c',
+    '\u010e': 'D',
+    '\u0110': 'D',
+    '\u010f': 'd',
+    '\u0111': 'd',
+    '\u0112': 'E',
+    '\u0114': 'E',
+    '\u0116': 'E',
+    '\u0118': 'E',
+    '\u011a': 'E',
+    '\u0113': 'e',
+    '\u0115': 'e',
+    '\u0117': 'e',
+    '\u0119': 'e',
+    '\u011b': 'e',
+    '\u011c': 'G',
+    '\u011e': 'G',
+    '\u0120': 'G',
+    '\u0122': 'G',
+    '\u011d': 'g',
+    '\u011f': 'g',
+    '\u0121': 'g',
+    '\u0123': 'g',
+    '\u0124': 'H',
+    '\u0126': 'H',
+    '\u0125': 'h',
+    '\u0127': 'h',
+    '\u0128': 'I',
+    '\u012a': 'I',
+    '\u012c': 'I',
+    '\u012e': 'I',
+    '\u0130': 'I',
+    '\u0129': 'i',
+    '\u012b': 'i',
+    '\u012d': 'i',
+    '\u012f': 'i',
+    '\u0131': 'i',
+    '\u0134': 'J',
+    '\u0135': 'j',
+    '\u0136': 'K',
+    '\u0137': 'k',
+    '\u0138': 'k',
+    '\u0139': 'L',
+    '\u013b': 'L',
+    '\u013d': 'L',
+    '\u013f': 'L',
+    '\u0141': 'L',
+    '\u013a': 'l',
+    '\u013c': 'l',
+    '\u013e': 'l',
+    '\u0140': 'l',
+    '\u0142': 'l',
+    '\u0143': 'N',
+    '\u0145': 'N',
+    '\u0147': 'N',
+    '\u014a': 'N',
+    '\u0144': 'n',
+    '\u0146': 'n',
+    '\u0148': 'n',
+    '\u014b': 'n',
+    '\u014c': 'O',
+    '\u014e': 'O',
+    '\u0150': 'O',
+    '\u014d': 'o',
+    '\u014f': 'o',
+    '\u0151': 'o',
+    '\u0154': 'R',
+    '\u0156': 'R',
+    '\u0158': 'R',
+    '\u0155': 'r',
+    '\u0157': 'r',
+    '\u0159': 'r',
+    '\u015a': 'S',
+    '\u015c': 'S',
+    '\u015e': 'S',
+    '\u0160': 'S',
+    '\u015b': 's',
+    '\u015d': 's',
+    '\u015f': 's',
+    '\u0161': 's',
+    '\u0162': 'T',
+    '\u0164': 'T',
+    '\u0166': 'T',
+    '\u0163': 't',
+    '\u0165': 't',
+    '\u0167': 't',
+    '\u0168': 'U',
+    '\u016a': 'U',
+    '\u016c': 'U',
+    '\u016e': 'U',
+    '\u0170': 'U',
+    '\u0172': 'U',
+    '\u0169': 'u',
+    '\u016b': 'u',
+    '\u016d': 'u',
+    '\u016f': 'u',
+    '\u0171': 'u',
+    '\u0173': 'u',
+    '\u0174': 'W',
+    '\u0175': 'w',
+    '\u0176': 'Y',
+    '\u0177': 'y',
+    '\u0178': 'Y',
+    '\u0179': 'Z',
+    '\u017b': 'Z',
+    '\u017d': 'Z',
+    '\u017a': 'z',
+    '\u017c': 'z',
+    '\u017e': 'z',
+    '\u0132': 'IJ',
+    '\u0133': 'ij',
+    '\u0152': 'Oe',
+    '\u0153': 'oe',
+    '\u0149': "'n",
+    '\u017f': 'ss'
+};
+var deburrLetter = basePropertyOf(deburredLetters);
+var symbolProto = Symbol ? Symbol.prototype : UNDEFINED,
+    symbolValueOf = symbolProto ? symbolProto.valueOf : UNDEFINED,
+    symbolToString = symbolProto ? symbolProto.toString : UNDEFINED;
+var objectToString = OBJECT_PROTOTYPE.toString,
+    symbolTag = '[object Symbol]',
+    isSymbolWrap = isWrap('symbol');
+var reApos = RegExp(rsApos, 'g');
+var reHasUnicodeWord = /[a-z][A-Z]|[A-Z]{2,}[a-z]|[0-9][a-zA-Z]|[a-zA-Z][0-9]|[^a-zA-Z0-9 ]/;
+
+function unicodeWords(string) {
+    return string.match(reUnicodeWord) || [];
+}
+
+function hasUnicodeWord(string) {
+    return reHasUnicodeWord.test(string);
+}
+
+function isSymbol(value) {
+    return isSymbolWrap(value) || (isObject(value) && objectToString.call(value) == symbolTag);
+}
+
+function baseToString(value) {
+    // Exit early for strings to avoid a performance hit in some environments.
+    if (isString(value)) {
+        return value;
+    }
+    if (isSymbol(value)) {
+        return symbolToString ? symbolToString.call(value) : EMPTY_STRING;
+    }
+    var result = (value + EMPTY_STRING);
+    return (result == '0' && (1 / value) == -INFINITY) ? '-0' : result;
+}
+
+function toString(value) {
+    return value == NULL ? EMPTY_STRING : baseToString(value);
+}
+
+function words(string_, pattern_, guard) {
+    var string = toString(string_),
+        pattern = guard ? UNDEFINED : pattern_;
+    if (pattern === UNDEFINED) {
+        return hasUnicodeWord(string) ? unicodeWords(string) : asciiWords(string);
+    }
+    return string.match(pattern) || [];
+}
+
+function arrayReduce(array, iteratee, accumulator, initAccum) {
+    var index = -1,
+        length = array ? array.length : 0;
+    if (initAccum && length) {
+        accumulator = array[++index];
+    }
+    while (++index < length) {
+        accumulator = iteratee(accumulator, array[index], index, array);
+    }
+    return accumulator;
+}
+
+function createCompounder(callback) {
+    return cacheable(function (string) {
+        return arrayReduce(words(deburr(string).replace(reApos, EMPTY_STRING)), callback, EMPTY_STRING);
+    });
+}
+
+function deburr(string) {
+    string = toString(string);
+    return string && string.replace(reLatin, deburrLetter).replace(reComboMark, EMPTY_STRING);
+}
+var capitalize = cacheable(function (s) {
+    return s[0].toUpperCase() + s.slice(1);
+});
+var kebabCase = createCompounder(function (result, word, index) {
+    return result + (index ? HYPHEN : EMPTY_STRING) + word.toLowerCase();
+});
+var camelCase = createCompounder(function (result, word, index) {
+    word = word.toLowerCase();
+    return result + (index ? capitalize(word) : word);
+});
+var lowerCase = createCompounder(function (result, word, index) {
+    return result + (index ? SPACE : EMPTY_STRING) + word.toLowerCase();
+});
+var snakeCase = createCompounder(function (result, word, index) {
+    return result + (index ? '_' : EMPTY_STRING) + word.toLowerCase();
+});
+var startCase = createCompounder(function (result, word, index) {
+    return result + (index ? SPACE : EMPTY_STRING) + upperFirst(word);
+});
+var upperCase = createCompounder(function (result, word, index) {
+    return result + (index ? SPACE : EMPTY_STRING) + word.toUpperCase();
+});
+/**
+ * @func
+ */
+var customUnits = categoricallyCacheable(function (unitList_) {
         var lengthHash = {},
             hash = {},
             lengths = [],
@@ -2317,6 +2664,9 @@ _.publicize({
     kebabCase: kebabCase,
     camelCase: camelCase,
     snakeCase: snakeCase,
+    lowerCase: lowerCase,
+    startCase: startCase,
+    upperCase: upperCase,
     reference: reference,
     string: string,
     units: units,
@@ -3148,6 +3498,7 @@ var EVENTS_STRING = 'Events',
     LISTENING_TO = 'listeningTo',
     REGISTERED = 'registered',
     LISTENING_PREFIX = 'l',
+    TALKER_PREFIX = 't',
     STATE = 'state',
     HANDLERS = 'handlers';
 app.scope(function (app) {
@@ -3293,7 +3644,7 @@ app.scope(function (app) {
             }
             // This talkerect is not listening to any other events on `talker` yet.
             // Setup the necessary references to track the listening callbacks.
-            talkerId = listenerDirective[TALKER_ID] = listenerDirective[TALKER_ID] || app.counter(LISTENING_PREFIX);
+            talkerId = talkerDirective[TALKER_ID] = talkerDirective[TALKER_ID] || app.counter(TALKER_PREFIX);
             listening = listeningTo[talkerId] = {
                 talker: talker,
                 talkerId: talkerId,
@@ -5438,10 +5789,28 @@ var ATTACHED = 'attached',
         return str ? tag === str.toLowerCase() : tag;
     },
     writeAttribute = function (el, key, val_) {
-        if (val_ === BOOLEAN_FALSE || val_ == NULL) {
+        var val = val_;
+        if (val === BOOLEAN_FALSE || val == NULL) {
             removeAttribute(el, key);
         } else {
-            el.setAttribute(key, (val_ === BOOLEAN_TRUE ? EMPTY_STRING : stringify(val_)) + EMPTY_STRING);
+            if (isObject(val_)) {
+                if (key === STYLE) {
+                    if (!el[STYLE]) {
+                        return;
+                    }
+                    //
+                    val = NULL;
+                } else {
+                    val = foldl(val_, function (memo, value, key) {
+                        if (value) {
+                            memo.push(key);
+                        }
+                    }).join(SPACE);
+                }
+            }
+            if (val !== BOOLEAN_FALSE && val != NULL) {
+                el.setAttribute(key, (val === BOOLEAN_TRUE ? EMPTY_STRING : val) + EMPTY_STRING);
+            }
         }
     },
     registeredElementName = function (name, manager) {
@@ -6340,9 +6709,9 @@ app.scope(function (app) {
                 if (isNumber(+n)) {
                     styleName = allStyles[n];
                 } else {
-                    styleName = unCamelCase(n);
+                    styleName = kebabCase(n);
                 }
-                unCamelCase(styleName);
+                kebabCase(styleName);
                 camelCase(styleName);
                 deprefixed = styleName;
                 for (j = 0; j < len && styleName[j] && !found; j++) {
@@ -6762,7 +7131,7 @@ app.scope(function (app) {
         },
         makeDataKey = function (_key) {
             var dataString = 'data-',
-                key = unCamelCase(_key),
+                key = kebabCase(_key),
                 sliced = _key.slice(0, 5);
             if (dataString !== sliced) {
                 key = dataString + _key;
@@ -7150,36 +7519,68 @@ app.scope(function (app) {
         },
         dispatchDetached = dispatchDomEvent('detach', BOOLEAN_FALSE),
         dispatchAttached = dispatchDomEvent('attach', BOOLEAN_TRUE),
-        applyStyle = function (key, value, manager, important) {
-            var newStyles, found, cached, element = manager.element();
-            if (!manager.is(ELEMENT) || (element[STYLE][key] === value && important)) {
+        updateStyleWithImportant = function (string, key_, value) {
+            var newStyles, found, key = kebabCase(key_);
+            return (newStyles = foldl(string.split(';'), function (memo, item_, index, items) {
+                var item = item_.trim(),
+                    itemSplit = item.split(COLON),
+                    property = itemSplit[0].trim(),
+                    shifted = itemSplit.shift(),
+                    setValue = itemSplit.join(COLON).trim();
+                if (property === key) {
+                    found = BOOLEAN_TRUE;
+                    setValue = value + ' !important';
+                }
+                if (key === property) {
+                    memo.push(property + ': ' + setValue);
+                } else {
+                    if ((!item_ && !index) || (index === items[LENGTH] - 1 && !found)) {
+                        memo.push(key + ': ' + value + ' !important');
+                    } else {
+                        //
+                    }
+                }
+                return memo;
+            }, []).join('; ')) ? newStyles + ';' : newStyles;
+        },
+        updateStyle = function (element, key_, value_) {
+            var changed, key = key_,
+                value = value_ !== '' ? convertStyleValue(key, value_) : value_;
+            duff(prefixedStyles[camelCase(key)], function (prefix) {
+                var styleKey = prefix + kebabCase(key),
+                    styleVal = element[STYLE][styleKey];
+                if (styleVal !== value) {
+                    element[STYLE][styleKey] = value;
+                    changed = BOOLEAN_TRUE;
+                }
+            });
+            return changed;
+        },
+        applyStyle = function (element, key_, value_, important_) {
+            var newStyles, found, cached, changed, updatedStyle,
+                key = key_,
+                value = value_,
+                important = important_;
+            if (!isElement(element)) {
                 return BOOLEAN_FALSE;
             }
             cached = attributeApi.read(element, STYLE);
-            value = value !== '' ? convertStyleValue(key, value) : value;
-            if (!important) {
-                duff(prefixedStyles[camelCase(key)], function (prefix) {
-                    element[STYLE][prefix + unCamelCase(key)] = value;
-                });
-            } else {
-                // write with importance
-                attributeApi.write(element, STYLE, (newStyles = foldl(cached.split(';'), function (memo, item_, index, items) {
-                    var item = item_.trim(),
-                        itemSplit = item.split(COLON),
-                        property = itemSplit[0].trim(),
-                        setValue = itemSplit[1].trim();
-                    if (property === key) {
-                        found = BOOLEAN_TRUE;
-                        setValue = value + ' !important';
-                    }
-                    memo.push([property, setValue].join(': '));
-                    if (index === items[LENGTH] - 1 && !found) {
-                        memo.push([key, value + ' !important'].join(': '));
-                    }
-                    return memo;
-                }, []).join('; ')) ? newStyles + ';' : newStyles);
+            if (isObject(key_)) {
+                important = value_;
+                value = NULL;
             }
-            return attributeApi.read(element, STYLE) !== cached;
+            if (important) {
+                // write with importance
+                intendedObject(key, value, function (key, value) {
+                    updatedStyle = updateStyleWithImportant(element, key, value);
+                });
+                return updateStyle !== cached;
+            } else {
+                intendedObject(key, value, function (key_, value_) {
+                    changed = updateStyle(element, key_, value_) ? BOOLEAN_TRUE : changed;
+                });
+            }
+            return changed;
         },
         attributeValuesHash = {
             set: function (attributeManager, set, nulled, read) {
@@ -7216,17 +7617,17 @@ app.scope(function (app) {
         },
         queueAttributeValues = function (attribute_, second_, third_, api_, domHappy_, merge, passedTrigger_) {
             var attribute = attribute_ === CLASS ? CLASSNAME : attribute_,
-                domHappy = domHappy_ || unCamelCase,
+                domHappy = domHappy_ || kebabCase,
                 api = api_,
-                unCamelCased = api.preventUnCamel ? attribute : domHappy(attribute),
-                withClass = unCamelCased === CLASSNAME || unCamelCased === CLASS__NAME,
-                trigger = (withClass ? (api = propertyApi) && (unCamelCased = CLASSNAME) && CLASSNAME : passedTrigger_) || unCamelCased;
+                kebabCased = api.preventUnCamel ? attribute : domHappy(attribute),
+                withClass = kebabCased === CLASSNAME || kebabCased === CLASS__NAME,
+                trigger = (withClass ? (api = propertyApi) && (kebabCased = CLASSNAME) && CLASSNAME : passedTrigger_) || kebabCased;
             api = propsHash[camelCase(trigger)] ? propertyApi : attributeApi;
             return function (manager, idx) {
                 var converted, generated, el = manager.element(),
-                    read = api.read(el, unCamelCased),
+                    read = api.read(el, kebabCased),
                     returnValue = manager,
-                    attributeManager = ensureManager(manager, unCamelCased, read);
+                    attributeManager = ensureManager(manager, kebabCased, read);
                 if (merge === 'get') {
                     if (!idx) {
                         returnValue = read;
@@ -7240,10 +7641,10 @@ app.scope(function (app) {
                 if (attributeManager.changeCounter) {
                     if (attributeManager.is(REMOVING)) {
                         attributeManager.unmark(REMOVING);
-                        api.remove(el, unCamelCased);
+                        api.remove(el, kebabCased);
                     } else {
                         generated = attributeManager.generate(SPACE);
-                        api.write(el, unCamelCased, cautiousConvertValue(generated));
+                        api.write(el, kebabCased, cautiousConvertValue(generated));
                     }
                 }
                 if (generated !== read && manager.is(CUSTOM_LISTENER)) {
@@ -7304,7 +7705,7 @@ app.scope(function (app) {
                 };
             };
         },
-        attrApi = getSetter(queueAttributeValues, attributeApi, unCamelCase),
+        attrApi = getSetter(queueAttributeValues, attributeApi, kebabCase),
         dataApi = getSetter(queueAttributeValues, attributeApi, makeDataKey),
         propApi = getSetter(queueAttributeValues, propertyApi, camelCase),
         domFirst = function (handler, context) {
@@ -7878,18 +8279,20 @@ app.scope(function (app) {
                 alpha: NULL
             });
         },
-        styleManipulator = function (one, two) {
+        styleManipulator = function (one, two, important) {
             var unCameled, styles, manager = this;
             if (!manager[LENGTH]()) {
                 return manager;
             }
             if (isString(one) && two === UNDEFINED) {
-                unCameled = unCamelCase(one);
+                unCameled = kebabCase(one);
                 return (manager = manager.item(0)) && (styles = manager.getStyle()) && ((prefix = find(prefixedStyles[camelCase(one)], function (prefix) {
                     return styles[prefix + unCameled] !== UNDEFINED;
                 })) ? styles[prefix + unCameled] : styles[prefix + unCameled]);
             } else {
-                manager.each(unmarkChange(intendedIteration(one, two, applyStyle)));
+                manager.each(unmarkChange(function (manager) {
+                    return applyStyle(manager.element(), one, two, important);
+                }));
                 return manager;
             }
         },
@@ -7963,7 +8366,7 @@ app.scope(function (app) {
                 var frag = reconstruct(object.children, context);
                 element.appendChild(frag);
                 each(object.attributes, function (value, key) {
-                    attributeApi.write(element, unCamelCase(key), value);
+                    attributeApi.write(element, kebabCase(key), value);
                 });
                 fragment.appendChild(element);
             });
@@ -8820,7 +9223,7 @@ app.scope(function (app) {
                 return this.applyStyle(DISPLAY, 'block');
             },
             applyStyle: function (key, value, important) {
-                applyStyle(key, value, this, important);
+                applyStyle(this.element(), key, value, important);
                 return this;
             },
             getStyle: function (eq) {

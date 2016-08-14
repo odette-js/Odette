@@ -6,6 +6,7 @@ var EVENTS_STRING = 'Events',
     LISTENING_TO = 'listeningTo',
     REGISTERED = 'registered',
     LISTENING_PREFIX = 'l',
+    TALKER_PREFIX = 't',
     STATE = 'state',
     HANDLERS = 'handlers';
 app.scope(function (app) {
@@ -151,7 +152,7 @@ app.scope(function (app) {
             }
             // This talkerect is not listening to any other events on `talker` yet.
             // Setup the necessary references to track the listening callbacks.
-            talkerId = listenerDirective[TALKER_ID] = listenerDirective[TALKER_ID] || app.counter(LISTENING_PREFIX);
+            talkerId = talkerDirective[TALKER_ID] = talkerDirective[TALKER_ID] || app.counter(TALKER_PREFIX);
             listening = listeningTo[talkerId] = {
                 talker: talker,
                 talkerId: talkerId,

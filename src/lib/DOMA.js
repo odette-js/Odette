@@ -48,10 +48,28 @@ var ATTACHED = 'attached',
         return str ? tag === str.toLowerCase() : tag;
     },
     writeAttribute = function (el, key, val_) {
-        if (val_ === BOOLEAN_FALSE || val_ == NULL) {
+        var val = val_;
+        if (val === BOOLEAN_FALSE || val == NULL) {
             removeAttribute(el, key);
         } else {
-            el.setAttribute(key, (val_ === BOOLEAN_TRUE ? EMPTY_STRING : stringify(val_)) + EMPTY_STRING);
+            if (isObject(val_)) {
+                if (key === STYLE) {
+                    if (!el[STYLE]) {
+                        return;
+                    }
+                    //
+                    val = NULL;
+                } else {
+                    val = foldl(val_, function (memo, value, key) {
+                        if (value) {
+                            memo.push(key);
+                        }
+                    }).join(SPACE);
+                }
+            }
+            if (val !== BOOLEAN_FALSE && val != NULL) {
+                el.setAttribute(key, (val === BOOLEAN_TRUE ? EMPTY_STRING : val) + EMPTY_STRING);
+            }
         }
     },
     registeredElementName = function (name, manager) {
@@ -950,9 +968,9 @@ app.scope(function (app) {
                 if (isNumber(+n)) {
                     styleName = allStyles[n];
                 } else {
-                    styleName = unCamelCase(n);
+                    styleName = kebabCase(n);
                 }
-                unCamelCase(styleName);
+                kebabCase(styleName);
                 camelCase(styleName);
                 deprefixed = styleName;
                 for (j = 0; j < len && styleName[j] && !found; j++) {
@@ -1372,7 +1390,7 @@ app.scope(function (app) {
         },
         makeDataKey = function (_key) {
             var dataString = 'data-',
-                key = unCamelCase(_key),
+                key = kebabCase(_key),
                 sliced = _key.slice(0, 5);
             if (dataString !== sliced) {
                 key = dataString + _key;
@@ -1760,36 +1778,68 @@ app.scope(function (app) {
         },
         dispatchDetached = dispatchDomEvent('detach', BOOLEAN_FALSE),
         dispatchAttached = dispatchDomEvent('attach', BOOLEAN_TRUE),
-        applyStyle = function (key, value, manager, important) {
-            var newStyles, found, cached, element = manager.element();
-            if (!manager.is(ELEMENT) || (element[STYLE][key] === value && important)) {
+        updateStyleWithImportant = function (string, key_, value) {
+            var newStyles, found, key = kebabCase(key_);
+            return (newStyles = foldl(string.split(';'), function (memo, item_, index, items) {
+                var item = item_.trim(),
+                    itemSplit = item.split(COLON),
+                    property = itemSplit[0].trim(),
+                    shifted = itemSplit.shift(),
+                    setValue = itemSplit.join(COLON).trim();
+                if (property === key) {
+                    found = BOOLEAN_TRUE;
+                    setValue = value + ' !important';
+                }
+                if (key === property) {
+                    memo.push(property + ': ' + setValue);
+                } else {
+                    if ((!item_ && !index) || (index === items[LENGTH] - 1 && !found)) {
+                        memo.push(key + ': ' + value + ' !important');
+                    } else {
+                        //
+                    }
+                }
+                return memo;
+            }, []).join('; ')) ? newStyles + ';' : newStyles;
+        },
+        updateStyle = function (element, key_, value_) {
+            var changed, key = key_,
+                value = value_ !== '' ? convertStyleValue(key, value_) : value_;
+            duff(prefixedStyles[camelCase(key)], function (prefix) {
+                var styleKey = prefix + kebabCase(key),
+                    styleVal = element[STYLE][styleKey];
+                if (styleVal !== value) {
+                    element[STYLE][styleKey] = value;
+                    changed = BOOLEAN_TRUE;
+                }
+            });
+            return changed;
+        },
+        applyStyle = function (element, key_, value_, important_) {
+            var newStyles, found, cached, changed, updatedStyle,
+                key = key_,
+                value = value_,
+                important = important_;
+            if (!isElement(element)) {
                 return BOOLEAN_FALSE;
             }
             cached = attributeApi.read(element, STYLE);
-            value = value !== '' ? convertStyleValue(key, value) : value;
-            if (!important) {
-                duff(prefixedStyles[camelCase(key)], function (prefix) {
-                    element[STYLE][prefix + unCamelCase(key)] = value;
-                });
-            } else {
-                // write with importance
-                attributeApi.write(element, STYLE, (newStyles = foldl(cached.split(';'), function (memo, item_, index, items) {
-                    var item = item_.trim(),
-                        itemSplit = item.split(COLON),
-                        property = itemSplit[0].trim(),
-                        setValue = itemSplit[1].trim();
-                    if (property === key) {
-                        found = BOOLEAN_TRUE;
-                        setValue = value + ' !important';
-                    }
-                    memo.push([property, setValue].join(': '));
-                    if (index === items[LENGTH] - 1 && !found) {
-                        memo.push([key, value + ' !important'].join(': '));
-                    }
-                    return memo;
-                }, []).join('; ')) ? newStyles + ';' : newStyles);
+            if (isObject(key_)) {
+                important = value_;
+                value = NULL;
             }
-            return attributeApi.read(element, STYLE) !== cached;
+            if (important) {
+                // write with importance
+                intendedObject(key, value, function (key, value) {
+                    updatedStyle = updateStyleWithImportant(element, key, value);
+                });
+                return updateStyle !== cached;
+            } else {
+                intendedObject(key, value, function (key_, value_) {
+                    changed = updateStyle(element, key_, value_) ? BOOLEAN_TRUE : changed;
+                });
+            }
+            return changed;
         },
         attributeValuesHash = {
             set: function (attributeManager, set, nulled, read) {
@@ -1826,17 +1876,17 @@ app.scope(function (app) {
         },
         queueAttributeValues = function (attribute_, second_, third_, api_, domHappy_, merge, passedTrigger_) {
             var attribute = attribute_ === CLASS ? CLASSNAME : attribute_,
-                domHappy = domHappy_ || unCamelCase,
+                domHappy = domHappy_ || kebabCase,
                 api = api_,
-                unCamelCased = api.preventUnCamel ? attribute : domHappy(attribute),
-                withClass = unCamelCased === CLASSNAME || unCamelCased === CLASS__NAME,
-                trigger = (withClass ? (api = propertyApi) && (unCamelCased = CLASSNAME) && CLASSNAME : passedTrigger_) || unCamelCased;
+                kebabCased = api.preventUnCamel ? attribute : domHappy(attribute),
+                withClass = kebabCased === CLASSNAME || kebabCased === CLASS__NAME,
+                trigger = (withClass ? (api = propertyApi) && (kebabCased = CLASSNAME) && CLASSNAME : passedTrigger_) || kebabCased;
             api = propsHash[camelCase(trigger)] ? propertyApi : attributeApi;
             return function (manager, idx) {
                 var converted, generated, el = manager.element(),
-                    read = api.read(el, unCamelCased),
+                    read = api.read(el, kebabCased),
                     returnValue = manager,
-                    attributeManager = ensureManager(manager, unCamelCased, read);
+                    attributeManager = ensureManager(manager, kebabCased, read);
                 if (merge === 'get') {
                     if (!idx) {
                         returnValue = read;
@@ -1850,10 +1900,10 @@ app.scope(function (app) {
                 if (attributeManager.changeCounter) {
                     if (attributeManager.is(REMOVING)) {
                         attributeManager.unmark(REMOVING);
-                        api.remove(el, unCamelCased);
+                        api.remove(el, kebabCased);
                     } else {
                         generated = attributeManager.generate(SPACE);
-                        api.write(el, unCamelCased, cautiousConvertValue(generated));
+                        api.write(el, kebabCased, cautiousConvertValue(generated));
                     }
                 }
                 if (generated !== read && manager.is(CUSTOM_LISTENER)) {
@@ -1914,7 +1964,7 @@ app.scope(function (app) {
                 };
             };
         },
-        attrApi = getSetter(queueAttributeValues, attributeApi, unCamelCase),
+        attrApi = getSetter(queueAttributeValues, attributeApi, kebabCase),
         dataApi = getSetter(queueAttributeValues, attributeApi, makeDataKey),
         propApi = getSetter(queueAttributeValues, propertyApi, camelCase),
         domFirst = function (handler, context) {
@@ -2488,18 +2538,20 @@ app.scope(function (app) {
                 alpha: NULL
             });
         },
-        styleManipulator = function (one, two) {
+        styleManipulator = function (one, two, important) {
             var unCameled, styles, manager = this;
             if (!manager[LENGTH]()) {
                 return manager;
             }
             if (isString(one) && two === UNDEFINED) {
-                unCameled = unCamelCase(one);
+                unCameled = kebabCase(one);
                 return (manager = manager.item(0)) && (styles = manager.getStyle()) && ((prefix = find(prefixedStyles[camelCase(one)], function (prefix) {
                     return styles[prefix + unCameled] !== UNDEFINED;
                 })) ? styles[prefix + unCameled] : styles[prefix + unCameled]);
             } else {
-                manager.each(unmarkChange(intendedIteration(one, two, applyStyle)));
+                manager.each(unmarkChange(function (manager) {
+                    return applyStyle(manager.element(), one, two, important);
+                }));
                 return manager;
             }
         },
@@ -2573,7 +2625,7 @@ app.scope(function (app) {
                 var frag = reconstruct(object.children, context);
                 element.appendChild(frag);
                 each(object.attributes, function (value, key) {
-                    attributeApi.write(element, unCamelCase(key), value);
+                    attributeApi.write(element, kebabCase(key), value);
                 });
                 fragment.appendChild(element);
             });
@@ -3430,7 +3482,7 @@ app.scope(function (app) {
                 return this.applyStyle(DISPLAY, 'block');
             },
             applyStyle: function (key, value, important) {
-                applyStyle(key, value, this, important);
+                applyStyle(this.element(), key, value, important);
                 return this;
             },
             getStyle: function (eq) {
