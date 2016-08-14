@@ -3371,7 +3371,8 @@ app.scope(function (app) {
                 }
                 if (manager.is(ACCESSABLE)) {
                     parsedReference = reference(wraptry(function () {
-                        return manager.parent('iframe').element().src || element[LOCATION].href;
+                        var frame;
+                        return (frame = manager.parent('iframe')) ? (frame.element().src || BOOLEAN_FALSE) : BOOLEAN_FALSE;
                     }) || element[LOCATION].href);
                     if (!parsedReference && manager.iframe) {
                         parsedReference = reference(manager.iframe.src());
