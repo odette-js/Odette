@@ -10450,8 +10450,11 @@ app.scope(function (app) {
                     modelEvents = result(view, 'modelEvents');
                 view.model = Model.isInstance(model) ? model : view.Model(model);
                 view.listenTo(view.model, modelEvents);
-                view.listenTo(view.model, CHANGE, view.render);
+                if (view.autoRenders()) {
+                    view.listenTo(view.model, CHANGE, view.render);
+                }
             },
+            autoRenders: returns(BOOLEAN_TRUE),
             constructor: function (secondary_) {
                 var view = this;
                 var secondary = secondary_ || {};
