@@ -2718,7 +2718,7 @@ var STATUS = 'Status',
         directives.creation[name] = (alreadyCreated = directives.creation[name]) || creation;
         directives.destruction[name] = directives.destruction[name] || destruction_;
         // returns whether or not that directive is new or not
-        return !alreadyCreated;
+        return directives.creation;
     },
     extendDirective = function (oldName, newName, handler_, destruction_) {
         var Destruction = destruction_ || returnsThird;
@@ -2732,20 +2732,21 @@ var STATUS = 'Status',
             return Destruction(instance, name, directive);
         });
     },
+    directive = function (name) {
+        var Handler, directive, that = this;
+        if ((directive = that[name])) {
+            return directive;
+        }
+        Handler = (that['directive:creation:' + name] || directives.creation[name] || returnsObject);
+        that[name] = new Handler(that, name);
+        return that[name];
+    },
     Directive = factories.Directive = factories.Extendable.extend('Directive', {
         mark: parody(STATUS, 'mark'),
         unmark: parody(STATUS, 'unmark'),
         remark: parody(STATUS, 'remark'),
         is: checkParody(STATUS, 'is', BOOLEAN_FALSE),
-        directive: function (name) {
-            var Handler, directive, that = this;
-            if ((directive = that[name])) {
-                return directive;
-            }
-            Handler = (that['directive:creation:' + name] || directives.creation[name] || returnsObject);
-            that[name] = new Handler(that, name);
-            return that[name];
-        },
+        directive: directive,
         directiveDestruction: function (name) {
             var result = (directives.destruction[name] || returnsNull)(this[name], this, name);
             delete this[name];
@@ -2790,7 +2791,9 @@ _.publicize({
     directives: {
         parody: parody,
         checkParody: checkParody,
-        iterate: iterate
+        iterate: iterate,
+        create: directive,
+        all: directives
     }
 });
 var COLLECTION = 'Collection',
