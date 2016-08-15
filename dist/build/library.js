@@ -2718,7 +2718,7 @@ var STATUS = 'Status',
         directives.creation[name] = (alreadyCreated = directives.creation[name]) || creation;
         directives.destruction[name] = directives.destruction[name] || destruction_;
         // returns whether or not that directive is new or not
-        return directives.creation;
+        return directives.creation[name];
     },
     extendDirective = function (oldName, newName, handler_, destruction_) {
         var Destruction = destruction_ || returnsThird;
