@@ -8483,6 +8483,9 @@ app.scope(function (app) {
                 if (evnt.toElement) {
                     evnt.toElement = origin.owner.returnsManager(evnt.toElement);
                 }
+                if (evnt.view) {
+                    evnt.view = origin.owner.returnsManager(evnt.view);
+                }
                 evnt[IS_TRUSTED] = _.has(originalEvent, IS_TRUSTED) ? originalEvent[IS_TRUSTED] : !DO_NOT_TRUST;
                 (fixHook.reaction || noop)(evnt, originalEvent);
             }
