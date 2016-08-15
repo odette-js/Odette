@@ -8479,6 +8479,10 @@ app.scope(function (app) {
                         evnt.remark(FULLSCREEN, (doc.fullScreen || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.fullscreenElement) ? BOOLEAN_TRUE : BOOLEAN_FALSE);
                     }
                 }
+                evnt.target = origin.owner.returnsManager(evnt.target);
+                if (evnt.toElement) {
+                    evnt.toElement = origin.owner.returnsManager(evnt.toElement);
+                }
                 evnt[IS_TRUSTED] = _.has(originalEvent, IS_TRUSTED) ? originalEvent[IS_TRUSTED] : !DO_NOT_TRUST;
                 (fixHook.reaction || noop)(evnt, originalEvent);
             }
@@ -8706,9 +8710,9 @@ app.scope(function (app) {
                 manager = evnt.origin;
                 el = manager.element();
                 // only take the target so we don't try to make managers for everyone
-                target = evnt.target;
+                target = evnt.target.element();
                 // there are no delegated events, so just return everything after capture
-                if (!delegateCount || evnt.target === el) {
+                if (!delegateCount || target === el) {
                     return list_.slice(captureCount);
                 }
                 sumCount = captureCount + delegateCount;
