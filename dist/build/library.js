@@ -1101,24 +1101,24 @@ var factories = {},
         return isArrayLike(object) ? isArray(object) ? object.slice(0) : arrayLikeToArray(object) : (isString(object) ? object.split(isString(delimiter) ? delimiter : COMMA) : [object]);
     },
     nonEnumerableProps = toArray('valueOf,isPrototypeOf,' + TO_STRING + ',propertyIsEnumerable,hasOwnProperty,toLocaleString'),
-    flattenArray = function (list, deep_, handle) {
-        var deep = !!deep_;
-        return foldl(list, function (memo, item_) {
+    flattenArray = function (list, handle, deep) {
+        var items = foldl(list, function (memo, item_) {
             var item;
             if (isArrayLike(item_)) {
-                item = deep ? flattenArray(item_, deep, handle) : item_;
+                item = deep ? flattenArray(item_, BOOLEAN_FALSE, deep) : item_;
                 return memo.concat(item);
             } else {
-                if (handle) {
-                    handle(item_);
-                }
                 memo.push(item_);
                 return memo;
             }
         }, []);
+        if (handle) {
+            duff(items, handle);
+        }
+        return items;
     },
-    flatten = function (list, deep, handler) {
-        return flattenArray(isArrayLike(list) ? list : objectToArray(list), deep, handler);
+    flatten = function (list, handler_, deep_) {
+        return flattenArray(isArrayLike(list) ? list : objectToArray(list), handler_, !!deep_);
     },
     gather = function (list, handler) {
         var newList = [];
@@ -4923,9 +4923,10 @@ app.scope(function (app) {
                     }
                 },
                 catchIt = function (e) {
+                    var catching;
                     lastCaught = e;
                     catchesCanRun = BOOLEAN_TRUE;
-                    var catching = catches.slice(0);
+                    catching = catches.slice(0);
                     catches = [];
                     eachCallTry(catching, 'fn', lastCaught);
                 };
@@ -5032,12 +5033,12 @@ app.scope(function (app) {
         },
         collect = function (promise, list) {
             var collection = promise.directive(COLLECTION);
-            flatten(list, BOOLEAN_TRUE, function (pro) {
+            flatten(list, function (pro) {
                 if (promise.isChildType(pro)) {
                     collection.add(pro);
                     collection.keep('cid', pro.cid, pro);
                 }
-            });
+            }, BOOLEAN_TRUE);
         },
         listen = function (promise, unbound) {
             var bound = bind(unbound, promise),
@@ -5173,7 +5174,7 @@ app.scope(function (app) {
                     stashedHandlers = promise[STASHED_HANDLERS];
                 // do the hard work now so later you can
                 // iterate through the stack quickly
-                flatten(isFunction(list) ? [list] : list, BOOLEAN_TRUE, function (fn) {
+                flatten(isFunction(list) ? [list] : list, function (fn) {
                     if (!isFunction(fn)) {
                         return;
                     }
@@ -5182,7 +5183,7 @@ app.scope(function (app) {
                         fn: bind(fn, promise),
                         handler: fn
                     });
-                });
+                }, BOOLEAN_TRUE);
             }),
             handle: intendedApi(function (name, fn_) {
                 var promise = this,
