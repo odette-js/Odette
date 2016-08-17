@@ -283,14 +283,14 @@
                 }
                 app.definedAgainst.push(globl);
                 odebt = globl.Odette;
-                defs = definitions.slice(0);
-                definitions = [];
                 opts = options || {};
                 if (app.defined) {
                     map(app.missedDefinitions, function (handler) {
                         handler.apply(app, [app, globl, opts]);
                     });
                 } else {
+                    defs = definitions.slice(0);
+                    definitions = [];
                     map(defs, function (definitionOptions) {
                         if (app.defining) {
                             exception(noFailures);
