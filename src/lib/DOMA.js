@@ -1634,7 +1634,7 @@ app.scope(function (app) {
         },
         _addEventListener = function (manager_, eventNames, group, selector_, handler, capture) {
             var events, selector = selector_,
-                manager = elementSwapper[selector] ? ((selector = '') || elementSwapper[selector](manager_)) : manager_,
+                manager = elementSwapper[selector] ? ((selector = '') || elementSwapper[selector_](manager_)) : manager_,
                 wasCustom = manager.is(CUSTOM);
             duff(toArray(eventNames, SPACE), eventExpander(manager.owner.events.expanders, function (name, passedName, nameStack) {
                 events = events || manager.directive(EVENTS);
@@ -3613,7 +3613,7 @@ app.scope(function (app) {
         }))),
         _removeEventListener = function (manager_, name, group, selector_, handler, capture_) {
             var selector = selector_,
-                manager = elementSwapper[selector] ? ((selector = '') || elementSwapper[selector](manager_)) : manager_,
+                manager = elementSwapper[selector] ? ((selector = '') || elementSwapper[selector_](manager_)) : manager_,
                 capture = !!capture_,
                 directive = manager.directive(EVENTS),
                 removeFromList = function (list, name) {
