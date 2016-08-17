@@ -277,7 +277,7 @@
                 return Odette.counter(thing);
             },
             definition: function (globl, options) {
-                var odebt, defs, definitions, opts, app = this;
+                var odebt, defs, opts, app = this;
                 if (app.definedAgainst.indexOf(globl) > -1) {
                     return app;
                 }
