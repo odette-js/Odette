@@ -49,6 +49,9 @@
         isArray = function (array) {
             return Array.isArray(array);
         },
+        stringify = function (obj) {
+            return (isObject(obj) ? JSON.stringify(obj) : isFunction(obj) ? obj.toString() : obj) + EMPTY_STRING;
+        },
         executionTime = now(),
         makeParody = function (parent, fn) {
             return function () {
