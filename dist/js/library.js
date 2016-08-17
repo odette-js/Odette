@@ -7369,8 +7369,18 @@ app.scope(function (app) {
         removeEventListener = expandEventListenerArguments(function (manager, name, selector, handler, capture, group) {
             return isFunction(handler) ? _removeEventListener(manager, name, group, selector, handler, capture) : manager;
         }),
-        _addEventListener = function (manager, eventNames, group, selector, handler, capture) {
-            var events, wasCustom = manager.is(CUSTOM);
+        elementSwapper = {
+            window: function (manager) {
+                return manager.owner.window();
+            },
+            document: function (manager) {
+                return manager.owner;
+            }
+        },
+        _addEventListener = function (manager_, eventNames, group, selector_, handler, capture) {
+            var events, selector = selector_,
+                manager = elementSwapper[selector] ? ((selector = '') || elementSwapper[selector](manager_)) : manager_,
+                wasCustom = manager.is(CUSTOM);
             duff(toArray(eventNames, SPACE), eventExpander(manager.owner.events.expanders, function (name, passedName, nameStack) {
                 events = events || manager.directive(EVENTS);
                 if (!ALL_EVENTS_HASH[name]) {
@@ -9346,8 +9356,10 @@ app.scope(function (app) {
                 return this.wrap()[key](one, two, three);
             };
         }))),
-        _removeEventListener = function (manager, name, group, selector, handler, capture_) {
-            var capture = !!capture_,
+        _removeEventListener = function (manager_, name, group, selector_, handler, capture_) {
+            var selector = selector_,
+                manager = elementSwapper[selector] ? ((selector = '') || elementSwapper[selector](manager_)) : manager_,
+                capture = !!capture_,
                 directive = manager.directive(EVENTS),
                 removeFromList = function (list, name) {
                     return list.obliteration(function (obj) {
@@ -10891,17 +10903,18 @@ app.scope(function (app) {
             delegateEvents: function () {
                 var key, method, match, directive = this,
                     view = directive.view,
-                    el = directive.el,
+                    el_ = directive.el,
                     elementBindings = directive.elementBindings || result(view, 'elementEvents'),
                     __events = [];
                 if (directive.elementBindings) {
                     directive.elementBindings = elementBindings;
                 }
-                if (!el) {
+                if (!el_) {
                     return directive;
                 }
                 directive.cachedElementBindings = map(elementBindings, function (method, key) {
-                    var object = makeDelegateEventKeys(view.cid, directive.uiBindings, key),
+                    var el = el_,
+                        object = makeDelegateEventKeys(view.cid, directive.uiBindings, key),
                         bound = object.fn = bindTo(isString(method) ? view[method] : method, view);
                     __events.push(object);
                     el.on(object.events, object[SELECTOR], bound, object.capture, object.group);

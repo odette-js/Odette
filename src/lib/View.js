@@ -683,17 +683,18 @@ app.scope(function (app) {
             delegateEvents: function () {
                 var key, method, match, directive = this,
                     view = directive.view,
-                    el = directive.el,
+                    el_ = directive.el,
                     elementBindings = directive.elementBindings || result(view, 'elementEvents'),
                     __events = [];
                 if (directive.elementBindings) {
                     directive.elementBindings = elementBindings;
                 }
-                if (!el) {
+                if (!el_) {
                     return directive;
                 }
                 directive.cachedElementBindings = map(elementBindings, function (method, key) {
-                    var object = makeDelegateEventKeys(view.cid, directive.uiBindings, key),
+                    var el = el_,
+                        object = makeDelegateEventKeys(view.cid, directive.uiBindings, key),
                         bound = object.fn = bindTo(isString(method) ? view[method] : method, view);
                     __events.push(object);
                     el.on(object.events, object[SELECTOR], bound, object.capture, object.group);
