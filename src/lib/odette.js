@@ -275,6 +275,40 @@
             },
             counter: function (thing) {
                 return Odette.counter(thing);
+            },
+            definition: function (globl, options) {
+                var odebt, defs, definitions, opts, app = this;
+                if (app.definedAgainst.indexOf(globl) > -1) {
+                    return app;
+                }
+                app.definedAgainst.push(globl);
+                odebt = globl.Odette;
+                defs = definitions.slice(0);
+                definitions = [];
+                opts = options || {};
+                if (app.defined) {
+                    map(app.missedDefinitions, function (handler) {
+                        handler.apply(app, [app, globl, opts]);
+                    });
+                } else {
+                    map(defs, function (definitionOptions) {
+                        if (app.defining) {
+                            exception(noFailures);
+                        }
+                        app.defining = BOOLEAN_TRUE;
+                        app.definingAgainst = globl;
+                        app.definingWith = opts;
+                        wraptry(function () {
+                            definitionOptions.handler.apply(app, [app, globl, opts]);
+                            app.defining = BOOLEAN_FALSE;
+                            app.defined = BOOLEAN_TRUE;
+                        });
+                    });
+                }
+                if (app.defining) {
+                    exception(noFailures);
+                }
+                return app;
             }
         });
         var loadScriptWithQueue = function (url_, handle) {
@@ -395,37 +429,7 @@
                         version = application.scope().VERSION;
                     }
                     app = application.registerVersion(version);
-                    if (app.definedAgainst.indexOf(globl) > -1) {
-                        return;
-                    }
-                    app.definedAgainst.push(globl);
-                    odebt = globl.Odette;
-                    defs = definitions.slice(0);
-                    definitions = [];
-                    opts = options || {};
-                    if (app.defined) {
-                        map(app.missedDefinitions, function (handler) {
-                            handler.apply(app, [app, globl, opts]);
-                        });
-                    } else {
-                        map(defs, function (definitionOptions) {
-                            if (app.defining) {
-                                exception(noFailures);
-                            }
-                            app.defining = BOOLEAN_TRUE;
-                            app.definingAgainst = globl;
-                            app.definingWith = opts;
-                            wraptry(function () {
-                                definitionOptions.handler.apply(app, [app, globl, opts]);
-                                app.defining = BOOLEAN_FALSE;
-                                app.defined = BOOLEAN_TRUE;
-                            });
-                        });
-                    }
-                    if (app.defining) {
-                        exception(noFailures);
-                    }
-                    return app;
+                    return app.definition(globl, options);
                 },
                 unRegisterVersion: function (name) {
                     var application = this,
