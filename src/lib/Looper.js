@@ -32,12 +32,10 @@ app.scope(function (app) {
                 handler();
             });
             if (!focused) {
-                win[CLEAR_TIMEOUT](lastTId);
-                lastTId = win.setTimeout(handler, nextFrame + 1);
+                lastTId = win[SET_TIMEOUT](handler, nextFrame + 1);
             }
             if (Looper.playWhileBlurred) {
-                win[CLEAR_TIMEOUT](lastOverrideId);
-                lastOverrideId = win.setTimeout(function () {
+                lastOverrideId = win[SET_TIMEOUT](function () {
                     focused = BOOLEAN_FALSE;
                     handler();
                 }, nextFrame + 50);

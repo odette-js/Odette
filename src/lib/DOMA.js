@@ -480,7 +480,7 @@ var ATTACHED = 'attached',
                     collectAttr(memo, aAttributes[index]);
                 }
                 if (memo.bLength > index) {
-                    key = bKeys[index];
+                    key = kebabCase(bKeys[index]);
                     collectAttr(memo, {
                         localName: key,
                         nodeValue: b[1][key]
