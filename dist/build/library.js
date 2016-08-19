@@ -6231,9 +6231,9 @@ var ATTACHED = 'attached',
                     collectAttr(memo, aAttributes[index]);
                 }
                 if (memo.bLength > index) {
-                    key = kebabCase(bKeys[index]);
+                    key = bKeys[index];
                     collectAttr(memo, {
-                        localName: key,
+                        localName: kebabCase(key),
                         nodeValue: b[1][key]
                     }, BOOLEAN_TRUE);
                 }
