@@ -4943,7 +4943,7 @@ app.scope(function (app) {
                 promise.unmark(EMPTYING);
             }
         },
-        collect = function (promise, allstates, opts, name, collected, collectedKeys) {
+        stateCollector = function (promise, allstates, opts, name, collected, collectedKeys) {
             var finalName = name;
             if (!isString(finalName)) {
                 exception(unknownStateErrorMessage);
@@ -4984,7 +4984,7 @@ app.scope(function (app) {
                 collected = {},
                 opts = arguments[LENGTH] === 2 ? (has(promise, STASHED_ARGUMENT) ? promise[STASHED_ARGUMENT] : promise[REASON]) : opts_,
                 collectedKeys = [];
-            collect(promise, allstates, opts, name, collected, collectedKeys);
+            stateCollector(promise, allstates, opts, name, collected, collectedKeys);
             if (!collectedKeys[LENGTH]) {
                 exception(unknownStateErrorMessage);
             }
