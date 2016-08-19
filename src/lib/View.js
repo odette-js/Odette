@@ -486,13 +486,18 @@ app.scope(function (app) {
                 documentManager.parent = app;
                 documentManager.documents = Collection();
                 documentManager.modifications = Collection();
-                factories.Model[CONSTRUCTOR].apply(this, arguments);
+                this['constructor:Model']();
                 return documentManager;
             },
             getByDocument: function (doc) {
                 return this.documents.find(function (documentViews) {
                     return documentViews.el.element() === doc;
                 });
+            },
+            defaults: function () {
+                return {
+                    renderLoop: 0
+                };
             }
         });
     var CAPITAL_ELEMENT = capitalize(ELEMENT);

@@ -70,15 +70,9 @@ app.scope(function (app) {
                 }
                 promise.unmark(EMPTYING);
             }
-            return promise;
         },
-        unknownStateErrorMessage = 'promise cannot resolve to an unknown or invalid ("", false, null, 0, etc.) state. Please check your resolution tree as well as your resolveAs method input',
-        dispatch = function (promise, name, opts_) {
-            var finalName = name,
-                allstates = result(promise, ALL_STATES),
-                collected = {},
-                opts = arguments[LENGTH] === 2 ? (has(promise, STASHED_ARGUMENT) ? promise[STASHED_ARGUMENT] : promise[REASON]) : opts_,
-                collectedKeys = [];
+        collect = function (promise, allstates, opts, name, collected, collectedKeys) {
+            var finalName = name;
             if (!isString(finalName)) {
                 exception(unknownStateErrorMessage);
             }
@@ -110,8 +104,20 @@ app.scope(function (app) {
                     }
                 }
             } while (isString(finalName));
-            // promise.resolutionChain = collected;
-            return collectedKeys[LENGTH] ? executeHandlers(promise, collected, opts) : exception(unknownStateErrorMessage);
+        },
+        unknownStateErrorMessage = 'promise cannot resolve to an unknown or invalid ("", false, null, 0, etc.) state. Please check your resolution tree as well as your resolveAs method input',
+        dispatch = function (promise, name, opts_) {
+            var finalName = name,
+                allstates = result(promise, ALL_STATES),
+                collected = {},
+                opts = arguments[LENGTH] === 2 ? (has(promise, STASHED_ARGUMENT) ? promise[STASHED_ARGUMENT] : promise[REASON]) : opts_,
+                collectedKeys = [];
+            collect(promise, allstates, opts, name, collected, collectedKeys);
+            if (!collectedKeys[LENGTH]) {
+                exception(unknownStateErrorMessage);
+            }
+            executeHandlers(promise, collected, opts);
+            return promise;
         },
         addHandler = function (key) {
             // if you haven't already attached a method, then do so now
