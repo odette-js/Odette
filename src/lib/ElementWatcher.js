@@ -48,5 +48,5 @@ app.scope(function (app) {
             }
         }
     });
-    app.registerDirective('ElementWatcher', ElementWatcher);
+    app.defineDirective('ElementWatcher', ElementWatcher);
 });
