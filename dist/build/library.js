@@ -9926,7 +9926,7 @@ app.scope(function (app) {
             }
         }
     });
-    app.registerDirective('ElementWatcher', ElementWatcher);
+    app.defineDirective('ElementWatcher', ElementWatcher);
 });
 app.scope(function (app) {
     var lastAFId, lastTId, lastOverrideId, x = 0,
