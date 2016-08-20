@@ -48,12 +48,13 @@ app.scope(function (app) {
         },
         Startable = factories.Startable = factories.Model.extend('Startable', startableMethods),
         doStart = function (e) {
-            if (this.startWithParent) {
+            if (result(this, 'startWithParent')) {
                 this[START](e);
             }
         },
         doStop = function (e) {
-            if (this.stopWithParent) {
+            // if (result(this,'startWithParent')) {
+            if (result(this, 'stopWithParent')) {
                 this[STOP](e);
             }
         },
@@ -145,12 +146,12 @@ app.scope(function (app) {
             publicize: intendedApi(function (key, value) {
                 this[EXPORTS][key] = value;
             }),
+            startWithParent: returns(BOOLEAN_TRUE),
+            stopWithParent: returns(BOOLEAN_TRUE),
             constructor: function (attrs, opts) {
                 var module = this;
-                module.startWithParent = BOOLEAN_TRUE;
-                module.stopWithParent = BOOLEAN_TRUE;
                 module[EXPORTS] = {};
-                Model[CONSTRUCTOR].apply(module, arguments);
+                module[CONSTRUCTOR + COLON + 'Model'](attrs, opts);
                 module.listenTo(module[PARENT], {
                     start: doStart,
                     stop: doStop
