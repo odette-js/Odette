@@ -319,7 +319,7 @@ app.scope(function (app) {
             buster.receiveHistory = factories.Collection();
             disconnected.call(buster);
             settings.group = defaultGroupId;
-            factories.Model[CONSTRUCTOR].call(buster, settings);
+            buster[CONSTRUCTOR + COLON + 'Model'](settings);
             buster.on(CONNECTED, function (e) {
                 var firstMessage = buster.directive(CHILDREN).first();
                 buster.connectPromise.fulfill(firstMessage);
