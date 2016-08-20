@@ -117,6 +117,13 @@ var ATTACHED = 'attached',
      * @func
      */
     // prefixedStyles,
+    styleKebabCase = cacheable(function (styleKey) {
+        var kebabed = kebabCase(styleKey);
+        if (styleKey[0] >= 'A' && styleKey[0] <= 'Z') {
+            kebabed = '-' + kebabed;
+        }
+        return kebabed;
+    }),
     prefixedStyles = (function () {
         var i, j, n, found, prefixIndex, __prefix, styleName, currentCheck, deprefixed, currentLen,
             validCssNames = [],
