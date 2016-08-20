@@ -1911,9 +1911,13 @@ app.scope(function (app) {
                     if (attributeManager.is(REMOVING)) {
                         attributeManager.unmark(REMOVING);
                         api.remove(el, kebabCased);
+                        generated = BOOLEAN_FALSE;
                     } else {
                         generated = attributeManager.generate(SPACE);
                         api.write(el, kebabCased, cautiousConvertValue(generated));
+                        if (generated === EMPTY_STRING) {
+                            generated = BOOLEAN_TRUE;
+                        }
                     }
                 }
                 if (generated !== read && manager.is(CUSTOM_LISTENER)) {

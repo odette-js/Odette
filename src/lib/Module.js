@@ -53,7 +53,6 @@ app.scope(function (app) {
             }
         },
         doStop = function (e) {
-            // if (result(this,'startWithParent')) {
             if (result(this, 'stopWithParent')) {
                 this[STOP](e);
             }
@@ -186,11 +185,7 @@ app.scope(function (app) {
                     return module.is(DEFINED) ? module[EXPORTS] : exception(notDefinedYetMessage);
                 } else {
                     promise = Promise();
-                    list = toArray(modulename, SPACE);
-                    if (!isArray(list) || !list[LENGTH]) {
-                        return promise;
-                    }
-                    list = list.slice(0);
+                    list = toArray(modulename, SPACE).slice(0);
                     promise.success(bind(handler, app));
                     if ((mappedArguments = checks(app, list))) {
                         promise.fulfill(mappedArguments);

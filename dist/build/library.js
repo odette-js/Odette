@@ -5596,7 +5596,6 @@ app.scope(function (app) {
             }
         },
         doStop = function (e) {
-            // if (result(this,'startWithParent')) {
             if (result(this, 'stopWithParent')) {
                 this[STOP](e);
             }
@@ -5729,11 +5728,7 @@ app.scope(function (app) {
                     return module.is(DEFINED) ? module[EXPORTS] : exception(notDefinedYetMessage);
                 } else {
                     promise = Promise();
-                    list = toArray(modulename, SPACE);
-                    if (!isArray(list) || !list[LENGTH]) {
-                        return promise;
-                    }
-                    list = list.slice(0);
+                    list = toArray(modulename, SPACE).slice(0);
                     promise.success(bind(handler, app));
                     if ((mappedArguments = checks(app, list))) {
                         promise.fulfill(mappedArguments);
@@ -7665,9 +7660,13 @@ app.scope(function (app) {
                     if (attributeManager.is(REMOVING)) {
                         attributeManager.unmark(REMOVING);
                         api.remove(el, kebabCased);
+                        generated = BOOLEAN_FALSE;
                     } else {
                         generated = attributeManager.generate(SPACE);
                         api.write(el, kebabCased, cautiousConvertValue(generated));
+                        if (generated === EMPTY_STRING) {
+                            generated = BOOLEAN_TRUE;
+                        }
                     }
                 }
                 if (generated !== read && manager.is(CUSTOM_LISTENER)) {
