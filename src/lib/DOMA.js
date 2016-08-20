@@ -34,7 +34,7 @@ var ATTACHED = 'attached',
     DIV = 'div',
     CUSTOM_ATTRIBUTE = '[' + CUSTOM_KEY + ']',
     devicePixelRatio = (win.devicePixelRatio || 1),
-    propsList = toArray('type,href,className,height,width,id,tabIndex,title,alt'),
+    propsList = toArray('type,href,className,height,width,id,tabIndex,title,alt,innerHTML,outerHTML,textContent,src'),
     propsHash = wrap(propsList, BOOLEAN_TRUE),
     Events = toArray('abort,afterprint,beforeprint,blocked,cached,canplay,canplaythrough,change,chargingchange,chargingtimechange,checking,close,complete,dischargingtimechange,DOMContentLoaded,downloading,durationchange,emptied,ended,error,fullscreenchange,fullscreenerror,input,invalid,languagechange,levelchange,loadeddata,loadedmetadata,message,noupdate,obsolete,offline,online,open,pagehide,pageshow,paste,pause,pointerlockchange,pointerlockerror,play,playing,ratechange,reset,seeked,seeking,stalled,storage,submit,success,suspend,timeupdate,updateready,upgradeneeded,versionchange,visibilitychange'),
     SVGEvent = toArray('SVGAbort,SVGError,SVGLoad,SVGResize,SVGScroll,SVGUnload,SVGZoom,volumechange,waiting'),
@@ -2514,9 +2514,28 @@ app.scope(function (app) {
                         manager.$(manager.customAttribute(name)).each(manager.returnsManager);
                     }
                     return registeredConstructors[name];
+                },
+                script: function (url, attrs, inner) {
+                    var proimse = Promise(),
+                        script = manager.createElement('script', attrs);
+                    // should this be head
+                    manager.$('body').item(0).append(script);
+                    script.on({
+                        load: function (e) {
+                            // logic for failure or success
+                            promise.resolve();
+                        },
+                        'error timeout cancel abort': function () {
+                            promise.reject();
+                        }
+                    });
+                    script.attr({
+                        src: url || BOOLEAN_FALSE,
+                        innerHTML: inner || BOOLEAN_FALSE
+                    });
+                    return promise;
                 }
             });
-            // manager.documentId = app.counter('doc');
             extend(manager, wrapped);
             extend($, wrapped);
             runSupport(manager.supports, manager);
