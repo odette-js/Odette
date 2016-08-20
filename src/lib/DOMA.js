@@ -40,17 +40,17 @@ var ATTACHED = 'attached',
     SVGEvent = toArray('SVGAbort,SVGError,SVGLoad,SVGResize,SVGScroll,SVGUnload,SVGZoom,volumechange,waiting'),
     KeyboardEvent = toArray('keydown,keypress,keyup'),
     GamePadEvent = toArray('gamepadconnected,gamepadisconnected'),
-    CompositionEvent = toArray('compositionend,compositionstart,compositionupdate,drag,dragend,dragenter,dragleave,dragover,dragstart,drop'),
+    CompositionEvents = toArray('compositionend,compositionstart,compositionupdate,drag,dragend,dragenter,dragleave,dragover,dragstart,drop'),
     MouseEvents = toArray('click,contextmenu,dblclick,mousedown,mouseenter,mouseleave,mousemove,mouseout,mouseover,mouseup,show,wheel'),
     TouchEvents = toArray('touchcancel,touchend,touchenter,touchleave,touchmove,touchstart'),
     DeviceEvents = toArray('devicemotion,deviceorientation,deviceproximity,devicelight'),
-    FocusEvent = toArray('blur,focus'),
-    TimeEvent = toArray('beginEvent,endEvent,repeatEvent'),
-    AnimationEvent = toArray('animationend,animationiteration,animationstart,transitionend'),
-    AudioProcessingEvent = toArray('audioprocess,complete'),
+    FocusEvents = toArray('blur,focus'),
+    TimeEvents = toArray('beginEvent,endEvent,repeatEvent'),
+    AnimationEvents = toArray('animationend,animationiteration,animationstart,transitionend'),
+    AudioProcessingEvents = toArray('audioprocess,complete'),
     UIEvents = toArray('abort,error,hashchange,load,orientationchange,readystatechange,resize,scroll,select,unload,beforeunload'),
     ProgressEvent = toArray('abort,error,load,loadend,loadstart,popstate,progress,timeout'),
-    AllEvents = concatUnique(Events, SVGEvent, KeyboardEvent, CompositionEvent, GamePadEvent, MouseEvents, TouchEvents, DeviceEvents, FocusEvent, TimeEvent, AnimationEvent, AudioProcessingEvent, UIEvents, ProgressEvent),
+    AllEvents = concatUnique(Events, SVGEvent, KeyboardEvent, CompositionEvents, GamePadEvent, MouseEvents, TouchEvents, DeviceEvents, FocusEvents, TimeEvents, AnimationEvents, AudioProcessingEvents, UIEvents, ProgressEvent),
     knownPrefixes = toArray('-o-,-ms-,-moz-,-webkit-,mso-,-xv-,-atsc-,-wap-,-khtml-,-apple-,prince-,-ah-,-hp-,-ro-,-rim-,-tc-'),
     validTagNames = toArray('a,abbr,address,area,article,aside,audio,b,base,bdi,bdo,blockquote,body,br,button,canvas,caption,cite,code,col,colgroup,data,datalist,dd,del,dfn,div,dl,dt,em,embed,fieldset,figcaption,figure,footer,form,h1,h2,h3,h4,h5,h6,head,header,hr,html,i,iframe,img,input,ins,kbd,keygen,label,legend,li,link,main,map,mark,meta,meter,nav,noscript,object,ol,optgroup,option,output,p,param,pre,progress,q,rb,rp,rt,rtc,ruby,s,samp,script,section,select,small,source,span,strong,style,sub,sup,table,tbody,td,template,textarea,tfoot,th,thead,time,title,tr,track,u,ul,var,video,wbr'),
     validTagsNamesHash = wrap(validTagNames, BOOLEAN_TRUE),
@@ -2368,7 +2368,8 @@ app.scope(function (app) {
                 makeTree: makeTree,
                 makeBranch: makeBranch,
                 createElement: createElement,
-                diff: diff
+                diff: diff,
+                ready: setupDomContentLoaded
             }, function (handler) {
                 return function (one, two, three) {
                     return handler(one, manager, two, three);
@@ -2379,9 +2380,6 @@ app.scope(function (app) {
                 nodeComparison: function (a, b, hash_, stopper) {
                     return nodeComparison(a, b, hash_, stopper, NULL, NULL, NULL, manager);
                 },
-                ready: function () {
-                    // ready
-                },
                 supports: {},
                 deltas: deltas,
                 registeredConstructors: registeredConstructors,
@@ -2389,7 +2387,6 @@ app.scope(function (app) {
                 iframeContent: iframeContent,
                 orderEventsByHeirarchy: returns(BOOLEAN_TRUE),
                 data: factories.Associator(),
-                // documentId: manager.documentId,
                 document: manager,
                 devicePixelRatio: devicePixelRatio,
                 constructor: DOMA[CONSTRUCTOR],
@@ -2407,14 +2404,14 @@ app.scope(function (app) {
                         svg: SVGEvent,
                         keyboard: KeyboardEvent,
                         gamepad: GamePadEvent,
-                        composition: CompositionEvent,
+                        composition: CompositionEvents,
                         mouse: MouseEvents,
                         touch: TouchEvents,
                         device: DeviceEvents,
-                        focus: FocusEvent,
-                        time: TimeEvent,
-                        animation: AnimationEvent,
-                        audioProcessing: AudioProcessingEvent,
+                        focus: FocusEvents,
+                        time: TimeEvents,
+                        animation: AnimationEvents,
+                        audioProcessing: AudioProcessingEvents,
                         ui: UIEvents,
                         progress: ProgressEvent,
                         all: AllEvents
