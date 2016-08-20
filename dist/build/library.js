@@ -4978,15 +4978,16 @@ app.scope(function (app) {
                     }
                 }
             } while (isString(finalName));
+            return collectedKeys;
         },
         unknownStateErrorMessage = 'promise cannot resolve to an unknown or invalid ("", false, null, 0, etc.) state. Please check your resolution tree as well as your resolveAs method input',
         dispatch = function (promise, name, opts_) {
             var finalName = name,
                 allstates = result(promise, ALL_STATES),
+                // think about stashing these
                 collected = {},
-                opts = arguments[LENGTH] === 2 ? (has(promise, STASHED_ARGUMENT) ? promise[STASHED_ARGUMENT] : promise[REASON]) : opts_,
-                collectedKeys = [];
-            stateCollector(promise, allstates, opts, name, collected, collectedKeys);
+                opts = opts_ === NULL ? (has(promise, STASHED_ARGUMENT) ? promise[STASHED_ARGUMENT] : promise[REASON]) : opts_,
+                collectedKeys = collectedKeys || stateCollector(promise, allstates, opts, name, collected, []);
             if (!collectedKeys[LENGTH]) {
                 exception(unknownStateErrorMessage);
             }
@@ -5098,7 +5099,7 @@ app.scope(function (app) {
                 promise.state = PENDING;
                 promise[STASHED_HANDLERS] = [];
                 promise[REASON] = BOOLEAN_FALSE;
-                Events[CONSTRUCTOR].call(promise);
+                promise[CONSTRUCTOR + COLON + 'Events']();
                 // cannot have been resolved in any way yet
                 // attach some convenience handlers to the
                 // instance so we can call crazy custom methods
@@ -5127,7 +5128,7 @@ app.scope(function (app) {
                 promise.state = resolveAs || FAILURE;
                 resolveAs = promise.state;
                 promise[DISPATCH_EVENT](BEFORE_COLON + 'resolve');
-                dispatched = dispatch(promise, resolveAs, opts);
+                dispatched = dispatch(promise, resolveAs, opts === UNDEFINED ? NULL : opts);
                 return promise;
             },
             fulfill: function (opts) {
@@ -11437,7 +11438,7 @@ app.scope(function (app) {
             buster.receiveHistory = factories.Collection();
             disconnected.call(buster);
             settings.group = defaultGroupId;
-            factories.Model[CONSTRUCTOR].call(buster, settings);
+            buster[CONSTRUCTOR + COLON + 'Model'](settings);
             buster.on(CONNECTED, function (e) {
                 var firstMessage = buster.directive(CHILDREN).first();
                 buster.connectPromise.fulfill(firstMessage);
