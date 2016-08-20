@@ -49,9 +49,13 @@ app.scope(function (app) {
             win[CLEAR_TIMEOUT](lastTId);
             win[CLEAR_TIMEOUT](lastOverrideId);
             // run the handlers
-            var docManager = app.DocumentManager;
-            var dependant = docManager && docManager.dependency();
-            eachCall(runningLoopers, 'run', frameTime);
+            var docManager = app.DocumentManager,
+                dependant = docManager && docManager.dependency && docManager.dependency(),
+                currentlyRunning = runningLoopers.slice(0),
+                i = 0;
+            for (; i < currentlyRunning[LENGTH]; i++) {
+                currentlyRunning[i].run(frameTime);
+            }
             // do it all over again
             teardown();
             return dependant && dependant();
@@ -61,7 +65,7 @@ app.scope(function (app) {
             request(basicHandler);
         },
         teardown = function () {
-            duffRight(runningLoopers, function (looper, idx) {
+            duff(runningLoopers.slice(0), function (looper, idx) {
                 if (looper.is(HALTED) || looper.is(STOPPED) || looper.is(DESTROYED) || !looper[LENGTH]()) {
                     looper.stop();
                     runningLoopers.splice(idx, 1);

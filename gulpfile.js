@@ -18,7 +18,7 @@ var content = ['browserify', 'distribute'],
             }
         });
     },
-    modules = 'scopeStart constants utils shims Strings Directives Collection Messenger Events Model directives/Events directives/Data directives/Children directives/Linguistics Promise Associator HTTP Module DOMA Looper directives/Element View Buster tests scopeEnd'.split(' '),
+    modules = 'scopeStart constants utils shims Strings Directives Collection Messenger Events Model directives/Events directives/Data directives/Children directives/Linguistics Promise Associator HTTP Module DOMA ElementWatcher Looper directives/Element View Buster tests scopeEnd'.split(' '),
     // just to make a new one
     specModules = modules.concat(['odette']),
     extraModules = 'Socket Router LocalStorage NoSock'.split(' '),

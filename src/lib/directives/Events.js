@@ -6,12 +6,12 @@ var ACTIONS = 'actions',
     PROPAGATION_STOPPED = PROPAGATION + UPCASED_STOPPED,
     IMMEDIATE_PROP_STOPPED = 'immediate' + capitalize(PROPAGATION) + UPCASED_STOPPED;
 app.scope(function (app) {
-    var _ = app._,
-        factories = _.factories,
+    var //_ = app._,
+    // factories = _.factories,
         event_incrementer = 1,
-        Collection = factories.Collection,
+        // Collection = factories.Collection,
         listeningCounter = 0,
-        returnsId = function () {
+        returnsId = returns.id = function () {
             return this.id;
         },
         PASSED_DATA = 'passedData',
@@ -21,7 +21,6 @@ app.scope(function (app) {
                 evnt.unmark(PROPAGATION_HALTED);
                 evnt.unmark(PROPAGATION_STOPPED);
                 evnt.unmark(IMMEDIATE_PROP_STOPPED);
-                // evnt[PROPAGATION_HALTED] = evnt[PROPAGATION_STOPPED] = evnt[IMMEDIATE_PROP_STOPPED] = BOOLEAN_FALSE;
                 evnt[ORIGIN] = target;
                 evnt[NAME] = name;
                 evnt[TYPE] = name.split(COLON)[0];
@@ -222,6 +221,9 @@ app.scope(function (app) {
             },
             has: function (key) {
                 return !!((this.handlers[key] && this.handlers[key][LENGTH]()) || this.proxyStack[LENGTH]());
+            },
+            handlerQueue: function (name) {
+                return this.handlers[key] || Collection();
             },
             dispatch: function (name, evnt) {
                 var subset, subLength, handler, i = 0,

@@ -4316,12 +4316,12 @@ var ACTIONS = 'actions',
     PROPAGATION_STOPPED = PROPAGATION + UPCASED_STOPPED,
     IMMEDIATE_PROP_STOPPED = 'immediate' + capitalize(PROPAGATION) + UPCASED_STOPPED;
 app.scope(function (app) {
-    var _ = app._,
-        factories = _.factories,
+    var //_ = app._,
+    // factories = _.factories,
         event_incrementer = 1,
-        Collection = factories.Collection,
+        // Collection = factories.Collection,
         listeningCounter = 0,
-        returnsId = function () {
+        returnsId = returns.id = function () {
             return this.id;
         },
         PASSED_DATA = 'passedData',
@@ -4331,7 +4331,6 @@ app.scope(function (app) {
                 evnt.unmark(PROPAGATION_HALTED);
                 evnt.unmark(PROPAGATION_STOPPED);
                 evnt.unmark(IMMEDIATE_PROP_STOPPED);
-                // evnt[PROPAGATION_HALTED] = evnt[PROPAGATION_STOPPED] = evnt[IMMEDIATE_PROP_STOPPED] = BOOLEAN_FALSE;
                 evnt[ORIGIN] = target;
                 evnt[NAME] = name;
                 evnt[TYPE] = name.split(COLON)[0];
@@ -4532,6 +4531,9 @@ app.scope(function (app) {
             },
             has: function (key) {
                 return !!((this.handlers[key] && this.handlers[key][LENGTH]()) || this.proxyStack[LENGTH]());
+            },
+            handlerQueue: function (name) {
+                return this.handlers[key] || Collection();
             },
             dispatch: function (name, evnt) {
                 var subset, subLength, handler, i = 0,
@@ -9875,6 +9877,58 @@ app.scope(function (app) {
     });
 });
 app.scope(function (app) {
+    var ElementWatcher = factories.ElementWatcher = factories.Registry.extend('ElementWatcher', {
+        watch: function (el, fn) {
+            var cached, elementWatcher = this,
+                __elid__ = el.__elid__,
+                watchers = elementWatcher.get('watchers', __elid__) || {},
+                count = watchers.count && ++watchers.count;
+            el.on('resize', fn);
+            if (el.is('window') || watchers.id) {
+                return;
+            }
+            elementWatcher.keep('watchers', __elid__, (cached = {
+                count: 1,
+                id: _.AF.queue(function () {
+                    var client = el.client();
+                    if (client.height === cached.height && client.width === cached.width) {
+                        return;
+                    }
+                    cached.height = client.height;
+                    cached.width = client.width;
+                    if (cached.blinking) {
+                        cached.blinking = BOOLEAN_FALSE;
+                        return;
+                    }
+                    el.dispatchEvent('resize');
+                })
+            }));
+        },
+        blink: function (el) {
+            var element;
+            var result = (element = elementWatcher.get('watchers', el.__elid__)) && (element.blinking = BOOLEAN_TRUE);
+        },
+        stop: function (el, fn) {
+            var cached = this.get('watchers', el.__elid__),
+                evntManager = el.directive('EventManager') || {},
+                handlers = evntManager.handlers || {},
+                clickHandlers = handlers.click || Collection(),
+                length = clickHandlers.length();
+            el.off('resize', fn);
+            if (!cached.id) {
+                return;
+            }
+            if (length !== clickHandlers.length()) {
+                --cached.count;
+            }
+            if (!cached.count) {
+                _.AF.dequeue(cached.id);
+            }
+        }
+    });
+    app.registerDirective('ElementWatcher', ElementWatcher);
+});
+app.scope(function (app) {
     var lastAFId, lastTId, lastOverrideId, x = 0,
         lastTime = 0,
         frameTime = 0,
@@ -9925,9 +9979,13 @@ app.scope(function (app) {
             win[CLEAR_TIMEOUT](lastTId);
             win[CLEAR_TIMEOUT](lastOverrideId);
             // run the handlers
-            var docManager = app.DocumentManager;
-            var dependant = docManager && docManager.dependency();
-            eachCall(runningLoopers, 'run', frameTime);
+            var docManager = app.DocumentManager,
+                dependant = docManager && docManager.dependency && docManager.dependency(),
+                currentlyRunning = runningLoopers.slice(0),
+                i = 0;
+            for (; i < currentlyRunning[LENGTH]; i++) {
+                currentlyRunning[i].run(frameTime);
+            }
             // do it all over again
             teardown();
             return dependant && dependant();
@@ -9937,7 +9995,7 @@ app.scope(function (app) {
             request(basicHandler);
         },
         teardown = function () {
-            duffRight(runningLoopers, function (looper, idx) {
+            duff(runningLoopers.slice(0), function (looper, idx) {
                 if (looper.is(HALTED) || looper.is(STOPPED) || looper.is(DESTROYED) || !looper[LENGTH]()) {
                     looper.stop();
                     runningLoopers.splice(idx, 1);
