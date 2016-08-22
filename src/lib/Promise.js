@@ -327,7 +327,7 @@ app.scope(function (app) {
                 promise.stash(name, fn);
                 if (promise.is(SETTLED)) {
                     // could be anywhere on the stack chain
-                    dispatch(promise, promise[STATE]);
+                    dispatch(promise, promise[STATE], NULL);
                 }
             })
         }),

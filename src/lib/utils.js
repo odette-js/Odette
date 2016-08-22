@@ -1309,25 +1309,28 @@ var factories = {},
     },
     _console = win.console || {},
     _log = _console.log || noop,
-    // use same name so that we can ensure browser compatability
-    console = extend(wrap(toArray('trace,warn,log,dir,error,clear,table,profile,profileEnd,time,timeEnd,timeStamp'), function (key) {
-        var method = _console[key] || _log;
-        return function () {
-            var consoled = method && method.apply && method.apply(_console, arguments);
-            if (key !== 'trace' && key !== 'error' && _console.trace) {
-                _console.trace();
+    consolemaker = function (canTrace) {
+        // use same name so that we can ensure browser compatability
+        return extend(wrap(toArray('trace,warn,log,dir,error,clear,table,profile,profileEnd,time,timeEnd,timeStamp'), function (key) {
+            var method = _console[key] || _log;
+            return function () {
+                var consoled = method && method.apply && method.apply(_console, arguments);
+                if (key !== 'trace' && key !== 'error' && _console.trace && canTrace) {
+                    _console.trace();
+                }
+            };
+        }), {
+            exception: function (msg) {
+                throw new Error(msg);
+            },
+            assert: function (boolean_, options) {
+                if (!boolean_) {
+                    exception(options);
+                }
             }
-        };
-    }), {
-        exception: function (msg) {
-            throw new Error(msg);
-        },
-        assert: function (boolean_, options) {
-            if (!boolean_) {
-                exception(options);
-            }
-        }
-    }),
+        });
+    },
+    console = consolemaker(),
     // make global
     exception = console.exception,
     // mitigate
@@ -1392,6 +1395,7 @@ var factories = {},
     },
     _ = app._ = {
         is: is,
+        consolemaker: consolemaker,
         blockWrapper: blockWrapper,
         unwrapBlock: unwrapBlock,
         passes: passes,
