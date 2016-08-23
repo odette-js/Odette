@@ -10010,8 +10010,8 @@ app.scope(function (app) {
             win[CLEAR_TIMEOUT](lastOverrideId);
             // run the handlers
             var docManager = app.DocumentManager,
-                dependant = docManager && docManager.dependency && docManager.dependency(),
                 currentlyRunning = runningLoopers.slice(0),
+                dependant = docManager && docManager.dependency && docManager.dependency(),
                 i = 0;
             for (; i < currentlyRunning[LENGTH]; i++) {
                 currentlyRunning[i].run(frameTime);
@@ -10040,7 +10040,7 @@ app.scope(function (app) {
             allLoopers.push(looper);
         },
         start = function (looper) {
-            if (!has(runningLoopers, looper)) {
+            if (!has(runningLoopers, looper, BOOLEAN_TRUE)) {
                 runningLoopers.push(looper);
             }
             if (!running) {
