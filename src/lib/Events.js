@@ -66,12 +66,12 @@ app.scope(function (app) {
         },
         setupWatcher = function (nameOrObjectIndex, triggersOnce) {
             return function () {
-                var context, list, args, firstArg, handlersIndex, nameOrObject, eventerDirective, original_handler, targetDirective, eventer = this,
-                    ret = {};
+                var context, list, firstArg, handlersIndex, nameOrObject, eventerDirective, original_handler, targetDirective, eventer = this,
+                    ret = {},
+                    args = toArray(arguments);
                 if (!arguments[0]) {
                     return ret;
                 }
-                args = toArray(arguments);
                 handlersIndex = nameOrObjectIndex;
                 list = args.slice(nameOrObjectIndex);
                 nameOrObject = list[0];
@@ -155,6 +155,7 @@ app.scope(function (app) {
             talkerId = talkerDirective[TALKER_ID] = talkerDirective[TALKER_ID] || app.counter(TALKER_PREFIX);
             listening = listeningTo[talkerId] = {
                 talker: talker,
+                // look into not having this key
                 talkerId: talkerId,
                 listeningTo: listeningTo,
                 count: 0

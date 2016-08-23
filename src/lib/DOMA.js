@@ -298,7 +298,8 @@ var ATTACHED = 'attached',
     },
     superElementsHash = {
         body: BOOLEAN_TRUE,
-        head: BOOLEAN_TRUE
+        head: BOOLEAN_TRUE,
+        document: BOOLEAN_TRUE
     },
     dataReconstructor = function (list, fn) {
         return foldl(list, function (memo, arg1, arg2, arg3) {
@@ -316,7 +317,7 @@ var ATTACHED = 'attached',
             owner = manager.owner;
         if (manager && manager === owner) {
             if (superElementsHash[str]) {
-                return superElements(context, 'body');
+                return superElements(context, str);
             }
         }
         if (manager && str[0] === '>') {
