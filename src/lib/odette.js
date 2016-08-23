@@ -230,341 +230,344 @@
                 return BOOLEAN_FALSE;
             });
         },
-        definitions = [];
-    return merge(function (global, WHERE, version, fn, alt, hoistFrom) {
-        function Application(name, parent) {
-            this.SCOPED = BOOLEAN_TRUE;
-            this.CREATED_AT = now();
-            this.VERSION = name;
-            this.application = this;
-            this.missedDefinitions = [];
-            this.definedAgainst = [];
-            return this;
-        }
-        Application[PROTOTYPE].extend = function (obj) {
-            return this.merge(this, obj);
-        };
-        Application[PROTOTYPE].merge = merge;
-        Application[PROTOTYPE].each = each;
-        Application[PROTOTYPE].extend({
-            exception: exception,
-            destroy: noop,
-            wraptry: wraptry,
-            now: now,
-            stringifyQuery: stringifyQuery,
-            parseSearch: parseSearch,
-            undefine: function (handler) {
-                this.missedDefinitions.push(handler);
-                if (this.defining) {
-                    handler.apply(this, [this, this.definingAgainst, this.definingWith]);
-                }
+        definitions = [],
+        Odette = function (global, WHERE, version, fn, alt, hoistFrom) {
+            function Application(name, parent) {
+                this.SCOPED = BOOLEAN_TRUE;
+                this.CREATED_AT = now();
+                this.VERSION = name;
+                this.application = this;
+                this.missedDefinitions = [];
+                this.definedAgainst = [];
                 return this;
-            },
-            parody: function (list) {
-                var app = this,
-                    i = 0,
-                    extendor = {},
-                    parent = app[PARENT];
-                for (; i < list[LENGTH]; i++) {
-                    extendor[list[i]] = makeParody(parent, parent[list[i]]);
-                }
-                app.extend(extendor);
-                return app;
-            },
-            scope: function (name_, fn_) {
-                var name = name_ && isString(name_) ? name_ : this.VERSION;
-                var fn = name_ && (isFunction(name_) ? name_ : (isFunction(fn_) ? fn_ : NULL));
-                return this[PARENT].scope(name, fn);
-            },
-            counter: function (thing) {
-                return Odette.counter(thing);
-            },
-            definition: function (globl, options) {
-                var odebt, defs, opts, app = this;
-                if (app.definedAgainst.indexOf(globl) > -1) {
-                    return app;
-                }
-                app.definedAgainst.push(globl);
-                odebt = globl.Odette;
-                opts = options || {};
-                if (app.defined) {
-                    map(app.missedDefinitions, function (handler) {
-                        handler.apply(app, [app, globl, opts]);
-                    });
-                } else {
-                    defs = definitions.slice(0);
-                    definitions = [];
-                    map(defs, function (definitionOptions) {
-                        if (app.defining) {
-                            exception(noFailures);
-                        }
-                        app.defining = BOOLEAN_TRUE;
-                        app.definingAgainst = globl;
-                        app.definingWith = opts;
-                        wraptry(function () {
-                            definitionOptions.handler.apply(app, [app, globl, opts]);
-                            app.defining = BOOLEAN_FALSE;
-                            app.defined = BOOLEAN_TRUE;
-                        });
-                    });
-                }
-                if (app.defining) {
-                    exception(noFailures);
-                }
-                return app;
             }
-        });
-        var loadScriptWithQueue = function (url_, handle) {
-            var loading, finished, endpoints = {};
-            return function (fn_) {
-                var focused, fn = fn_ || noop,
-                    url = url_,
-                    app = this,
-                    application = this.global,
-                    cachedContext = application.buildContext,
-                    push = function () {
-                        focused.queue.push(item);
-                    },
-                    item = {
-                        app: app,
-                        context: cachedContext,
-                        handler: fn
-                    };
-                if (isString(url)) {
-                    url = returns(url);
-                }
-                url = url(app);
-                if (!url) {
-                    return BOOLEAN_FALSE;
-                }
-                // now url is a string
-                focused = endpoints[url] = endpoints[url] || {};
-                if (focused.finished) {
-                    handle.apply(application, [item]);
-                    fn.apply(item, [app]);
-                } else {
-                    if (focused.loading) {
-                        push();
-                    } else {
-                        focused.queue = [];
-                        focused.loading = BOOLEAN_TRUE;
-                        push();
-                        application.makeScript(url, function () {
-                            var queued = focused.queue.slice(0);
-                            focused.loading = BOOLEAN_FALSE;
-                            focused.finished = BOOLEAN_TRUE;
-                            focused.queue = [];
-                            application.registerVersion(app.VERSION);
-                            application.map(queued, function (item) {
-                                handle.apply(application, [item]);
-                                item.handler(item.app);
-                            });
-                        }, cachedContext.document);
-                    }
-                }
-                return focused.queue;
+            Application[PROTOTYPE].extend = function (obj) {
+                return this.merge(this, obj);
             };
-        };
-        wraptry(function () {
-            var hoisted, alreadyTried = [];
-            map(hoistFrom, function (hoistFrom) {
-                if (!global_[WHERE] && touchable(hoistFrom) && hoistFrom[WHERE]) {
-                    hoisted = BOOLEAN_TRUE;
-                    global_[WHERE] = hoistFrom[WHERE];
-                }
-            });
-        });
-        var queue = [];
-        var app, application = global_[WHERE] = global_[WHERE] || (function () {
-            Odette.where.push(WHERE);
-            return {
-                Application: Application,
-                LOADED_CONTEXT: window,
-                EXECUTED_AT: executionTime,
-                WHERE: WHERE,
-                VERSION: odette_version,
-                SHARED: BOOLEAN_TRUE,
-                SCOPED: BOOLEAN_FALSE,
-                versionOrder: [],
-                versions: {},
+            Application[PROTOTYPE].merge = merge;
+            Application[PROTOTYPE].each = each;
+            Application[PROTOTYPE].extend({
+                exception: exception,
+                destroy: noop,
                 wraptry: wraptry,
-                maxVersion: maxVersion,
-                map: map,
-                loadScriptWithQueue: loadScriptWithQueue,
-                loadedAgainst: [global],
-                queue: function (context, handler) {
-                    queue.push({
-                        context: context,
-                        handler: handler
-                    });
+                now: now,
+                Odette: Odette,
+                stringifyQuery: stringifyQuery,
+                parseSearch: parseSearch,
+                undefine: function (handler) {
+                    this.missedDefinitions.push(handler);
+                    if (this.defining) {
+                        handler.apply(this, [this, this.definingAgainst, this.definingWith]);
+                    }
                     return this;
                 },
-                emptyQueue: function (fn) {
-                    var queued = queue.slice(0);
-                    var shared = this;
-                    var current = shared.scope();
-                    queue = [];
-                    map(queued, fn || function (q) {
-                        q.handler.apply(q.context, [shared, current]);
-                    });
-                    return shared;
-                },
-                registerVersion: function (scopedV, app) {
-                    var defaultVersion, application = this,
-                        cachedOrPassed = application.versions[scopedV],
-                        newApp = application.versions[scopedV] = cachedOrPassed || app || new Application(scopedV, application);
-                    newApp[PARENT] = application;
-                    application.currentVersion = scopedV;
-                    application.defaultVersion = application.maxVersion(application.defaultVersion, scopedV) ? scopedV : application.defaultVersion;
-                    if (!cachedOrPassed) {
-                        application.versionOrder.push(scopedV);
+                parody: function (list) {
+                    var app = this,
+                        i = 0,
+                        extendor = {},
+                        parent = app[PARENT];
+                    for (; i < list[LENGTH]; i++) {
+                        extendor[list[i]] = makeParody(parent, parent[list[i]]);
                     }
-                    return newApp;
-                },
-                definition: function (version_, globl_, options_) {
-                    var app, odebt, defs, definitionOptions, opts, context, application = this,
-                        version = version_,
-                        globl = globl_,
-                        options = options_;
-                    if (isObject(version)) {
-                        options = globl;
-                        globl = version;
-                        version = application.scope().VERSION;
-                    }
-                    app = application.registerVersion(version);
-                    return app.definition(globl, options);
-                },
-                unRegisterVersion: function (name) {
-                    var application = this,
-                        saved = application.versions[name],
-                        orderIdx = application.versionOrder.indexOf(name);
-                    if (orderIdx === -1) {
-                        return application;
-                    }
-                    saved.destroy();
-                    application.versionOrder.splice(orderIdx, 1);
-                    saved[PARENT] = UNDEFINED;
-                    application.versions[name] = UNDEFINED;
-                    return saved;
+                    app.extend(extendor);
+                    return app;
                 },
                 scope: function (name_, fn_) {
-                    var name, fn, scoped, app = this,
-                        hash = app.versions;
-                    if (isString(name_) || isNumber(name_)) {
-                        name = name_;
-                        fn = fn_;
-                    } else {
-                        fn = name_;
-                        name = app.defaultVersion;
-                    }
-                    if (!hash[name]) {
-                        app.registerVersion(name);
-                    } else {
-                        app.currentVersion = name;
-                    }
-                    scoped = hash[name];
-                    if (!isFunction(fn)) {
-                        return scoped;
-                    }
-                    fn.apply(app, [scoped]);
-                    return scoped;
+                    var name = name_ && isString(name_) ? name_ : this.VERSION;
+                    var fn = name_ && (isFunction(name_) ? name_ : (isFunction(fn_) ? fn_ : NULL));
+                    return this[PARENT].scope(name, fn);
                 },
-                hoist: function (windo, toHere) {
-                    var application = this,
-                        target = (toHere || window);
-                    if (!windo) {
-                        return BOOLEAN_FALSE;
-                    }
-                    if (windo === this.LOADED_CONTEXT) {
-                        return BOOLEAN_TRUE;
-                    }
-                    // it has already been hoisted
-                    if (application.loadedAgainst.indexOf(windo) + 1) {
-                        return BOOLEAN_TRUE;
-                    }
-                    // we have access
-                    if (application.touch(windo)) {
-                        if (windo[application.WHERE]) {
-                            target[application.WHERE] = windo[application.WHERE];
-                        }
-                        return target[application.WHERE];
-                    } else {
-                        return BOOLEAN_FALSE;
-                    }
+                counter: function (thing) {
+                    return Odette.counter(thing);
                 },
-                registerScopedMethod: function (name, expects_) {
-                    var application = this,
-                        expects = expects_ || 3,
-                        method = application[name] = application[name] || function () {
-                            var i = 0,
-                                args = arguments,
-                                args_ = args,
-                                argLen = args[LENGTH],
-                                version = args[0];
-                            // expects is equivalent to what it would be if the version was passed in
-                            if (argLen < expects) {
-                                version = application.currentVersion;
-                            } else {
-                                args_ = [];
-                                for (; i < args[LENGTH]; i++) {
-                                    args_.push(args[i]);
-                                }
-                                version = args_.shift();
+                definition: function (globl, options) {
+                    var odebt, defs, opts, app = this;
+                    if (app.definedAgainst.indexOf(globl) > -1) {
+                        return app;
+                    }
+                    app.definedAgainst.push(globl);
+                    odebt = globl.Odette;
+                    opts = options || {};
+                    if (app.defined) {
+                        map(app.missedDefinitions, function (handler) {
+                            handler.apply(app, [app, globl, opts]);
+                        });
+                    } else {
+                        defs = definitions.slice(0);
+                        definitions = [];
+                        map(defs, function (definitionOptions) {
+                            if (app.defining) {
+                                exception(noFailures);
                             }
-                            application.applyTo(version, name, args_);
-                        };
-                    return application;
-                },
-                get: function (version) {
-                    return this.versions[version];
-                },
-                applyTo: function (which, method, args) {
-                    var application = this,
-                        app = application.get(which);
-                    return app && app[method] && app[method].apply(app, args);
-                },
-                getCurrentScript: function (d) {
-                    var allScripts = (d || doc).scripts,
-                        currentScript = d.currentScript,
-                        lastScript = allScripts[allScripts[LENGTH] - 1];
-                    return currentScript || lastScript;
-                },
-                touch: touchable,
-                makeScript: function (src, onload, docu_, preventappend) {
-                    var docu = docu_ || doc,
-                        script = docu.createElement('script');
-                    script.type = 'text/javascript';
-                    if (!preventappend) {
-                        docu.head.appendChild(script);
+                            app.defining = BOOLEAN_TRUE;
+                            app.definingAgainst = globl;
+                            app.definingWith = opts;
+                            wraptry(function () {
+                                definitionOptions.handler.apply(app, [app, globl, opts]);
+                                app.defining = BOOLEAN_FALSE;
+                                app.defined = BOOLEAN_TRUE;
+                            });
+                        });
                     }
-                    if (src) {
-                        if (onload) {
-                            script.onload = onload;
-                        }
-                        if (isString(src)) {
-                            // src applied last for ie
-                            script.src = src;
-                        } else {
-                            script.innerHTML = src.join('\n');
-                        }
+                    if (app.defining) {
+                        exception(noFailures);
                     }
-                    return script;
+                    return app;
                 }
+            });
+            var loadScriptWithQueue = function (url_, handle) {
+                var loading, finished, endpoints = {};
+                return function (fn_) {
+                    var focused, fn = fn_ || noop,
+                        url = url_,
+                        app = this,
+                        application = this.global,
+                        cachedContext = application.buildContext,
+                        push = function () {
+                            focused.queue.push(item);
+                        },
+                        item = {
+                            app: app,
+                            context: cachedContext,
+                            handler: fn
+                        };
+                    if (isString(url)) {
+                        url = returns(url);
+                    }
+                    url = url(app);
+                    if (!url) {
+                        return BOOLEAN_FALSE;
+                    }
+                    // now url is a string
+                    focused = endpoints[url] = endpoints[url] || {};
+                    if (focused.finished) {
+                        handle.apply(application, [item]);
+                        fn.apply(item, [app]);
+                    } else {
+                        if (focused.loading) {
+                            push();
+                        } else {
+                            focused.queue = [];
+                            focused.loading = BOOLEAN_TRUE;
+                            push();
+                            application.makeScript(url, function () {
+                                var queued = focused.queue.slice(0);
+                                focused.loading = BOOLEAN_FALSE;
+                                focused.finished = BOOLEAN_TRUE;
+                                focused.queue = [];
+                                application.registerVersion(app.VERSION);
+                                application.map(queued, function (item) {
+                                    handle.apply(application, [item]);
+                                    item.handler(item.app);
+                                });
+                            }, cachedContext.document);
+                        }
+                    }
+                    return focused.queue;
+                };
             };
-        }());
-        application.buildContext = global;
-        app = application.get(version);
-        if (!app) {
-            // there is already an app with this same version that originated from this global object
-            app = application.registerVersion(version);
-            // call is used because apply is finicky and bind is not universal
-            fn.apply(global_, [application, app]);
-        }
-        if (alt) {
-            alt.apply(global_, [application, app]);
-        }
-        return app;
-    }, {
+            wraptry(function () {
+                var hoisted, alreadyTried = [];
+                map(hoistFrom, function (hoistFrom) {
+                    if (!global_[WHERE] && touchable(hoistFrom) && hoistFrom[WHERE]) {
+                        hoisted = BOOLEAN_TRUE;
+                        global_[WHERE] = hoistFrom[WHERE];
+                    }
+                });
+            });
+            var queue = [];
+            var app, application = global_[WHERE] = global_[WHERE] || (function () {
+                Odette.where.push(WHERE);
+                return {
+                    Application: Application,
+                    Odette: Odette,
+                    LOADED_CONTEXT: window,
+                    EXECUTED_AT: executionTime,
+                    WHERE: WHERE,
+                    VERSION: odette_version,
+                    SHARED: BOOLEAN_TRUE,
+                    SCOPED: BOOLEAN_FALSE,
+                    versionOrder: [],
+                    versions: {},
+                    wraptry: wraptry,
+                    maxVersion: maxVersion,
+                    map: map,
+                    loadScriptWithQueue: loadScriptWithQueue,
+                    loadedAgainst: [global],
+                    queue: function (context, handler) {
+                        queue.push({
+                            context: context,
+                            handler: handler
+                        });
+                        return this;
+                    },
+                    emptyQueue: function (fn) {
+                        var queued = queue.slice(0);
+                        var shared = this;
+                        var current = shared.scope();
+                        queue = [];
+                        map(queued, fn || function (q) {
+                            q.handler.apply(q.context, [shared, current]);
+                        });
+                        return shared;
+                    },
+                    registerVersion: function (scopedV, app) {
+                        var defaultVersion, application = this,
+                            cachedOrPassed = application.versions[scopedV],
+                            newApp = application.versions[scopedV] = cachedOrPassed || app || new Application(scopedV, application);
+                        newApp[PARENT] = application;
+                        application.currentVersion = scopedV;
+                        application.defaultVersion = application.maxVersion(application.defaultVersion, scopedV) ? scopedV : application.defaultVersion;
+                        if (!cachedOrPassed) {
+                            application.versionOrder.push(scopedV);
+                        }
+                        return newApp;
+                    },
+                    definition: function (version_, globl_, options_) {
+                        var app, odebt, defs, definitionOptions, opts, context, application = this,
+                            version = version_,
+                            globl = globl_,
+                            options = options_;
+                        if (isObject(version)) {
+                            options = globl;
+                            globl = version;
+                            version = application.scope().VERSION;
+                        }
+                        app = application.registerVersion(version);
+                        return app.definition(globl, options);
+                    },
+                    unRegisterVersion: function (name) {
+                        var application = this,
+                            saved = application.versions[name],
+                            orderIdx = application.versionOrder.indexOf(name);
+                        if (orderIdx === -1) {
+                            return application;
+                        }
+                        saved.destroy();
+                        application.versionOrder.splice(orderIdx, 1);
+                        saved[PARENT] = UNDEFINED;
+                        application.versions[name] = UNDEFINED;
+                        return saved;
+                    },
+                    scope: function (name_, fn_) {
+                        var name, fn, scoped, app = this,
+                            hash = app.versions;
+                        if (isString(name_) || isNumber(name_)) {
+                            name = name_;
+                            fn = fn_;
+                        } else {
+                            fn = name_;
+                            name = app.defaultVersion;
+                        }
+                        if (!hash[name]) {
+                            app.registerVersion(name);
+                        } else {
+                            app.currentVersion = name;
+                        }
+                        scoped = hash[name];
+                        if (!isFunction(fn)) {
+                            return scoped;
+                        }
+                        fn.apply(app, [scoped]);
+                        return scoped;
+                    },
+                    hoist: function (windo, toHere) {
+                        var application = this,
+                            target = (toHere || window);
+                        if (!windo) {
+                            return BOOLEAN_FALSE;
+                        }
+                        if (windo === this.LOADED_CONTEXT) {
+                            return BOOLEAN_TRUE;
+                        }
+                        // it has already been hoisted
+                        if (application.loadedAgainst.indexOf(windo) + 1) {
+                            return BOOLEAN_TRUE;
+                        }
+                        // we have access
+                        if (application.touch(windo)) {
+                            if (windo[application.WHERE]) {
+                                target[application.WHERE] = windo[application.WHERE];
+                            }
+                            return target[application.WHERE];
+                        } else {
+                            return BOOLEAN_FALSE;
+                        }
+                    },
+                    registerScopedMethod: function (name, expects_) {
+                        var application = this,
+                            expects = expects_ || 3,
+                            method = application[name] = application[name] || function () {
+                                var i = 0,
+                                    args = arguments,
+                                    args_ = args,
+                                    argLen = args[LENGTH],
+                                    version = args[0];
+                                // expects is equivalent to what it would be if the version was passed in
+                                if (argLen < expects) {
+                                    version = application.currentVersion;
+                                } else {
+                                    args_ = [];
+                                    for (; i < args[LENGTH]; i++) {
+                                        args_.push(args[i]);
+                                    }
+                                    version = args_.shift();
+                                }
+                                application.applyTo(version, name, args_);
+                            };
+                        return application;
+                    },
+                    get: function (version) {
+                        return this.versions[version];
+                    },
+                    applyTo: function (which, method, args) {
+                        var application = this,
+                            app = application.get(which);
+                        return app && app[method] && app[method].apply(app, args);
+                    },
+                    getCurrentScript: function (d) {
+                        var allScripts = (d || doc).scripts,
+                            currentScript = d.currentScript,
+                            lastScript = allScripts[allScripts[LENGTH] - 1];
+                        return currentScript || lastScript;
+                    },
+                    touch: touchable,
+                    makeScript: function (src, onload, docu_, preventappend) {
+                        var docu = docu_ || doc,
+                            script = docu.createElement('script');
+                        script.type = 'text/javascript';
+                        if (!preventappend) {
+                            docu.head.appendChild(script);
+                        }
+                        if (src) {
+                            if (onload) {
+                                script.onload = onload;
+                            }
+                            if (isString(src)) {
+                                // src applied last for ie
+                                script.src = src;
+                            } else {
+                                script.innerHTML = src.join('\n');
+                            }
+                        }
+                        return script;
+                    }
+                };
+            }());
+            application.buildContext = global;
+            app = application.get(version);
+            if (!app) {
+                // there is already an app with this same version that originated from this global object
+                app = application.registerVersion(version);
+                // call is used because apply is finicky and bind is not universal
+                fn.apply(global_, [application, app]);
+            }
+            if (alt) {
+                alt.apply(global_, [application, app]);
+            }
+            return app;
+        };
+    return merge(Odette, {
         VERSION: odette_version,
         where: [],
         touchable: touchable,
