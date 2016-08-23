@@ -3565,12 +3565,12 @@ app.scope(function (app) {
         },
         setupWatcher = function (nameOrObjectIndex, triggersOnce) {
             return function () {
-                var context, list, args, firstArg, handlersIndex, nameOrObject, eventerDirective, original_handler, targetDirective, eventer = this,
-                    ret = {};
+                var context, list, firstArg, handlersIndex, nameOrObject, eventerDirective, original_handler, targetDirective, eventer = this,
+                    ret = {},
+                    args = toArray(arguments);
                 if (!arguments[0]) {
                     return ret;
                 }
-                args = toArray(arguments);
                 handlersIndex = nameOrObjectIndex;
                 list = args.slice(nameOrObjectIndex);
                 nameOrObject = list[0];
@@ -3654,6 +3654,7 @@ app.scope(function (app) {
             talkerId = talkerDirective[TALKER_ID] = talkerDirective[TALKER_ID] || app.counter(TALKER_PREFIX);
             listening = listeningTo[talkerId] = {
                 talker: talker,
+                // look into not having this key
                 talkerId: talkerId,
                 listeningTo: listeningTo,
                 count: 0
@@ -6052,7 +6053,8 @@ var ATTACHED = 'attached',
     },
     superElementsHash = {
         body: BOOLEAN_TRUE,
-        head: BOOLEAN_TRUE
+        head: BOOLEAN_TRUE,
+        document: BOOLEAN_TRUE
     },
     dataReconstructor = function (list, fn) {
         return foldl(list, function (memo, arg1, arg2, arg3) {
@@ -6070,7 +6072,7 @@ var ATTACHED = 'attached',
             owner = manager.owner;
         if (manager && manager === owner) {
             if (superElementsHash[str]) {
-                return superElements(context, 'body');
+                return superElements(context, str);
             }
         }
         if (manager && str[0] === '>') {
