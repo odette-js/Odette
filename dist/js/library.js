@@ -2786,6 +2786,9 @@ var STATUS = 'Status',
         },
         isNot: function (status) {
             return !this[STATUSES][status];
+        },
+        toJSON: function () {
+            return this[STATUSES];
         }
     });
 defineDirective(STATUS, Status[CONSTRUCTOR]);
