@@ -8164,7 +8164,7 @@ app.scope(function (app) {
                 },
                 events: {
                     custom: {},
-                    expanders: {},
+                    expanders: cloneJSON(_eventExpander),
                     lists: wrap({
                         base: Events,
                         svg: SVGEvent,
