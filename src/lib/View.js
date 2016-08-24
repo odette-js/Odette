@@ -135,7 +135,7 @@ app.scope(function (app) {
                         bufferDirective = region.directive(BUFFERED_VIEWS);
                         bufferDirective.els.append(viewEl);
                     } else {
-                        $(viewParentElement).append(viewEl);
+                        region.owner$(viewParentElement).append(viewEl);
                     }
                 }
                 return region;

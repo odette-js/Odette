@@ -7419,11 +7419,12 @@ app.scope(function (app) {
                         domTarget: manager,
                         nameStack: nameStack
                     });
-                };
+                },
+                expansion = eventExpander(manager.owner.events.expanders, handlesExpansion);
             duff(spaceList, function (evnt) {
+                expansion(evnt);
                 handlesExpansion(evnt, evnt, [evnt]);
             });
-            duff(spaceList, eventExpander(manager.owner.events.expanders, handlesExpansion));
             if (!wasCustom && manager.is(CUSTOM_LISTENER)) {
                 markCustom(manager, BOOLEAN_TRUE);
                 manager.remark(ATTACHED, isAttached(manager.element(), manager.owner));
@@ -10458,7 +10459,7 @@ app.scope(function (app) {
                         bufferDirective = region.directive(BUFFERED_VIEWS);
                         bufferDirective.els.append(viewEl);
                     } else {
-                        $(viewParentElement).append(viewEl);
+                        region.owner$(viewParentElement).append(viewEl);
                     }
                 }
                 return region;
