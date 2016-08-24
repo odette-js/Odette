@@ -1807,12 +1807,8 @@ app.scope(function (app) {
             return returnValue;
         },
         elementEventDispatcher = function (manager, name, opts) {
-            var el = manager.element();
-            var view = manager.owner.window().element();
-            var evnt = new view.Event(name, opts);
-            if (el.dispatchEvent) {
-                return el.dispatchEvent(evnt);
-            }
+            var view, el = manager.element();
+            return el.dispatchEvent && (view = manager.owner.window().element()) && el.dispatchEvent(new view.Event(name, isBoolean(opts) ? {} : opts));
         },
         directAttributes = {
             id: BOOLEAN_FALSE,
@@ -3431,7 +3427,7 @@ app.scope(function (app) {
                 }
                 if (manager.is(IFRAME)) {
                     // it's an iframe, so return the manager relative to the outside
-                    return manager.is(ATTACHED) && manager.owner.returnsManager(manager.element().contentWindow);
+                    return manager.is(ATTACHED) && (windo = manager.element().contentWindow) && manager.owner.returnsManager(windo);
                 }
                 // it's an element so go up
                 return manager.owner.window();
@@ -3618,7 +3614,8 @@ app.scope(function (app) {
             dispatchEvent: function (name, e, capturing_) {
                 var ret, cachedTrust = DO_NOT_TRUST;
                 DO_NOT_TRUST = BOOLEAN_TRUE;
-                ret = eventDispatcher(this, name, e, capturing_, cachedTrust);
+                elementEventDispatcher(this, name, capturing_);
+                // ret = eventDispatcher(this, name, e, capturing_, cachedTrust);
                 DO_NOT_TRUST = cachedTrust;
                 return ret;
             },
