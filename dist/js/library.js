@@ -7342,7 +7342,7 @@ app.scope(function (app) {
             ready: 'DOMContentLoaded',
             wheel: 'wheel,mousewheel',
             deviceorientation: 'deviceorientation,mozOrientation',
-            fullscreenalter: 'webkitfullscreenchange,mozfullscreenchange,fullscreenchange,MSFullscreenChange',
+            fullscreenchange: 'webkitfullscreenchange,mozfullscreenchange,fullscreenchange,MSFullscreenChange',
             hover: 'mouseenter,mouseleave',
             forcewillbegin: 'mouseforcewillbegin,webkitmouseforcewillbegin',
             forcechange: 'mouseforcechange,webkitmouseforcechange',
