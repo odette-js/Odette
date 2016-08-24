@@ -6752,15 +6752,16 @@ app.scope(function (app) {
             var img = new Image();
             url = stringifyQuery(url);
             if (callback) {
-                img.onload = function (e) {
-                    callback.apply(this, [url, e]);
-                };
+                img.onload = callback;
             }
             img.src = url;
             return img;
         },
         DO_NOT_TRUST = BOOLEAN_FALSE,
-        makeEachTrigger = function (attr, api) {
+        triggersOnElement = function (el, key) {
+            return ALL_EVENTS_HASH[whichever] && isFunction(el[whichever]) ? el[whichever]() : BOOLEAN_FALSE;
+        },
+        makeEachTrigger = function (attr, api, data) {
             var whichever = api || attr;
             return function (manager) {
                 var el = manager.element();
@@ -6769,20 +6770,19 @@ app.scope(function (app) {
                 if (ALL_EVENTS_HASH[whichever] && isFunction(el[whichever])) {
                     el[whichever]();
                 } else {
-                    manager[DISPATCH_EVENT](whichever);
+                    elementEventDispatcher(manager, whichever, data);
                 }
                 DO_NOT_TRUST = cachedTrust;
             };
         },
         triggerEventWrapper = function (attr_, api) {
-            var attr = attr_ || api,
-                eachHandler = makeEachTrigger(attr, api);
+            var attr = attr_ || api;
             return function (fn, fn2, capturing) {
                 var doma = this;
                 if (isFunction(fn) || isFunction(fn2)) {
                     doma.on(attr, fn, fn2, capturing);
                 } else {
-                    doma.each(eachHandler);
+                    doma.each(makeEachTrigger(attr, api, fn));
                 }
                 return doma;
             };
@@ -6795,7 +6795,7 @@ app.scope(function (app) {
                 if (isFunction(fn) || isFunction(fn2)) {
                     manager.on(attr, fn, fn2, capturing);
                 } else {
-                    eachHandler(manager);
+                    makeEachTrigger(attr, api, fn)(manager);
                 }
                 return manager;
             };
