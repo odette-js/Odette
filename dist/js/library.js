@@ -7337,7 +7337,7 @@ app.scope(function (app) {
             }
             return capturing;
         },
-        _eventExpander = wrap({
+        _eventExpander = foldl({
             resize: 'resize,orientationchange',
             ready: 'DOMContentLoaded',
             wheel: 'wheel,mousewheel',
@@ -7349,7 +7349,9 @@ app.scope(function (app) {
             forcedown: 'mouseforcedown,webkitmouseforcedown',
             forceup: 'mouseforceup,webkitmouseforceup',
             force: 'mouseforcewillbegin,webkitmouseforcewillbegin,mouseforcechange,webkitmouseforcechange,mouseforcedown,webkitmouseforcedown,mouseforceup,webkitmouseforceup'
-        }, toArray),
+        }, function (memo, value, key) {
+            memo[key] = toArray(value);
+        }, {}),
         distilledEventName = foldl(_eventExpander, function (memo, arr, key) {
             duff(arr, function (item) {
                 memo[item] = key;
@@ -7558,6 +7560,14 @@ app.scope(function (app) {
             });
             manager.owner.remark(RUNNING_EVENT, DO_NOT_TRUST);
             return returnValue;
+        },
+        elementEventDispatcher = function (manager, name, opts) {
+            var el = manager.element();
+            var view = manager.owner.window().element();
+            var evnt = new view.Event(name, opts);
+            if (el.dispatchEvent) {
+                return el.dispatchEvent(evnt);
+            }
         },
         directAttributes = {
             id: BOOLEAN_FALSE,
