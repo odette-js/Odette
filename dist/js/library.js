@@ -7363,6 +7363,7 @@ app.scope(function (app) {
             return function (nme) {
                 var name = nme,
                     hadInList = indexOf(stack, name) !== -1;
+                // prevents circular
                 if (!hadInList) {
                     stack.push(name);
                 }
@@ -7400,24 +7401,29 @@ app.scope(function (app) {
         _addEventListener = function (manager_, eventNames, group, selector_, handler, capture) {
             var events, selector = selector_,
                 manager = elementSwapper[selector] ? ((selector = '') || elementSwapper[selector_](manager_)) : manager_,
-                wasCustom = manager.is(CUSTOM);
-            duff(toArray(eventNames, SPACE), eventExpander(manager.owner.events.expanders, function (name, passedName, nameStack) {
-                events = events || manager.directive(EVENTS);
-                if (!ALL_EVENTS_HASH[name]) {
-                    manager.mark(CUSTOM_LISTENER);
-                }
-                events.attach(name, {
-                    capturing: !!capture,
-                    origin: manager,
-                    handler: handler,
-                    group: group,
-                    selector: selector,
-                    passedName: passedName,
-                    domName: name,
-                    domTarget: manager,
-                    nameStack: nameStack
-                });
-            }));
+                wasCustom = manager.is(CUSTOM),
+                spaceList = toArray(eventNames, SPACE),
+                handlesExpansion = function (name, passedName, nameStack) {
+                    events = events || manager.directive(EVENTS);
+                    if (!ALL_EVENTS_HASH[name]) {
+                        manager.mark(CUSTOM_LISTENER);
+                    }
+                    events.attach(name, {
+                        capturing: !!capture,
+                        origin: manager,
+                        handler: handler,
+                        group: group,
+                        selector: selector,
+                        passedName: passedName,
+                        domName: name,
+                        domTarget: manager,
+                        nameStack: nameStack
+                    });
+                };
+            duff(spaceList, function (evnt) {
+                handlesExpansion(evnt, evnt, [evnt]);
+            });
+            duff(spaceList, eventExpander(manager.owner.events.expanders, handlesExpansion));
             if (!wasCustom && manager.is(CUSTOM_LISTENER)) {
                 markCustom(manager, BOOLEAN_TRUE);
                 manager.remark(ATTACHED, isAttached(manager.element(), manager.owner));
@@ -9197,7 +9203,6 @@ app.scope(function (app) {
                     element = windo.element();
                 if (windo.is(ACCESSABLE)) {
                     message = parse(message_);
-                    // if (handler) {
                     (handler || receivePostMessage)({
                         // this can be expanded a bit when you get some time
                         srcElement: element,
@@ -9207,7 +9212,6 @@ app.scope(function (app) {
                         }
                     });
                     return this;
-                    // }
                 }
                 wraptry(function () {
                     // do not parse message so it can be sent as is
@@ -11021,7 +11025,7 @@ app.scope(function (app) {
                         object = makeDelegateEventKeys(view.cid, directive.uiBindings, key),
                         bound = object.fn = bindTo(isString(method) ? view[method] : method, view);
                     __events.push(object);
-                    el.on(object.events, object[SELECTOR], bound, object.capture, object.group);
+                    el.on(object.events, object[SELECTOR] || NULL, bound, object.capture, object.group);
                 });
                 directive.cachedElementBindings = __events;
                 return directive;
@@ -11035,7 +11039,7 @@ app.scope(function (app) {
                     return directive;
                 }
                 duff(elementBindings, function (binding) {
-                    el.off(binding.events, binding[SELECTOR], binding.fn);
+                    el.off(binding.events, binding[SELECTOR] || NULL, binding.fn);
                 });
                 directive.cachedElementBindings = UNDEFINED;
                 return directive;
