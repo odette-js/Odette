@@ -702,7 +702,7 @@ app.scope(function (app) {
                         object = makeDelegateEventKeys(view.cid, directive.uiBindings, key),
                         bound = object.fn = bindTo(isString(method) ? view[method] : method, view);
                     __events.push(object);
-                    el.on(object.events, object[SELECTOR], bound, object.capture, object.group);
+                    el.on(object.events, object[SELECTOR] || NULL, bound, object.capture, object.group);
                 });
                 directive.cachedElementBindings = __events;
                 return directive;
@@ -716,7 +716,7 @@ app.scope(function (app) {
                     return directive;
                 }
                 duff(elementBindings, function (binding) {
-                    el.off(binding.events, binding[SELECTOR], binding.fn);
+                    el.off(binding.events, binding[SELECTOR] || NULL, binding.fn);
                 });
                 directive.cachedElementBindings = UNDEFINED;
                 return directive;
