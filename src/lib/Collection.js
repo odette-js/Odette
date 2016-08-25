@@ -199,7 +199,7 @@ app.scope(function (app) {
                 return cached;
             }
         }),
-        recreatingSelfCollection = toArray('eq,where,whereNot,map,results,filter,cycle,uncycle,flatten,gather'),
+        recreatingSelfCollection = toArray('eq,where,whereNot,map,results,filter,cycle,uncycle,flatten,gather,unique'),
         eachHandlers = {
             each: duff,
             duff: duff,

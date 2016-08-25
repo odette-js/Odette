@@ -297,6 +297,8 @@ app.scope(function (app) {
             dispatchEvent: function (name, data, options) {
                 var bus, evnt, eventValidation, returnValue, eventer = this,
                     eventsDirective = eventer[EVENTS];
+                // if (options && options.bubbles) {
+                //     eventsDirective.dispatchEvent(name, data, options); }
                 if (!eventsDirective || !eventsDirective.has(name) || eventsDirective.running[name] || eventsDirective.queued[name] || !(eventValidation = eventsDirective.validate(name, data, options))) {
                     return;
                 }

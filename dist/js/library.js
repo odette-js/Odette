@@ -1011,6 +1011,13 @@ var factories = {},
             return memo;
         }, isArrayResult ? [] : {});
     },
+    unique = function (list) {
+        return foldl(list, function (memo, item) {
+            if (indexOf(memo, item) === -1) {
+                memo.push(item);
+            }
+        }, []);
+    },
     where = function (obj, attrs) {
         return filter(obj, matches(attrs));
     },
@@ -3004,7 +3011,7 @@ app.scope(function (app) {
                 return cached;
             }
         }),
-        recreatingSelfCollection = toArray('eq,where,whereNot,map,results,filter,cycle,uncycle,flatten,gather'),
+        recreatingSelfCollection = toArray('eq,where,whereNot,map,results,filter,cycle,uncycle,flatten,gather,unique'),
         eachHandlers = {
             each: duff,
             duff: duff,
@@ -3799,6 +3806,8 @@ app.scope(function (app) {
             dispatchEvent: function (name, data, options) {
                 var bus, evnt, eventValidation, returnValue, eventer = this,
                     eventsDirective = eventer[EVENTS];
+                // if (options && options.bubbles) {
+                //     eventsDirective.dispatchEvent(name, data, options); }
                 if (!eventsDirective || !eventsDirective.has(name) || eventsDirective.running[name] || eventsDirective.queued[name] || !(eventValidation = eventsDirective.validate(name, data, options))) {
                     return;
                 }

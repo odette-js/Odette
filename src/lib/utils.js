@@ -901,6 +901,13 @@ var factories = {},
             return memo;
         }, isArrayResult ? [] : {});
     },
+    unique = function (list) {
+        return foldl(list, function (memo, item) {
+            if (indexOf(memo, item) === -1) {
+                memo.push(item);
+            }
+        }, []);
+    },
     where = function (obj, attrs) {
         return filter(obj, matches(attrs));
     },
@@ -1481,6 +1488,7 @@ var factories = {},
         once: once,
         each: each,
         flows: flows,
+        unique: unique,
         baseClamp: baseClamp,
         has: has,
         negate: negate,
