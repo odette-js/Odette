@@ -7232,7 +7232,7 @@ app.scope(function (app) {
                 key = kebabCase(_key),
                 sliced = _key.slice(0, 5);
             if (dataString !== sliced) {
-                key = dataString + _key;
+                key = dataString + key;
             }
             return key;
         },
