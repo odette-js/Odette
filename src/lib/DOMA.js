@@ -1462,7 +1462,7 @@ app.scope(function (app) {
         makeDataKey = function (_key) {
             var dataString = 'data-',
                 key = kebabCase(_key),
-                sliced = _key.slice(0, 5);
+                sliced = key.slice(0, 5);
             if (dataString !== sliced) {
                 key = dataString + key;
             }
