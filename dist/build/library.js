@@ -7381,7 +7381,8 @@ app.scope(function (app) {
                     stack.push(name);
                 }
                 if (expanders[name] && !hadInList) {
-                    duff(expanders[name], eventExpander(expanders, fn, stack));
+                    duff(expanders[name], eventExpander(expanders, fn, stack.slice(0)));
+                    return BOOLEAN_TRUE;
                 } else {
                     fn(name, stack[0], stack.slice(0));
                 }
@@ -7435,8 +7436,9 @@ app.scope(function (app) {
                 },
                 expansion = eventExpander(manager.owner.events.expanders, handlesExpansion);
             duff(spaceList, function (evnt) {
-                expansion(evnt);
-                handlesExpansion(evnt, evnt, [evnt]);
+                if (expansion(evnt)) {
+                    handlesExpansion(evnt, evnt, [evnt]);
+                }
             });
             if (!wasCustom && manager.is(CUSTOM_LISTENER)) {
                 markCustom(manager, BOOLEAN_TRUE);
