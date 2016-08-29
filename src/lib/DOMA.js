@@ -1614,6 +1614,7 @@ app.scope(function (app) {
                 }
                 if (expanders[name] && !hadInList) {
                     duff(expanders[name], eventExpander(expanders, fn, stack.slice(0)));
+                    stack.pop();
                     return BOOLEAN_TRUE;
                 } else {
                     fn(name, stack[0], stack.slice(0));
