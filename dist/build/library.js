@@ -86,6 +86,13 @@ var UNDEFINED, win = window,
     BODY = 'body',
     BOOLEAN_TRUE = !0,
     BOOLEAN_FALSE = !1,
+    INFINITY = 1 / 0,
+    MAX_SAFE_INTEGER = 9007199254740991,
+    MAX_INTEGER = 1.7976931348623157e+308,
+    NAN = 0 / 0,
+    MAX_ARRAY_LENGTH = 4294967295,
+    MAX_ARRAY_INDEX = MAX_ARRAY_LENGTH - 1,
+    HALF_MAX_ARRAY_LENGTH = MAX_ARRAY_LENGTH >>> 1,
     INFINITY = Infinity,
     NEGATIVE_INFINITY = -INFINITY,
     BIG_INTEGER = 32767,
@@ -1143,17 +1150,33 @@ var factories = {},
         return number;
     },
     safeInteger = function (number_) {
-        return baseClamp(number_, MIN_SAFE_VALUE, MAX_SAFE_VALUE);
+        return baseClamp(number_, -MAX_SAFE_INTEGER, MAX_SAFE_INTEGER);
     },
     isValidInteger = function (number) {
-        return number < MAX_VALUE && number > MIN_VALUE;
+        return number < MAX_INTEGER && number > -MAX_INTEGER;
     },
     clampInteger = function (number) {
-        return baseClamp(number, MIN_VALUE, MAX_VALUE);
+        return baseClamp(number, -MAX_INTEGER, MAX_INTEGER);
     },
     floatToInteger = function (value) {
         var remainder = value % 1;
         return value === value ? (remainder ? value - remainder : value) : 0;
+    },
+    toFinite = function (value) {
+        if (!value) {
+            return value === 0 ? value : 0;
+        }
+        value = toNumber(value);
+        if (value === INFINITY || value === -INFINITY) {
+            var sign = (value < 0 ? -1 : 1);
+            return sign * MAX_INTEGER;
+        }
+        return value === value ? value : 0;
+    },
+    toInteger = function (value) {
+        var result = toFinite(value),
+            remainder = result % 1;
+        return result === result ? (remainder ? result - remainder : result) : 0;
     },
     toInteger = function (number, notSafe) {
         var converted;
