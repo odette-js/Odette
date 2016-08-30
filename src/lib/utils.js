@@ -100,7 +100,7 @@ var factories = {},
     sort = function (obj, fn_, reversed, context) {
         var fn = bindTo(fn_ || function (a, b) {
             return a > b;
-        }, context);
+        }, context || obj);
         // normalize sort function handling for safari
         return obj.sort(function (a, b) {
             var result = fn(a, b);

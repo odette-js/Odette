@@ -342,6 +342,7 @@ app.scope(function (app) {
             keep: parody(REGISTRY, 'keep'),
             drop: parody(REGISTRY, 'drop'),
             swap: parody(REGISTRY, 'swap'),
+            comparator: function () {},
             constructor: function (items) {
                 this.reset(items);
                 return this;
@@ -391,7 +392,7 @@ app.scope(function (app) {
             sort: function (fn_) {
                 // normalization sort function for cross browsers
                 var list = this;
-                sort(list.toArray(), fn_, list.is(REVERSED), list);
+                sort(list.toArray(), fn_ || this.comparator, list.is(REVERSED), list);
                 return list;
             },
             sortBy: function (key, fn_) {
