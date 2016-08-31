@@ -436,21 +436,23 @@ app.scope(function (app) {
                     return model;
                 }
                 dataDirective = model.directive(DATA);
-                model.digest(function () {
-                    duff(list, function (name) {
-                        dataDirective.changing[name] = BOOLEAN_TRUE;
-                        model[DISPATCH_EVENT](CHANGE_COLON + name);
-                        dataDirective.changing[name] = BOOLEAN_FALSE;
-                    });
+                model.digest(list, function (name) {
+                    dataDirective.changing[name] = BOOLEAN_TRUE;
+                    model[DISPATCH_EVENT](CHANGE_COLON + name);
+                    dataDirective.changing[name] = BOOLEAN_FALSE;
                 });
                 return model;
             },
-            digest: function (handler) {
+            digest: function (handler, fn) {
                 var model = this,
                     // cache the data directive in case it gets swapped out
                     dataDirective = model.directive(DATA);
                 dataDirective.increment();
-                handler();
+                if (isFunction(handler)) {
+                    handler();
+                } else {
+                    duff(handler, fn, model);
+                }
                 dataDirective.decrement();
                 // this event should only ever exist here
                 if (dataDirective.static()) {
