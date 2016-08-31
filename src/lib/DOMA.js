@@ -1651,7 +1651,7 @@ app.scope(function (app) {
                 wasCustom = manager.is(CUSTOM),
                 spaceList = toArray(eventNames, SPACE),
                 handlesExpansion = function (name, passedName, nameStack) {
-                    events = events || manager.directive(EVENTS);
+                    events = events || manager.directive(EVENT_MANAGER);
                     if (!ALL_EVENTS_HASH[name]) {
                         manager.mark(CUSTOM_LISTENER);
                     }
@@ -3591,7 +3591,7 @@ app.scope(function (app) {
                 }
                 manager[DISPATCH_EVENT](DESTROY);
                 // destroy events
-                manager.directiveDestruction(EVENTS);
+                manager.directiveDestruction(EVENT_MANAGER);
                 // remove from global hash
                 manager.owner.data.remove(element);
                 manager[STOP_LISTENING]();
@@ -3658,7 +3658,7 @@ app.scope(function (app) {
             var selector = selector_,
                 manager = elementSwapper[selector] ? ((selector = '') || elementSwapper[selector_](manager_)) : manager_,
                 capture = !!capture_,
-                directive = manager.directive(EVENTS),
+                directive = manager.directive(EVENT_MANAGER),
                 removeFromList = function (list, name) {
                     return list.obliteration(function (obj) {
                         if ((!name || name === obj.passedName) && (!handler || obj.handler === handler) && (!group || obj.group === group) && (!selector || obj.selector === selector)) {

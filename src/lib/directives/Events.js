@@ -300,5 +300,5 @@ app.scope(function (app) {
                 return !!bus;
             }
         });
-    app.defineDirective(EVENTS, factories.EventsDirective[CONSTRUCTOR]);
+    app.defineDirective(EVENT_MANAGER, factories.EventsDirective[CONSTRUCTOR]);
 });

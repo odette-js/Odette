@@ -1,6 +1,6 @@
 var CHILDREN = capitalize(CHILD + 'ren'),
     CHILD_OPTIONS = CHILD + 'Options',
-    CHILD_EVENTS = CHILD + EVENTS_STRING;
+    CHILD_EVENTS = CHILD + EVENT_STRING;
 app.scope(function (app) {
     var Events = factories.Events,
         List = factories.Collection,
@@ -18,7 +18,7 @@ app.scope(function (app) {
         _delegateChildEvents = function (parent, model) {
             var childsEventDirective, childEvents = result(parent, CHILD_EVENTS);
             if (model && childEvents) {
-                childsEventDirective = model.directive(EVENTS);
+                childsEventDirective = model.directive(EVENT_MANAGER);
                 // stash them
                 childsEventDirective[_PARENT_DELEGATED_CHILD_EVENTS] = childEvents;
                 parent.listenTo(model, childEvents);
@@ -27,7 +27,7 @@ app.scope(function (app) {
         // ties child events to new child
         _unDelegateChildEvents = function (parent, model) {
             var childsEventDirective;
-            if (model && parent[STOP_LISTENING] && (childsEventDirective = model[EVENTS]) && childsEventDirective[_PARENT_DELEGATED_CHILD_EVENTS]) {
+            if (model && parent[STOP_LISTENING] && (childsEventDirective = model[EVENT_MANAGER]) && childsEventDirective[_PARENT_DELEGATED_CHILD_EVENTS]) {
                 parent[STOP_LISTENING](model, model[_PARENT_DELEGATED_CHILD_EVENTS]);
                 childsEventDirective[_PARENT_DELEGATED_CHILD_EVENTS] = UNDEFINED;
             }
@@ -36,7 +36,7 @@ app.scope(function (app) {
             var childsEventDirective, parent = model[PARENT],
                 parentEvents = result(model, PARENT + 'Events');
             if (parent && parentEvents) {
-                childsEventDirective = model.directive(EVENTS);
+                childsEventDirective = model.directive(EVENT_MANAGER);
                 childsEventDirective[_DELEGATED_CHILD_EVENTS] = parentEvents;
                 model.listenTo(parent, parentEvents);
             }
@@ -44,7 +44,7 @@ app.scope(function (app) {
         // ties child events to new child
         _unDelegateParentEvents = function (parent, model) {
             var childsEventDirective;
-            if (model[STOP_LISTENING] && (childsEventDirective = model[EVENTS]) && childsEventDirective[_DELEGATED_CHILD_EVENTS]) {
+            if (model[STOP_LISTENING] && (childsEventDirective = model[EVENT_MANAGER]) && childsEventDirective[_DELEGATED_CHILD_EVENTS]) {
                 model[STOP_LISTENING](parent, model[_DELEGATED_CHILD_EVENTS]);
                 childsEventDirective[_DELEGATED_CHILD_EVENTS] = UNDEFINED;
             }
@@ -343,7 +343,6 @@ app.scope(function (app) {
                 this.modified([key]);
                 return result;
             },
-            // checkParody(DATA, 'unset', BOOLEAN_FALSE),
             /**
              * @description returns attribute passed into
              * @param {String} attr - property string that is being gotten from the attributes object
@@ -369,7 +368,7 @@ app.scope(function (app) {
             constructor: function (attributes, secondary) {
                 var model = this;
                 model.reset(attributes);
-                this[CONSTRUCTOR + COLON + EVENTS_STRING](secondary);
+                this[CONSTRUCTOR + COLON + EVENT_STRING](secondary);
                 return model;
             },
             defaults: function () {
@@ -410,6 +409,7 @@ app.scope(function (app) {
              * @returns {Model} instance
              */
             destroy: function () {
+                // just a wrapper around the parent
                 Parent.fn.destroy.call(this);
                 delete this.id;
                 return this;
@@ -418,14 +418,11 @@ app.scope(function (app) {
                 var changedList = [],
                     model = this,
                     dataDirective = model.directive(DATA),
-                    previous = {},
-                    eventsDirective;
+                    previous = {};
                 intendedObject(key, value, function (key, value) {
                     // defconinitely set the value, and let us know what happened
                     // and if you're not changing already, (already)
                     if (dataDirective.set(key, value) && !dataDirective.changing[name]) {
-                        eventsDirective = eventsDirective || model.directive(EVENTS);
-                        // eventsDirective.queueStack(CHANGE_COLON + key);
                         changedList.push(key);
                     }
                 });
@@ -434,17 +431,15 @@ app.scope(function (app) {
             },
             modified: function (list) {
                 var dataDirective, model = this;
-                // do not digest... this time
-                if (!list[LENGTH]) {
+                if (!list || !list[LENGTH]) {
+                    // do not digest... this time
                     return model;
                 }
                 dataDirective = model.directive(DATA);
                 model.digest(function () {
                     duff(list, function (name) {
-                        var eventName = CHANGE_COLON + name,
-                            previous = dataDirective.changing[name];
                         dataDirective.changing[name] = BOOLEAN_TRUE;
-                        model[DISPATCH_EVENT](eventName);
+                        model[DISPATCH_EVENT](CHANGE_COLON + name);
                         dataDirective.changing[name] = BOOLEAN_FALSE;
                     });
                 });
@@ -452,13 +447,16 @@ app.scope(function (app) {
             },
             digest: function (handler) {
                 var model = this,
+                    // cache the data directive in case it gets swapped out
                     dataDirective = model.directive(DATA);
                 dataDirective.increment();
                 handler();
                 dataDirective.decrement();
                 // this event should only ever exist here
                 if (dataDirective.static()) {
+                    dataDirective.increment();
                     model[DISPATCH_EVENT](CHANGE, dataDirective[CHANGING]);
+                    dataDirective.decrement();
                     dataDirective.finish();
                 }
             },

@@ -3532,9 +3532,9 @@ var Messenger = factories.Directive.extend('Messenger', {
     }
 });
 app.defineDirective('Messenger', Messenger);
-var EVENTS_STRING = 'Events',
+var EVENT_STRING = 'Events',
     DISPATCH_EVENT = 'dispatchEvent',
-    EVENTS = 'EventManager',
+    EVENT_MANAGER = 'EventManager',
     STOP_LISTENING = 'stopListening',
     TALKER_ID = 'talkerId',
     LISTENING_TO = 'listeningTo',
@@ -3567,7 +3567,7 @@ app.scope(function (app) {
                 }
                 args = toArray(arguments);
                 intendedObject(args[_nameOrObjectIndex], args[_nameOrObjectIndex + 1], function (key, value, isObj) {
-                    eventsDirective = eventsDirective || eventer.directive(EVENTS);
+                    eventsDirective = eventsDirective || eventer.directive(EVENT_MANAGER);
                     if (firstTimeRound && isObj) {
                         // make room for one more
                         args.splice(_nameOrObjectIndex, _nameOrObjectIndex + 1, NULL);
@@ -3613,9 +3613,9 @@ app.scope(function (app) {
                 if (nameOrObjectIndex && !args[0]) {
                     return ret;
                 }
-                eventerDirective = eventer.directive(EVENTS);
+                eventerDirective = eventer.directive(EVENT_MANAGER);
                 if (nameOrObjectIndex) {
-                    targetDirective = args[0].directive(EVENTS);
+                    targetDirective = args[0].directive(EVENT_MANAGER);
                 } else {
                     targetDirective = eventerDirective;
                 }
@@ -3644,7 +3644,7 @@ app.scope(function (app) {
         },
         listenToModifier = function (eventer, targetDirective, obj, target) {
             var valid, listeningObject = retreiveListeningObject(eventer, target),
-                eventsDirective = target.directive(EVENTS),
+                eventsDirective = target.directive(EVENT_MANAGER),
                 handlers = eventsDirective[HANDLERS] = eventsDirective[HANDLERS] || {};
             listeningObject.count++;
             obj.listening = listeningObject;
@@ -3677,8 +3677,8 @@ app.scope(function (app) {
         onFiller = onFillerMaker(2),
         listenToFiller = onFillerMaker(3),
         retreiveListeningObject = function (listener, talker) {
-            var listening, listenerDirective = listener.directive(EVENTS),
-                talkerDirective = talker.directive(EVENTS),
+            var listening, listenerDirective = listener.directive(EVENT_MANAGER),
+                talkerDirective = talker.directive(EVENT_MANAGER),
                 talkerId = talkerDirective[TALKER_ID],
                 listeningTo = listenerDirective[LISTENING_TO];
             if (talkerId && (listening = listeningTo[talkerId])) {
@@ -3706,7 +3706,7 @@ app.scope(function (app) {
             listenToHandler(eventer, directive, obj, list, onceModification);
         },
         uniqueKey = 'c',
-        Events = factories[EVENTS_STRING] = factories.Directive.extend(EVENTS_STRING, {
+        Events = factories[EVENT_STRING] = factories.Directive.extend(EVENT_STRING, {
             /**
              * @description attach event handlers to the Model event loop
              * @func
@@ -3718,7 +3718,7 @@ app.scope(function (app) {
              */
             // uniqueKey: 'c',
             initialize: noop,
-            bubble: parody(EVENTS, 'bubble'),
+            bubble: parody(EVENT_MANAGER, 'bubble'),
             // onUntil: flattenMatrix(untilHandler),
             on: flattenMatrix(attachEventObject, 0, 3, onFiller),
             once: flattenMatrix(onceHandler, 0, 3, onFiller),
@@ -3760,7 +3760,7 @@ app.scope(function (app) {
             off: function (name_, fn_, context_) {
                 var context, currentObj, eventer = this,
                     name = name_,
-                    events = eventer[EVENTS];
+                    events = eventer[EVENT_MANAGER];
                 if (!events) {
                     return;
                 }
@@ -3790,12 +3790,12 @@ app.scope(function (app) {
             stopListening: function (target, name, callback) {
                 var listeningTo, notTalking, ids, targetEventsDirective, stillListening = 0,
                     origin = this,
-                    originEventsDirective = origin[EVENTS];
+                    originEventsDirective = origin[EVENT_MANAGER];
                 if (!originEventsDirective) {
                     return origin;
                 }
                 listeningTo = originEventsDirective[LISTENING_TO];
-                notTalking = (target && !(targetEventsDirective = target[EVENTS]));
+                notTalking = (target && !(targetEventsDirective = target[EVENT_MANAGER]));
                 if (notTalking) {
                     return origin;
                 }
@@ -3830,7 +3830,7 @@ app.scope(function (app) {
             },
             dispatchEvent: function (name, data, options) {
                 var bus, evnt, eventValidation, returnValue, eventer = this,
-                    eventsDirective = eventer[EVENTS];
+                    eventsDirective = eventer[EVENT_MANAGER];
                 // if (options && options.bubbles) {
                 //     eventsDirective.dispatchEvent(name, data, options); }
                 if (!eventsDirective || !eventsDirective.has(name) || eventsDirective.running[name] || eventsDirective.queued[name] || !(eventValidation = eventsDirective.validate(name, data, options))) {
@@ -3849,7 +3849,7 @@ app.scope(function (app) {
 });
 var CHILDREN = capitalize(CHILD + 'ren'),
     CHILD_OPTIONS = CHILD + 'Options',
-    CHILD_EVENTS = CHILD + EVENTS_STRING;
+    CHILD_EVENTS = CHILD + EVENT_STRING;
 app.scope(function (app) {
     var Events = factories.Events,
         List = factories.Collection,
@@ -3867,7 +3867,7 @@ app.scope(function (app) {
         _delegateChildEvents = function (parent, model) {
             var childsEventDirective, childEvents = result(parent, CHILD_EVENTS);
             if (model && childEvents) {
-                childsEventDirective = model.directive(EVENTS);
+                childsEventDirective = model.directive(EVENT_MANAGER);
                 // stash them
                 childsEventDirective[_PARENT_DELEGATED_CHILD_EVENTS] = childEvents;
                 parent.listenTo(model, childEvents);
@@ -3876,7 +3876,7 @@ app.scope(function (app) {
         // ties child events to new child
         _unDelegateChildEvents = function (parent, model) {
             var childsEventDirective;
-            if (model && parent[STOP_LISTENING] && (childsEventDirective = model[EVENTS]) && childsEventDirective[_PARENT_DELEGATED_CHILD_EVENTS]) {
+            if (model && parent[STOP_LISTENING] && (childsEventDirective = model[EVENT_MANAGER]) && childsEventDirective[_PARENT_DELEGATED_CHILD_EVENTS]) {
                 parent[STOP_LISTENING](model, model[_PARENT_DELEGATED_CHILD_EVENTS]);
                 childsEventDirective[_PARENT_DELEGATED_CHILD_EVENTS] = UNDEFINED;
             }
@@ -3885,7 +3885,7 @@ app.scope(function (app) {
             var childsEventDirective, parent = model[PARENT],
                 parentEvents = result(model, PARENT + 'Events');
             if (parent && parentEvents) {
-                childsEventDirective = model.directive(EVENTS);
+                childsEventDirective = model.directive(EVENT_MANAGER);
                 childsEventDirective[_DELEGATED_CHILD_EVENTS] = parentEvents;
                 model.listenTo(parent, parentEvents);
             }
@@ -3893,7 +3893,7 @@ app.scope(function (app) {
         // ties child events to new child
         _unDelegateParentEvents = function (parent, model) {
             var childsEventDirective;
-            if (model[STOP_LISTENING] && (childsEventDirective = model[EVENTS]) && childsEventDirective[_DELEGATED_CHILD_EVENTS]) {
+            if (model[STOP_LISTENING] && (childsEventDirective = model[EVENT_MANAGER]) && childsEventDirective[_DELEGATED_CHILD_EVENTS]) {
                 model[STOP_LISTENING](parent, model[_DELEGATED_CHILD_EVENTS]);
                 childsEventDirective[_DELEGATED_CHILD_EVENTS] = UNDEFINED;
             }
@@ -4192,7 +4192,6 @@ app.scope(function (app) {
                 this.modified([key]);
                 return result;
             },
-            // checkParody(DATA, 'unset', BOOLEAN_FALSE),
             /**
              * @description returns attribute passed into
              * @param {String} attr - property string that is being gotten from the attributes object
@@ -4218,7 +4217,7 @@ app.scope(function (app) {
             constructor: function (attributes, secondary) {
                 var model = this;
                 model.reset(attributes);
-                this[CONSTRUCTOR + COLON + EVENTS_STRING](secondary);
+                this[CONSTRUCTOR + COLON + EVENT_STRING](secondary);
                 return model;
             },
             defaults: function () {
@@ -4259,6 +4258,7 @@ app.scope(function (app) {
              * @returns {Model} instance
              */
             destroy: function () {
+                // just a wrapper around the parent
                 Parent.fn.destroy.call(this);
                 delete this.id;
                 return this;
@@ -4267,14 +4267,11 @@ app.scope(function (app) {
                 var changedList = [],
                     model = this,
                     dataDirective = model.directive(DATA),
-                    previous = {},
-                    eventsDirective;
+                    previous = {};
                 intendedObject(key, value, function (key, value) {
                     // defconinitely set the value, and let us know what happened
                     // and if you're not changing already, (already)
                     if (dataDirective.set(key, value) && !dataDirective.changing[name]) {
-                        eventsDirective = eventsDirective || model.directive(EVENTS);
-                        // eventsDirective.queueStack(CHANGE_COLON + key);
                         changedList.push(key);
                     }
                 });
@@ -4283,17 +4280,15 @@ app.scope(function (app) {
             },
             modified: function (list) {
                 var dataDirective, model = this;
-                // do not digest... this time
-                if (!list[LENGTH]) {
+                if (!list || !list[LENGTH]) {
+                    // do not digest... this time
                     return model;
                 }
                 dataDirective = model.directive(DATA);
                 model.digest(function () {
                     duff(list, function (name) {
-                        var eventName = CHANGE_COLON + name,
-                            previous = dataDirective.changing[name];
                         dataDirective.changing[name] = BOOLEAN_TRUE;
-                        model[DISPATCH_EVENT](eventName);
+                        model[DISPATCH_EVENT](CHANGE_COLON + name);
                         dataDirective.changing[name] = BOOLEAN_FALSE;
                     });
                 });
@@ -4301,13 +4296,16 @@ app.scope(function (app) {
             },
             digest: function (handler) {
                 var model = this,
+                    // cache the data directive in case it gets swapped out
                     dataDirective = model.directive(DATA);
                 dataDirective.increment();
                 handler();
                 dataDirective.decrement();
                 // this event should only ever exist here
                 if (dataDirective.static()) {
+                    dataDirective.increment();
                     model[DISPATCH_EVENT](CHANGE, dataDirective[CHANGING]);
+                    dataDirective.decrement();
                     dataDirective.finish();
                 }
             },
@@ -4652,7 +4650,7 @@ app.scope(function (app) {
                 return !!bus;
             }
         });
-    app.defineDirective(EVENTS, factories.EventsDirective[CONSTRUCTOR]);
+    app.defineDirective(EVENT_MANAGER, factories.EventsDirective[CONSTRUCTOR]);
 });
 app.scope(function (app) {
     var CHANGE_COUNTER = 'counter',
@@ -7443,7 +7441,7 @@ app.scope(function (app) {
                 wasCustom = manager.is(CUSTOM),
                 spaceList = toArray(eventNames, SPACE),
                 handlesExpansion = function (name, passedName, nameStack) {
-                    events = events || manager.directive(EVENTS);
+                    events = events || manager.directive(EVENT_MANAGER);
                     if (!ALL_EVENTS_HASH[name]) {
                         manager.mark(CUSTOM_LISTENER);
                     }
@@ -9383,7 +9381,7 @@ app.scope(function (app) {
                 }
                 manager[DISPATCH_EVENT](DESTROY);
                 // destroy events
-                manager.directiveDestruction(EVENTS);
+                manager.directiveDestruction(EVENT_MANAGER);
                 // remove from global hash
                 manager.owner.data.remove(element);
                 manager[STOP_LISTENING]();
@@ -9450,7 +9448,7 @@ app.scope(function (app) {
             var selector = selector_,
                 manager = elementSwapper[selector] ? ((selector = '') || elementSwapper[selector_](manager_)) : manager_,
                 capture = !!capture_,
-                directive = manager.directive(EVENTS),
+                directive = manager.directive(EVENT_MANAGER),
                 removeFromList = function (list, name) {
                     return list.obliteration(function (obj) {
                         if ((!name || name === obj.passedName) && (!handler || obj.handler === handler) && (!group || obj.group === group) && (!selector || obj.selector === selector)) {

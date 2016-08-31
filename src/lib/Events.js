@@ -1,6 +1,6 @@
-var EVENTS_STRING = 'Events',
+var EVENT_STRING = 'Events',
     DISPATCH_EVENT = 'dispatchEvent',
-    EVENTS = 'EventManager',
+    EVENT_MANAGER = 'EventManager',
     STOP_LISTENING = 'stopListening',
     TALKER_ID = 'talkerId',
     LISTENING_TO = 'listeningTo',
@@ -33,7 +33,7 @@ app.scope(function (app) {
                 }
                 args = toArray(arguments);
                 intendedObject(args[_nameOrObjectIndex], args[_nameOrObjectIndex + 1], function (key, value, isObj) {
-                    eventsDirective = eventsDirective || eventer.directive(EVENTS);
+                    eventsDirective = eventsDirective || eventer.directive(EVENT_MANAGER);
                     if (firstTimeRound && isObj) {
                         // make room for one more
                         args.splice(_nameOrObjectIndex, _nameOrObjectIndex + 1, NULL);
@@ -79,9 +79,9 @@ app.scope(function (app) {
                 if (nameOrObjectIndex && !args[0]) {
                     return ret;
                 }
-                eventerDirective = eventer.directive(EVENTS);
+                eventerDirective = eventer.directive(EVENT_MANAGER);
                 if (nameOrObjectIndex) {
-                    targetDirective = args[0].directive(EVENTS);
+                    targetDirective = args[0].directive(EVENT_MANAGER);
                 } else {
                     targetDirective = eventerDirective;
                 }
@@ -110,7 +110,7 @@ app.scope(function (app) {
         },
         listenToModifier = function (eventer, targetDirective, obj, target) {
             var valid, listeningObject = retreiveListeningObject(eventer, target),
-                eventsDirective = target.directive(EVENTS),
+                eventsDirective = target.directive(EVENT_MANAGER),
                 handlers = eventsDirective[HANDLERS] = eventsDirective[HANDLERS] || {};
             listeningObject.count++;
             obj.listening = listeningObject;
@@ -143,8 +143,8 @@ app.scope(function (app) {
         onFiller = onFillerMaker(2),
         listenToFiller = onFillerMaker(3),
         retreiveListeningObject = function (listener, talker) {
-            var listening, listenerDirective = listener.directive(EVENTS),
-                talkerDirective = talker.directive(EVENTS),
+            var listening, listenerDirective = listener.directive(EVENT_MANAGER),
+                talkerDirective = talker.directive(EVENT_MANAGER),
                 talkerId = talkerDirective[TALKER_ID],
                 listeningTo = listenerDirective[LISTENING_TO];
             if (talkerId && (listening = listeningTo[talkerId])) {
@@ -172,7 +172,7 @@ app.scope(function (app) {
             listenToHandler(eventer, directive, obj, list, onceModification);
         },
         uniqueKey = 'c',
-        Events = factories[EVENTS_STRING] = factories.Directive.extend(EVENTS_STRING, {
+        Events = factories[EVENT_STRING] = factories.Directive.extend(EVENT_STRING, {
             /**
              * @description attach event handlers to the Model event loop
              * @func
@@ -184,7 +184,7 @@ app.scope(function (app) {
              */
             // uniqueKey: 'c',
             initialize: noop,
-            bubble: parody(EVENTS, 'bubble'),
+            bubble: parody(EVENT_MANAGER, 'bubble'),
             // onUntil: flattenMatrix(untilHandler),
             on: flattenMatrix(attachEventObject, 0, 3, onFiller),
             once: flattenMatrix(onceHandler, 0, 3, onFiller),
@@ -226,7 +226,7 @@ app.scope(function (app) {
             off: function (name_, fn_, context_) {
                 var context, currentObj, eventer = this,
                     name = name_,
-                    events = eventer[EVENTS];
+                    events = eventer[EVENT_MANAGER];
                 if (!events) {
                     return;
                 }
@@ -256,12 +256,12 @@ app.scope(function (app) {
             stopListening: function (target, name, callback) {
                 var listeningTo, notTalking, ids, targetEventsDirective, stillListening = 0,
                     origin = this,
-                    originEventsDirective = origin[EVENTS];
+                    originEventsDirective = origin[EVENT_MANAGER];
                 if (!originEventsDirective) {
                     return origin;
                 }
                 listeningTo = originEventsDirective[LISTENING_TO];
-                notTalking = (target && !(targetEventsDirective = target[EVENTS]));
+                notTalking = (target && !(targetEventsDirective = target[EVENT_MANAGER]));
                 if (notTalking) {
                     return origin;
                 }
@@ -296,7 +296,7 @@ app.scope(function (app) {
             },
             dispatchEvent: function (name, data, options) {
                 var bus, evnt, eventValidation, returnValue, eventer = this,
-                    eventsDirective = eventer[EVENTS];
+                    eventsDirective = eventer[EVENT_MANAGER];
                 // if (options && options.bubbles) {
                 //     eventsDirective.dispatchEvent(name, data, options); }
                 if (!eventsDirective || !eventsDirective.has(name) || eventsDirective.running[name] || eventsDirective.queued[name] || !(eventValidation = eventsDirective.validate(name, data, options))) {
