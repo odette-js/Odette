@@ -8409,7 +8409,7 @@ app.scope(function (app) {
             return manager.owner.$(query(selector, target, manager), target);
         },
         isAppendable = function (els) {
-            return els.isValidDomManager || isElement(els) || isFragment(els);
+            return els.isValidDomManager ? (els.is('element') || els.is('fragment')) : (isElement(els) || isFragment(els));
         },
         iframeChangeHandler = function () {
             var windo;
@@ -9058,6 +9058,9 @@ app.scope(function (app) {
                     markGlobal(manager, el);
                 }
                 if (manager.is(ELEMENT)) {
+                    if (!attributeApi.read(el, 'is')) {
+                        attributeApi.write(el, 'is', true);
+                    }
                     if (manager[REGISTERED_AS] && manager[REGISTERED_AS] !== BOOLEAN_TRUE) {
                         manager = wraptry(function () {
                             return registerAs(manager, hash, owner);

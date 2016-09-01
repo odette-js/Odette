@@ -2568,6 +2568,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 test.expect(attrs).not.toEqual(templatized[1]);
                 applyMutations(diff.mutations);
                 attrs = $root.attributes();
+                delete attrs.is;
                 test.expect(attrs).toEqual(templatized[1]);
             });
             test.it('removes nodes when needed', function () {
