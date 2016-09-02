@@ -2351,7 +2351,7 @@ app.scope(function (app) {
                             // console.log(prefixedStyles);
                             cameled = camelCase(trimmed);
                             duff(prefixedStyles[cameled], function (prefix) {
-                                memo.push('\n\t' + kebabCase(trimmed + cameled) + ':' + convertStyleValue(trimmed, block) + ';');
+                                memo.push('\n\t' + kebabCase(prefix + cameled) + ':' + convertStyleValue(trimmed, block) + ';');
                             });
                         }
                         // }
