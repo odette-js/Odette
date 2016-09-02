@@ -8115,7 +8115,7 @@ app.scope(function (app) {
                         beforeAnyMore();
                     }
                     result = foldl(json, function (memo, block, key) {
-                        var trimmed = key.trim();
+                        var cameled, trimmed = key.trim();
                         // var media = trimmed[0] === '@';
                         // if (media) {
                         // return total_.concat(medium[trimmed.split(' ').shift()](json, trimmed, total));
@@ -8140,7 +8140,11 @@ app.scope(function (app) {
                             opensBlock();
                             closesBlock = closeBlock(memo);
                             // always on the same line
-                            memo.push('\n\t' + kebabCase(trimmed) + ':' + convertStyleValue(trimmed, block) + ';');
+                            // console.log(prefixedStyles);
+                            cameled = camelCase(trimmed);
+                            duff(prefixedStyles[cameled], function (prefix) {
+                                memo.push('\n\t' + kebabCase(trimmed + cameled) + ':' + convertStyleValue(trimmed, block) + ';');
+                            });
                         }
                         // }
                     }, memo);
