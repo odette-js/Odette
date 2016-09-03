@@ -225,6 +225,7 @@ app.scope(function (app) {
             removeChildView: removeChildView,
             tagName: returns('div'),
             template: returns(BOOLEAN_FALSE),
+            canRenderAsync: returns(BOOLEAN_FALSE),
             getChildViews: function (key) {
                 return this.getRegion(key).directive(CHILDREN);
             },
@@ -658,7 +659,7 @@ app.scope(function (app) {
                 var element = this,
                     view = element.view;
                 // if it is attached and the documentview is not writing already, then queue it up
-                if (view.el.is('attached')) {
+                if (view.el.is('attached') && view.canRenderAsync()) {
                     view.mark('asyncRendering');
                     view.owner$.documentView.chunk(view.cid, bindTo(element.setState, element));
                 } else {
