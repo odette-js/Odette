@@ -414,18 +414,26 @@ app.scope(function (app) {
                 delete this.id;
                 return this;
             },
-            set: function (key, value) {
+            set: function (key, value_, returnmodified_) {
                 var changedList = [],
                     model = this,
+                    value = value_,
                     dataDirective = model.directive(DATA),
-                    previous = {};
-                intendedObject(key, value, function (key, value) {
+                    previous = {},
+                    returnmodified = returnmodified_;
+                intendedObject(key, value, function (key, value, third) {
+                    if (!returnmodified && third) {
+                        returnmodified = value_;
+                    }
                     // defconinitely set the value, and let us know what happened
                     // and if you're not changing already, (already)
                     if (dataDirective.set(key, value) && !dataDirective.changing[name]) {
                         changedList.push(key);
                     }
                 });
+                if (returnmodified) {
+                    return changedList;
+                }
                 model.modified(changedList);
                 return model;
             },

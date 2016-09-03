@@ -995,7 +995,7 @@ var factories = {},
         }, []);
     },
     toArray = function (object, delimiter) {
-        return isArrayLike(object) ? isArray(object) ? object.slice(0) : arrayLikeToArray(object) : (isString(object) ? object.split(isString(delimiter) ? delimiter : COMMA) : [object]);
+        return isArrayLike(object) ? (isArray(object) ? object.slice(0) : arrayLikeToArray(object)) : (isString(object) ? object.split(isString(delimiter) ? delimiter : COMMA) : [object]);
     },
     nonEnumerableProps = toArray('valueOf,isPrototypeOf,' + TO_STRING + ',propertyIsEnumerable,hasOwnProperty,toLocaleString'),
     flattenArray = function (list, handle, deep) {

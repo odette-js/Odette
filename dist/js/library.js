@@ -1112,7 +1112,7 @@ var factories = {},
         }, []);
     },
     toArray = function (object, delimiter) {
-        return isArrayLike(object) ? isArray(object) ? object.slice(0) : arrayLikeToArray(object) : (isString(object) ? object.split(isString(delimiter) ? delimiter : COMMA) : [object]);
+        return isArrayLike(object) ? (isArray(object) ? object.slice(0) : arrayLikeToArray(object)) : (isString(object) ? object.split(isString(delimiter) ? delimiter : COMMA) : [object]);
     },
     nonEnumerableProps = toArray('valueOf,isPrototypeOf,' + TO_STRING + ',propertyIsEnumerable,hasOwnProperty,toLocaleString'),
     flattenArray = function (list, handle, deep) {
@@ -4263,18 +4263,26 @@ app.scope(function (app) {
                 delete this.id;
                 return this;
             },
-            set: function (key, value) {
+            set: function (key, value_, returnmodified_) {
                 var changedList = [],
                     model = this,
+                    value = value_,
                     dataDirective = model.directive(DATA),
-                    previous = {};
-                intendedObject(key, value, function (key, value) {
+                    previous = {},
+                    returnmodified = returnmodified_;
+                intendedObject(key, value, function (key, value, third) {
+                    if (!returnmodified && third) {
+                        returnmodified = value_;
+                    }
                     // defconinitely set the value, and let us know what happened
                     // and if you're not changing already, (already)
                     if (dataDirective.set(key, value) && !dataDirective.changing[name]) {
                         changedList.push(key);
                     }
                 });
+                if (returnmodified) {
+                    return changedList;
+                }
                 model.modified(changedList);
                 return model;
             },
@@ -8142,8 +8150,8 @@ app.scope(function (app) {
                             // always on the same line
                             // console.log(prefixedStyles);
                             cameled = camelCase(trimmed);
-                            duff(prefixedStyles[cameled], function (prefix) {
-                                memo.push('\n\t' + prefix + kebabCase(cameled) + ':' + convertStyleValue(trimmed, block) + ';');
+                            duff(prefixedStyles[cameled] || [''], function (prefix) {
+                                memo.push('\n\t' + prefix + kebabCase(cameled) + ': ' + convertStyleValue(trimmed, block) + ';');
                             });
                         }
                         // }

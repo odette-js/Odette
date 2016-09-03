@@ -2350,8 +2350,8 @@ app.scope(function (app) {
                             // always on the same line
                             // console.log(prefixedStyles);
                             cameled = camelCase(trimmed);
-                            duff(prefixedStyles[cameled], function (prefix) {
-                                memo.push('\n\t' + prefix + kebabCase(cameled) + ':' + convertStyleValue(trimmed, block) + ';');
+                            duff(prefixedStyles[cameled] || [''], function (prefix) {
+                                memo.push('\n\t' + prefix + kebabCase(cameled) + ': ' + convertStyleValue(trimmed, block) + ';');
                             });
                         }
                         // }
