@@ -3099,7 +3099,7 @@ app.scope(function (app) {
                     if (manager.is(DOCUMENT) && (body = manager.element()[BODY])) {
                         ret = body[doc];
                     } else {
-                        if (manager.is(WINDOW)) {
+                        if (manager.is(WINDOW) && manager.is(ACCESSABLE)) {
                             ret = manager.element()[win];
                         }
                     }
