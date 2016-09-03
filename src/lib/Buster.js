@@ -156,7 +156,7 @@ app.scope(function (app) {
         connectReceived = function (e) {
             // first submit a response so the other side can flush
             var buster = this,
-                dataDirective = buster.directive(DATA);
+                dataDirective = buster.directive(DATA_MANAGER);
             if (dataDirective.get(IS_LATE)) {
                 dataDirective.set(SENT_MESSAGE_INDEX, 1);
             }
@@ -186,7 +186,7 @@ app.scope(function (app) {
         },
         response: function (original, data) {
             var buster = this,
-                originalData = original[DATA];
+                originalData = original[DATA_MANAGER];
             if (!originalData) {
                 return;
             }
@@ -230,7 +230,7 @@ app.scope(function (app) {
          */
         defineWindows: function (receiveWindow, emitWindow) {
             var buster = this,
-                busterData = buster.directive(DATA);
+                busterData = buster.directive(DATA_MANAGER);
             if (receiveWindow && receiveWindow.is(WINDOW)) {
                 // takes care of preventing duplicate handlers
                 buster.receiveWindow = receiveWindow.on(receiveWindowEvents);
@@ -258,7 +258,7 @@ app.scope(function (app) {
         setupIframe: function () {
             var emitReferrer, buster = this,
                 iframe = buster[IFRAME],
-                busterData = buster.directive(DATA),
+                busterData = buster.directive(DATA_MANAGER),
                 hrefSplit = buster.receiveWindow.element().location.href.split(ENCODED_BRACKET),
                 hrefShift = hrefSplit.shift(),
                 unshifted = hrefSplit.unshift(EMPTY_STRING),
@@ -368,7 +368,7 @@ app.scope(function (app) {
         flush: function () {
             var command, children, childrenLen, queuedMsg, i = 0,
                 buster = this,
-                dataManager = buster.directive(DATA),
+                dataManager = buster.directive(DATA_MANAGER),
                 currentIdx = dataManager.get(SENT_MESSAGE_INDEX),
                 connected = buster.is(CONNECTED),
                 initedFrom = dataManager.get('initedFromPartner'),
@@ -382,7 +382,7 @@ app.scope(function (app) {
                 childrenLen = children[LENGTH]();
                 queuedMsg = children.item(currentIdx);
                 while (queuedMsg && currentIdx < childrenLen) {
-                    queuedMsg.directive(DATA).set(RUN_COUNT, 0);
+                    queuedMsg.directive(DATA_MANAGER).set(RUN_COUNT, 0);
                     if (currentIdx || connected) {
                         queuedMsg = children.item(currentIdx);
                         currentIdx = (dataManager.get(SENT_MESSAGE_INDEX) + 1) || 0;
@@ -455,7 +455,7 @@ app.scope(function (app) {
             // if (buster.el && (!data.canThrottle || buster.shouldUpdate(arguments))) {
             // on the inner functions, we don't want to allow this
             // module to be present, so the inner does not influence the outer
-            messageData = originalMessage.directive(DATA);
+            messageData = originalMessage.directive(DATA_MANAGER);
             messageData.set(RUN_COUNT, (messageData.get(RUN_COUNT) || 0) + 1);
             packet = extend(BOOLEAN_TRUE, result(buster, 'package') || {}, packet_);
             newMessage = extend(defaultMessage(buster), {

@@ -1,6 +1,7 @@
 var CHILDREN = capitalize(CHILD + 'ren'),
     CHILD_OPTIONS = CHILD + 'Options',
-    CHILD_EVENTS = CHILD + EVENT_STRING;
+    CHILD_EVENTS = CHILD + EVENT_STRING,
+    DATA_MANAGER = 'DataManager';
 app.scope(function (app) {
     var Events = factories.Events,
         List = factories.Collection,
@@ -335,7 +336,7 @@ app.scope(function (app) {
              * @name Model#unset
              */
             unset: function (key) {
-                var dataDirective = this[DATA];
+                var dataDirective = this[DATA_MANAGER];
                 if (!dataDirective) {
                     return BOOLEAN_FALSE;
                 }
@@ -350,7 +351,7 @@ app.scope(function (app) {
              * @func
              * @name Model#get
              */
-            get: checkParody(DATA, 'get'),
+            get: checkParody(DATA_MANAGER, 'get'),
             escape: function (key) {
                 return escape(this.get(key));
             },
@@ -361,9 +362,9 @@ app.scope(function (app) {
              * @description checks to see if the current attribute is on the attributes object as anything other an undefined
              * @name Model#has
              */
-            keys: checkParody(DATA, 'keys', returnsArray),
-            values: checkParody(DATA, 'values', returnsArray),
-            has: checkParody(DATA, 'has', BOOLEAN_FALSE),
+            keys: checkParody(DATA_MANAGER, 'keys', returnsArray),
+            values: checkParody(DATA_MANAGER, 'values', returnsArray),
+            has: checkParody(DATA_MANAGER, 'has', BOOLEAN_FALSE),
             idAttribute: returns('id'),
             constructor: function (attributes, secondary) {
                 var model = this;
@@ -391,7 +392,7 @@ app.scope(function (app) {
                     model[DISPATCH_EVENT](BEFORE_COLON + RESET);
                 }
                 if (hasResetBefore || keysResult[LENGTH]) {
-                    dataDirective = model.directive(DATA);
+                    dataDirective = model.directive(DATA_MANAGER);
                     dataDirective[RESET](newAttributes);
                 }
                 // let everything know that it is changing
@@ -418,7 +419,7 @@ app.scope(function (app) {
                 var changedList = [],
                     model = this,
                     value = value_,
-                    dataDirective = model.directive(DATA),
+                    dataDirective = model.directive(DATA_MANAGER),
                     previous = {},
                     returnmodified = returnmodified_;
                 intendedObject(key, value, function (key, value, third) {
@@ -443,7 +444,7 @@ app.scope(function (app) {
                     // do not digest... this time
                     return model;
                 }
-                dataDirective = model.directive(DATA);
+                dataDirective = model.directive(DATA_MANAGER);
                 model.digest(list, function (name) {
                     dataDirective.changing[name] = BOOLEAN_TRUE;
                     model[DISPATCH_EVENT](CHANGE_COLON + name);
@@ -454,7 +455,7 @@ app.scope(function (app) {
             digest: function (handler, fn) {
                 var model = this,
                     // cache the data directive in case it gets swapped out
-                    dataDirective = model.directive(DATA);
+                    dataDirective = model.directive(DATA_MANAGER);
                 dataDirective.increment();
                 if (isFunction(handler)) {
                     handler();
@@ -482,7 +483,7 @@ app.scope(function (app) {
                 // to prevent circular dependencies
                 return this.clone();
             },
-            clone: checkParody(DATA, 'clone', function () {
+            clone: checkParody(DATA_MANAGER, 'clone', function () {
                 return {};
             }),
             valueOf: function () {

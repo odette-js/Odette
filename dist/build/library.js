@@ -3849,7 +3849,8 @@ app.scope(function (app) {
 });
 var CHILDREN = capitalize(CHILD + 'ren'),
     CHILD_OPTIONS = CHILD + 'Options',
-    CHILD_EVENTS = CHILD + EVENT_STRING;
+    CHILD_EVENTS = CHILD + EVENT_STRING,
+    DATA_MANAGER = 'DataManager';
 app.scope(function (app) {
     var Events = factories.Events,
         List = factories.Collection,
@@ -4184,7 +4185,7 @@ app.scope(function (app) {
              * @name Model#unset
              */
             unset: function (key) {
-                var dataDirective = this[DATA];
+                var dataDirective = this[DATA_MANAGER];
                 if (!dataDirective) {
                     return BOOLEAN_FALSE;
                 }
@@ -4199,7 +4200,7 @@ app.scope(function (app) {
              * @func
              * @name Model#get
              */
-            get: checkParody(DATA, 'get'),
+            get: checkParody(DATA_MANAGER, 'get'),
             escape: function (key) {
                 return escape(this.get(key));
             },
@@ -4210,9 +4211,9 @@ app.scope(function (app) {
              * @description checks to see if the current attribute is on the attributes object as anything other an undefined
              * @name Model#has
              */
-            keys: checkParody(DATA, 'keys', returnsArray),
-            values: checkParody(DATA, 'values', returnsArray),
-            has: checkParody(DATA, 'has', BOOLEAN_FALSE),
+            keys: checkParody(DATA_MANAGER, 'keys', returnsArray),
+            values: checkParody(DATA_MANAGER, 'values', returnsArray),
+            has: checkParody(DATA_MANAGER, 'has', BOOLEAN_FALSE),
             idAttribute: returns('id'),
             constructor: function (attributes, secondary) {
                 var model = this;
@@ -4240,7 +4241,7 @@ app.scope(function (app) {
                     model[DISPATCH_EVENT](BEFORE_COLON + RESET);
                 }
                 if (hasResetBefore || keysResult[LENGTH]) {
-                    dataDirective = model.directive(DATA);
+                    dataDirective = model.directive(DATA_MANAGER);
                     dataDirective[RESET](newAttributes);
                 }
                 // let everything know that it is changing
@@ -4267,7 +4268,7 @@ app.scope(function (app) {
                 var changedList = [],
                     model = this,
                     value = value_,
-                    dataDirective = model.directive(DATA),
+                    dataDirective = model.directive(DATA_MANAGER),
                     previous = {},
                     returnmodified = returnmodified_;
                 intendedObject(key, value, function (key, value, third) {
@@ -4292,7 +4293,7 @@ app.scope(function (app) {
                     // do not digest... this time
                     return model;
                 }
-                dataDirective = model.directive(DATA);
+                dataDirective = model.directive(DATA_MANAGER);
                 model.digest(list, function (name) {
                     dataDirective.changing[name] = BOOLEAN_TRUE;
                     model[DISPATCH_EVENT](CHANGE_COLON + name);
@@ -4303,7 +4304,7 @@ app.scope(function (app) {
             digest: function (handler, fn) {
                 var model = this,
                     // cache the data directive in case it gets swapped out
-                    dataDirective = model.directive(DATA);
+                    dataDirective = model.directive(DATA_MANAGER);
                 dataDirective.increment();
                 if (isFunction(handler)) {
                     handler();
@@ -4331,7 +4332,7 @@ app.scope(function (app) {
                 // to prevent circular dependencies
                 return this.clone();
             },
-            clone: checkParody(DATA, 'clone', function () {
+            clone: checkParody(DATA_MANAGER, 'clone', function () {
                 return {};
             }),
             valueOf: function () {
@@ -4664,7 +4665,7 @@ app.scope(function (app) {
 });
 app.scope(function (app) {
     var CHANGE_COUNTER = 'counter',
-        DataDirective = factories.DataDirective = factories.Directive.extend('DataDirective', {
+        DataManager = factories[DATA_MANAGER] = factories.Directive.extend(DATA_MANAGER, {
             constructor: function () {
                 var dataDirective = this;
                 dataDirective[CURRENT] = {};
@@ -4732,7 +4733,7 @@ app.scope(function (app) {
                 return each(this[CURRENT], fn, this);
             }
         });
-    app.defineDirective(DATA, DataDirective[CONSTRUCTOR]);
+    app.defineDirective(DATA_MANAGER, DataManager[CONSTRUCTOR]);
 });
 
 app.scope(function (app) {
@@ -5278,6 +5279,7 @@ app.scope(function (app) {
     var _ = app._,
         factories = _.factories,
         ITEMS = 'items',
+        DATA = 'data',
         DATASET = DATA + 'set',
         IS_ELEMENT = 'isElement',
         extend = _.extend,
@@ -11345,7 +11347,7 @@ app.scope(function (app) {
         connectReceived = function (e) {
             // first submit a response so the other side can flush
             var buster = this,
-                dataDirective = buster.directive(DATA);
+                dataDirective = buster.directive(DATA_MANAGER);
             if (dataDirective.get(IS_LATE)) {
                 dataDirective.set(SENT_MESSAGE_INDEX, 1);
             }
@@ -11375,7 +11377,7 @@ app.scope(function (app) {
         },
         response: function (original, data) {
             var buster = this,
-                originalData = original[DATA];
+                originalData = original[DATA_MANAGER];
             if (!originalData) {
                 return;
             }
@@ -11419,7 +11421,7 @@ app.scope(function (app) {
          */
         defineWindows: function (receiveWindow, emitWindow) {
             var buster = this,
-                busterData = buster.directive(DATA);
+                busterData = buster.directive(DATA_MANAGER);
             if (receiveWindow && receiveWindow.is(WINDOW)) {
                 // takes care of preventing duplicate handlers
                 buster.receiveWindow = receiveWindow.on(receiveWindowEvents);
@@ -11447,7 +11449,7 @@ app.scope(function (app) {
         setupIframe: function () {
             var emitReferrer, buster = this,
                 iframe = buster[IFRAME],
-                busterData = buster.directive(DATA),
+                busterData = buster.directive(DATA_MANAGER),
                 hrefSplit = buster.receiveWindow.element().location.href.split(ENCODED_BRACKET),
                 hrefShift = hrefSplit.shift(),
                 unshifted = hrefSplit.unshift(EMPTY_STRING),
@@ -11557,7 +11559,7 @@ app.scope(function (app) {
         flush: function () {
             var command, children, childrenLen, queuedMsg, i = 0,
                 buster = this,
-                dataManager = buster.directive(DATA),
+                dataManager = buster.directive(DATA_MANAGER),
                 currentIdx = dataManager.get(SENT_MESSAGE_INDEX),
                 connected = buster.is(CONNECTED),
                 initedFrom = dataManager.get('initedFromPartner'),
@@ -11571,7 +11573,7 @@ app.scope(function (app) {
                 childrenLen = children[LENGTH]();
                 queuedMsg = children.item(currentIdx);
                 while (queuedMsg && currentIdx < childrenLen) {
-                    queuedMsg.directive(DATA).set(RUN_COUNT, 0);
+                    queuedMsg.directive(DATA_MANAGER).set(RUN_COUNT, 0);
                     if (currentIdx || connected) {
                         queuedMsg = children.item(currentIdx);
                         currentIdx = (dataManager.get(SENT_MESSAGE_INDEX) + 1) || 0;
@@ -11644,7 +11646,7 @@ app.scope(function (app) {
             // if (buster.el && (!data.canThrottle || buster.shouldUpdate(arguments))) {
             // on the inner functions, we don't want to allow this
             // module to be present, so the inner does not influence the outer
-            messageData = originalMessage.directive(DATA);
+            messageData = originalMessage.directive(DATA_MANAGER);
             messageData.set(RUN_COUNT, (messageData.get(RUN_COUNT) || 0) + 1);
             packet = extend(BOOLEAN_TRUE, result(buster, 'package') || {}, packet_);
             newMessage = extend(defaultMessage(buster), {

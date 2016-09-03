@@ -2,6 +2,7 @@ app.scope(function (app) {
     var _ = app._,
         factories = _.factories,
         ITEMS = 'items',
+        DATA = 'data',
         DATASET = DATA + 'set',
         IS_ELEMENT = 'isElement',
         extend = _.extend,

@@ -188,8 +188,8 @@ application.scope().run(window, function (app, _, factories, documentView, scope
             });
             _.test.it('they can clone it\'s attributes by using the toJSON method', function () {
                 var clone = box.toJSON();
-                _.test.expect(clone).toEqual(box.directive('data').current);
-                _.test.expect(clone === box.directive('data').current).toEqual(false);
+                _.test.expect(clone).toEqual(box.directive('DataManager').current);
+                _.test.expect(clone === box.directive('DataManager').current).toEqual(false);
             });
             _.test.it('they can clone children into an array', function () {
                 var clone;

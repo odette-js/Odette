@@ -1,6 +1,6 @@
 app.scope(function (app) {
     var CHANGE_COUNTER = 'counter',
-        DataDirective = factories.DataDirective = factories.Directive.extend('DataDirective', {
+        DataManager = factories[DATA_MANAGER] = factories.Directive.extend(DATA_MANAGER, {
             constructor: function () {
                 var dataDirective = this;
                 dataDirective[CURRENT] = {};
@@ -68,5 +68,5 @@ app.scope(function (app) {
                 return each(this[CURRENT], fn, this);
             }
         });
-    app.defineDirective(DATA, DataDirective[CONSTRUCTOR]);
+    app.defineDirective(DATA_MANAGER, DataManager[CONSTRUCTOR]);
 });
