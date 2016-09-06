@@ -9510,6 +9510,7 @@ app.scope(function (app) {
         },
         exportResult = _.publicize({
             isIE: isIE,
+            buildCss: buildCss,
             covers: covers,
             center: center,
             closer: closer,
