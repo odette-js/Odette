@@ -827,7 +827,66 @@ var ATTACHED = 'attached',
     collectChildren = function (element) {
         return toArray(element.children || element.childNodes);
     },
-    globalAssociator = factories.Associator();
+    globalAssociator = factories.Associator(),
+    openBlock = function (selector, total) {
+        return once(function () {
+            total.push(selector.join('') + ' {');
+        });
+    },
+    closeBlock = function (total) {
+        return once(function () {
+            total.push(' }\n');
+        });
+    },
+    buildCss = function (json, selector_, memo_, beforeAnyMore) {
+        var result, baseSelector = selector_ || [],
+            memo = memo_ || [],
+            opensBlock = noop,
+            closesBlock = noop;
+        if (memo_) {
+            opensBlock = openBlock(baseSelector, memo);
+        }
+        if (beforeAnyMore) {
+            beforeAnyMore();
+        }
+        result = foldl(json, function (memo, block, key) {
+            var cameled, trimmed = key.trim();
+            // var media = trimmed[0] === '@';
+            // if (media) {
+            // return total_.concat(medium[trimmed.split(' ').shift()](json, trimmed, total));
+            // handle one way... possible with an extendable handler?
+            // } else {
+            if (isObject(block)) {
+                duff(toArray(trimmed, COMMA), function (trimmd_) {
+                    trimmed = trimmd_.trim();
+                    if (baseSelector[LENGTH]) {
+                        if (trimmed[0] !== '&') {
+                            trimmed = ' ' + trimmed;
+                        } else {
+                            trimmed = trimmed.slice(1);
+                        }
+                    }
+                    opensBlock = openBlock(baseSelector, memo);
+                    baseSelector.push(trimmed);
+                    buildCss(block, baseSelector, memo, closesBlock);
+                    baseSelector.pop();
+                });
+            } else {
+                opensBlock();
+                closesBlock = closeBlock(memo);
+                // always on the same line
+                // console.log(prefixedStyles);
+                cameled = camelCase(trimmed);
+                duff(prefixedStyles[cameled] || [''], function (prefix) {
+                    memo.push('\n\t' + prefix + kebabCase(cameled) + ': ' + convertStyleValue(trimmed, block) + ';');
+                });
+            }
+            // }
+        }, memo);
+        // if (memo_) {
+        closesBlock(memo);
+        return result.join('');
+    };
 app.scope(function (app) {
     var ensure = function (el, owner) {
             var data;
@@ -2300,65 +2359,6 @@ app.scope(function (app) {
                             var result = a[__ELID__] ? $(a).remove() : removeChild(a);
                         };
                     }
-                },
-                openBlock = function (selector, total) {
-                    return once(function () {
-                        total.push(selector.join('') + ' {');
-                    });
-                },
-                closeBlock = function (total) {
-                    return once(function () {
-                        total.push(' }\n');
-                    });
-                },
-                buildCss = function (json, selector_, memo_, beforeAnyMore) {
-                    var result, baseSelector = selector_ || [],
-                        memo = memo_ || [],
-                        opensBlock = noop,
-                        closesBlock = noop;
-                    if (memo_) {
-                        opensBlock = openBlock(baseSelector, memo);
-                    }
-                    if (beforeAnyMore) {
-                        beforeAnyMore();
-                    }
-                    result = foldl(json, function (memo, block, key) {
-                        var cameled, trimmed = key.trim();
-                        // var media = trimmed[0] === '@';
-                        // if (media) {
-                        // return total_.concat(medium[trimmed.split(' ').shift()](json, trimmed, total));
-                        // handle one way... possible with an extendable handler?
-                        // } else {
-                        if (isObject(block)) {
-                            duff(toArray(trimmed, COMMA), function (trimmd_) {
-                                trimmed = trimmd_.trim();
-                                if (baseSelector[LENGTH]) {
-                                    if (trimmed[0] !== '&') {
-                                        trimmed = ' ' + trimmed;
-                                    } else {
-                                        trimmed = trimmed.slice(1);
-                                    }
-                                }
-                                opensBlock = openBlock(baseSelector, memo);
-                                baseSelector.push(trimmed);
-                                buildCss(block, baseSelector, memo, closesBlock);
-                                baseSelector.pop();
-                            });
-                        } else {
-                            opensBlock();
-                            closesBlock = closeBlock(memo);
-                            // always on the same line
-                            // console.log(prefixedStyles);
-                            cameled = camelCase(trimmed);
-                            duff(prefixedStyles[cameled] || [''], function (prefix) {
-                                memo.push('\n\t' + prefix + kebabCase(cameled) + ': ' + convertStyleValue(trimmed, block) + ';');
-                            });
-                        }
-                        // }
-                    }, memo);
-                    // if (memo_) {
-                    closesBlock(memo);
-                    return result.join('');
                 };
             if (manager.is('setupComplete')) {
                 return manager.$;
