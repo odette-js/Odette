@@ -45,10 +45,10 @@ app.scope(function (app) {
                 }
             });
         },
-        sendthething = function (xhrReq, args, ajax) {
+        sendthething = function (xhrReq, data, ajax) {
             return function () {
                 return wraptry(function () {
-                    return xhrReq.send.apply(xhrReq, args);
+                    return data ? xhrReq.send(data) : xhrReq.send();
                 }, function (e) {
                     ajax.resolveAs(CATCH, e, e.message);
                 });
@@ -122,21 +122,29 @@ app.scope(function (app) {
                     // if (!win.XDomainRequest || !isInstance(xhrReq, win.XDomainRequest)) {
                     //     xhrReq.withCredentials = ajax.options.withCredentials;
                     // }
-                    xhrReq.open(type, url, ajax.options.async);
+                    xhrReq.open(type.toUpperCase(), url, ajax.options.async);
                 });
                 if (data) {
-                    args.push(stringify(data));
+                    // data = isObject(data) ? JSON.stringify(data) : data;
+                    // args.push(data);
+                    data = isObject(data) ? foldl(data, function (memo, value, key) {
+                        memo.push(encodeURIComponent(key) + '=' + encodeURIComponent((isObject(value) ? JSON.stringify(value) : (isFunction(value) ? NULL : value))));
+                    }, []).join('&') : encodeURIComponent(data);
                 }
-                ajax.headers(ajax.options.headers);
+                if (isString(data)) {
+                    data = data.replace(/%20/g, '+');
+                }
+                ajax.headers(merge({
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+                }, ajax.options.headers));
                 attachBaseListeners(ajax);
                 // have to wrap in set timeout for ie
-                sending = sendthething(xhrReq, args, ajax);
+                sending = sendthething(xhrReq, data, ajax);
                 if (_.isIE) {
                     setTimeout(sending);
                 } else {
                     sending();
                 }
-                // );
                 return ajax;
             },
             status: function (code, handler) {
@@ -144,7 +152,7 @@ app.scope(function (app) {
             },
             headers: function (headers) {
                 var ajax = this,
-                    xhrReq = ajax.requestObject;
+                    xhrReq = ajax.options.requestObject;
                 each(headers, function (val, key) {
                     xhrReq.setRequestHeader(key, val);
                 });

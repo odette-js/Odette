@@ -31,17 +31,28 @@ module.exports = function (settings) {
     // });
     // var secureServer = https.createServer(options, app).listen(settings.http.port);
     //Here we are configuring express to use body-parser as middle-ware.
-    app.use(bodyParser.urlencoded({
-        extended: false
-    }));
-    app.use(bodyParser.json());
     // view engine setup
     // uncomment after placing your favicon in /public
     // app.use(logger(settings.env.logger));
+    app.use(bodyParser.urlencoded({
+        extended: true
+    }));
+    app.use(bodyParser.json());
     app.use(function (req, res, next) {
         res.header('Access-Control-Allow-Origin', '*');
         res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
         next();
+    });
+    app.post('/postecho', function (req, res, next) {
+        if (req.body && req.body.success) {
+            res.send({
+                successful: true
+            });
+        } else {
+            res.send({
+                successful: false
+            });
+        }
     });
     app.ws('/echo', function (ws, req) {
         console.log('connected to someone');

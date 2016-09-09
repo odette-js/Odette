@@ -30,6 +30,18 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 done();
             });
         });
+        _.test.it('can post', function (done) {
+            factories.HTTP({
+                type: 'POST',
+                url: '/postecho',
+                data: {
+                    success: true
+                }
+            }).success(function (data) {
+                _.test.expect(data && data.successful).toBe(true);
+                done();
+            });
+        });
         _.test.describe('can handle', function () {
             _.test.it('failures', function (done) {
                 var handlerCounter = 0;
