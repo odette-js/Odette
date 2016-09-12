@@ -3630,7 +3630,6 @@ app.scope(function (app) {
                 var ret, cachedTrust = DO_NOT_TRUST;
                 DO_NOT_TRUST = BOOLEAN_TRUE;
                 elementEventDispatcher(this, name, capturing_);
-                // ret = eventDispatcher(this, name, e, capturing_, cachedTrust);
                 DO_NOT_TRUST = cachedTrust;
                 return ret;
             },

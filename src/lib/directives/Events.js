@@ -226,8 +226,7 @@ app.scope(function (app) {
                 return this.handlers[key] || Collection();
             },
             dispatch: function (name, evnt) {
-                var subset, subLength, handler, i = 0,
-                    events = this,
+                var subset, events = this,
                     stack = events[STACK],
                     handlers = events[HANDLERS],
                     list = handlers[name],
@@ -238,21 +237,31 @@ app.scope(function (app) {
                     bus = events.proxyStack;
                 // make sure setup is proper
                 if (cached) {
-                    return exception('cannot stack events coming from the same object');
+                    console.error('cannot stack events coming from the same object');
+                    return;
                 }
                 if (stopped || !list || !list[LENGTH]()) {
                     return;
                 }
                 running[name] = BOOLEAN_TRUE;
                 subset = events.subset(list.toArray(), evnt);
-                subLength = subset[LENGTH];
-                for (; i < subLength && !stopped; i++) {
-                    handler = subset[i];
-                    if (!handler.disabled && events.queue(stack, handler, evnt)) {
-                        handler.fn(evnt);
-                        events.unQueue(stack, handler, evnt);
+                stack_length = stack[LENGTH];
+                stopped = wraptry(function () {
+                    var stopped, handler, i = 0,
+                        subLength = subset[LENGTH];
+                    for (; i < subLength && !stopped; i++) {
+                        handler = subset[i];
+                        if (!handler.disabled && events.queue(stack, handler, evnt)) {
+                            handler.fn(evnt);
+                            events.unQueue(stack, handler, evnt);
+                        }
+                        stopped = !!evnt.is(PROPAGATION_HALTED);
                     }
-                    stopped = !!evnt.is(PROPAGATION_HALTED);
+                }, function () {
+                    return BOOLEAN_TRUE;
+                });
+                if (stack_length < stack[LENGTH]) {
+                    events.unQueue(stack, handler, evnt);
                 }
                 if (stopped) {
                     events.cancelled(stack, evnt);
