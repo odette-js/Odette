@@ -1813,15 +1813,15 @@ app.scope(function (app) {
                 if (manager.is(ELEMENT)) {
                     parentElement = manager.element();
                     if (attribute === INNER_HTML) {
-                        children = toArray(manager.$(CUSTOM_ATTRIBUTE));
+                        children = manager.$(CUSTOM_ATTRIBUTE).toArray();
                     }
                     parentElement[attribute] = value || EMPTY_STRING;
                     if (children && children[LENGTH]) {
                         // detach old
                         dispatchDetached(children, owner);
                         // establish new
-                        duff(manager.$(CUSTOM_ATTRIBUTE, parentElement), owner.returnsManager, owner);
                     }
+                    manager.$(CUSTOM_ATTRIBUTE, parentElement);
                 }
             }
         },
@@ -1922,11 +1922,9 @@ app.scope(function (app) {
                 var managers = [];
                 // mark all managers first
                 duff(list, function (element) {
-                    var manager = owner.returnsManager(element);
-                    var original = manager.is(ATTACHED);
-                    manager.remark(ATTACHED, mark);
-                    if (mark !== original && manager.is(ELEMENT) && manager.is(CUSTOM_LISTENER)) {
-                        managers.push(manager);
+                    var m = owner.returnsManager(element);
+                    if (m.remark(ATTACHED, mark) && m.is(ELEMENT) && m.is(CUSTOM_LISTENER)) {
+                        managers.push(m);
                     }
                 });
                 eachCall(managers, DISPATCH_EVENT, evnt);
