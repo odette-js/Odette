@@ -7635,12 +7635,12 @@ app.scope(function (app) {
                         children = toArray(manager.$(CUSTOM_ATTRIBUTE));
                     }
                     parentElement[attribute] = value || EMPTY_STRING;
-                    if (children[LENGTH]) {
+                    if (children && children[LENGTH]) {
                         // detach old
                         dispatchDetached(children, owner);
+                        // establish new
+                        duff(manager.$(CUSTOM_ATTRIBUTE, parentElement), owner.returnsManager, owner);
                     }
-                    // establish new
-                    duff(manager.$(CUSTOM_ATTRIBUTE, parentElement), owner.returnsManager, owner);
                 }
             }
         },
