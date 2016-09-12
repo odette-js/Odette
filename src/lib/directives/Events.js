@@ -226,7 +226,7 @@ app.scope(function (app) {
                 return this.handlers[key] || Collection();
             },
             dispatch: function (name, evnt) {
-                var subset, events = this,
+                var subset, stack_length, events = this,
                     stack = events[STACK],
                     handlers = events[HANDLERS],
                     list = handlers[name],
