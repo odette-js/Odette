@@ -127,8 +127,8 @@ app.scope(function (app) {
                 headers = merge({
                     'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
                 }, ajax.options.headers);
-                if (options.cacheable) {
-                    key = [ajax.options.type, ajax.optins.url, stringify(headers), data].join(',');
+                if (ajax.options.cacheable) {
+                    key = [ajax.options.type, ajax.options.url, stringify(headers), data].join(',');
                     cached = cache[key];
                     if (cached) {
                         return cached;
