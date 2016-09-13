@@ -5441,6 +5441,7 @@ app.scope(function (app) {
         STATUS_300s = 'status:3xx',
         STATUS_400s = 'status:4xx',
         STATUS_500s = 'status:5xx',
+        cache = {},
         HTTP = factories.HTTP = Promise.extend('HTTP', {
             /**
              * @func
@@ -5453,7 +5454,6 @@ app.scope(function (app) {
                 var promise, url, thingToDo, typeThing, type, ajax = this,
                     method = 'onreadystatechange',
                     // Add a cache buster to the url
-                    // ajax.async = BOOLEAN_TRUE;
                     xhrReq = new XMLHttpRequest();
                 // covers ie9
                 if (!isUndefined(XDomainRequest)) {
@@ -5482,8 +5482,7 @@ app.scope(function (app) {
                     withCredentials: BOOLEAN_TRUE
                 }, str);
                 ajax[CONSTRUCTOR + COLON + 'Promise']();
-                // function () {
-                var sending,
+                var headers, cached, key, sending,
                     args = [],
                     data = ajax.options.data;
                 type = ajax.options.type;
@@ -5494,16 +5493,7 @@ app.scope(function (app) {
                 if (!url || !type) {
                     return exception('http object must have a url and a type');
                 }
-                ajax.attachResponseHandler();
-                wraptry(function () {
-                    // if (!win.XDomainRequest || !isInstance(xhrReq, win.XDomainRequest)) {
-                    //     xhrReq.withCredentials = ajax.options.withCredentials;
-                    // }
-                    xhrReq.open(type.toUpperCase(), url, ajax.options.async);
-                });
                 if (data) {
-                    // data = isObject(data) ? JSON.stringify(data) : data;
-                    // args.push(data);
                     data = isObject(data) ? foldl(data, function (memo, value, key) {
                         memo.push(encodeURIComponent(key) + '=' + encodeURIComponent((isObject(value) ? JSON.stringify(value) : (isFunction(value) ? NULL : value))));
                     }, []).join('&') : encodeURIComponent(data);
@@ -5511,9 +5501,22 @@ app.scope(function (app) {
                 if (isString(data)) {
                     data = data.replace(/%20/g, '+');
                 }
-                ajax.headers(merge({
+                headers = merge({
                     'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
-                }, ajax.options.headers));
+                }, ajax.options.headers);
+                if (options.cacheable) {
+                    key = [ajax.options.type, ajax.optins.url, stringify(headers), data].join(',');
+                    cached = cache[key];
+                    if (cached) {
+                        return cached;
+                    }
+                    cache[key] = this;
+                }
+                ajax.attachResponseHandler();
+                wraptry(function () {
+                    xhrReq.open(type.toUpperCase(), url, ajax.options.async);
+                });
+                ajax.headers(headers);
                 attachBaseListeners(ajax);
                 // have to wrap in set timeout for ie
                 sending = sendthething(xhrReq, data, ajax);
