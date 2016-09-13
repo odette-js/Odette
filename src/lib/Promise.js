@@ -35,7 +35,7 @@ app.scope(function (app) {
         executeHandlers = function (promise, obj) {
             var handler, catches = [],
                 lastCaught,
-                catchesCanRun, arg = promise[STASHED_ARGUMENT],
+                catchesCanRun, arg = promise[STASHED_ARGUMENT] || promise[REASON],
                 handlers = promise[STASHED_HANDLERS],
                 countLimit = handlers[LENGTH],
                 callIt = function () {

@@ -1794,7 +1794,8 @@ app.scope(function (app) {
         },
         setInnard = function (attribute, manager, value, vars) {
             var children, cachedValue, win, doc, windo, doTheThing, parentElement,
-                owner = manager.owner;
+                owner = manager.owner,
+                appliedvalue = value || EMPTY_STRING;
             if (manager.is(IFRAME)) {
                 windo = manager.window();
                 testIframe(manager);
@@ -1805,7 +1806,7 @@ app.scope(function (app) {
                     each(vars, function (value, key) {
                         parentElement[key] = value;
                     });
-                    doc.write(value);
+                    doc.write(appliedvalue);
                     doc.close();
                     doTheThing = BOOLEAN_TRUE;
                 }
@@ -1815,13 +1816,17 @@ app.scope(function (app) {
                     if (attribute === INNER_HTML) {
                         children = manager.$(CUSTOM_ATTRIBUTE).toArray();
                     }
-                    parentElement[attribute] = value || EMPTY_STRING;
+                    previous = parentElement[attribute];
+                    parentElement[attribute] = appliedvalue;
                     if (children && children[LENGTH]) {
                         // detach old
                         dispatchDetached(children, owner);
                         // establish new
                     }
                     manager.$(CUSTOM_ATTRIBUTE, parentElement);
+                    if (previous !== appliedvalue) {
+                        manager.dispatchEvent('contentChanged');
+                    }
                 }
             }
         },
