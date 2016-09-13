@@ -7612,7 +7612,7 @@ app.scope(function (app) {
             return returnValue;
         },
         setInnard = function (attribute, manager, value, vars) {
-            var children, cachedValue, win, doc, windo, doTheThing, parentElement,
+            var children, previous, cachedValue, win, doc, windo, doTheThing, parentElement,
                 owner = manager.owner,
                 appliedvalue = value || EMPTY_STRING;
             if (manager.is(IFRAME)) {
