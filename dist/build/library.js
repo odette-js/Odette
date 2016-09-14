@@ -8974,7 +8974,7 @@ app.scope(function (app) {
             // this is here to be an alias
             querySelectorAll: manager_query,
             orderEventsByHeirarchy: function () {
-                return this.owner.orderEventsByHeirarchy;
+                return this.owner.orderEventsByHeirarchy();
             },
             queryString: function () {
                 var string = '';
