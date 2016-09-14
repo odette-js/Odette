@@ -3067,10 +3067,10 @@ app.scope(function (app) {
                             } else {
                                 list.push(first);
                             }
-                            found = NULL;
                         }
                         parent = parent[PARENT_NODE];
                     }
+                    found = NULL;
                 }
                 return list.concat(afterwards);
             }
