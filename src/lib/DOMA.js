@@ -3067,6 +3067,7 @@ app.scope(function (app) {
                             } else {
                                 list.push(first);
                             }
+                            found = NULL;
                         }
                         parent = parent[PARENT_NODE];
                     }
