@@ -3057,10 +3057,14 @@ app.scope(function (app) {
                                 if (!(j = list[LENGTH])) {
                                     list.push(first);
                                 } else {
-                                    while (first && list[--j]) {
+                                    while (first && j && list[--j]) {
                                         if (list[j].parentNodeNumber <= first.parentNodeNumber) {
                                             list.splice(j + 1, 0, first);
                                             first = NULL;
+                                        } else {
+                                            if (!j) {
+                                                list.unshift(first);
+                                            }
                                         }
                                     }
                                 }
