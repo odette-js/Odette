@@ -6177,7 +6177,7 @@ var ATTACHED = 'attached',
     },
     cautiousConvertValue = function (generated) {
         var converted = +generated;
-        return generated[LENGTH] && converted == generated ? converted : generated;
+        return generated[LENGTH] && converted === generated && converted + EMPTY_STRING === generated ? converted : generated;
     },
     convertAttributeValue = function (val_) {
         var val = val_;
@@ -10509,8 +10509,7 @@ app.scope(function (app) {
                 return unwrapped;
             },
             adopt: function (view_) {
-                var model, view, region = this,
-                    children = region[CHILDREN];
+                var model, view, children, region = this;
                 if (!view_) {
                     return BOOLEAN_FALSE;
                 }
@@ -10522,6 +10521,7 @@ app.scope(function (app) {
                         disown(view[PARENT], view, region);
                     }
                 }
+                children = region.directive(CHILDREN);
                 view[PARENT] = region;
                 children.attach(view);
                 model = view.model;
