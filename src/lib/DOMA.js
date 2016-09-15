@@ -2621,7 +2621,7 @@ app.scope(function (app) {
         manager_query = function (selector) {
             var manager = this;
             var target = manager.element();
-            return manager.owner.$(query(selector, target, manager), target);
+            return manager.owner.$(isArrayLike(selector) ? selector : query(selector, target, manager), target);
         },
         isAppendable = function (els) {
             return els.isValidDomManager ? (els.is('element') || els.is('fragment')) : (isElement(els) || isFragment(els));
