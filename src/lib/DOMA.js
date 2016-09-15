@@ -355,7 +355,7 @@ var ATTACHED = 'attached',
     },
     cautiousConvertValue = function (generated) {
         var converted = +generated;
-        return generated[LENGTH] && converted === generated && converted + EMPTY_STRING === generated ? converted : generated;
+        return generated[LENGTH] && converted === converted && converted + EMPTY_STRING === generated ? converted : generated;
     },
     convertAttributeValue = function (val_) {
         var val = val_;
