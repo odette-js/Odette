@@ -3291,7 +3291,7 @@ app.scope(function (app) {
                     }
                 } else {
                     if (manager.is(DOCUMENT)) {
-                        app.definition(manager.window().element());
+                        app.definition(manager[TARGET][DEFAULT_VIEW]);
                     }
                 }
                 return manager;
