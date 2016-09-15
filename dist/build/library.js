@@ -9083,19 +9083,22 @@ app.scope(function (app) {
                         manager[__ELID__] = el[__ELID__];
                     }
                 } else {
+                    // hash[]
                     if ((isDocument = manager.is(DOCUMENT))) {
                         owner = manager;
                         manager[__ELID__] = elId = el[__ELID__];
+                        // hash.manager
                     } else {
-                        hash[DOM_MANAGER_STRING] = manager;
                         manager[__ELID__] = app.counter('win');
                     }
+                    hash[DOM_MANAGER_STRING] = manager;
                 }
                 manager.owner = owner || BOOLEAN_FALSE;
                 manager[TARGET] = el;
                 if (manager.is(IFRAME)) {
                     manager.on(ATTRIBUTE_CHANGE + ':src detach attach', iframeChangeHandler);
                 }
+                // manager.mark('constructing');
                 if (manager.is(WINDOW)) {
                     markGlobal(manager, el);
                 }
