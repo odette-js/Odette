@@ -3289,6 +3289,10 @@ app.scope(function (app) {
                     if (has(manager, REGISTERED_AS)) {
                         delete manager[REGISTERED_AS];
                     }
+                } else {
+                    if (manager.is(DOCUMENT)) {
+                        app.definition(manager.window().element());
+                    }
                 }
                 return manager;
             },
