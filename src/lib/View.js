@@ -100,8 +100,7 @@ app.scope(function (app) {
                 return unwrapped;
             },
             adopt: function (view_) {
-                var model, view, region = this,
-                    children = region[CHILDREN];
+                var model, view, children, region = this;
                 if (!view_) {
                     return BOOLEAN_FALSE;
                 }
@@ -113,6 +112,7 @@ app.scope(function (app) {
                         disown(view[PARENT], view, region);
                     }
                 }
+                children = region.directive(CHILDREN);
                 view[PARENT] = region;
                 children.attach(view);
                 model = view.model;
