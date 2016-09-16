@@ -9114,10 +9114,10 @@ app.scope(function (app) {
                     if (has(manager, REGISTERED_AS)) {
                         delete manager[REGISTERED_AS];
                     }
-                } else {
-                    if (manager.is(DOCUMENT)) {
-                        app.definition(manager[TARGET][DEFAULT_VIEW]);
-                    }
+                // } else {
+                //     if (manager.is(DOCUMENT)) {
+                //         app.definition(manager[TARGET][DEFAULT_VIEW]);
+                //     }
                 }
                 return manager;
             },
@@ -9327,7 +9327,8 @@ app.scope(function (app) {
                 if (manager.is(ACCESSABLE)) {
                     parsedReference = reference(wraptry(function () {
                         var frame;
-                        return (frame = manager.parent('iframe')) ? (frame.element().src || BOOLEAN_FALSE) : BOOLEAN_FALSE;
+                        return (frame = element.frameElement) ? frame.src : BOOLEAN_FALSE;
+                        // return (frame = manager.parent('iframe')) ? (frame.element().src || BOOLEAN_FALSE) : BOOLEAN_FALSE;
                     }) || element[LOCATION].href);
                     if (!parsedReference && manager.iframe) {
                         parsedReference = reference(manager.iframe.src());
