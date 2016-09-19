@@ -185,6 +185,13 @@ app.scope(function (app) {
                 // dispatch the render event
                 region[DISPATCH_EVENT](RENDER);
                 return region;
+            },
+            destroy: function () {
+                var children, region = this;
+                if ((children = region[CHILDREN])) {
+                    children.slice().callEach(DESTROY);
+                }
+                return this;
             }
         }),
         establishRegions = function (view, force) {
@@ -274,19 +281,18 @@ app.scope(function (app) {
                 return this.model.valueOf();
             },
             destroy: function (handler) {
-                var view = this;
+                var el, view = this;
                 if (view.is(DESTROYING)) {
                     return view;
                 } else {
                     view[DISPATCH_EVENT](BEFORE_DESTROY);
                 }
                 view.mark(DESTROYING);
-                if (view[REGION_MANAGER]) {
-                    view[REGION_MANAGER].list.eachCall(DESTROY);
-                }
-                if (view.el) {
-                    view.el.destroy(handler);
-                }
+                view.directiveDestruction(REGION_MANAGER);
+                // el = view.el;
+                // if (el && el.destroy) {
+                //     el.destroy(handler);
+                // }
                 view.directiveDestruction(CAPITAL_ELEMENT);
                 Parent[CONSTRUCTOR][PROTOTYPE].destroy.call(view);
                 return view;
@@ -383,6 +389,9 @@ app.scope(function (app) {
                     region.el = $selected;
                 }
             }),
+            destroy: function () {
+
+            },
             remove: function (region_) {
                 // var regionManager = this;
                 // var region = isString(region_) ? regionManager.get(region_) : region_;
@@ -767,7 +776,14 @@ app.scope(function (app) {
             }
         });
     app.defineDirective(DOCUMENT_MANAGER, DocumentManager[CONSTRUCTOR]);
-    app.defineDirective(REGION_MANAGER, RegionManager[CONSTRUCTOR]);
+    app.defineDirective(REGION_MANAGER, RegionManager[CONSTRUCTOR], function (directive, target, name) {
+        if (directive.is(DESTROYING)) {
+            return;
+        }
+        directive.mark(DESTROYING);
+        directive.list.slice().eachCall(DESTROY);
+        delete directive.parent;
+    });
     app.defineDirective(BUFFERED_VIEWS, BufferedViews[CONSTRUCTOR]);
     app.defineDirective(CAPITAL_ELEMENT, Element, function (directive, instance) {
         directive.el.destroy();

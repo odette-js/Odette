@@ -66,6 +66,14 @@ var STATUS = 'Status',
         is: checkParody(STATUS, 'is', BOOLEAN_FALSE),
         directive: directive,
         directiveDestruction: function (name) {
+            var directive;
+            if (!(directive = this[name])) {
+                return NULL;
+            }
+            if (directive.is('directiveDestroying')) {
+                return NULL;
+            }
+            directive.mark('directiveDestroying');
             var result = (directives.destruction[name] || returnsNull)(this[name], this, name);
             delete this[name];
             return result;
