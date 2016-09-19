@@ -87,7 +87,6 @@ var UNDEFINED, win = window,
     BOOLEAN_TRUE = !0,
     BOOLEAN_FALSE = !1,
     INFINITY = 1 / 0,
-    MAX_SAFE_INTEGER = 9007199254740991,
     MAX_INTEGER = 1.7976931348623157e+308,
     NAN = 0 / 0,
     MAX_ARRAY_LENGTH = 4294967295,
@@ -1952,7 +1951,7 @@ var cacheable = function (fn) {
 /** Used to match empty string literals in compiled template source. */
 var reEmptyStringLeading = /\b__p \+= EMPTY_STRING;/g,
     reEmptyStringMiddle = /\b(__p \+=) EMPTY_STRING \+/g,
-    reEmptyStringTrailing = /(__e\(.*?\)|\b__t\)) \+\nEMPTY_STRING;/g;
+    reEmptyStringTrailing = /(__e\(.*?\)|\b__t\)) \+\n'';/g;
 /** Used to match HTML entities and HTML characters. */
 var reEscapedHtml = /&(?:amp|lt|gt|quot|#39|#96);/g,
     reUnescapedHtml = /[&<>"'`]/g,
@@ -2274,87 +2273,81 @@ var objectToString = OBJECT_PROTOTYPE.toString,
 var reApos = RegExp(rsApos, 'g');
 var reHasUnicodeWord = /[a-z][A-Z]|[A-Z]{2,}[a-z]|[0-9][a-zA-Z]|[a-zA-Z][0-9]|[^a-zA-Z0-9 ]/;
 
-function unicodeWords(string) {
-    return string.match(reUnicodeWord) || [];
-}
+var unicodeWords = function (string) {
+        return string.match(reUnicodeWord) || [];
+    },
 
-function hasUnicodeWord(string) {
-    return reHasUnicodeWord.test(string);
-}
+    hasUnicodeWord = function (string) {
+        return reHasUnicodeWord.test(string);
+    },
 
-function isSymbol(value) {
-    return isSymbolWrap(value) || (isObject(value) && objectToString.call(value) == symbolTag);
-}
-
-function baseToString(value) {
-    // Exit early for strings to avoid a performance hit in some environments.
-    if (isString(value)) {
-        return value;
-    }
-    if (isSymbol(value)) {
-        return symbolToString ? symbolToString.call(value) : EMPTY_STRING;
-    }
-    var result = (value + EMPTY_STRING);
-    return (result == '0' && (1 / value) == -INFINITY) ? '-0' : result;
-}
-
-function toString(value) {
-    return value == NULL ? EMPTY_STRING : baseToString(value);
-}
-
-function words(string_, pattern_, guard) {
-    var string = toString(string_),
-        pattern = guard ? UNDEFINED : pattern_;
-    if (pattern === UNDEFINED) {
-        return hasUnicodeWord(string) ? unicodeWords(string) : asciiWords(string);
-    }
-    return string.match(pattern) || [];
-}
-
-function arrayReduce(array, iteratee, accumulator, initAccum) {
-    var index = -1,
-        length = array ? array.length : 0;
-    if (initAccum && length) {
-        accumulator = array[++index];
-    }
-    while (++index < length) {
-        accumulator = iteratee(accumulator, array[index], index, array);
-    }
-    return accumulator;
-}
-
-function createCompounder(callback) {
-    return cacheable(function (string) {
-        return arrayReduce(words(deburr(string).replace(reApos, EMPTY_STRING)), callback, EMPTY_STRING);
+    isSymbol = function (value) {
+        return isSymbolWrap(value) || (isObject(value) && objectToString.call(value) == symbolTag);
+    },
+    baseToString = function (value) {
+        // Exit early for strings to avoid a performance hit in some environments.
+        if (isString(value)) {
+            return value;
+        }
+        if (isSymbol(value)) {
+            return symbolToString ? symbolToString.call(value) : EMPTY_STRING;
+        }
+        var result = (value + EMPTY_STRING);
+        return (result == '0' && (1 / value) == -INFINITY) ? '-0' : result;
+    },
+    toString = function (value) {
+        return value == NULL ? EMPTY_STRING : baseToString(value);
+    },
+    words = function (string_, pattern_, guard) {
+        var string = toString(string_),
+            pattern = guard ? UNDEFINED : pattern_;
+        if (pattern === UNDEFINED) {
+            return hasUnicodeWord(string) ? unicodeWords(string) : asciiWords(string);
+        }
+        return string.match(pattern) || [];
+    },
+    arrayReduce = function (array, iteratee, accumulator, initAccum) {
+        var index = -1,
+            length = array ? array.length : 0;
+        if (initAccum && length) {
+            accumulator = array[++index];
+        }
+        while (++index < length) {
+            accumulator = iteratee(accumulator, array[index], index, array);
+        }
+        return accumulator;
+    },
+    createCompounder = function (callback) {
+        return cacheable(function (string) {
+            return arrayReduce(words(deburr(string).replace(reApos, EMPTY_STRING)), callback, EMPTY_STRING);
+        });
+    },
+    deburr = function (string) {
+        string = toString(string);
+        return string && string.replace(reLatin, deburrLetter).replace(reComboMark, EMPTY_STRING);
+    },
+    capitalize = cacheable(function (s) {
+        return s[0].toUpperCase() + s.slice(1);
+    }),
+    kebabCase = createCompounder(function (result, word, index) {
+        return result + (index ? HYPHEN : EMPTY_STRING) + word.toLowerCase();
+    }),
+    camelCase = createCompounder(function (result, word, index) {
+        word = word.toLowerCase();
+        return result + (index ? capitalize(word) : word);
+    }),
+    lowerCase = createCompounder(function (result, word, index) {
+        return result + (index ? SPACE : EMPTY_STRING) + word.toLowerCase();
+    }),
+    snakeCase = createCompounder(function (result, word, index) {
+        return result + (index ? '_' : EMPTY_STRING) + word.toLowerCase();
+    }),
+    startCase = createCompounder(function (result, word, index) {
+        return result + (index ? SPACE : EMPTY_STRING) + upperFirst(word);
+    }),
+    upperCase = createCompounder(function (result, word, index) {
+        return result + (index ? SPACE : EMPTY_STRING) + word.toUpperCase();
     });
-}
-
-function deburr(string) {
-    string = toString(string);
-    return string && string.replace(reLatin, deburrLetter).replace(reComboMark, EMPTY_STRING);
-}
-var capitalize = cacheable(function (s) {
-    return s[0].toUpperCase() + s.slice(1);
-});
-var kebabCase = createCompounder(function (result, word, index) {
-    return result + (index ? HYPHEN : EMPTY_STRING) + word.toLowerCase();
-});
-var camelCase = createCompounder(function (result, word, index) {
-    word = word.toLowerCase();
-    return result + (index ? capitalize(word) : word);
-});
-var lowerCase = createCompounder(function (result, word, index) {
-    return result + (index ? SPACE : EMPTY_STRING) + word.toLowerCase();
-});
-var snakeCase = createCompounder(function (result, word, index) {
-    return result + (index ? '_' : EMPTY_STRING) + word.toLowerCase();
-});
-var startCase = createCompounder(function (result, word, index) {
-    return result + (index ? SPACE : EMPTY_STRING) + upperFirst(word);
-});
-var upperCase = createCompounder(function (result, word, index) {
-    return result + (index ? SPACE : EMPTY_STRING) + word.toUpperCase();
-});
 /**
  * @func
  */
@@ -2676,8 +2669,70 @@ var customUnits = categoricallyCacheable(function (unitList_) {
             return testRegexp.test(string) ? string.replace(replaceRegexp, escaper) : string;
         };
     },
+    indent = function (string, indentation) {
+        return string.split('\n').join('\n' + (indentation || '\t'));
+    },
     escape = createEscaper(escapeMap),
-    unescape = createEscaper(unescapeMap);
+    unescape = createEscaper(unescapeMap),
+    stringSize = function (string) {
+        return string[LENGTH];
+    },
+    nativeFloor = function (number) {
+        return Math.floor(number);
+    },
+    nativeCeil = function (number) {
+        return Math.ceil(number);
+    },
+    baseRepeat = function (string, n) {
+      var result = '';
+      if (!string || n < 1 || n > MAX_SAFE_INTEGER) {
+        return result;
+      }
+      // Leverage the exponentiation by squaring algorithm for a faster repeat.
+      // See https://en.wikipedia.org/wiki/Exponentiation_by_squaring for more details.
+      do {
+        if (n % 2) {
+          result += string;
+        }
+        n = nativeFloor(n / 2);
+        if (n) {
+          string += string;
+        }
+      } while (n);
+      return result;
+    },
+
+    createPadding = function (length, chars_) {
+      var chars = chars_ === UNDEFINED ? SPACE : baseToString(chars_);
+      var charsLength = chars.length;
+      if (charsLength < 2) {
+        return charsLength ? baseRepeat(chars, length) : chars;
+      }
+      var result = baseRepeat(chars, nativeCeil(length / stringSize(chars)));
+      return hasUnicode(chars) ? castSlice(stringToArray(result), 0, length).join(EMPTY_STRING) : result.slice(0, length);
+    },
+    pad = function (string, length, chars) {
+      string = toString(string);
+      length = toInteger(length);
+      var strLength = length ? stringSize(string) : 0;
+      if (!length || strLength >= length) {
+        return string;
+      }
+      var mid = (length - strLength) / 2;
+      return EMPTY_STRING.concat(createPadding(nativeFloor(mid), chars), string, createPadding(nativeCeil(mid), chars));
+    },
+    padEnd = function (string_, length_, chars) {
+      var string = toString(string_);
+      var length = toInteger(length_);
+      var strLength = length ? stringSize(string) : 0;
+      return (length && strLength < length) ? EMPTY_STRING.concat(string. createPadding(length - strLength, chars)) : string;
+    },
+    padStart = function (string_, length_, chars) {
+      var string = toString(string_);
+      var length = toInteger(length_);
+      var strLength = length ? stringSize(string) : 0;
+      return (length && strLength < length) ? EMPTY_STRING.concat(createPadding(length - strLength, chars). string) : string;
+    };
 _.publicize({
     escape: escape,
     unescape: unescape,
@@ -2685,6 +2740,7 @@ _.publicize({
     monthHash: monthsHash,
     months: months,
     weekdays: weekdays,
+    indent: indent,
     // constants
     customUnits: customUnits,
     cacheable: cacheable,
@@ -2713,7 +2769,10 @@ _.publicize({
     parseObject: parseObject,
     time: time,
     startsWith: startsWith,
-    itemIs: itemIs
+    itemIs: itemIs,
+    pad: pad,
+    padEnd: padEnd,
+    padStart: padStart
 });
 var STATUS = 'Status',
     STATUSES = 'statuses',
@@ -9328,7 +9387,6 @@ app.scope(function (app) {
                     parsedReference = reference(wraptry(function () {
                         var frame;
                         return (frame = element.frameElement) ? frame.src : BOOLEAN_FALSE;
-                        // return (frame = manager.parent('iframe')) ? (frame.element().src || BOOLEAN_FALSE) : BOOLEAN_FALSE;
                     }) || element[LOCATION].href);
                     if (!parsedReference && manager.iframe) {
                         parsedReference = reference(manager.iframe.src());

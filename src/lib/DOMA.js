@@ -3506,7 +3506,6 @@ app.scope(function (app) {
                     parsedReference = reference(wraptry(function () {
                         var frame;
                         return (frame = element.frameElement) ? frame.src : BOOLEAN_FALSE;
-                        // return (frame = manager.parent('iframe')) ? (frame.element().src || BOOLEAN_FALSE) : BOOLEAN_FALSE;
                     }) || element[LOCATION].href);
                     if (!parsedReference && manager.iframe) {
                         parsedReference = reference(manager.iframe.src());
