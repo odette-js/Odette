@@ -3095,16 +3095,16 @@ app.scope(function (app) {
                 found = attrs[where] = attrs[where] || StringManager();
             return found;
         },
-        dimensionFinder = function (element, doc, win) {
+        dimensionFinder = function (element, doc, win, usescrolling) {
             return function (num) {
-                var ret, body, manager = this[ITEM](num);
+                var ret, body, documnt, manager = this[ITEM](num);
                 if (!manager) {
                     return 0;
                 }
                 if (manager.is(ELEMENT)) {
                     ret = clientRect(manager.element())[element];
                 } else {
-                    if (manager.is(DOCUMENT) && (body = manager.element()[BODY])) {
+                    if (manager.is(DOCUMENT) && (documnt = manager.element()) && usescrolling ? (body = (documnt && (documnt.scrollingElement || documnt[BODY]))) : (body = documnt[BODY])) {
                         ret = body[doc];
                     } else {
                         if (manager.is(WINDOW) && manager.is(ACCESSABLE)) {
@@ -3223,6 +3223,8 @@ app.scope(function (app) {
             skip: managerHorizontalTraverser('skip', NULL, 0),
             height: dimensionFinder(HEIGHT, 'scrollHeight', INNER_HEIGHT),
             width: dimensionFinder(WIDTH, 'scrollWidth', INNER_WIDTH),
+            scrollLeft: dimensionFinder('scrollLeft', 'scrollLeft', 'pageXOffset', BOOLEAN_TRUE),
+            scrollTop: dimensionFinder('scrollTop', 'scrollTop', 'pageYOffset', BOOLEAN_TRUE),
             siblings: function (filtr) {
                 var original = this,
                     filter = createDomFilter(filtr, original.owner);
@@ -3971,6 +3973,8 @@ app.scope(function (app) {
              * @returns {Number} width of the first object, adjusting for the different types of possible objects such as dom element, document or window
              */
             width: dimensionFinder(WIDTH, 'scrollWidth', INNER_WIDTH),
+            scrollLeft: dimensionFinder('scrollLeft', 'scrollLeft', 'pageXOffset', BOOLEAN_TRUE),
+            scrollTop: dimensionFinder('scrollTop', 'scrollTop', 'pageYOffset', BOOLEAN_TRUE),
             /**
              * @func
              * @name DOMA#data
