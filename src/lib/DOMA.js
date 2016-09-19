@@ -3104,7 +3104,7 @@ app.scope(function (app) {
                 if (manager.is(ELEMENT)) {
                     ret = clientRect(manager.element())[element];
                 } else {
-                    if (manager.is(DOCUMENT) && (documnt = manager.element()) && usescrolling ? (body = (documnt && (documnt.scrollingElement || documnt[BODY]))) : (body = documnt[BODY])) {
+                    if (manager.is(DOCUMENT) && (documnt = manager.element()) && (usescrolling ? (body = (documnt && (documnt.scrollingElement || documnt[BODY]))) : (body = documnt[BODY]))) {
                         ret = body[doc];
                     } else {
                         if (manager.is(WINDOW) && manager.is(ACCESSABLE)) {
