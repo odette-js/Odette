@@ -189,7 +189,7 @@ app.scope(function (app) {
             destroy: function () {
                 var children, region = this;
                 if ((children = region[CHILDREN])) {
-                    children.slice().callEach(DESTROY);
+                    children.slice().eachCall(DESTROY);
                 }
                 return this;
             }
