@@ -1779,7 +1779,7 @@ app.scope(function (app) {
             if (manager.is(IFRAME)) {
                 testIframe(manager);
                 windo = manager.window();
-                if (windo.is(ACCESSABLE)) {
+                if (windo && windo.is(ACCESSABLE)) {
                     parentElement = windo.element();
                     doc = parentElement[DOCUMENT];
                     returnValue = doc.body ? doc.body[PARENT_NODE].outerHTML : EMPTY_STRING;
@@ -1799,6 +1799,7 @@ app.scope(function (app) {
             if (manager.is(IFRAME)) {
                 windo = manager.window();
                 testIframe(manager);
+                // if (windo) {
                 if (windo.is(ACCESSABLE)) {
                     parentElement = windo.element();
                     doc = parentElement[DOCUMENT];
@@ -1810,6 +1811,9 @@ app.scope(function (app) {
                     doc.close();
                     doTheThing = BOOLEAN_TRUE;
                 }
+                // } else {
+                //     manager.cachedContent = value;
+                // }
             } else {
                 if (manager.is(ELEMENT)) {
                     parentElement = manager.element();
@@ -1846,7 +1850,7 @@ app.scope(function (app) {
          * @func
          */
         testIframe = function (manager, element_) {
-            var src, contentWindow, contentWindowManager, element;
+            var src, contentWindow, contentWindowManager, element, cached;
             manager.remark(IFRAME, manager.tagName === IFRAME);
             if (!manager.is(IFRAME)) {
                 return;
@@ -1861,12 +1865,13 @@ app.scope(function (app) {
             contentWindowManager = manager.owner.returnsManager(contentWindow);
             contentWindowManager.iframe = manager;
             markGlobal(contentWindowManager, contentWindow, src);
-            if (!manager.cachedContent || !contentWindowManager.is(ACCESSABLE)) {
+            if (!(cached = manager.cachedContent) || !contentWindowManager.is(ACCESSABLE)) {
+                manager.cachedContent = NULL;
                 return;
             }
             // must be string
-            manager.html(manager.cachedContent);
             manager.cachedContent = NULL;
+            manager.html(cached ? cached.string : '', (cached ? cached.vars : {}));
         },
         cachedDispatch = factories.Events[CONSTRUCTOR][PROTOTYPE][DISPATCH_EVENT],
         RUNNING_EVENT = 'runningEvent',
@@ -3585,11 +3590,16 @@ app.scope(function (app) {
                 if (!passedContent && (body || content.slice(0, 10).toLowerCase() !== '<!doctype ')) {
                     content = manager.owner.iframeContent(content, body);
                 }
+                var sharedVars = isObject(passedContent) ? passedContent : (isObject(body) ? body : {});
                 if (manager.is(IFRAME)) {
                     if (manager.is(ATTACHED)) {
-                        manager.html(content);
+                        manager.html(content, sharedVars);
                     } else {
-                        manager.cachedContent = content;
+                        manager.cachedContent = {
+                            string: content,
+                            vars: sharedVars
+                        };
+                        // manager.cachedContent = content;
                     }
                     return manager;
                 } else {
