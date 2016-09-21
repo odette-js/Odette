@@ -104,7 +104,7 @@ var factories = {},
         // normalize sort function handling for safari
         return obj.sort(function (a, b) {
             var result = fn(a, b);
-            if (isNaN(result)) {
+            if (_isNaN(result)) {
                 result = INFINITY;
             }
             if (result === BOOLEAN_TRUE) {
@@ -200,7 +200,7 @@ var factories = {},
     /**
      * @func
      */
-    isNaN = function (thing) {
+    _isNaN = function (thing) {
         return thing !== thing;
     },
     notNaN = function (thing) {
@@ -240,7 +240,7 @@ var factories = {},
         };
     },
     isFinite_ = win.isFinite,
-    isFinite = function (thing) {
+    _isFinite = function (thing) {
         return isNumber(thing) && isFinite_(thing);
     },
     isWindow = function (obj) {
@@ -657,7 +657,7 @@ var factories = {},
     },
     constructorWrapper = function (Constructor, parent) {
         var __ = function (one, two, three, four, five, six) {
-            return one instanceof Constructor ? one : new Constructor(one, two, three, four, five, six);
+            return one != NULL && one instanceof Constructor ? one : new Constructor(one, two, three, four, five, six);
         };
         __.isInstance = Constructor.isInstance = function (instance) {
             return isInstance(instance, Constructor);
@@ -939,15 +939,15 @@ var factories = {},
         }
         if ((val[0] === '{' && val[valLength - 1] === '}') || (val[0] === '[' && val[valLength - 1] === ']')) {
             if ((val = wraptry(function () {
-                return JSON.parse(val);
-            }, function () {
-                return val;
-            })) !== valTrimmed) {
+                    return JSON.parse(val);
+                }, function () {
+                    return val;
+                })) !== valTrimmed) {
                 return val;
             }
         }
         coerced = +val;
-        if (!isNaN(coerced)) {
+        if (!_isNaN(coerced)) {
             return coerced;
         }
         if (has(baseDataTypes, val)) {
@@ -1162,7 +1162,7 @@ var factories = {},
             proto = constructor[PROTOTYPE];
             val = proto[key];
             constructor = previousConstructor(proto);
-        } while (--farDown > 0 && constructor && isFinite(farDown));
+        } while (--farDown > 0 && constructor && _isFinite(farDown));
         return val;
     },
     uuid = function () {
@@ -1477,10 +1477,10 @@ var factories = {},
         isFunction: isFunction,
         isObject: isObject,
         isNumber: isNumber,
-        isFinite: isFinite,
+        isFinite: _isFinite,
         isString: isString,
         isNull: isNull,
-        isNaN: isNaN,
+        isNaN: _isNaN,
         notNaN: notNaN,
         eachProxy: eachProxy,
         publicize: publicize,

@@ -32,7 +32,7 @@ app.scope(function (app) {
         addValue = function (constant1, constant2) {
             return function () {
                 var sequencer = this;
-                duff(arguments, function (value) {
+                duff(toArray(arguments), function (value) {
                     sequencer.add(value, constant1, constant2);
                 });
                 return sequencer;
@@ -63,16 +63,20 @@ app.scope(function (app) {
             isLessThan: addValue(BOOLEAN_FALSE, curriedLessThan),
             isNotGreaterThan: addValue(BOOLEAN_TRUE, curriedGreaterThan),
             isNotLessThan: addValue(BOOLEAN_TRUE, curriedLessThan),
+            /**
+             * This function creates the Lingustics object that is automatically added to the LinguisticsManager object that the when method was invoked from.
+             * @param {object} LinguisticsManager
+             */
             constructor: function (origin) {
                 var sequencer = this;
                 sequencer.origin = origin;
                 sequencer[COUNTER] = 0;
                 sequencer[GROUP_INDEX] = -1;
                 sequencer[REGISTERED] = {};
-                sequencer.logic = new Collection[CONSTRUCTOR]();
-                sequencer[SUCCESS] = new Collection[CONSTRUCTOR]();
-                sequencer[FAILURES] = new Collection[CONSTRUCTOR]();
-                sequencer[EVERY] = new Collection[CONSTRUCTOR]();
+                sequencer.logic = Collection();
+                sequencer[SUCCESS] = Collection();
+                sequencer[FAILURES] = Collection();
+                sequencer[EVERY] = Collection();
                 sequencer.group();
                 sequencer.listenTo(sequencer.origin, {
                     change: 'apply',
@@ -99,7 +103,7 @@ app.scope(function (app) {
                 ++sequencer[GROUP_INDEX];
                 sequencer.logic.push({
                     index: sequencer[GROUP_INDEX],
-                    list: new Collection[CONSTRUCTOR]()
+                    list: Collection()
                 });
                 return sequencer;
             },
