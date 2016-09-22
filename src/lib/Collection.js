@@ -163,9 +163,14 @@ app.scope(function (app) {
                 this.reset();
                 return this;
             },
-            get: function (category, id) {
+            get: function (category, id, method) {
                 var cat = this.register[category];
-                return cat && cat[id];
+                var item = cat && cat[id];
+                if (item === UNDEFINED && method) {
+                    item = method();
+                    this.keep(category, id, item);
+                }
+                return item;
             },
             keep: function (category, id, value) {
                 var register = this.register,

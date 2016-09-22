@@ -1,3 +1,8 @@
+/*
+ * @overview First script to be loaded onto page. Bare minimum for all apps and subapps to be built under
+ * @author Michael McLaughlin
+ * @version 6.2.4
+ */
 (function (root, KEY, factory) {
     if (typeof define === 'function' && define.amd) {
         define([], factory);
@@ -16,7 +21,6 @@
         PROTOTYPE = 'prototype',
         HAS_ACCESS = 'hasAccess',
         PERIOD = '.',
-        // figure all this out later to allow for server side use... if appropriate
         global_ = this || window,
         doc = global_.document,
         BOOLEAN_TRUE = !0,
@@ -31,16 +35,22 @@
         now = function () {
             return +(new Date());
         },
-        map = function (arra_, fn) {
+        /**
+         * This function adds one to its input.
+         * @param {Array} list array or arraylike object.
+         * @param {Function} fn iterate over each item in the array
+         * @returns {Array} result of the method passed in under the second argument
+         */
+        map = function (list, fn) {
             var i = 0,
-                arra = arra_ && arra_.slice(0),
+                arra = list && list.slice(0),
                 len = arra && arra[LENGTH],
-                arr = [];
+                array = [];
             while (len > i) {
-                arr[i] = fn(arra[i], i, arra);
+                array[i] = fn(arra[i], i, arra);
                 i++;
             }
-            return arr;
+            return array;
         },
         isString = typeConstructor('string'),
         isNumber = typeConstructor('number'),
@@ -73,6 +83,12 @@
         isVersionString = function (string) {
             return isNumber(string) || (isString(string) && (string.split(PERIOD)[LENGTH] > 1 || +string === +string)) ? BOOLEAN_TRUE : BOOLEAN_FALSE;
         },
+        /**
+         * This function distinguishes major.minor.patch versions from one another and ranks them based on their values. Since strings that contain numbers cannot be ordered well, it is best to understand each version name holistically.
+         * @param {String} string1 first version name to be compared
+         * @param {String} string2 second version name to be compared
+         * @returns {Boolean} returns true if string2 is "larger"
+         */
         maxVersion = function (string1, string2) {
             // string 2 is always the underdogl
             var split1, split2, provenLarger, cvs1Result = convertVersionString(string1);
@@ -142,7 +158,6 @@
             } else {
                 string += EMPTY_STRING;
                 converted = +string;
-                // could be a number hiding as a string
                 if (converted === converted) {
                     return converted;
                 } else {
@@ -212,19 +227,21 @@
             }
             return obj;
         },
-        merge = function (obj1, obj2) {
-            each(obj2, function (value, key) {
-                obj1[key] = value;
+        /**
+         * This function merges two objects' key value pairs
+         * @param {Object} object1 array or arraylike object.
+         * @param {Object} object2 used to overwrite key value pairs on object1
+         * @returns {Object} object1
+         */
+        merge = function (object1, object2) {
+            each(object2, function (value, key) {
+                object1[key] = value;
             });
-            return obj1;
+            return object1;
         },
         touchable = function (touchHere) {
-            // assume you have top access
             return wraptry(function () {
-                // always errs
                 var doc = touchHere.document;
-                // overwrite the scoped application variable
-                // doc has to be true, if it is undefined (safari) then we did not make it
                 return !!doc;
             }, function () {
                 return BOOLEAN_FALSE;
@@ -254,6 +271,10 @@
                 Odette: Odette,
                 stringifyQuery: stringifyQuery,
                 parseSearch: parseSearch,
+                /**
+                 * Pass a function to this method to have it run each time the app encounters a new window. When this happens all functions passed to the undefine method are run to set up the window properly.
+                 * @param {Function} this function will run everytime a new window is encountered after this point.
+                 */
                 undefine: function (handler) {
                     this.missedDefinitions.push(handler);
                     if (this.defining) {
@@ -277,9 +298,18 @@
                     var fn = name_ && (isFunction(name_) ? name_ : (isFunction(fn_) ? fn_ : NULL));
                     return this[PARENT].scope(name, fn);
                 },
-                counter: function (thing) {
-                    return Odette.counter(thing);
+                /**
+                 * Proxy for the global Odette counter
+                 * @param {String=} category a category to pull the id from
+                 */
+                counter: function (category) {
+                    return Odette.counter(category);
                 },
+                /**
+                 Define an app definition
+                 @param {Window} globl pass a window object to root the definition against
+                 @param {Object=} options options that the method, and queued methods can be passed
+                 */
                 definition: function (globl, options) {
                     var odebt, defs, opts, app = this;
                     if (app.definedAgainst.indexOf(globl) > -1) {
@@ -338,7 +368,6 @@
                     if (!url) {
                         return BOOLEAN_FALSE;
                     }
-                    // now url is a string
                     focused = endpoints[url] = endpoints[url] || {};
                     if (focused.finished) {
                         handle.apply(application, [item]);
@@ -557,9 +586,7 @@
             application.buildContext = global;
             app = application.get(version);
             if (!app) {
-                // there is already an app with this same version that originated from this global object
                 app = application.registerVersion(version);
-                // call is used because apply is finicky and bind is not universal
                 fn.apply(global_, [application, app]);
             }
             if (alt) {

@@ -1,9 +1,9 @@
 var content = ['browserify', 'distribute'],
     server = ['serve', 'open'],
     stackTasks = ['stack', 'stackie', 'stackie9'],
-    docsTasks = ['builddocs', 'upload'],
-    allTasks = content.concat(['watch'], server),
-    devTasks = allTasks.concat(content),
+    docsTasks = ['builddocumentation', 'watchdocs'],
+    devTasks = content.concat(['watch'], server),
+    // devTasks = allTasks.concat(content),
     gulp = require('gulp'),
     gulpTasker = require('./gulp'),
     path = require('path'),
@@ -11,6 +11,7 @@ var content = ['browserify', 'distribute'],
     fs = require('fs'),
     path = require('path'),
     spawn = require('child_process').spawn,
+    runSequence = require('run-sequence'),
     makePath = function (obj) {
         return _.each(obj, function (val, key) {
             if (_.isObject(val)) {
@@ -54,6 +55,9 @@ var content = ['browserify', 'distribute'],
     }), {
         gulpdir: __dirname,
         src: './src/**/*',
+        // jsAllLib: './src/lib/**/*.js',
+        jsAllLib: ['./src/lib/**/*', '!./src/lib/**/scope*'],
+        documentationOutput: './dist/docs',
         publicized: './src/static/**/*',
         publicizedOutput: './dist',
         jsLibraryOutput: 'library.js',
@@ -67,11 +71,16 @@ var content = ['browserify', 'distribute'],
         jsLibraryDistribute: 'library.js',
         jsDistributes: './dist/build/'
     });
-gulpTasker(allTasks.concat(stackTasks, docsTasks), [require('./settings'), paths]);
+gulpTasker(devTasks.concat(stackTasks, docsTasks), [require('./settings'), paths]);
 gulp.task('build', content);
 gulp.task('dev', devTasks);
-gulp.task('default', allTasks);
-gulp.task('docs', ['default', 'builddocs']);
+gulp.task('docs', function (cb) {
+    runSequence('build', 'builddocumentation', cb);
+});
+gulp.task('devdocs', ['dev', 'builddocumentation', 'watchdocs']);
+gulp.task('uploaddocs', function (cb) {
+    runSequence('default', 'builddocs', 'upload', cb);
+});
 gulp.task('browserstack', ['default', 'stack']);
 gulp.task('browserstackie', ['default', 'stackie']);
 gulp.task('browserstackie9', ['default', 'stackie9']);

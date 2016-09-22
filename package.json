@@ -25,10 +25,13 @@
     "jsdoc": "^3.4.0",
     "json-pretty": "0.0.1",
     "morgan": "^1.7.0",
+    "run-sequence": "^1.2.2",
     "serve-favicon": "^2.3.0",
     "underscore": "^1.8.3"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "gulp-documentation": "^2.2.0"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

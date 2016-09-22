@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
+var settings = require('./settings');
 require('./server')({
     http: {
-        port: 9080
+        port: settings.http.port
     },
     env: {
         type: process.env.SPICE_ENV,
@@ -12,7 +13,7 @@ require('./server')({
 });
 require('./server')({
     http: {
-        port: 9000
+        port: settings.http.port - 80
     },
     env: {
         type: process.env.SPICE_ENV,
