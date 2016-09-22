@@ -336,12 +336,12 @@ var factories = {},
             return extend(BOOLEAN_TRUE, returnOrApply(supertarget, context, args), returnOrApply(handler, context, args));
         };
     },
-    merge_count = 0,
+    // merge_count = 0,
     merge = function (obj1, obj2, deep) {
         var key, obj1Val, obj2Val, i = 0,
             instanceKeys = keys(obj2),
             l = instanceKeys[LENGTH];
-        merge_count++;
+        // merge_count++;
         for (; i < l; i++) {
             key = instanceKeys[i];
             // ignore undefined
@@ -354,9 +354,9 @@ var factories = {},
                             if (!isObject(obj1Val)) {
                                 obj1Val = obj1[key] = returnBaseType(obj2Val);
                             }
-                            if (merge_count > 20) {
-                                debugger;
-                            }
+                            // if (merge_count > 20) {
+                            //     debugger;
+                            // }
                             merge(obj1Val, obj2Val, deep);
                         } else {
                             obj1[key] = obj2Val;
@@ -367,7 +367,7 @@ var factories = {},
                 }
             }
         }
-        merge_count--;
+        // merge_count--;
         return obj1;
     },
     values = function (object) {
