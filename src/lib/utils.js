@@ -337,25 +337,28 @@ var factories = {},
         };
     },
     merge = function (obj1, obj2, deep) {
-        var key, val, i = 0,
+        var key, obj1Val, obj2Val, i = 0,
             instanceKeys = keys(obj2),
             l = instanceKeys[LENGTH];
         for (; i < l; i++) {
             key = instanceKeys[i];
             // ignore undefined
             if (obj2[key] !== UNDEFINED) {
-                val = obj2[key];
+                obj2Val = obj2[key];
                 if (deep) {
-                    if (isObject(obj2[key])) {
-                        if (!isObject(obj1[key])) {
-                            obj1[key] = returnBaseType(obj2[key]);
+                    obj1Val = obj1[key];
+                    if (obj1Val !== obj2Val) {
+                        if (isObject(obj2Val)) {
+                            if (!isObject(obj1Val)) {
+                                obj1Val = obj1[key] = returnBaseType(obj2Val);
+                            }
+                            merge(obj1Val, obj2Val, deep);
+                        } else {
+                            obj1[key] = obj2Val;
                         }
-                        merge(obj1[key], obj2[key], deep);
-                    } else {
-                        obj1[key] = val;
                     }
                 } else {
-                    obj1[key] = val;
+                    obj1[key] = obj2Val;
                 }
             }
         }
