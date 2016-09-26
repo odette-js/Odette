@@ -1394,6 +1394,9 @@ var factories = {},
             return thing;
         };
     },
+    returnsSelf = returns.self = function () {
+        return this;
+    },
     returnsTrue = returns.true = returns(BOOLEAN_TRUE),
     returnsFalse = returns.false = returns(BOOLEAN_FALSE),
     returnsArray = returns.array = function () {
