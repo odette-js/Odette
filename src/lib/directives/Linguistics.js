@@ -50,14 +50,14 @@ app.scope(function (app) {
             };
         },
         abstractedStopListening = function () {
-            this.stopListening();
+            this.stopListening(this.origin);
         },
         Linguistics = factories.Linguistics = factories.Events.extend(LINGUISTICS, {
             then: push(SUCCESS),
             always: push(EVERY),
             otherwise: push(FAILURES),
             is: addValue(),
-            isnt: isNot,
+            // isnt: isNot,
             isNot: isNot,
             isGreaterThan: addValue(BOOLEAN_FALSE, curriedGreaterThan),
             isLessThan: addValue(BOOLEAN_FALSE, curriedLessThan),
@@ -77,16 +77,25 @@ app.scope(function (app) {
                 sequencer[SUCCESS] = Collection();
                 sequencer[FAILURES] = Collection();
                 sequencer[EVERY] = Collection();
-                sequencer.group();
-                sequencer.listenTo(sequencer.origin, {
+                // sequencer.group();
+                sequencer.listenToOrigin();
+                return this;
+            },
+            listenToOrigin: function () {
+                return this.listenTo(this.origin, {
                     change: 'apply',
                     destroy: abstractedStopListening
                 });
-                return this;
             },
-            when: function (key) {
-                return this[PARENT] ? this[PARENT].when(key) : exception('this sequencer has been destroyed');
+            stopListeningToOrigin: function () {
+                return this.stopListening(this.origin, {
+                    change: 'apply',
+                    destroy: abstractedStopListening
+                });
             },
+            // when: function (key) {
+            //     return this[PARENT] ? this[PARENT].when(key) : exception('this sequencer has been destroyed');
+            // },
             and: function (key) {
                 var sequencer = this;
                 sequencer[CURRENT] = key;
@@ -179,11 +188,16 @@ app.scope(function (app) {
             when: function (key) {
                 var newish = new Linguistics[CONSTRUCTOR](this.target);
                 this.add(newish);
-                return newish.and(key);
+                return newish.or(key);
             },
             constructor: function (target) {
                 // save it for later
                 this.target = target;
+                return this;
+            },
+            remove: function (lm) {
+                this.remove(lm);
+                lm.stopListeningToOrigin();
                 return this;
             }
         });
