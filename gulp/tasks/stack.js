@@ -2,15 +2,15 @@ module.exports = function (settings, paths) {
     var log = function () {
         console.log.apply(console, arguments);
     };
-    var BrowserStack = require("browserstack");
-    var webdriver = require('browserstack-webdriver');
-    var client = BrowserStack.createClient({
-        username: "shashank@gospecless.com",
-        password: "Specless@BrowserStack"
-    });
     // gulp.task('stack', function () {
     // Input capabilities
     return function () {
+        var BrowserStack = require("browserstack");
+        var webdriver = require('browserstack-webdriver');
+        var client = BrowserStack.createClient({
+            username: "shashank@gospecless.com",
+            password: "Specless@BrowserStack"
+        });
         var browserIdx = 0,
             capabilities = {
                 'browserstack.user': 'michaelmclaughli1',

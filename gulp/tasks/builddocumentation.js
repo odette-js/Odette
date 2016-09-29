@@ -1,7 +1,7 @@
-var documentation = require('gulp-documentation'),
-    gulp = require('gulp');
 module.exports = function (settings, paths) {
     return function () {
+        var documentation = require('gulp-documentation'),
+            gulp = require('gulp');
         // gulp.src('./index.js')
         //   .pipe(documentation({ format: 'md' }))
         //   .pipe(gulp.dest('md-documentation'));
