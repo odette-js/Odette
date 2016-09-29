@@ -1539,6 +1539,7 @@ var factories = {},
             return Math[key];
         })
     };
+isBoolean.false = isBoolean.true = BOOLEAN_TRUE;
 app.logWrappedErrors = BOOLEAN_TRUE;
 /**
  * @class Extendable
