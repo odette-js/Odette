@@ -106,6 +106,9 @@ module.exports = function (settings) {
     });
     app.listen(settings.http.port);
     console.log('Listening on :'.concat(settings.http.port));
+    process.on('exit', function () {
+        app.close();
+    });
     // Was going to have node automatically open default browser to proper location,
     // but it requires an external package, so not worth it.
 };

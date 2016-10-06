@@ -205,22 +205,22 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                     box.set('here', 'there');
                     _.test.expect(count).toEqual(0);
                 });
-                _.test.it('allows for negatives to be used like isNot and isnt', function () {
-                    box.when('one').isNot(2).and('up').isnt('down').then(function () {
-                        count++;
-                    }).otherwise(function () {
-                        count--;
-                    });
-                    _.test.expect(count).toEqual(0);
-                    box.set('up', 'down');
-                    _.test.expect(count).toEqual(-1);
-                    box.set('one', 2);
-                    _.test.expect(count).toEqual(-1);
-                    box.set('one', 1);
-                    _.test.expect(count).toEqual(-1);
-                    box.set('up', 'side');
-                    _.test.expect(count).toEqual(0);
-                });
+                // _.test.it('allows for negatives to be used like isNot and isnt', function () {
+                //     box.when('one').isNot(2).and('up').isnt('down').then(function () {
+                //         count++;
+                //     }).otherwise(function () {
+                //         count--;
+                //     });
+                //     _.test.expect(count).toEqual(0);
+                //     box.set('up', 'down');
+                //     _.test.expect(count).toEqual(-1);
+                //     box.set('one', 2);
+                //     _.test.expect(count).toEqual(-1);
+                //     box.set('one', 1);
+                //     _.test.expect(count).toEqual(-1);
+                //     box.set('up', 'side');
+                //     _.test.expect(count).toEqual(0);
+                // });
                 _.test.it('can compare numbers using basic operators and negation', function () {
                     box.when('one').isGreaterThan(5).and('ten').isLessThan(4).and('phone').isNotLessThan(5).then(function () {
                         count++;

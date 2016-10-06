@@ -102,6 +102,7 @@ app.scope(function (app) {
             failedTests = 0;
             runningEach(expectation.afterStack);
             testisrunning = BOOLEAN_FALSE;
+            // promise.resolveAs();
             if (queue[0]) {
                 queued = queue.shift();
                 clearTimeout(queued.runId);
@@ -110,15 +111,18 @@ app.scope(function (app) {
             setupPoller();
         },
         describe = function (string, handler) {
-            var resolution = Promise();
+            var resolution = Promise(_.noop, BOOLEAN_TRUE);
             describes.push(resolution);
             stack.push(string);
             globalBeforeEachStack.push([]);
             globalAfterEachStack.push([]);
-            wraptry(handler, noop, function () {
+            wraptry(handler, function (e) {
+                resolution.reject(e);
+            }, function () {
                 globalAfterEachStack.pop();
                 globalBeforeEachStack.pop();
                 stack.pop();
+                resolution.resolve();
             });
             return resolution;
         },
@@ -171,7 +175,7 @@ app.scope(function (app) {
                 current: copy,
                 afterStack: globalAfterEachStack.slice(0),
                 beforeStack: globalBeforeEachStack.slice(0),
-                promise: Promise()
+                promise: Promise(_.noop, BOOLEAN_TRUE)
             };
             allIts.push(expectation);
             if (testisrunning) {

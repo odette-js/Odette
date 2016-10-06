@@ -260,7 +260,7 @@ app.scope(function (app) {
                 }
                 fn = tween.bind(fn_);
                 // continuous update
-                return tween.timeout(0, function (ms) {
+                return tween.interval(0, function (ms) {
                     var finished = BOOLEAN_FALSE,
                         diff = ms - added;
                     if (diff >= time_) {

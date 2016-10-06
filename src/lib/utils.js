@@ -4,10 +4,10 @@ var factories = {},
     hasEnumBug = !{
         toString: NULL
     }.propertyIsEnumerable(TO_STRING),
-    noop = function () {},
     /**
-     * @func
+     * @lends _
      */
+    noop = function () {},
     indexOfNaN = function (array, fromIndex, toIndex, fromRight) {
         if (!array) {
             return -1;
@@ -85,18 +85,12 @@ var factories = {},
     smartIndexOf = function (array, item, _from, _to, _rtl) {
         return (_from === BOOLEAN_TRUE && array && array[LENGTH] > 100 ? sortedIndexOf : indexOf)(array, item, _from, _to, _rtl);
     },
-    /**
-     * @func
-     */
     toString = function (obj) {
         return obj == NULL ? EMPTY_STRING : obj + EMPTY_STRING;
     },
     stringify = function (obj) {
         return (isObject(obj) ? JSON.stringify(obj) : isFunction(obj) ? obj.toString() : obj) + EMPTY_STRING;
     },
-    /**
-     * @func
-     */
     sort = function (obj, fn_, reversed, context) {
         var fn = bindTo(fn_ || function (a, b) {
             return a > b;
@@ -152,9 +146,6 @@ var factories = {},
             return handler(a, arg1) > handler(b, arg1);
         }, reversed, context);
     },
-    /**
-     * @func
-     */
     has = function (obj, prop, useArrayCheck) {
         var val = BOOLEAN_FALSE;
         if (useArrayCheck) {
@@ -165,9 +156,6 @@ var factories = {},
         }
         return val;
     },
-    /**
-     * @func
-     */
     previousConstructor = function (instance) {
         return instance && instance[CONSTRUCTOR_KEY] && instance[CONSTRUCTOR_KEY][CONSTRUCTOR] || instance[CONSTRUCTOR];
     },
@@ -178,17 +166,11 @@ var factories = {},
         }
         return instance instanceof constructor;
     },
-    /**
-     * @func
-     */
     splitGen = function (delimiter) {
         return function (list) {
             return isString(list) ? list.split(delimiter) : list;
         };
     },
-    /**
-     * @func
-     */
     isWrap = function (type, fn_) {
         var fn = fn_ || function () {
             return BOOLEAN_TRUE;
@@ -197,37 +179,22 @@ var factories = {},
             return typeof thing === type && fn(thing);
         };
     },
-    /**
-     * @func
-     */
     _isNaN = function (thing) {
         return thing !== thing;
     },
     notNaN = function (thing) {
         return thing === thing;
     },
-    /**
-     * @func
-     */
     isFunction = isWrap(FUNCTION),
-    /**
-     * @func
-     */
     isBoolean = isWrap(BOOLEAN),
     isInt = function (num) {
         return isNumber(num) && num === Math.round(num);
     },
-    /**
-     * @func
-     */
     isString = isWrap(STRING),
     isNumber = isWrap(NUMBER, notNaN),
     isObject = isWrap(OBJECT, function (thing) {
         return !!thing;
     }),
-    /**
-     * @func
-     */
     isNull = function (thing) {
         return thing === NULL;
     },
@@ -246,22 +213,10 @@ var factories = {},
     isWindow = function (obj) {
         return !!(obj && obj === obj[WINDOW]);
     },
-    /**
-     * @func
-     */
-    /**
-     * @func
-     */
     isArray = ARRAY_CONSTRUCTOR.isArray,
-    /**
-     * @func
-     */
     isEmpty = function (obj) {
         return !keys(obj)[LENGTH];
     },
-    /**
-     * @func
-     */
     invert = function (obj) {
         var i = 0,
             result = {},
@@ -272,9 +227,6 @@ var factories = {},
         }
         return result;
     },
-    /**
-     * @func
-     */
     collectNonEnumProps = function (obj, keys) {
         var nonEnumIdx = nonEnumerableProps[LENGTH];
         var constructor = obj[CONSTRUCTOR];
@@ -289,9 +241,6 @@ var factories = {},
             }
         }
     },
-    /**
-     * @func
-     */
     now = function () {
         return +(new Date());
     },
@@ -304,9 +253,6 @@ var factories = {},
         now: now_shim,
         offset: now_offset
     },
-    /**
-     * @func
-     */
     extend = function () {
         var deep = BOOLEAN_FALSE,
             args = arguments,
@@ -403,17 +349,11 @@ var factories = {},
         }
         return obj;
     },
-    /**
-     * @func
-     */
     // Helper for collection methods to determine whether a collection
     // should be iterated as an array or as an object
     // Related: http://people.mozilla.org/~jorendorff/es6-draft.html#sec-tolength
     // Avoids a very nasty iOS 8 JIT bug on ARM-64. #2094
     MAX_ARRAY_INDEX = Math.pow(2, 53) - 1,
-    /**
-     * @func
-     */
     isArrayLike = function (collection) {
         var length = !!collection && collection[LENGTH];
         return isArray(collection) || (isWindow(collection) ? BOOLEAN_FALSE : (isNumber(length) && !isString(collection) && length >= 0 && length <= MAX_ARRAY_INDEX && !isFunction(collection)));
@@ -450,9 +390,6 @@ var factories = {},
             return fn(list, iterator, context, direction);
         };
     },
-    /**
-     * @func
-     */
     createPredicateIndexFinder = function (dir) {
         return function (obj, predicate, context, index_) {
             var key, value, array = isArrayLike(obj) ? obj : keys(obj),
@@ -472,18 +409,9 @@ var factories = {},
             return;
         };
     },
-    /**
-     * @func
-     */
     // Returns the first index on an array-like that passes a predicate test
     findIndex = createPredicateIndexFinder(1),
-    /**
-     * @func
-     */
     findLastIndex = createPredicateIndexFinder(-1),
-    /**
-     * @func
-     */
     validKey = function (key) {
         // -1 for arrays
         // any other data type ensures string
@@ -558,9 +486,6 @@ var factories = {},
     },
     duffRight = tackRight(duff),
     eachRight = tackRight(each),
-    /**
-     * @func
-     */
     toBoolean = function (thing) {
         var ret, thingMod = thing + EMPTY_STRING;
         thingMod = thingMod.trim();
@@ -576,9 +501,6 @@ var factories = {},
         }
         return ret;
     },
-    /**
-     * @func
-     */
     parseDecimal = function (num) {
         return parseFloat(num) || 0;
     },
@@ -615,9 +537,6 @@ var factories = {},
         }
         return keys;
     },
-    /**
-     * @func
-     */
     constructorExtend = function (name, protoProps) {
         var nameString, constructorKeyName, child, passedParent, hasConstructor, constructor, parent = this,
             nameIsStr = isString(name);
@@ -679,9 +598,6 @@ var factories = {},
         }
         return __;
     },
-    /**
-     * @func
-     */
     once = function (fn) {
         var doIt = BOOLEAN_TRUE;
         return function () {
@@ -691,9 +607,6 @@ var factories = {},
             }
         };
     },
-    /**
-     * @func
-     */
     // Internal recursive comparison function for `isEqual`.
     eq = function (a, b, aStack, bStack) {
         var className, areArrays, aCtor, bCtor, length, objKeys, key;
@@ -796,15 +709,13 @@ var factories = {},
         return BOOLEAN_TRUE;
     },
     /**
-     * @func
+     * Perform a deep comparison to check if two objects are equal.
+     * @name _#isEqual
+     * @method
      */
-    // Perform a deep comparison to check if two objects are equal.
     isEqual = function (a, b) {
         return eq(a, b, [], []);
     },
-    /**
-     * @func
-     */
     // very shallow clone
     clone = function (obj) {
         return map(obj, function (value) {
@@ -814,9 +725,6 @@ var factories = {},
     cloneJSON = function (obj) {
         return parse(stringify(obj));
     },
-    /**
-     * @func
-     */
     wrap = function (obj, fn, noExecute) {
         var newObj = {},
             _isArray = isArray(obj),
@@ -834,9 +742,6 @@ var factories = {},
         });
         return newObj;
     },
-    /**
-     * @func
-     */
     publicize = function (obj) {
         return extend(_, obj);
     },
@@ -852,9 +757,6 @@ var factories = {},
         var base = [];
         return base.concat.apply(base, map(arguments, passesFirstArgument(toArray)));
     },
-    /**
-     * @func
-     */
     concatUnique = function () {
         return foldl(arguments, function (memo, argument) {
             duff(argument, function (item) {
@@ -1080,9 +982,6 @@ var factories = {},
     toLength = function (number) {
         return number ? clampInteger(toInteger(number, BOOLEAN_TRUE), 0, MAX_ARRAY_LENGTH) : 0;
     },
-    /**
-     * @func
-     */
     debounce = function (func, wait, immediate) {
         var timeout;
         return function () {
@@ -1138,9 +1037,6 @@ var factories = {},
             return id;
         };
     },
-    /**
-     * @func
-     */
     stringifyQuery = function (obj) {
         var val, n, base = obj.url,
             query = [];
@@ -1236,9 +1132,6 @@ var factories = {},
             return iteratorFn(key, value, third);
         };
     },
-    /**
-     * @func
-     */
     roundFloat = function (val, power, base) {
         var mult;
         if (!isNumber(power)) {
@@ -1290,9 +1183,6 @@ var factories = {},
             return maths[method].apply(maths, args);
         };
     },
-    /**
-     * @func
-     */
     // Create a reducing function iterating left or right.
     createReduce = function (dir) {
         // Optimized iterator function as using arguments[LENGTH]
@@ -1322,14 +1212,8 @@ var factories = {},
     },
     // **Reduce** builds up a single result from a list of values, aka `inject`,
     // or `foldl`.
-    /**
-     * @func
-     */
     foldl = createReduce(1),
     // The right-associative version of reduce, also known as `foldr`.
-    /**
-     * @func
-     */
     foldr = createReduce(-1),
     some = function (array, handler) {
         return foldl(array, function (memo, value, key) {
@@ -1428,6 +1312,10 @@ var factories = {},
         arrayLike: isArrayLike,
         instance: isInstance
     },
+    /**
+     * @static
+     * @namespace _
+     */
     _ = app._ = {
         is: is,
         consolemaker: consolemaker,
@@ -1543,6 +1431,7 @@ isBoolean.false = isBoolean.true = BOOLEAN_TRUE;
 app.logWrappedErrors = BOOLEAN_TRUE;
 /**
  * @class Extendable
+ * @private
  */
 function Extendable(attributes, options) {
     return this;

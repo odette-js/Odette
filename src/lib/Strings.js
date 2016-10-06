@@ -70,68 +70,61 @@ var cacheable = function (fn) {
             return found();
         };
     }());
-/** Used to match empty string literals in compiled template source. */
 var reEmptyStringLeading = /\b__p \+= EMPTY_STRING;/g,
     reEmptyStringMiddle = /\b(__p \+=) EMPTY_STRING \+/g,
     reEmptyStringTrailing = /(__e\(.*?\)|\b__t\)) \+\n'';/g;
-/** Used to match HTML entities and HTML characters. */
+// Used to match HTML entities and HTML characters.
 var reEscapedHtml = /&(?:amp|lt|gt|quot|#39|#96);/g,
     reUnescapedHtml = /[&<>"'`]/g,
     reHasEscapedHtml = RegExp(reEscapedHtml.source),
     reHasUnescapedHtml = RegExp(reUnescapedHtml.source);
-/** Used to match template delimiters. */
+// Used to match template delimiters. */
 var reEscape = /<%-([\s\S]+?)%>/g,
     reEvaluate = /<%([\s\S]+?)%>/g,
     reInterpolate = /<%=([\s\S]+?)%>/g;
-/** Used to match property names within property paths. */
+// Used to match property names within property paths. */
 var reIsDeepProp = /\.|\[(?:[^[\]]*|(["'])(?:(?!\1)[^\\]|\\.)*?\1)\]/,
     reIsPlainProp = /^\w*$/,
     reLeadingDot = /^\./,
     rePropName = /[^.[\]]+|\[(?:(-?\d+(?:\.\d+)?)|(["'])((?:(?!\2)[^\\]|\\.)*?)\2)\]|(?=(?:\.|\[\])(?:\.|\[\]|$))/g;
-/**
- * Used to match `RegExp`
- * [syntax characters](http://ecma-international.org/ecma-262/7.0/#sec-patterns).
- */
+//* Used to match `RegExp`* [syntax characters](http://ecma-international.org/ecma-262/7.0/#sec-patterns).*/
 var reRegExpChar = /[\\^$.*+?()[\]{}|]/g,
     reHasRegExpChar = RegExp(reRegExpChar.source);
-/** Used to match leading and trailing whitespace. */
+// Used to match leading and trailing whitespace. */
 var reTrim = /^\s+|\s+$/g,
     reTrimStart = /^\s+/,
     reTrimEnd = /\s+$/;
-/** Used to match wrap detail comments. */
+// Used to match wrap detail comments. */
 var reWrapComment = /\{(?:\n\/\* \[wrapped with .+\] \*\/)?\n?/,
     reWrapDetails = /\{\n\/\* \[wrapped with (.+)\] \*/,
     reSplitDetails = /,? & /;
-/** Used to match words composed of alphanumeric characters. */
+// Used to match words composed of alphanumeric characters. */
 var reAsciiWord = /[^\x00-\x2f\x3a-\x40\x5b-\x60\x7b-\x7f]+/g;
-/** Used to match backslashes in property paths. */
+// Used to match backslashes in property paths. */
 var reEscapeChar = /\\(\\)?/g;
-/**
- * Used to match
- * [ES template delimiters](http://ecma-international.org/ecma-262/7.0/#sec-template-literal-lexical-components).
- */
+//* Used to match* [ES template delimiters](http://ecma-international.org/ecma-262/7.0/#sec-template-literal-lexical-components).*/
 var reEsTemplate = /\$\{([^\\}]*(?:\\.[^\\}]*)*)\}/g;
-/** Used to match `RegExp` flags from their coerced string values. */
+// Used to match `RegExp` flags from their coerced string values. */
 var reFlags = /\w*$/;
-/** Used to detect hexadecimal string values. */
+// Used to detect hexadecimal string values. */
 var reHasHexPrefix = /^0x/i;
-/** Used to detect bad signed hexadecimal string values. */
+// Used to detect bad signed hexadecimal string values. */
 var reIsBadHex = /^[-+]0x[0-9a-f]+$/i;
-/** Used to detect binary string values. */
+// Used to detect binary string values. */
 var reIsBinary = /^0b[01]+$/i;
-/** Used to detect host constructors (Safari). */
+// Used to detect host constructors (Safari). */
 var reIsHostCtor = /^\[object .+?Constructor\]$/;
-/** Used to detect octal string values. */
+// Used to detect octal string values. */
 var reIsOctal = /^0o[0-7]+$/i;
-/** Used to detect unsigned integer values. */
+// Used to detect unsigned integer values. */
 var reIsUint = /^(?:0|[1-9]\d*)$/;
-/** Used to match Latin Unicode letters (excluding mathematical operators). */
+// Used to match Latin Unicode letters (excluding mathematical operators). */
 var reLatin = /[\xc0-\xd6\xd8-\xf6\xf8-\xff\u0100-\u017f]/g;
-/** Used to ensure capturing order of template delimiters. */
+// Used to ensure capturing order of template delimiters. */
 var reNoMatch = /($^)/;
-/** Used to match unescaped characters in compiled string literals. */
+// Used to match unescaped characters in compiled string literals. */
 var reUnescapedString = /['\n\r\u2028\u2029\\]/g,
-    /** Used to compose unicode character classes. */
+    // Used to compose unicode character classes. */
     rsAstralRange = '\\ud800-\\udfff',
     rsComboMarksRange = '\\u0300-\\u036f\\ufe20-\\ufe23',
     rsComboSymbolsRange = '\\u20d0-\\u20f0',
@@ -144,7 +137,7 @@ var reUnescapedString = /['\n\r\u2028\u2029\\]/g,
     rsUpperRange = 'A-Z\\xc0-\\xd6\\xd8-\\xde',
     rsVarRange = '\\ufe0e\\ufe0f',
     rsBreakRange = rsMathOpRange + rsNonCharRange + rsPunctuationRange + rsSpaceRange;
-/** Used to compose unicode capture groups. */
+// Used to compose unicode capture groups. */
 var rsApos = "['\u2019]",
     rsAstral = '[' + rsAstralRange + ']',
     rsBreak = '[' + rsBreakRange + ']',
@@ -160,7 +153,7 @@ var rsApos = "['\u2019]",
     rsSurrPair = '[\\ud800-\\udbff][\\udc00-\\udfff]',
     rsUpper = '[' + rsUpperRange + ']',
     rsZWJ = '\\u200d';
-/** Used to compose unicode regexes. */
+// Used to compose unicode regexes. */
 var rsLowerMisc = '(?:' + rsLower + '|' + rsMisc + ')',
     rsUpperMisc = '(?:' + rsUpper + '|' + rsMisc + ')',
     rsOptLowerContr = '(?:' + rsApos + '(?:d|ll|m|re|s|t|ve))?',
@@ -190,7 +183,7 @@ function basePropertyOf(object) {
     };
 }
 var reComboMark = RegExp(rsCombo, 'g');
-/** Used to map Latin Unicode letters to basic Latin letters. */
+// Used to map Latin Unicode letters to basic Latin letters. */
 var deburredLetters = {
     // Latin-1 Supplement block.
     '\xc0': 'A',
@@ -394,15 +387,12 @@ var objectToString = OBJECT_PROTOTYPE.toString,
     isSymbolWrap = isWrap('symbol');
 var reApos = RegExp(rsApos, 'g');
 var reHasUnicodeWord = /[a-z][A-Z]|[A-Z]{2,}[a-z]|[0-9][a-zA-Z]|[a-zA-Z][0-9]|[^a-zA-Z0-9 ]/;
-
 var unicodeWords = function (string) {
         return string.match(reUnicodeWord) || [];
     },
-
     hasUnicodeWord = function (string) {
         return reHasUnicodeWord.test(string);
     },
-
     isSymbol = function (value) {
         return isSymbolWrap(value) || (isObject(value) && objectToString.call(value) == symbolTag);
     },
@@ -470,9 +460,6 @@ var unicodeWords = function (string) {
     upperCase = createCompounder(function (result, word, index) {
         return result + (index ? SPACE : EMPTY_STRING) + word.toUpperCase();
     });
-/**
- * @func
- */
 var customUnits = categoricallyCacheable(function (unitList_) {
         var lengthHash = {},
             hash = {},
@@ -806,54 +793,53 @@ var customUnits = categoricallyCacheable(function (unitList_) {
         return Math.ceil(number);
     },
     baseRepeat = function (string, n) {
-      var result = '';
-      if (!string || n < 1 || n > MAX_SAFE_INTEGER) {
+        var result = '';
+        if (!string || n < 1 || n > MAX_SAFE_INTEGER) {
+            return result;
+        }
+        // Leverage the exponentiation by squaring algorithm for a faster repeat.
+        // See https://en.wikipedia.org/wiki/Exponentiation_by_squaring for more details.
+        do {
+            if (n % 2) {
+                result += string;
+            }
+            n = nativeFloor(n / 2);
+            if (n) {
+                string += string;
+            }
+        } while (n);
         return result;
-      }
-      // Leverage the exponentiation by squaring algorithm for a faster repeat.
-      // See https://en.wikipedia.org/wiki/Exponentiation_by_squaring for more details.
-      do {
-        if (n % 2) {
-          result += string;
-        }
-        n = nativeFloor(n / 2);
-        if (n) {
-          string += string;
-        }
-      } while (n);
-      return result;
     },
-
     createPadding = function (length, chars_) {
-      var chars = chars_ === UNDEFINED ? SPACE : baseToString(chars_);
-      var charsLength = chars.length;
-      if (charsLength < 2) {
-        return charsLength ? baseRepeat(chars, length) : chars;
-      }
-      var result = baseRepeat(chars, nativeCeil(length / stringSize(chars)));
-      return hasUnicode(chars) ? castSlice(stringToArray(result), 0, length).join(EMPTY_STRING) : result.slice(0, length);
+        var chars = chars_ === UNDEFINED ? SPACE : baseToString(chars_);
+        var charsLength = chars.length;
+        if (charsLength < 2) {
+            return charsLength ? baseRepeat(chars, length) : chars;
+        }
+        var result = baseRepeat(chars, nativeCeil(length / stringSize(chars)));
+        return hasUnicode(chars) ? castSlice(stringToArray(result), 0, length).join(EMPTY_STRING) : result.slice(0, length);
     },
     pad = function (string, length, chars) {
-      string = toString(string);
-      length = toInteger(length);
-      var strLength = length ? stringSize(string) : 0;
-      if (!length || strLength >= length) {
-        return string;
-      }
-      var mid = (length - strLength) / 2;
-      return EMPTY_STRING.concat(createPadding(nativeFloor(mid), chars), string, createPadding(nativeCeil(mid), chars));
+        string = toString(string);
+        length = toInteger(length);
+        var strLength = length ? stringSize(string) : 0;
+        if (!length || strLength >= length) {
+            return string;
+        }
+        var mid = (length - strLength) / 2;
+        return EMPTY_STRING.concat(createPadding(nativeFloor(mid), chars), string, createPadding(nativeCeil(mid), chars));
     },
     padEnd = function (string_, length_, chars) {
-      var string = toString(string_);
-      var length = toInteger(length_);
-      var strLength = length ? stringSize(string) : 0;
-      return (length && strLength < length) ? EMPTY_STRING.concat(string. createPadding(length - strLength, chars)) : string;
+        var string = toString(string_);
+        var length = toInteger(length_);
+        var strLength = length ? stringSize(string) : 0;
+        return (length && strLength < length) ? EMPTY_STRING.concat(string.createPadding(length - strLength, chars)) : string;
     },
     padStart = function (string_, length_, chars) {
-      var string = toString(string_);
-      var length = toInteger(length_);
-      var strLength = length ? stringSize(string) : 0;
-      return (length && strLength < length) ? EMPTY_STRING.concat(createPadding(length - strLength, chars). string) : string;
+        var string = toString(string_);
+        var length = toInteger(length_);
+        var strLength = length ? stringSize(string) : 0;
+        return (length && strLength < length) ? EMPTY_STRING.concat(createPadding(length - strLength, chars).string) : string;
     };
 _.publicize({
     escape: escape,

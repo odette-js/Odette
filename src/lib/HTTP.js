@@ -104,7 +104,6 @@ app.scope(function (app) {
                     requestObject: xhrReq,
                     withCredentials: BOOLEAN_TRUE
                 }, str);
-                ajax[CONSTRUCTOR + COLON + 'Promise']();
                 var headers, cached, key, sending,
                     args = [],
                     data = ajax.options.data;
@@ -135,19 +134,42 @@ app.scope(function (app) {
                     }
                     cache[key] = this;
                 }
-                ajax.attachResponseHandler();
-                wraptry(function () {
-                    xhrReq.open(type.toUpperCase(), url, ajax.options.async);
-                });
-                ajax.headers(headers);
-                attachBaseListeners(ajax);
                 // have to wrap in set timeout for ie
-                sending = sendthething(xhrReq, data, ajax);
-                if (_.isIE) {
-                    setTimeout(sending);
-                } else {
-                    sending();
-                }
+                ajax[CONSTRUCTOR + COLON + 'Promise'](function (success, failure, custom) {
+                    var sending = sendthething(xhrReq, data, ajax, success, failure);
+                    // attachResponseHandler(ajax);
+                    var xhrReqObj = ajax.options.requestObject,
+                        hasFinished = BOOLEAN_FALSE,
+                        method = ajax.options.method,
+                        handler = function (evnt) {
+                            var status, doIt, allStates, rawData, xhrReqObj = this;
+                            if (!xhrReqObj || hasFinished) {
+                                return;
+                            }
+                            status = xhrReqObj[STATUS];
+                            rawData = xhrReqObj.responseText;
+                            if (method === 'onload' || (method === 'onreadystatechange' && xhrReqObj[READY_STATE] === 4)) {
+                                allStates = result(ajax, 'allStates');
+                                rawData = ajax.options.preventParse ? rawData : ajax.parse(rawData);
+                                hasFinished = BOOLEAN_TRUE;
+                                custom(STATUS + COLON + (xhrReqObj[STATUS] === UNDEFINED ? 200 : xhrReqObj[STATUS]), rawData);
+                            }
+                        };
+                    if (!xhrReqObj[method]) {
+                        xhrReqObj[method] = handler;
+                    }
+                    // return ajax;
+                    wraptry(function () {
+                        xhrReq.open(type.toUpperCase(), url, ajax.options.async);
+                    });
+                    ajax.headers(headers);
+                    attachBaseListeners(ajax);
+                    if (_.isIE) {
+                        setTimeout(sending);
+                    } else {
+                        sending();
+                    }
+                }, BOOLEAN_TRUE);
                 return ajax;
             },
             status: function (code, handler) {
@@ -200,30 +222,6 @@ app.scope(function (app) {
                     'status:511': STATUS_500s,
                     'abort': FAILURE
                 };
-            },
-            attachResponseHandler: function () {
-                var ajax = this,
-                    xhrReqObj = ajax.options.requestObject,
-                    hasFinished = BOOLEAN_FALSE,
-                    method = ajax.options.method,
-                    handler = function (evnt) {
-                        var status, doIt, allStates, rawData, xhrReqObj = this;
-                        if (!xhrReqObj || hasFinished) {
-                            return;
-                        }
-                        status = xhrReqObj[STATUS];
-                        rawData = xhrReqObj.responseText;
-                        if (method === 'onload' || (method === 'onreadystatechange' && xhrReqObj[READY_STATE] === 4)) {
-                            allStates = result(ajax, 'allStates');
-                            rawData = ajax.options.preventParse ? rawData : ajax.parse(rawData);
-                            hasFinished = BOOLEAN_TRUE;
-                            ajax.resolveAs(STATUS + COLON + (xhrReqObj[STATUS] === UNDEFINED ? 200 : xhrReqObj[STATUS]), rawData);
-                        }
-                    };
-                if (!xhrReqObj[method]) {
-                    xhrReqObj[method] = handler;
-                }
-                return ajax;
             }
         });
     _.foldl(validTypes, function (memo, key_) {

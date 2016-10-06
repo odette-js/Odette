@@ -6,50 +6,61 @@ var gulp = require('gulp'),
     concat = require('gulp-concat'),
     copy = require('gulp-copy'),
     path = require('path'),
-    // browserify = require('gulp-browserify'),
+    _ = require('underscore'),
+    q = require('q'),
     minName = function (filename) {
         var name = filename.split('.');
         name.splice(name.length - 1, 0, 'min');
         return name.join('.');
     };
-module.exports = function (settings, paths) {
-    return function () {
-        gulp.src(paths.jsOdette).pipe(plumber())
-            // .pipe(srcMaps.init())
-            .pipe(concat(paths.jsOdetteOutput)).pipe(gulp.dest(paths.jspublic))
-            // .pipe(gulp.src(paths.jsOdetteOutput))
-            .pipe(uglify()).pipe(rename(minName(paths.jsOdetteOutput)))
-            // .pipe(srcMaps.write('.'))
-            .pipe(gulp.dest(paths.jspublic));
-        gulp.src(paths.jsApplication).pipe(plumber())
-            // .pipe(srcMaps.init())
-            .pipe(concat(paths.jsApplicationOutput)).pipe(gulp.dest(paths.jspublic))
-            // .pipe(gulp.src(paths.jsApplicationOutput))
-            .pipe(uglify()).pipe(rename(minName(paths.jsApplicationOutput)))
-            // .pipe(srcMaps.write('.'))
-            .pipe(gulp.dest(paths.jspublic));
-        gulp.src(paths.jsLibraryList).pipe(plumber())
-            // .pipe(srcMaps.init())
-            .pipe(concat(paths.jsLibraryOutput)).pipe(gulp.dest(paths.jspublic))
-            // .pipe(gulp.src(paths.jsOutput))
-            .pipe(uglify()).pipe(rename(minName(paths.jsLibraryOutput)))
-            // .pipe(srcMaps.write('.'))
-            .pipe(gulp.dest(paths.jspublic));
-        gulp.src(paths.jsTestList).pipe(plumber())
-            // .pipe(srcMaps.init())
-            .pipe(concat(paths.jsTestOutput))
-            // .pipe(srcMaps.write('.'))
-            .pipe(gulp.dest(paths.jsTestsPublic));
-        gulp.src(paths.jsExtra).pipe(plumber())
-            // .pipe(srcMaps.init())
-            .pipe(concat(paths.jsExtraOutput))
-            // .pipe(srcMaps.write('.'))
-            .pipe(gulp.dest(paths.jspublic));
-        gulp.src(paths.jsFramed).pipe(plumber())
-            // .pipe(srcMaps.init())
-            .pipe(concat(paths.jsFramedOutput))
-            // .pipe(srcMaps.write('.'))
-            .pipe(gulp.dest(paths.jspublic));
-        gulp.src(paths.publicized).pipe(plumber()).pipe(gulp.dest(paths.publicizedOutput));
-    };
+module.exports = function (settings, paths, context, name) {
+    gulp.task('odette-build', function () {
+        return [q.Promise(function (success, failure) {
+            gulp.src(paths.jsOdette) //
+                .pipe(concat(paths.jsOdetteOutput)) //
+                .pipe(gulp.dest(paths.jspublic)).on('end', success).on('error', failure);
+        }), q.Promise(function (success, failure) {
+            gulp.src(paths.jsApplication) //
+                .pipe(concat(paths.jsApplicationOutput)) //
+                .pipe(gulp.dest(paths.jspublic)).on('end', success).on('error', failure);
+        })];
+    });
+    gulp.task('library-build', function () {
+        return q.Promise(function (success, failure) {
+            console.log(paths.jsLibraryList);
+            gulp.src(paths.jsLibraryList) //
+                .pipe(concat(paths.jsLibraryOutput)) //
+                .pipe(gulp.dest(paths.jspublic)).on('end', success).on('error', failure);
+        });
+    });
+    gulp.task('full-build', function () {
+        return q.Promise(function (success, failure) {
+            gulp.src(paths.jsFull) //
+                .pipe(concat(paths.jsFullOutput)) //
+                .pipe(gulp.dest(paths.jspublic)).on('end', success).on('error', failure);
+        });
+    });
+    gulp.task('spec-build', function () {
+        return q.Promise(function (success, failure) {
+            // console.log(paths.jsTestList);
+            gulp.src(paths.jsTestList) //
+                .pipe(concat(paths.jsTestOutput)) //
+                .pipe(gulp.dest(paths.jsTestsPublic)).on('end', success).on('error', failure);
+        });
+    });
+    gulp.task('public-framed', function () {
+        return q.Promise(function (success, failure) {
+            gulp.src(paths.jsFramed) //
+                .pipe(concat(paths.jsFramedOutput)) //
+                .pipe(gulp.dest(paths.jspublic)).on('end', success).on('error', failure);
+        });
+    });
+    gulp.task('public-build', function () {
+        return q.Promise(function (success, failure) {
+            gulp.src(paths.publicized) //
+                .pipe(require(path.join(process.cwd(), 'replace-root-url'))('./src/static', './dist/')) //
+                .pipe(gulp.dest(paths.publicizedOutput)).on('end', success).on('error', failure);
+        });
+    });
+    gulp.task(name, ['odette-build', 'library-build', 'full-build', 'spec-build', 'public-framed', 'public-build']);
 };

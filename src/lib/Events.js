@@ -197,6 +197,9 @@ app.scope(function (app) {
             request: parody('Messenger', 'request'),
             reply: parody('Messenger', 'reply'),
             when: parody('Linguistics', 'when'),
+            linguisticsOrigin: function () {
+                return this;
+            },
             constructor: function (opts) {
                 var eventer = this;
                 extend(eventer, opts);
@@ -274,8 +277,8 @@ app.scope(function (app) {
                     stillListening = (stillListening || (listening && listening[id])) ? 1 : 0;
                 });
                 if (!stillListening && !find(target ? keys(listeningTo) : ids, function (id, key) {
-                    return listeningTo[id];
-                })) {
+                        return listeningTo[id];
+                    })) {
                     originEventsDirective[LISTENING_TO] = {};
                 }
                 return origin;

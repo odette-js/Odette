@@ -16,18 +16,19 @@ module.exports = function (settings, paths) {
     return function () {
         // odette
         gulp.src(paths.jsOdette).pipe(plumber()) //
-        .pipe(concat(paths.jsOdetteDistribute)).pipe(gulp.dest(paths.jsDistributes)) //
-        .pipe(uglify()).pipe(rename(minName(paths.jsOdetteDistribute))) //
-        .pipe(gulp.dest(paths.jsDistributes));
+            .pipe(concat(paths.jsOdetteDistribute)).pipe(gulp.dest(paths.jsDistributes)) //
+            .pipe(uglify()).pipe(rename(minName(paths.jsOdetteDistribute))) //
+            .pipe(gulp.dest(paths.jsDistributes));
         // application
         gulp.src(paths.jsApplication).pipe(plumber()) //
-        .pipe(concat(paths.jsApplicationDistribute)).pipe(gulp.dest(paths.jsDistributes)) //
-        .pipe(uglify()).pipe(rename(minName(paths.jsApplicationDistribute))) //
-        .pipe(gulp.dest(paths.jsDistributes));
+            .pipe(concat(paths.jsApplicationDistribute)).pipe(gulp.dest(paths.jsDistributes)) //
+            .pipe(uglify()).pipe(rename(minName(paths.jsApplicationDistribute))) //
+            .pipe(gulp.dest(paths.jsDistributes));
         // library
+        // console.log();
         gulp.src(paths.jsLibraryList).pipe(plumber()) //
-        .pipe(concat(paths.jsLibraryDistribute)).pipe(gulp.dest(paths.jsDistributes)) //
-        .pipe(uglify()).pipe(rename(minName(paths.jsLibraryDistribute))) //
-        .pipe(gulp.dest(paths.jsDistributes));
+            .pipe(concat(paths.jsLibraryDistribute)).pipe(gulp.dest(paths.jsDistributes)) //
+            .pipe(uglify()).pipe(rename(minName(paths.jsLibraryDistribute))) //
+            .pipe(gulp.dest(paths.jsDistributes));
     };
 };

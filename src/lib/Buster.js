@@ -69,9 +69,8 @@ app.scope(function (app) {
          * either through a post message, or through a setTimeout
          * @arg {buster}
          */
-        postMessage = function (base, buster) {
-            var referrer, message = stringify(base);
-            return buster.emitWindow.emit(message, buster.get(EMIT_REFERRER));
+        postMessage = function (buster, base) {
+            return buster.emitWindow.emit(base, buster.get(EMIT_REFERRER));
         },
         defaultGroupId = uuid(),
         RESPOND_HANDLERS = 'respondHandlers',
@@ -146,7 +145,7 @@ app.scope(function (app) {
             }
             buster.unmark(CONNECTED);
             buster[DISPATCH_EVENT](DISCONNECTED);
-            buster.connectPromise = _.Promise();
+            buster.connectPromise = _.Promise(noop, BOOLEAN_TRUE);
         },
         connected = function (buster, message) {
             buster.connectPromise.fulfill(message);
@@ -387,13 +386,13 @@ app.scope(function (app) {
                         queuedMsg = children.item(currentIdx);
                         currentIdx = (dataManager.get(SENT_MESSAGE_INDEX) + 1) || 0;
                         dataManager.set(SENT_MESSAGE_INDEX, currentIdx);
-                        postMessage(queuedMsg, buster);
+                        postMessage(buster, queuedMsg);
                     } else {
                         // initializing
                         childrenLen = UNDEFINED;
                         command = queuedMsg.get(COMMAND);
                         if (command === CONNECT || command === INITIALIZE) {
-                            postMessage(queuedMsg, buster);
+                            postMessage(buster, queuedMsg);
                         }
                     }
                 }
@@ -475,7 +474,7 @@ app.scope(function (app) {
             messageData.set(IS_DEFERRED, BOOLEAN_TRUE);
             // loud set
             buster.set(LAST_RESPONSE, newMessage.timeStamp);
-            postMessage(newMessage, buster);
+            postMessage(buster, newMessage);
             buster[DISPATCH_EVENT](RESPONDED, packet);
             return buster;
         },

@@ -13,6 +13,11 @@
     }
 }(this, 'Odette', function (context) {
     'use strict';
+    /**
+     * Odette Object
+     * @type {Function}
+     * @lends Odette
+     */
     var UNDEFINED, odette_version = '0.0.0',
         EMPTY_STRING = '',
         noFailures = 'definitions cannot fail due to errors',
@@ -274,6 +279,7 @@
                 /**
                  * Pass a function to this method to have it run each time the app encounters a new window. When this happens all functions passed to the undefine method are run to set up the window properly.
                  * @param {Function} this function will run everytime a new window is encountered after this point.
+                 * @memberOf Odette
                  */
                 undefine: function (handler) {
                     this.missedDefinitions.push(handler);
@@ -300,6 +306,7 @@
                 },
                 /**
                  * Proxy for the global Odette counter
+                 * @memberof Odette
                  * @param {String=} category a category to pull the id from
                  */
                 counter: function (category) {
@@ -307,8 +314,9 @@
                 },
                 /**
                  Define an app definition
-                 @param {Window} globl pass a window object to root the definition against
-                 @param {Object=} options options that the method, and queued methods can be passed
+                 * @memberof Odette
+                 * @param {Window} globl pass a window object to root the definition against
+                 * @param {Object=} options options that the method, and queued methods can be passed
                  */
                 definition: function (globl, options) {
                     var odebt, defs, opts, app = this;

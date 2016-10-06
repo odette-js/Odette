@@ -37,9 +37,11 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 data: {
                     success: true
                 }
-            }).success(function (data) {
+            }).then(function (data) {
                 _.test.expect(data && data.successful).toBe(true);
                 done();
+            }, function (err) {
+                console.log(err);
             });
         });
         _.test.describe('can handle', function () {
@@ -60,7 +62,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                     handlerCounter++;
                     _.test.expect(handlerCounter).toEqual(1);
                     throw new Error('some message here');
-                }).catch(function () {
+                }).failure(function () {
                     handlerCounter++;
                 }).always(function () {
                     handlerCounter++;

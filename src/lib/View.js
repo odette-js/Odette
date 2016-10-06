@@ -233,6 +233,9 @@ app.scope(function (app) {
             tagName: returns('div'),
             template: returns(BOOLEAN_FALSE),
             canRenderAsync: returns(BOOLEAN_FALSE),
+        linguisticsOrigin: function () {
+                return this.model;
+            },
             getChildViews: function (key) {
                 return this.getRegion(key).directive(CHILDREN);
             },
@@ -389,9 +392,7 @@ app.scope(function (app) {
                     region.el = $selected;
                 }
             }),
-            destroy: function () {
-
-            },
+            destroy: function () {},
             remove: function (region_) {
                 // var regionManager = this;
                 // var region = isString(region_) ? regionManager.get(region_) : region_;

@@ -5,7 +5,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
         };
         _.test.beforeEach(function () {
             madeit = 0;
-            promise = factories.Promise();
+            promise = factories.Promise(_.noop, true);
         });
         _.test.it('allows for async resolution of state', function () {
             _.test.expect(_.isObject(promise)).toEqual(true);

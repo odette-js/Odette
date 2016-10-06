@@ -56,7 +56,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 }
             });
         });
-        _.test.it('gives you a nice little tween function for calculating linear progressions against time', function () {
+        _.test.it('gives you a nice little tween function for calculating linear progressions against time', function (done) {
             var previous = 0;
             _.AF.tween(100, function (time, percent, finished) {
                 _.test.expect(percent > previous).toBe(true);

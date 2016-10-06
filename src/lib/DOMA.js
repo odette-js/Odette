@@ -32,7 +32,10 @@ var ATTACHED = 'attached',
     FONT_SIZE = 'fontSize',
     DEFAULT_VIEW = 'defaultView',
     DIV = 'div',
-    CUSTOM_ATTRIBUTE = '[' + CUSTOM_KEY + ']',
+    makeDataAttr = function (key, value) {
+        return '[' + (value == NULL ? key : (key + '="' + value + '"')) + ']';
+    },
+    CUSTOM_ATTRIBUTE = makeDataAttr(CUSTOM_KEY),
     devicePixelRatio = (win.devicePixelRatio || 1),
     propsList = toArray('type,href,className,height,width,id,tabIndex,title,alt,innerHTML,outerHTML,textContent'),
     propsHash = wrap(propsList, BOOLEAN_TRUE),
@@ -771,7 +774,6 @@ var ATTACHED = 'attached',
             }
             return BOOLEAN_FALSE;
         }
-        // return diffs;
     },
     nodeToJSON = function (node, shouldStop_, includeComments) {
         var obj, children, childrenLength, shouldStop = shouldStop_ || noop;
@@ -791,19 +793,15 @@ var ATTACHED = 'attached',
         obj.children = foldl(children, function (memo, child) {
             if (isElement(child)) {
                 memo.push(nodeToJSON(child, shouldStop, includeComments));
-            } else {
-                if (child.nodeType === 3) {
-                    memo.push(textJSON(child.textContent));
+            } else if (child.nodeType === 3) {
+                memo.push(textJSON(child.textContent));
+            } else if (includeComments) {
+                if (child.nodeType === 8) {
+                    memo.push(commentJSON(child.textContent));
                 } else {
-                    if (includeComments) {
-                        if (child.nodeType === 8) {
-                            memo.push(commentJSON(child.textContent));
-                        } else {
-                            memo.push({
-                                err: BOOLEAN_TRUE
-                            });
-                        }
-                    }
+                    memo.push({
+                        err: BOOLEAN_TRUE
+                    });
                 }
             }
         }, []);
@@ -881,9 +879,7 @@ var ATTACHED = 'attached',
                     memo.push('\n\t' + prefix + kebabCase(cameled) + ': ' + convertStyleValue(trimmed, block) + ';');
                 });
             }
-            // }
         }, memo);
-        // if (memo_) {
         closesBlock(memo);
         return result.join('');
     };
@@ -935,8 +931,6 @@ app.scope(function (app) {
             if (templateIsFunction) {
                 render = text;
             } else {
-                // text = text.trim();
-                // if (text.match(/return(\s*)\[/igm)) {
                 trimmed = text.trim();
                 if (trimmed[trimmed[LENGTH] - 1] !== ';') {
                     trimmed += ';';
@@ -945,9 +939,6 @@ app.scope(function (app) {
                 render = wraptry(function () {
                     return new FUNCTION_CONSTRUCTOR_CONSTRUCTOR('helpers', '_', blockWrapper(trimmed));
                 });
-                // } else {
-                //     exception('templates must return a json structure');
-                // }
             }
             return function (data, helpers) {
                 return render.call(data, helpers, _);
@@ -1005,14 +996,6 @@ app.scope(function (app) {
             templates.keep(ID, id, templateHandler);
             return templateHandler;
         },
-        /**
-         * @private
-         * @func
-         */
-        /**
-         * @private
-         * @func
-         */
         rkeyEvent = /^key/,
         rmouseEvent = /^(?:mouse|pointer|contextmenu)|click/,
         rfocusMorph = /^(?:focusinfocus|focusoutblur)$/,
@@ -1130,23 +1113,14 @@ app.scope(function (app) {
                 bottom: clientRect[TOP] + clientRect[HEIGHT] + marginBottom
             };
         },
-        /**
-         * @private
-         * @func
-         */
         style = function (els, key, value) {
             if (!els[LENGTH]) {
                 return;
             }
-            // var bound = bind(styleIteration, this);
             intendedObject(key, value, function (key, value_) {
                 bound(key, convertStyleValue(key, value_));
             });
         },
-        /**
-         * @private
-         * @func
-         */
         box = function (el, ctx) {
             var clientrect, computed, ret = {};
             if (!isElement(el)) {
@@ -1190,17 +1164,9 @@ app.scope(function (app) {
                 height: returnValue[HEIGHT] || item.clientHeight || 0
             };
         },
-        /**
-         * @private
-         * @func
-         */
         unitRemoval = function (str, unit) {
             return +(str.split(unit || 'px').join(EMPTY_STRING).trim()) || 0;
         },
-        /**
-         * @private
-         * @func
-         */
         getStyleSize = function (el, attr, win) {
             var val, elStyle, num = el;
             if (isObject(el)) {
@@ -1218,10 +1184,6 @@ app.scope(function (app) {
             }
             return val;
         },
-        /**
-         * @private
-         * @func
-         */
         filterExpressions = {
             ':even': function (el, idx) {
                 return (idx % 2);
@@ -1230,7 +1192,6 @@ app.scope(function (app) {
                 return ((idx + 1) % 2);
             }
         },
-        // always in pixels
         numberToUnit = {
             'in': function (val, el, win, styleAttr) {
                 return val / 96;
@@ -1287,10 +1248,6 @@ app.scope(function (app) {
             }
             return number;
         },
-        /**
-         * @private
-         * @func
-         */
         unitToNumber = {
             'in': function (val, el, win, styleAttr) {
                 return val * 96;
@@ -1345,15 +1302,6 @@ app.scope(function (app) {
             }
             return number;
         },
-        /**
-         * @private
-         * @func
-         */
-        /**
-         * @private
-         * @func
-         */
-        // array, array, (array)
         diff = function (outputA, outputB, diffs_) {
             var opposition, element = this,
                 view = element.view,
@@ -1374,7 +1322,6 @@ app.scope(function (app) {
                     // swap node
                     return;
                 }
-                // if (true) {}
             });
             return diffs;
         },
@@ -1444,14 +1391,6 @@ app.scope(function (app) {
         makeBranch = function (str, manager) {
             return makeTree(str, manager)[0];
         },
-        /**
-         * @private
-         * @func
-         */
-        /**
-         * @private
-         * @func
-         */
         mappedConcat = function (context, handler, items) {
             var list = [];
             return list.concat.apply(list, items ? map(items, handler) : context.map(handler));
@@ -1548,7 +1487,6 @@ app.scope(function (app) {
                 return obj;
             };
         },
-        // coordinates
         covers = function (element, coords) {
             var _clientRect = clientRect(element),
                 bottom = _clientRect[BOTTOM],
@@ -1811,9 +1749,6 @@ app.scope(function (app) {
                     doc.close();
                     doTheThing = BOOLEAN_TRUE;
                 }
-                // } else {
-                //     manager.cachedContent = value;
-                // }
             } else {
                 if (manager.is(ELEMENT)) {
                     parentElement = manager.element();
@@ -1846,9 +1781,6 @@ app.scope(function (app) {
                 }
             };
         },
-        /**
-         * @func
-         */
         testIframe = function (manager, element_) {
             var src, contentWindow, contentWindowManager, element, cached;
             manager.remark(IFRAME, manager.tagName === IFRAME);
@@ -1889,6 +1821,10 @@ app.scope(function (app) {
             var view, el = manager.element();
             return el.dispatchEvent && (view = manager.owner.window().element()) && el.dispatchEvent(new view.Event(name, isBoolean(opts) ? {} : opts));
         },
+        /*
+         * missing these
+         * @type {Object}
+         */
         directAttributes = {
             id: BOOLEAN_FALSE,
             src: BOOLEAN_FALSE,
@@ -2086,16 +2022,16 @@ app.scope(function (app) {
         domContextFind = function (fn, context) {
             return !context.find(fn);
         },
-        makeValueTarget = function (target, passed_, api, domaHappy) {
-            var passed = passed_ || target;
-            return _.foldl(toArray('add,remove,toggle,change,has,set'), function (memo, method_) {
-                var method = method_ + 'Value';
-                memo[method_ + capitalize(target)] = function (one, two) {
-                    return this[method](passed, one, two, api, domaHappy, target);
-                };
-                return memo;
-            }, {});
-        },
+        // makeValueTarget = function (target, passed_, api, domaHappy) {
+        //     var passed = passed_ || target;
+        //     return _.foldl(toArray('add,remove,toggle,change,has,set'), function (memo, method_) {
+        //         var method = method_ + 'Value';
+        //         memo[method_ + capitalize(target)] = function (one, two) {
+        //             return this[method](passed, one, two, api, domaHappy, target);
+        //         };
+        //         return memo;
+        //     }, {});
+        // },
         classApplicationWrapper = function (key, hasList, noList) {
             return function (element, list, second) {
                 if (element.classList && element.classList[key] && !isIE) {
@@ -2138,23 +2074,56 @@ app.scope(function (app) {
             else return 0; //It is not IE
         }()),
         classApiShim = {
+            /**
+             * This method adds the list or space delineated string to the target manager's element.
+             * @method
+             * @name  DomManager#addClass
+             * @example <caption>Add a spaces separated list of classes.</caption>
+             * targetManager.addClass('item1 class2');
+             * @example
+             * targetManager.addClass(['item1', 'class2']);
+             */
             add: classApplicationWrapper('add', function (element, list) {
                 element.classList.add.apply(element.classList, list);
             }, function (element, current, list) {
                 duff(list, passesFirstArgument(bind(arrayAdds, NULL, current)));
                 element[CLASSNAME] = current.join(SPACE);
             }),
+            /**
+             * This method removes the list or space delineated string to the target manager's element.
+             * @method
+             * @name DomManager#removeClass
+             * @example <caption>Remove a spaces separated list of classes.</caption>
+             * targetManager.removeClass('item1 class2');
+             * @example
+             * targetManager.removeClass(['item1', 'class2']);
+             */
             remove: classApplicationWrapper('remove', function (element, list) {
                 element.classList.remove.apply(element.classList, list);
             }, function (element, current, list) {
                 duff(list, passesFirstArgument(bind(arrayRemoves, NULL, current)));
                 element[CLASSNAME] = current.join(SPACE);
             }),
-            // mess with toggle here so that you
+            /**
+             * This method toggles the list or space delineated string to the target manager's element. A second argument can be passed to toggle the class in a direction a truthy value will add the class, a falsey value will remove the class. Super useful if you want to direct the classes and you do not want any logic to clutter up your calls.
+             * @param {String|Array} classes toggle the space delineated classes that are passed
+             * @param {Boolean} [direction] direct the classes based on an external boolean. A boolean, not just truthy or falsy value to determine whether the class should be added or removed.
+             * @method
+             * @name DomManager#toggleClass
+             * @example <caption>The following examples toggle the item1 and class2 classes.</caption>
+             * targetManager.toggleClass('item1 class2');
+             * @example <caption>Passing true adds classes.</caption>
+             * targetManager.toggleClass(['item1', 'class2'], true); // equivalent to calling addClass
+             * @example <caption>passing false removes classes.</caption>
+             * targetManager.toggleClass('item1 class2', false); // equivalent to calling removeClass
+             */
             toggle: classApplicationWrapper('toggler', noop, function (element, current, list, direction) {
                 duff(list, passesFirstArgument(bind(toggles, NULL, current, direction)));
                 element[CLASSNAME] = current.join(SPACE);
             }),
+            /*
+             *
+             */
             contains: classApplicationWrapper('contains', function (element, list) {
                 return !element.classList.contains.apply(element.classList, list);
             }, function (element, current, list) {
@@ -2162,6 +2131,13 @@ app.scope(function (app) {
                     return !has(current, item, BOOLEAN_TRUE);
                 });
             }),
+            /**
+             * This method both removes and adds classes at the same time, and in that order.
+             * @method
+             * @name DomManager#changeClass
+             * @param {String|Array|Null} remove List of classes to remove from the element.
+             * @param {String|Array|Null} add List of classes to add to the element.
+             */
             change: classApplicationWrapper('add', function (element, list, second) {
                 element.classList.remove.apply(element.classList, list);
                 element.classList.add.apply(element.classList, toArray(second, SPACE));
@@ -2186,6 +2162,19 @@ app.scope(function (app) {
                 };
             };
         }, {
+            /**
+             * This method checks class attribute against the list or space delineated string to make sure all of the questioned classes are present. If one or more are missing the method will return false.
+             * @method
+             * @name DomManager#hasClass
+             * @param  {String|Array} classes the classes to check against
+             * @return {Boolean}
+             * @example
+             * target.hasClass('item1'); // true
+             * @example <caption>Check for multiple classes at the same time.</caption>
+             * target.hasClass('item1 item2 item3');
+             * @example <caption>An array can also be passed.</caption>
+             * target.hasClass(['item1', 'item2', 'item3']);
+             */
             has: function (manipulator) {
                 return function (classes) {
                     return !this.find(manipulator(toArray(classes, SPACE)));
@@ -2414,7 +2403,7 @@ app.scope(function (app) {
                 registeredConstructors: registeredConstructors,
                 registeredElementOptions: registeredElementOptions,
                 iframeContent: iframeContent,
-                orderEventsByHeirarchy: returns(BOOLEAN_TRUE),
+                ordersEventsByHierarchy: returns(BOOLEAN_TRUE),
                 data: factories.Associator(),
                 document: manager,
                 devicePixelRatio: devicePixelRatio,
@@ -2468,7 +2457,7 @@ app.scope(function (app) {
                     return manager;
                 },
                 customAttribute: function (key) {
-                    return key ? '[' + CUSTOM_KEY + '="' + key + '"]' : CUSTOM_ATTRIBUTE;
+                    return key ? makeDataAttr(CUSTOM_KEY, key) : CUSTOM_ATTRIBUTE;
                 },
                 stashMotionEvent: function (evnt) {
                     cachedMotionEvent = evnt;
@@ -2808,7 +2797,7 @@ app.scope(function (app) {
                 if (evnt.view) {
                     evnt.view = origin.owner.returnsManager(evnt.view);
                 }
-                evnt[IS_TRUSTED] = _.has(originalEvent, IS_TRUSTED) ? originalEvent[IS_TRUSTED] : !DO_NOT_TRUST;
+                evnt.remark('trusted', _.has(originalEvent, IS_TRUSTED) ? originalEvent[IS_TRUSTED] : !DO_NOT_TRUST);
                 (fixHook.reaction || noop)(evnt, originalEvent);
             }
         },
@@ -2831,10 +2820,9 @@ app.scope(function (app) {
                 return e;
             },
             motion: function () {
-                var acc, acc_, cached, evnt = this,
-                    owner = evnt.origin.owner,
-                    motion = owner.motion();
-                return motion;
+                var evnt = this,
+                    owner = evnt.origin.owner;
+                return owner.motion();
             },
             preventDefault: function () {
                 var e = this.originalEvent;
@@ -2842,6 +2830,9 @@ app.scope(function (app) {
                 if (e && e.preventDefault) {
                     e.preventDefault();
                 }
+            },
+            trusted: function () {
+                return this.isTrusted;
             },
             stopPropagation: function () {
                 var e = this.originalEvent;
@@ -3043,7 +3034,7 @@ app.scope(function (app) {
                 sumCount = captureCount + delegateCount;
                 i = captureCount;
                 afterwards = list_.slice(sumCount);
-                ordersEventsByHierarchy = manager.orderEventsByHeirarchy();
+                ordersEventsByHierarchy = manager.ordersEventsByHierarchy();
                 while (i < sumCount) {
                     first = list_[i];
                     ++i;
@@ -3155,538 +3146,1099 @@ app.scope(function (app) {
         dommanagerunwrapper = function () {
             return [this];
         },
-        DomManager = factories[DOM_MANAGER_STRING] = factories.Events.extend(DOM_MANAGER_STRING, extend({}, classApi, {
-            'directive:creation:EventManager': DomEventsDirective,
-            isValidDomManager: BOOLEAN_TRUE,
-            $: manager_query,
-            // this is here to be an alias
-            querySelectorAll: manager_query,
-            orderEventsByHeirarchy: function () {
-                return this.owner.orderEventsByHeirarchy();
-            },
-            queryString: function () {
-                var string = '';
-                var json = this.toJSON(BOOLEAN_TRUE);
-                var attributes = json.attributes;
-                string += json.tagName;
-                if (attributes.id) {
-                    string += ('#' + attributes.id);
-                }
-                if (attributes[CLASS]) {
-                    string += (PERIOD + attributes[CLASS].split(SPACE).join(PERIOD));
-                }
-                return string;
-            },
-            registeredElementName: function () {
-                return this.owner.registeredElementName(this[REGISTERED_AS]);
-            },
-            attributes: function (fn_) {
-                var memo, bound, manager = this;
-                var element = manager.element();
-                var elementAttributes = element.attributes;
-                if (!fn_) {
-                    memo = {};
+        /**
+         * Manager for DOM elements, as well as documents and windows. Odette's DomManager is a very powerful abstraction of the DOM api. It abstracts a variety of tests as well as tasks away from you so you don't have to worry about them, such as events on attachment, detachment, contentChanges, attributeChanges, destruction and more. To access a DomManager, simply query the dom using the {@link DOMA} and find the element that you would like to manipulate through any of the methods that the doma provides. A simple one is [item]{@link DOMA#item} which will return the element in that location on the list of possible DomManagers
+         * @class  DomManager
+         * @example
+         * var $body = $('body');
+         * var bodyManager = $body.index(0); // DomManager
+         */
+        DomManager = factories[DOM_MANAGER_STRING] = factories.Events.extend(DOM_MANAGER_STRING, extend({}, classApi,
+            /**
+             * @lends DomManager.prototype
+             */
+            {
+                'directive:creation:EventManager': DomEventsDirective,
+                /**
+                 * Flag to let other objects know that this is a valid dom manager
+                 * @private
+                 * @type {Boolean}
+                 */
+                isValidDomManager: BOOLEAN_TRUE,
+                /**
+                 * The query symbol ($) is used to query elements inside of the current context. When this function is called, the target is queried using querySelectorAll and the query string is passed in. When the elements are returned, they are wrapped in a {@link DOMA} object.
+                 * @method
+                 * @param {String} selector selector used to gather dom nodes.
+                 * @returns {DOMA}
+                 * @example
+                 * var spansUnderManager = domManager.$('span');
+                 * @example <caption>The result variable contains all of the li tags under the second div in the body.</caption>
+                 * var $divs = bodyManager.$('div'); // all the divs under body
+                 * var secondDivManager = $divs.index(1);
+                 * var result = secondDivManager.$('li'); // all of the li's under the second div
+                 */
+                $: manager_query,
+                querySelectorAll: manager_query,
+                /**
+                 * Describes how event delegation should order the events it is managing. This method is a proxy for the Document's manager. That being said, this can be overwritten and will be called at the beginning of every event loop, so you can modify how events are ordered for that manager live.
+                 * @return {Boolean}
+                 * @example
+                 * manager.ordersEventsByHierarchy();
+                 */
+                ordersEventsByHierarchy: function () {
+                    return this.owner.ordersEventsByHierarchy();
+                },
+                /**
+                 * Gives the most specific query string that it can based on attributes without going to any parents.
+                 * @return {String}
+                 */
+                queryString: function () {
+                    var clas, json = baseNodeToJSON(this.element()),
+                        string = json.tagName;
+                    return foldl(json.attributes, function (string, attr, key) {
+                        if (key === ID || key === CLASS) {
+                            return string;
+                        }
+                        return string + makeDataAttr(key, attr);
+                    }, string);
+                },
+                registeredElementName: function () {
+                    return this.owner.registeredElementName(this[REGISTERED_AS]);
+                },
+                /**
+                 * Iterate over the attributes of the element. When no arguments are passed, the attributes are simply collected and returned on an object.
+                 * @param  {Function} [fun] iterates over each attribute on the element.
+                 * @return {DomManager}
+                 * @example <caption>Get the attributes as an object.</caption>
+                 * var attrHash = domManager.attributes();
+                 * @example
+                 * domManager.attributes(function (value, attr) {
+                 *     // exposes attr without camelCasing it
+                 * });
+                 */
+                attributes: function (fun) {
+                    var memo, bound, manager = this;
+                    var element = manager.element();
+                    var elementAttributes = element.attributes;
+                    if (!fun) {
+                        memo = {};
+                        duff(elementAttributes, function (attribute) {
+                            memo[attribute.localName] = attribute.nodeValue;
+                        });
+                        return memo;
+                    }
+                    bound = bindTo(fun, manager);
                     duff(elementAttributes, function (attribute) {
-                        memo[attribute.localName] = attribute.nodeValue;
+                        bound(attribute.nodeValue, attribute.localName);
                     });
-                    return memo;
-                }
-                bound = bindTo(fn_, manager);
-                duff(elementAttributes, function (attribute) {
-                    bound(attribute.nodeValue, attribute.localName);
-                });
-                return manager;
-            },
-            hasValue: hasValue(domContextFind),
-            addValue: addValue(domIterates),
-            removeValue: removeValue(domIterates),
-            toggleValue: toggleValue(domIterates),
-            changeValue: changeValue(domIterates),
-            on: addEventListener,
-            addEventListener: addEventListener,
-            once: addEventListenerOnce,
-            off: removeEventListener,
-            removeEventListener: removeEventListener,
-            append: appendChildDomManager,
-            appendChild: appendChildDomManager,
-            prepend: prependChild,
-            insertBefore: sharedInsertBefore,
-            insertAfter: insertAfter,
-            getAttribute: getValueCurried,
-            setAttribute: setValueCurried,
-            removeAttribute: attributeParody(REMOVE),
-            attr: attrApi(domIterates),
-            data: dataApi(domIterates),
-            prop: propApi(domIterates),
-            html: innardManipulator(INNER_HTML),
-            // outerHTML: innardManipulator(OUTER_HTML),
-            text: innardManipulator(INNER_TEXT),
-            // style: styleManipulator,
-            css: styleManipulator,
-            next: managerHorizontalTraverser('next', 'nextElementSibling', 1),
-            prev: managerHorizontalTraverser('prev', 'previousElementSibling', -1),
-            skip: managerHorizontalTraverser('skip', NULL, 0),
-            height: dimensionFinder(HEIGHT, 'scrollHeight', INNER_HEIGHT),
-            width: dimensionFinder(WIDTH, 'scrollWidth', INNER_WIDTH),
-            scrollLeft: dimensionFinder('scrollLeft', 'scrollLeft', 'pageXOffset', BOOLEAN_TRUE),
-            scrollTop: dimensionFinder('scrollTop', 'scrollTop', 'pageYOffset', BOOLEAN_TRUE),
-            siblings: function (filtr) {
-                var original = this,
-                    filter = createDomFilter(filtr, original.owner);
-                return original.parent().children(function (manager, index, list) {
-                    return manager !== original && filter(manager, index, list);
-                });
-            },
-            element: function () {
-                return this[TARGET];
-            },
-            elements: function () {
-                return [this.element()];
-            },
-            constructor: function (el, hash, owner_) {
-                var elId, registeredOptions, isDocument, owner = owner_,
-                    manager = this;
-                if (!el) {
-                    exception('element must be an element');
-                }
-                if (DomManager.isInstance(el)) {
-                    // extend what we already know
-                    hash[DOM_MANAGER_STRING] = manager;
-                    extend(manager, el);
-                    // run it through it's scoped constructor
-                    registeredOptions = owner.registeredElementOptions[manager[REGISTERED_AS]];
-                    registeredOptions.creation.call(manager, manager);
-                    manager.on(registeredOptions.events);
-                    manager.on(DESTROY, registeredOptions.destruction);
                     return manager;
-                }
-                test(manager, owner, el);
-                if (manager.is(ELEMENT) || manager.is(FRAGMENT)) {
-                    hash[DOM_MANAGER_STRING] = manager;
-                    owner = ensure(el.ownerDocument, BOOLEAN_TRUE);
-                    if (manager.is(ELEMENT)) {
-                        manager[__ELID__] = el[__ELID__];
+                },
+                /**
+                 * Check if the element has a value in it's attribute list.
+                 * @method
+                 * @name DomManager#hasValue
+                 * @param {String} attribute name of the attribute that the checked value is being held under
+                 * @param {String} value value of the attribute that is being checked for
+                 * @example {@lang xml}
+                 * <div data-tags="here there"></div>
+                 * @example {@lang javascript}
+                 * manager.hasValue("data-tags", "there"); // true
+                 */
+                hasValue: hasValue(domContextFind),
+                /**
+                 * To add a single value to an attribute that already has many values, you can simply call the addValue method. This method uses the AttributeManager to back it's attributes.
+                 * @method
+                 * @example
+                 * // <body>;
+                 * bodyManager.addValue('data-here', 'one');
+                 * // body -> <body data-here="one two">
+                 * bodyManager.addValue('data-here', 'two');
+                 */
+                addValue: addValue(domIterates),
+                /**
+                 * To remove a single value to an attribute that already has many values, you can simply call the addValue method. This method uses the AttributeManager to back it's attributes and can accept multiple values.
+                 * @method
+                 * @example <caption>consider the following html.</caption> {@lang xml}
+                 * <body data-here="one two">
+                 * @example
+                 * body.removeValue('data-here', 'one');
+                 */
+                removeValue: removeValue(domIterates),
+                /**
+                 * Toggles a singular value of an attribute in a list.
+                 * @method
+                 * @param {Boolean} [direction] pass an optional true or false value to direct the toggle (like a lightswitch)
+                 * @example <caption>consider the following html.</caption> {@lang xml}
+                 * <div data-directions="s w"></div>
+                 * @example
+                 * div.toggleValue('dataDirections', 'n w');
+                 * @example {@lang xml}
+                 * <div data-directions="s n"></div>
+                 */
+                toggleValue: toggleValue(domIterates),
+                /**
+                 * The changeValue method takes up to 3 arguments. First the attribute to change, the second is the list of values to remove, and the third is the list of values to add to the attribute.
+                 * @method
+                 * @example {@lang xml}
+                 * <div id="unique-id" data-special="one two three four five"><div>
+                 * @description To change the values in the data-special attribute all we need to do is call changeValue with the appropriate inputs. Lets remove three and five, and add threepointfive and seven. We can even choose to pass a space delineated string, or an array with our appropriate values.
+                 * @example
+                 * var specialManager = $('#unique-id').index(0);
+                 * specialManager.changeValue('data-special', ['three', 'five'], 'threepointfive seven');
+                 * @example {@lang xml}
+                 * <div id="unique-id" data-special="one two four threepointfive seven"><div>
+                 */
+                changeValue: changeValue(domIterates),
+                /**
+                 * Attaches an event listeners to the target manager.
+                 * @method
+                 * @param {String} eventname name of the event you are targeting
+                 * @param {String|Function} [target] define a delegate target
+                 * @param {Function} [callback] handler for when the event is triggered
+                 * @param {Boolean} [capture] whether or not the event will be captured. Captured events cannot have delegate targets.
+                 * @returns {DomManager}
+                 */
+                on: addEventListener,
+                addEventListener: addEventListener,
+                once: addEventListenerOnce,
+                /**
+                 * Removes event handlers that match the parameters passed into the method.
+                 * @method
+                 * @param {String} eventname name of the event you are targeting
+                 * @param {String|Function} [target] define a delegate target
+                 * @param {Function} [callback] handler for when the event is triggered
+                 * @param {Boolean} [capture] whether or not the event will be captured. Captured events cannot have delegate targets.
+                 * @returns {DomManager}
+                 * @example <caption>add and then remove an event handler</caption>
+                 * var handleIt = function () {
+                 *     console.log('handled');
+                 * };
+                 * bodyManager.on('handle', handleIt);
+                 * bodyManager.dispatchEvent('handle'); // logs "handled"
+                 * bodyManager.off('handle', handleIt);
+                 * bodyManager.dispatchEvent('handle'); // ... nothing happens
+                 */
+                off: removeEventListener,
+                removeEventListener: removeEventListener,
+                /**
+                 * Append elements to the target context by calling this method.
+                 * @method
+                 * @param {Collection|DomManager|DOMA|Node|String} elements what to append to the manager.
+                 * @example <caption>A new div is created with the [createElement] method and appended to the body.</caption>
+                 * var newDiv = $.createElement('div');
+                 * bodyManager.append(newDiv);
+                 * newDiv.parent() === bodyManager; // true
+                 */
+                append: appendChildDomManager,
+                appendChild: appendChildDomManager,
+                /**
+                 * Uses insertAt method to prepend the passed in elements and managers' elements to the target manager's element.
+                 * @method
+                 * @param {String|Node|DomManager|Array|Collection|DOMA} elements elements to prepend to target
+                 * @example <caption>The following example creates a new element, prepends it to the target, and then checks to make sure it is there by getting the first child.</caption>
+                 * var newDiv = $.createElement('div');
+                 * targetManager.prepend(newDiv);
+                 * targetManager.children().item(0) === newDiv; // true
+                 */
+                prepend: prependChild,
+                insertBefore: sharedInsertBefore,
+                insertAfter: insertAfter,
+                /**
+                 * Gets the value of the attribute that is passed into this method. Basically a parody of the native getAttribute function... except it will automatically parse any object or number or boolean for you.
+                 * @method
+                 * @param {String} attr attribute to access
+                 * @return {String|Number|Object} Tries to parse result of reading the attribute.
+                 * @example <caption>Numbers and Objects are automatically detected and parsed.</caption>
+                 * targetManager.getAttribute('data-number');
+                 */
+                getAttribute: getValueCurried,
+                /**
+                 * Wipe the values from whatever attribute is passed in and replace them with the second argument.
+                 * @method
+                 * @param {String} attr attribute to access
+                 * @return {String|Number|Object} Tries to parse result of reading the attribute.
+                 * @example <caption>Numbers and Objects are automatically detected and parsed.</caption>
+                 * targetManager.getAttribute('data-number');
+                 */
+                setAttribute: setValueCurried,
+                /**
+                 * Remove an attribute from the manager's element.
+                 * @method
+                 * @param {String|Array} [attr] attribute you wish to remove.
+                 * @example <caption>consider the following code</caption> {@lang xml}
+                 * <div data-some="attr"></div>
+                 * @example <caption>pass a camelcased or non camelCased version of the attribute you would like to remove</caption>
+                 * targetManager.removeAttribute('dataSome');
+                 * @example <caption>the attribute has been successfully removed.</caption> {@lang xml}
+                 * <div></div>
+                 */
+                removeAttribute: attributeParody(REMOVE),
+                /**
+                 * Convenience function for setting and getting attributes on the target element.
+                 * @func
+                 * @name DOMA#attr
+                 * @param {...*} splat of objects and key value pairs that create a single object to be applied to the element
+                 * @returns {DOMA | *} if multiple attributes were requested then a plain hash is returned, otherwise the DOMA instance is returned
+                 * @example
+                 * newDiv.attr({
+                 *     name: "michael"
+                 * }); // <div name="michael">
+                 */
+                attr: attrApi(domIterates),
+                /**
+                 * The data method is a convenience method for wrapping attribute changes around data attributes. Simply pass an object or key value pairs into the function and the method will take care of unCamelCasing it for you and applying it with a "data-" prefix after running it through [kebabCase]{@link _.kebabCase}.
+                 * @method
+                 * @returns {this|String}
+                 */
+                data: dataApi(domIterates),
+                /**
+                 * Convenience method for setting and getting properties on the target element.
+                 * @method
+                 * @returns {this|String}
+                 * @example <caption>Set the property "name" of the div to "michael"</caption>
+                 * div.prop({
+                 *     name: "michael"
+                 * }); // <div name="michael">
+                 */
+                prop: propApi(domIterates),
+                /**
+                 * Use the html method to get and set the innerHTML of the target element.
+                 * @method
+                 * @param {String} contents string to set on the target
+                 * @return {String|DomManager}
+                 * @example <caption>Sets the inner contents of the html</caption>
+                 * targetElement.html('<div></div>');
+                 */
+                html: innardManipulator(INNER_HTML),
+                /**
+                 * Use the text method to get and set the textContent of the target element.
+                 * @method
+                 * @param {String} contents string to set on the target
+                 * @return {String|DomManager}
+                 * @example <caption>Sets the text of the target element.</caption>
+                 * target.html('<div></div>');
+                 */
+                text: innardManipulator(INNER_TEXT),
+                /**
+                 * The css method is a convenience function for setting and retrieving values off of the style api.
+                 * @method
+                 * @name DOMA#css
+                 * @param {...*} splat of objects and key value pairs that create a single object to be applied to the element
+                 * @returns {DOMA}
+                 * @example <caption>To change the opacity for instance from 1 to 0.5, simply use the following code on your target DomManager.</caption>
+                 * targetManager.css('opacity', 0.5);
+                 * @description Many styles can be applied at the same time by passing an object instead of key value pairs. Below is an example of an element being centered with the absolute position method. Don't worry, those numbered values will converted into pixel values they are applied.
+                 * @example
+                 * targetManager.css({
+                 *     position: 'absolute',
+                 *     top: 0,
+                 *     right: 0,
+                 *     bottom: 0,
+                 *     left: 0,
+                 *     margin: 'auto'
+                 * });
+                 */
+                css: styleManipulator,
+                /**
+                 * Gets the next element that matches the selector. Or just gets the next sibling in the sequence.
+                 * @method
+                 * @param {String|Function} [filter] filters the next sibling. The default value is a function that returns true.
+                 * @example <caption>Get the manager's next sibling.</caption>
+                 * manager.next();
+                 * @example <caption>Get the next sibling anchor tag from this element.</caption>
+                 * manager.next('a');
+                 * @example
+                 * manager.next(function () {
+                 *     return true; // or some crazy logic
+                 * });
+                 */
+                next: managerHorizontalTraverser('next', 'nextElementSibling', 1),
+                /**
+                 * Gets the next element that matches the selector. Or just gets the next sibling in the sequence.
+                 * @method
+                 * @example <caption>Get the previous sibling.</caption>
+                 * manager.prev();
+                 * @example <caption>Get the span just before this element.</caption>
+                 * manager.prev("span");
+                 */
+                prev: managerHorizontalTraverser('prev', 'previousElementSibling', -1),
+                /**
+                 * Uses the same code that backs next and previous. A number (count of elements to skip) or a string must be passed
+                 * @method
+                 * @param {Number} steps how many siblings should be skipped. Negative numbers iterate through siblings negatively.
+                 * @example <caption>returns manager of element 2 siblings ahead</caption>
+                 * targetManager.skip(2);
+                 * @example <caption>returns manager of element 2 siblings behind</caption>
+                 * targetManager.skip(-2);
+                 */
+                skip: managerHorizontalTraverser('skip', NULL, 0),
+                height: dimensionFinder(HEIGHT, 'scrollHeight', INNER_HEIGHT),
+                width: dimensionFinder(WIDTH, 'scrollWidth', INNER_WIDTH),
+                scrollLeft: dimensionFinder('scrollLeft', 'scrollLeft', 'pageXOffset', BOOLEAN_TRUE),
+                scrollTop: dimensionFinder('scrollTop', 'scrollTop', 'pageYOffset', BOOLEAN_TRUE),
+                /**
+                 * The siblings method returns all siblings that are not the current manager and meet the filter passed in as the first argument.
+                 * @param  {Number|String|Function} filtr a filter to selectively collect the siblings
+                 * @return {DOMA}
+                 * @example <caption>the following line returns all of the div's siblings without the div present in the Collection.</caption>
+                 * div.siblings();
+                 */
+                siblings: function (filtr) {
+                    var original = this,
+                        filter = createDomFilter(filtr, original.owner);
+                    return original.parent().children(function (manager, index, list) {
+                        return manager !== original && filter(manager, index, list);
+                    });
+                },
+                /**
+                 * Returns the element that belongs to that manager.
+                 * @return {Node}
+                 * @example <caption>Get the element that the dom manager is associated with.</caption>
+                 * bodyManager.element(); // <body></body>
+                 */
+                element: function () {
+                    return this[TARGET];
+                },
+                /**
+                 * Parody method of the {@link DOMA} that simply returns the element in an array.
+                 * @return {Array}
+                 * @example <caption>returns the node as an array just like the {@link DOMA}</caption>
+                 * bodyManager.elements(); // [<body></body>]
+                 */
+                elements: function () {
+                    return [this.element()];
+                },
+                constructor: function (el, hash, owner_) {
+                    var elId, registeredOptions, isDocument, owner = owner_,
+                        manager = this;
+                    if (!el) {
+                        exception('element must be an element');
                     }
-                } else {
-                    // hash[]
-                    if ((isDocument = manager.is(DOCUMENT))) {
-                        owner = manager;
-                        manager[__ELID__] = elId = el[__ELID__];
-                        // hash.manager
+                    if (DomManager.isInstance(el)) {
+                        // extend what we already know
+                        hash[DOM_MANAGER_STRING] = manager;
+                        extend(manager, el);
+                        // run it through it's scoped constructor
+                        registeredOptions = owner.registeredElementOptions[manager[REGISTERED_AS]];
+                        registeredOptions.creation.call(manager, manager);
+                        manager.on(registeredOptions.events);
+                        manager.on(DESTROY, registeredOptions.destruction);
+                        return manager;
+                    }
+                    test(manager, owner, el);
+                    if (manager.is(ELEMENT) || manager.is(FRAGMENT)) {
+                        hash[DOM_MANAGER_STRING] = manager;
+                        owner = ensure(el.ownerDocument, BOOLEAN_TRUE);
+                        if (manager.is(ELEMENT)) {
+                            manager[__ELID__] = el[__ELID__];
+                        }
                     } else {
-                        manager[__ELID__] = app.counter('win');
-                    }
-                    hash[DOM_MANAGER_STRING] = manager;
-                }
-                manager.owner = owner || BOOLEAN_FALSE;
-                manager[TARGET] = el;
-                if (manager.is(IFRAME)) {
-                    manager.on(ATTRIBUTE_CHANGE + ':src detach attach', iframeChangeHandler);
-                }
-                // manager.mark('constructing');
-                if (manager.is(WINDOW)) {
-                    markGlobal(manager, el);
-                }
-                if (manager.is(ELEMENT)) {
-                    if (!attributeApi.read(el, 'is')) {
-                        attributeApi.write(el, 'is', true);
-                    }
-                    if (manager[REGISTERED_AS] && manager[REGISTERED_AS] !== BOOLEAN_TRUE) {
-                        manager = wraptry(function () {
-                            return registerAs(manager, hash, owner);
-                        }) || manager;
-                    }
-                    if (has(manager, REGISTERED_AS)) {
-                        delete manager[REGISTERED_AS];
-                    }
-                // } else {
-                //     if (manager.is(DOCUMENT)) {
-                //         app.definition(manager[TARGET][DEFAULT_VIEW]);
-                //     }
-                }
-                return manager;
-            },
-            clone: function () {
-                var manager = this;
-                if (!manager.is(ELEMENT)) {
-                    return {};
-                }
-                return makeBranch(manager.element()[OUTER_HTML], manager.owner);
-            },
-            length: function () {
-                return 1;
-            },
-            wrap: function (list) {
-                return this.owner.$(list || this);
-            },
-            unwrap: dommanagerunwrapper,
-            toArray: dommanagerunwrapper,
-            parent: (function () {
-                var finder = function (manager, fn, original) {
-                        var rets, found, parentManager = manager,
-                            owner = manager.owner,
-                            parentElement = parentManager.element(),
-                            next = original;
-                        while (parentElement && !found) {
-                            rets = fn(parentElement, original, next, owner);
-                            parentElement = rets[0];
-                            found = rets[1];
-                            next = rets[2];
+                        // hash[]
+                        if ((isDocument = manager.is(DOCUMENT))) {
+                            owner = manager;
+                            manager[__ELID__] = elId = el[__ELID__];
+                            // hash.manager
+                        } else {
+                            manager[__ELID__] = app.counter('win');
                         }
-                        if (found && parentElement) {
-                            return owner.returnsManager(parentElement);
+                        hash[DOM_MANAGER_STRING] = manager;
+                    }
+                    manager.owner = owner || BOOLEAN_FALSE;
+                    manager[TARGET] = el;
+                    if (manager.is(IFRAME)) {
+                        manager.on(ATTRIBUTE_CHANGE + ':src detach attach', iframeChangeHandler);
+                    }
+                    // manager.mark('constructing');
+                    if (manager.is(WINDOW)) {
+                        markGlobal(manager, el);
+                    }
+                    if (manager.is(ELEMENT)) {
+                        if (!attributeApi.read(el, 'is')) {
+                            attributeApi.write(el, 'is', true);
                         }
-                    },
-                    number = function (element, original, next) {
-                        next -= 1;
-                        if (next < 0 || !isFinite(next) || isNaN(next)) {
-                            next = 0;
+                        if (manager[REGISTERED_AS] && manager[REGISTERED_AS] !== BOOLEAN_TRUE) {
+                            manager = wraptry(function () {
+                                return registerAs(manager, hash, owner);
+                            }) || manager;
                         }
-                        return [element[PARENT_NODE], !next, next];
-                    },
-                    string = function (element, original_, next, owner) {
-                        var parent = element[PARENT_NODE];
-                        var original = convertSelector(original_, owner);
-                        return [parent, matchesSelector(parent, original, owner)];
-                    },
-                    speshal = {
-                        document: function (element, original, next) {
+                        if (has(manager, REGISTERED_AS)) {
+                            delete manager[REGISTERED_AS];
+                        }
+                        // } else {
+                        //     if (manager.is(DOCUMENT)) {
+                        //         app.definition(manager[TARGET][DEFAULT_VIEW]);
+                        //     }
+                    }
+                    return manager;
+                },
+                clone: function () {
+                    var manager = this;
+                    if (!manager.is(ELEMENT)) {
+                        return {};
+                    }
+                    return makeBranch(manager.element()[OUTER_HTML], manager.owner);
+                },
+                /**
+                 * Always returns 1 since it is basically just a parody of the Collection's {@link Collection#length} method.
+                 * @return {Number} will always be 1 unless the function is overwritten.
+                 * @example
+                 * manager.length(); // 1
+                 */
+                length: function () {
+                    return 1;
+                },
+                wrap: function (list) {
+                    return this.owner.$(list || this);
+                },
+                unwrap: dommanagerunwrapper,
+                /**
+                 * Parody method that simply wraps the dom manager in an array so that it produces the same result as the {@link DOMA}.
+                 * @method
+                 * @example <caption>the div list in this case is just to wrap the {@link DomManager} in an array.</caption>
+                 * var divList = div.unwrap();
+                 */
+                toArray: dommanagerunwrapper,
+                /**
+                 * Returns the first matching parent of target manager. If no argument is passed, the direct parent will be returned. A function can be passed, through the method, but it must return a tuple with the parent at the first index, and a boolean at the second index to continue or terminate the loop.
+                 * @example <caption>gets the body's parent (the html element)</caption>
+                 * bodyManager.parent();
+                 * @example <caption>pass a string to check for and filter the element. Works a lot like closest in jQuery.</caption>
+                 * bodyManager.parent('document').is("document"); // true
+                 * bodyManager.parent('window').is("window"); // true
+                 * bodyManager.parent('iframe').tag(); // "iframe"
+                 */
+                parent: (function () {
+                    var finder = function (manager, fn, original) {
+                            var rets, found, parentManager = manager,
+                                owner = manager.owner,
+                                parentElement = parentManager.element(),
+                                next = original;
+                            while (parentElement && !found) {
+                                rets = fn(parentElement, original, next, owner);
+                                parentElement = rets[0];
+                                found = rets[1];
+                                next = rets[2];
+                            }
+                            if (found && parentElement) {
+                                return owner.returnsManager(parentElement);
+                            }
+                        },
+                        number = function (element, original, next) {
+                            next -= 1;
+                            if (next < 0 || !isFinite(next) || isNaN(next)) {
+                                next = 0;
+                            }
+                            return [element[PARENT_NODE], !next, next];
+                        },
+                        string = function (element, original_, next, owner) {
                             var parent = element[PARENT_NODE];
-                            if (isDocument(parent)) {
-                                return [parent, BOOLEAN_TRUE];
-                            } else {
-                                if (isElement(parent)) {
-                                    return [parent, BOOLEAN_FALSE];
+                            var original = convertSelector(original_, owner);
+                            return [parent, matchesSelector(parent, original, owner)];
+                        },
+                        speshal = {
+                            document: function (element, original, next) {
+                                var parent = element[PARENT_NODE];
+                                if (isDocument(parent)) {
+                                    return [parent, BOOLEAN_TRUE];
                                 } else {
-                                    if (isFragment(parent)) {
-                                        return [NULL, BOOLEAN_FALSE];
+                                    if (isElement(parent)) {
+                                        return [parent, BOOLEAN_FALSE];
+                                    } else {
+                                        if (isFragment(parent)) {
+                                            return [NULL, BOOLEAN_FALSE];
+                                        }
                                     }
                                 }
-                            }
-                        },
-                        window: function (element, original, next, origin) {
-                            var parent, defaultView = element[DEFAULT_VIEW];
-                            if (defaultView) {
-                                return [defaultView, BOOLEAN_TRUE];
-                            }
-                            if ((parent = element[PARENT_NODE])) {
-                                return [parent, BOOLEAN_FALSE];
-                            } else {
-                                return [BOOLEAN_FALSE, BOOLEAN_FALSE];
-                            }
-                        },
-                        iframe: function (element, original, next) {
-                            var found, parent = element,
-                                elementIsWindow = isWindow(element);
-                            if (elementIsWindow) {
-                                if (parent === parent.top) {
-                                    return [NULL, BOOLEAN_FALSE];
-                                } else {
-                                    found = wraptry(function () {
-                                        return parent.frameElement;
-                                    });
-                                    return [found, !!found];
+                            },
+                            window: function (element, original, next, origin) {
+                                var parent, defaultView = element[DEFAULT_VIEW];
+                                if (defaultView) {
+                                    return [defaultView, BOOLEAN_TRUE];
                                 }
-                            } else {
-                                return [element[DEFAULT_VIEW]] || element[PARENT_NODE];
+                                if ((parent = element[PARENT_NODE])) {
+                                    return [parent, BOOLEAN_FALSE];
+                                } else {
+                                    return [BOOLEAN_FALSE, BOOLEAN_FALSE];
+                                }
+                            },
+                            iframe: function (element, original, next) {
+                                var found, parent = element,
+                                    elementIsWindow = isWindow(element);
+                                if (elementIsWindow) {
+                                    if (parent === parent.top) {
+                                        return [NULL, BOOLEAN_FALSE];
+                                    } else {
+                                        found = wraptry(function () {
+                                            return parent.frameElement;
+                                        });
+                                        return [found, !!found];
+                                    }
+                                } else {
+                                    return [element[DEFAULT_VIEW]] || element[PARENT_NODE];
+                                }
                             }
+                        };
+                    return function (original) {
+                        var iterator, manager = this,
+                            data = [],
+                            doDefault = BOOLEAN_FALSE;
+                        if (isNumber(original)) {
+                            iterator = number;
+                        } else {
+                            if (isString(original)) {
+                                iterator = speshal[original] || string;
+                            } else {
+                                doDefault = original ? BOOLEAN_TRUE : doDefault;
+                            }
+                        }
+                        if (doDefault) {
+                            return finder(manager, original);
+                        } else {
+                            if (!iterator) {
+                                iterator = number;
+                                original = 1;
+                            }
+                            return finder(manager, iterator, original);
                         }
                     };
-                return function (original) {
-                    var iterator, manager = this,
-                        data = [],
-                        doDefault = BOOLEAN_FALSE;
-                    if (isNumber(original)) {
-                        iterator = number;
-                    } else {
-                        if (isString(original)) {
-                            iterator = speshal[original] || string;
-                        } else {
-                            doDefault = original ? BOOLEAN_TRUE : doDefault;
-                        }
+                }()),
+                /**
+                 * Returns a boolean based on whether or not the elements passed into the method are inside of target element. Also, a [parent]{@link DomManager#parent} type function can be passed to discern whether or not the parent is in fact the parent you are looking for.
+                 * @param  {String|Node|DomManager|DOMA} el check to see if the manager in question contains the element
+                 * @return {Boolean}
+                 * @example <caption>The body in this case contains at least one div.</caption>
+                 * bodyManager.contains('div'); // true
+                 * @example <caption>A DomManager (as well as a node) can be passed</caption>
+                 * bodyManager.contains($('div').index(0)); // true
+                 * @example <caption>Because the new div has not been appended to anything, it is not contained in the body.</caption>
+                 * bodyManager.contains($.createElement('div')); // false
+                 */
+                contains: function (el) {
+                    var managerElement, target, element = el,
+                        manager = this;
+                    if (isWindow(element)) {
+                        return BOOLEAN_FALSE;
                     }
-                    if (doDefault) {
-                        return finder(manager, original);
-                    } else {
-                        if (!iterator) {
-                            iterator = number;
-                            original = 1;
-                        }
-                        return finder(manager, iterator, original);
+                    if (isString(element)) {
+                        return !!query(element, manager.element(), manager)[LENGTH];
                     }
-                };
-            }()),
-            contains: function (element_) {
-                var managerElement, target, element = element_,
-                    manager = this;
-                if (isWindow(element)) {
-                    return BOOLEAN_FALSE;
-                }
-                if (isString(element)) {
-                    return !!query(element, manager.element(), manager)[LENGTH];
-                }
-                if (element.isValidDOMA) {
-                    return !!element.find(manager.contains, manager);
-                }
-                target = manager.owner.returnsManager(element);
-                if (target.is(DOCUMENT)) {
-                    return target.window() === manager;
-                }
-                managerElement = manager.element();
-                return !!target.parent(function (node) {
-                    var parentNode = node[PARENT_NODE];
-                    return [parentNode, parentNode === managerElement];
-                });
-            },
-            insertAt: function (els, index) {
-                var manager = this,
-                    owner = manager.owner,
-                    fragmentManager = isAppendable(els) ? owner.returnsManager(els) : owner.$(els).fragment(),
-                    fragment = fragmentManager.element(),
-                    children = index == NULL ? NULL : manager.children(),
-                    child = children && children.item(index) || NULL,
-                    element = child && child.element() || NULL,
-                    managerElement = manager && manager.element(),
-                    returns = fragmentManager.children(),
-                    fragmentChildren = collectCustom(fragmentManager, BOOLEAN_TRUE),
-                    detachNotify = dispatchDetached(fragmentChildren, owner),
-                    returnValue = managerElement && insertBefore(managerElement, fragment, element),
-                    notify = isAttached(managerElement, owner) && dispatchAttached(fragmentChildren, owner);
-                return returns;
-            },
-            window: function () {
-                var manager = this;
-                if (manager.is(WINDOW)) {
-                    // yay we're here!
-                    return manager;
-                }
-                if (manager.is(DOCUMENT)) {
-                    // it's a document, so return the manager relative to the inside
-                    return manager.returnsManager(manager.element().defaultView);
-                }
-                if (manager.is(IFRAME)) {
-                    // it's an iframe, so return the manager relative to the outside
-                    return manager.is(ATTACHED) && (windo = manager.element().contentWindow) && manager.owner.returnsManager(windo);
-                }
-                // it's an element so go up
-                return manager.owner.window();
-            },
-            setAddress: function (address) {
-                var manager = this;
-                address = manager.address = address || manager.address || uuid();
-                return address;
-            },
-            emit: function (message_, referrer_, handler) {
-                var message, post, windo = this.window(),
+                    if (element.isValidDOMA) {
+                        return !!element.find(manager.contains, manager);
+                    }
+                    target = manager.owner.returnsManager(element);
+                    if (target.is(DOCUMENT)) {
+                        return target.window() === manager;
+                    }
+                    managerElement = manager.element();
+                    return !!target.parent(function (node) {
+                        var parentNode = node[PARENT_NODE];
+                        return [parentNode, parentNode === managerElement];
+                    });
+                },
+                /**
+                 * The insertAt method is the main handler that will be abstracted by append, prepend and others. It handles node insertion at whatever index is passed into the method as the second argument.
+                 * @param  {String|Node|Manager|DOMA|Collection} els elements to insert at the given index
+                 * @param  {Number|Null} index Where to put the elements
+                 * @return {DOMA} children (first layer) that were just inserted
+                 * @example <caption>insert a div by it's manager at the 4rd index</caption>
+                 * bodyManager.insertAt(divManager, 3);
+                 * @example <caption>appends a newly created div</caption>
+                 * divManager.insertAt('<div/>');
+                 */
+                insertAt: function (els, index) {
+                    var manager = this,
+                        owner = manager.owner,
+                        fragmentManager = isAppendable(els) ? owner.returnsManager(els) : owner.$(els).fragment(),
+                        fragment = fragmentManager.element(),
+                        children = index == NULL ? NULL : manager.children(),
+                        child = children && children.item(index) || NULL,
+                        element = child && child.element() || NULL,
+                        managerElement = manager && manager.element(),
+                        returns = fragmentManager.children(),
+                        fragmentChildren = collectCustom(fragmentManager, BOOLEAN_TRUE),
+                        detachNotify = dispatchDetached(fragmentChildren, owner),
+                        returnValue = managerElement && insertBefore(managerElement, fragment, element),
+                        notify = isAttached(managerElement, owner) && dispatchAttached(fragmentChildren, owner);
+                    return returns;
+                },
+                /**
+                 * Returns the manager of the window associated with the element. If this method is called on the document, then it will reach up to it's parent window. If it is called on a window, then it will return said window. If it is called on any element that is not an iframe, then it will get the window of the owner document. If it is called on an iframe then it will grab the content window of said iframe. This method is used internally for the emit and other methods.
+                 * @returns {DomManager}
+                 * @example <caption>The window of the body is returned (<code>bodyManager.element().parentNode.parentNode.defaultView</code>)</caption>
+                 * bodyManager.window();
+                 * @example <caption>The window inside of the iframe is returned (<code>iframeManager.element().contentWindow</code>)</caption>
+                 * iframeManager.window();
+                 * @example <caption>The window that the element is in is returned (<code>divManager.owner.element().defaultView</code>)</caption>
+                 * divManager.window();
+                 * @example <caption>The window returns it's self <code>windowManager.element()</code></caption>
+                 * windowManager.window();
+                 */
+                window: function () {
+                    var manager = this;
+                    if (manager.is(WINDOW)) {
+                        // yay we're here!
+                        return manager;
+                    }
+                    if (manager.is(DOCUMENT)) {
+                        // it's a document, so return the manager relative to the inside
+                        return manager.returnsManager(manager.element().defaultView);
+                    }
+                    if (manager.is(IFRAME)) {
+                        // it's an iframe, so return the manager relative to the outside
+                        return manager.is(ATTACHED) && (windo = manager.element().contentWindow) && manager.owner.returnsManager(windo);
+                    }
+                    // it's an element so go up
+                    return manager.owner.window();
+                },
+                /**
+                 * Method is called automatically during Manager construction. It creates a unique id for the window to post emit messages to.
+                 * @param {String} [address] the id that will be used for the window to receive post messages.
+                 * @returns {String} the address that was set. different if there was no param passed.
+                 */
+                setAddress: function (address) {
+                    var manager = this;
+                    address = manager.address = address || manager.address || uuid();
+                    return address;
+                },
+                /**
+                 * Post message abstraction for window objects. Be sure to pass a function, because if the window is friendly, the DomManager will pass an object that resembles an event back throught that function to be handled by the same side.
+                 * @param  {String} message Usually a stringified object that is sent across the window
+                 * @param  {String} [referrer] second argument of the post message method of the window.
+                 * @param  {Function} [handler] redirect when the window is friendly.
+                 * @return {this}
+                 * @example <caption>Handle both sides of the equation by using this methodology.</caption>
+                 * $('iframe').index(0).emit({
+                 *     coded: "messages"
+                 * }, 'http://odette-js.github.io', function (fake_evnt) {
+                 *     // nevermind, i've got this
+                 * });
+                 */
+                emit: function (message, referrer, handler) {
+                    var msg, post, element, stringified, windo = this.window();
+                    if (!windo.is(WINDOW)) {
+                        return this;
+                    }
                     element = windo.element();
-                if (windo.is(ACCESSABLE)) {
-                    message = parse(message_);
-                    (handler || receivePostMessage)({
-                        // this can be expanded a bit when you get some time
-                        srcElement: element,
-                        timeStamp: _.now(),
-                        data: function () {
-                            return message;
+                    stringified = stringify(message);
+                    if (windo.is(ACCESSABLE)) {
+                        msg = parse(stringified);
+                        (handler || receivePostMessage)({
+                            // this can be expanded a bit when you get some time
+                            srcElement: element,
+                            timeStamp: _.now(),
+                            data: function () {
+                                return msg;
+                            }
+                        });
+                        return this;
+                    }
+                    wraptry(function () {
+                        // do not parse message so it can be sent as is
+                        if (!referrer) {
+                            exception('missing referrer: ' + windo.address);
+                        } else {
+                            element.postMessage(stringified, referrer);
                         }
                     });
                     return this;
-                }
-                wraptry(function () {
-                    // do not parse message so it can be sent as is
-                    if (!referrer_) {
-                        exception('missing referrer: ' + windo.address);
-                    } else {
-                        element.postMessage(message_, referrer_);
+                },
+                /**
+                 * Check the window's origin against it's owner document. This is the document that the DomManager was created for, not necessarily the document of the window.
+                 * @example <caption>this example is of code that ran and is registered against the insides of an unfriendly iframe</caption>
+                 * $.returnsManager(window).sameOrigin(); // true
+                 * $.returnsManager(window.top).sameOrigin(); // false
+                 */
+                sameOrigin: function () {
+                    var parsedReference, manager = this,
+                        element = manager.element(),
+                        windo = manager.owner.window(),
+                        windoElement = windo.element();
+                    if (windo === manager) {
+                        return BOOLEAN_TRUE;
                     }
-                });
-                return this;
-            },
-            sameOrigin: function () {
-                var parsedReference, manager = this,
-                    element = manager.element(),
-                    windo = manager.owner.window(),
-                    windoElement = windo.element();
-                if (windo === manager) {
-                    return BOOLEAN_TRUE;
-                }
-                if (manager.is(ACCESSABLE)) {
-                    parsedReference = reference(wraptry(function () {
-                        var frame;
-                        return (frame = element.frameElement) ? frame.src : BOOLEAN_FALSE;
-                    }) || element[LOCATION].href);
-                    if (!parsedReference && manager.iframe) {
-                        parsedReference = reference(manager.iframe.src());
-                    }
-                    return !parsedReference || parsedReference === reference(windoElement[LOCATION].href);
-                }
-                return BOOLEAN_FALSE;
-            },
-            children: function (eq, memo) {
-                var filter, resultant, manager = this,
-                    children = collectChildren(manager.element());
-                if (eq === UNDEFINED) {
-                    return memo ? ((children = map(children, manager.owner.returnsManager, manager.owner)) && result(memo, 'is', FRAGMENT) ? memo.append(children) : (memo.push.apply(memo, children) ? memo : memo)) : manager.wrap(children);
-                } else {
-                    filter = createDomFilter(eq, manager.owner);
-                    resultant = foldl(children, function (memo, child, idx, children) {
-                        if (filter(child, idx, children)) {
-                            memo.push(manager.owner.returnsManager(child));
+                    if (manager.is(ACCESSABLE)) {
+                        parsedReference = reference(wraptry(function () {
+                            var frame;
+                            return (frame = element.frameElement) ? frame.src : BOOLEAN_FALSE;
+                        }) || element[LOCATION].href);
+                        if (!parsedReference && manager.iframe) {
+                            parsedReference = reference(manager.iframe.src());
                         }
-                        return memo;
-                    }, memo || []);
-                }
-                return memo ? resultant : manager.wrap(resultant);
-            },
-            visible: function () {
-                var client, element, styles, owner, windo, windoElement, innerHeight, innerWidth, manager = this;
-                if (!manager.is(ATTACHED)) {
-                    return BOOLEAN_FALSE;
-                }
-                styles = manager.getStyle();
-                if (+styles.opacity === 0 || styles.display === NONE || styles[HEIGHT] === ZERO_PIXELS || styles[WIDTH] === ZERO_PIXELS || styles.visibility === HIDDEN) {
-                    return BOOLEAN_FALSE;
-                }
-                element = manager.element();
-                client = element.getBoundingClientRect();
-                if (!client[HEIGHT] || !client[WIDTH]) {
-                    return BOOLEAN_FALSE;
-                }
-                windoElement = (manager.element().ownerDocument || {}).defaultView;
-                if (!windoElement) {
-                    return BOOLEAN_TRUE;
-                }
-                innerHeight = windoElement[INNER_HEIGHT];
-                innerWidth = windoElement[INNER_WIDTH];
-                if (innerHeight < client.top || innerWidth < client.left || client.right < 0 || client.bottom < 0) {
-                    return BOOLEAN_FALSE;
-                }
-                windo = manager.owner.returnsManager(windoElement);
-                return windo.is('topWindow') ? BOOLEAN_TRUE : windowIsVisible(windo, manager.owner);
-            },
-            hide: function () {
-                return this.applyStyle(DISPLAY, NONE);
-            },
-            show: function () {
-                return this.applyStyle(DISPLAY, 'block');
-            },
-            applyStyle: function (key, value, important) {
-                applyStyle(this.element(), key, value, important);
-                return this;
-            },
-            getStyle: function (eq) {
-                var returnValue = {},
-                    manager = this,
-                    first = manager.element();
-                if (first && manager.is(ELEMENT)) {
-                    returnValue = getComputed(first, manager.owner.element());
-                }
-                return returnValue;
-            },
-            remove: removeHandler,
-            removeChild: removeHandler,
-            frame: function (head, body, passedContent) {
-                var manager = this,
-                    content = head || '';
-                if (!passedContent && (body || content.slice(0, 10).toLowerCase() !== '<!doctype ')) {
-                    content = manager.owner.iframeContent(content, body);
-                }
-                var sharedVars = isObject(passedContent) ? passedContent : (isObject(body) ? body : {});
-                if (manager.is(IFRAME)) {
-                    if (manager.is(ATTACHED)) {
-                        manager.html(content, sharedVars);
-                    } else {
-                        manager.cachedContent = {
-                            string: content,
-                            vars: sharedVars
-                        };
-                        // manager.cachedContent = content;
+                        return !parsedReference || parsedReference === reference(windoElement[LOCATION].href);
                     }
-                    return manager;
-                } else {
-                    return manager;
-                }
-            },
-            // rework how to destroy elements
-            destroy: function (handler) {
-                var customName, manager = this,
-                    registeredAs = manager[REGISTERED_AS],
+                    return BOOLEAN_FALSE;
+                },
+                /**
+                 * Method to return all of the direct children of the target element. While the list of children is being iterated over, it can also be filtered by passing in a string to act as a query selector, a number to only get that element, or a function for custom filtering.
+                 * @param  {String|Number|Function} eq How to filter the children. Null values return collect all.
+                 * @param  {Object|DocumentFragment} memo push all children to this param, or if it is a document fragment, all children will be appended
+                 * @return {DOMA}
+                 * @example <caption>Consider the following markup.</caption> {@lang xml}
+                 * <div id="top-level">
+                 *     <div class="item-0"></div>
+                 *     <div class="item-1" data-marker></div>
+                 *     <div class="item-2"></div>
+                 *     <div class="item-3" data-marker></div>
+                 *     <div class="item-4"></div>
+                 * </div>
+                 * @example <caption>We might want to select for the children in a variety of ways.</caption>
+                 * var topLevelManager = $('#top-level');
+                 * var $allChildren = topLevelManager.children(); // length 5
+                 * var $thirdChild = topLevelManager.children(2); // length 1
+                 * var $markerChildren = topLevelManager.children('[data-marker]'); // length 2
+                 * var $evenChildren = topLevelManager.children(function (manager, index) {
+                 *     return !(index % 2);
+                 * }); // length 3
+                 */
+                children: function (eq, memo) {
+                    var filter, resultant, manager = this,
+                        children = collectChildren(manager.element());
+                    if (eq == NULL) {
+                        return memo ? ((children = map(children, manager.owner.returnsManager, manager.owner)) && result(memo, 'is', FRAGMENT) ? memo.append(children) : (memo.push.apply(memo, children) ? memo : memo)) : manager.wrap(children);
+                    } else {
+                        filter = createDomFilter(eq, manager.owner);
+                        resultant = foldl(children, function (memo, child, idx, children) {
+                            if (filter(child, idx, children)) {
+                                memo.push(manager.owner.returnsManager(child));
+                            }
+                            return memo;
+                        }, memo || []);
+                    }
+                    return memo ? resultant : manager.wrap(resultant);
+                },
+                /**
+                 * Runs a series of checks to determine if the element in question is visible. It will first check the attachment status, then various css properties, as well as the client rect of the element. Finally, if the element is inside of an iframe, it will do it's best to discern the element's visibility.
+                 * @return {Boolean}
+                 * @example <caption>elements that are not in the document, or elements that have a 0 height or width, or have styles like display none, visiblity none, or opacity 0 would all result in false.</caption>
+                 * visibleBody.append(divManager);
+                 * divManager.visible(); // true
+                 * @example <caption>elements that are not attached to the dom are not visible.</caption>
+                 * divManager.remove();
+                 * divManager.visible(); // false
+                 */
+                visible: function () {
+                    var client, element, styles, owner, windo, windoElement, innerHeight, innerWidth, manager = this;
+                    if (!manager.is(ATTACHED)) {
+                        return BOOLEAN_FALSE;
+                    }
+                    styles = manager.getStyle();
+                    if (+styles.opacity === 0 || styles.display === NONE || styles[HEIGHT] === ZERO_PIXELS || styles[WIDTH] === ZERO_PIXELS || styles.visibility === HIDDEN) {
+                        return BOOLEAN_FALSE;
+                    }
                     element = manager.element();
-                if (manager.is(DESTROYED)) {
+                    client = element.getBoundingClientRect();
+                    if (!client[HEIGHT] || !client[WIDTH]) {
+                        return BOOLEAN_FALSE;
+                    }
+                    windoElement = (manager.element().ownerDocument || {}).defaultView;
+                    if (!windoElement) {
+                        return BOOLEAN_TRUE;
+                    }
+                    innerHeight = windoElement[INNER_HEIGHT];
+                    innerWidth = windoElement[INNER_WIDTH];
+                    if (innerHeight < client.top || innerWidth < client.left || client.right < 0 || client.bottom < 0) {
+                        return BOOLEAN_FALSE;
+                    }
+                    windo = manager.owner.returnsManager(windoElement);
+                    return windo.is('topWindow') ? BOOLEAN_TRUE : windowIsVisible(windo, manager.owner);
+                },
+                /**
+                 * Quick abstraction for an applyStyle call with the arguments display, and none.
+                 * @return {this}
+                 * @example <caption>hides the element</caption>
+                 * manager.hide();
+                 */
+                hide: function () {
+                    return this.applyStyle(DISPLAY, NONE);
+                },
+                /**
+                 * Quick abstraction for an applyStyle call with the arguments display, and block.
+                 * @return {this}
+                 * @example <caption>hides the element</caption>
+                 * manager.show();
+                 */
+                show: function () {
+                    return this.applyStyle(DISPLAY, 'block');
+                },
+                /**
+                 * Applies a singular style to the target element.
+                 * @param  {String} style css property to be applied
+                 * @param  {String|Number} value value of the property being applied
+                 * @param  {Boolean} important whether to apply important flag with the style
+                 * @return {this}
+                 * @example <caption>Hides the body</caption>
+                 * bodyManager.applyStyle('display', 'none');
+                 * @example <caption>Shows the body with the important flag</caption>
+                 * bodyManager.applyStyle('opacity', 1, true);
+                 * @example <caption>Hides the body</caption>
+                 * bodyManager.applyStyle({
+                 *     opacity: 1,
+                 *     display: "block",
+                 *     visibility: "visible"
+                 * });
+                 */
+                applyStyle: function (style, value, important) {
+                    applyStyle(this.element(), style, value, important);
+                    return this;
+                },
+                /**
+                 * A convenience method for retrieving styles from an element.
+                 * @return {String}
+                 * @example <caption>considering the following html</caption> {@lang xml}
+                 * <div style="display: block;"></div>
+                 * @example
+                 * targetManager.getStyle('display'); // "block"
+                 */
+                getStyle: function (eq) {
+                    var returnValue = {},
+                        manager = this,
+                        first = manager.element();
+                    if (first && manager.is(ELEMENT)) {
+                        returnValue = getComputed(first, manager.owner.element());
+                    }
+                    return returnValue;
+                },
+                /**
+                 * Removes the dom node from its parent. First optional argument can be a document fragment that the target manager's element will be appended to. The second, optional, argument can be a function that is run asynchronously after the dom element is removed from the dom.
+                 * @method
+                 * @param {Function} [callback] to run after the element has been removed from the dom. (most useful for iframes when code can be stopped mid-execution)
+                 * @example <caption>When an element is removed it no longer has a parent.</caption>
+                 * divInBody.remove();
+                 * divInBody.parent(); // undefined
+                 */
+                remove: removeHandler,
+                removeChild: removeHandler,
+                /**
+                 * The frame method helps you create the base string for an iframe. You can either pass it the full string (with doctype) or the head and the body in one or two arguments. If the head and body are separate, the method will automatically add some helpful meta tags to the head to reduce redundancy.
+                 * @param  {String} head define the head or the entire document with this param
+                 * @param  {String|Object} body if string, this param will be understood to be the body. Pass an object if the head contains the entire document.
+                 * @param  {Object} passedContent The variables that should be set on the window just before the frame string is inserted into the iframe.
+                 * @return {this}
+                 * @example <caption>sets the iframe content and the "_" variable to an empty object.</caption>
+                 * manager.frame('<link rel="stylesheet" href="./css/main.css">', //
+                 *     '<div class="my-container"></div>\n\t\t<script>console.log(_);</script>', {
+                 *     _: {}
+                 * });
+                 * @example <caption>The call above would produce the following html inside of an iframe.</caption> {@lang xml}
+                 * <!DOCTYPE html>
+                 * <html>
+                 *     <head>
+                 *         <meta charset="utf-8">
+                 *         <meta name="viewport" content="user-scalable=no,width=device-width,initial-scale=1">
+                 *         <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+                 *         <link rel="stylesheet" href="./css/main.css">
+                 *     </head>
+                 *     <body>
+                 *         <div class="my-container"></div>
+                 *         <script>console.log(_);</script> <!-- logs {} -->
+                 *     </body>
+                 * </html>
+                 */
+                frame: function (head, body, passedContent) {
+                    var manager = this,
+                        content = head || '';
+                    if (!passedContent && (body || content.slice(0, 10).toLowerCase() !== '<!doctype ')) {
+                        content = manager.owner.iframeContent(content, body);
+                    }
+                    var sharedVars = isObject(passedContent) ? passedContent : (isObject(body) ? body : {});
+                    if (manager.is(IFRAME)) {
+                        if (manager.is(ATTACHED)) {
+                            manager.html(content, sharedVars);
+                        } else {
+                            manager.cachedContent = {
+                                string: content,
+                                vars: sharedVars
+                            };
+                        }
+                        return manager;
+                    } else {
+                        return manager;
+                    }
+                },
+                // rework how to destroy elements
+                destroy: function (handler) {
+                    var customName, manager = this,
+                        registeredAs = manager[REGISTERED_AS],
+                        element = manager.element();
+                    if (manager.is(DESTROYED)) {
+                        return manager;
+                    }
+                    manager.mark(DESTROYED);
+                    if (manager.is(IFRAME)) {
+                        manager.owner.data.remove(element.contentWindow);
+                    }
+                    manager.remove(NULL, handler);
+                    if (registeredAs) {
+                        customName = manager.owner.registeredElementName(registeredAs);
+                        manager.directiveDestruction(customName);
+                    }
+                    manager[DISPATCH_EVENT](DESTROY);
+                    // destroy events
+                    manager.directiveDestruction(EVENT_MANAGER);
+                    // remove from global hash
+                    manager.owner.data.remove(element);
+                    manager[STOP_LISTENING]();
                     return manager;
+                },
+                item: function () {
+                    return this;
+                },
+                /**
+                 * A parody method to allow a DomManager share internal methods with the {@link DOMA}
+                 * @param  {Function} fn the callback that will iterate over this single DomManager
+                 * @param  {Object} context the this of the callback
+                 * @return {Array}
+                 * @example <caption>pseudo iterate over the DomManager in question</caption>
+                 * @example
+                 * bodyManager.each(function (manager, index) {
+                 *     manager === bodyManager; // true
+                 *     index === 0; // true
+                 * });
+                 */
+                each: function (fn, context) {
+                    var manager = this,
+                        wrapped = [manager],
+                        result = context ? fn.call(context, manager, 0, wrapped) : fn(manager, 0, wrapped);
+                    return wrapped;
+                },
+                /**
+                 * Parody method of the {@link DOMA} that fake iterates with the single manager.
+                 * @param  {Function} fn callback to iterate over the pseudo collection.
+                 * @param {Object} [context] context in which the callback will run
+                 * @return {Null|DomManager} if truthy value is returned from callback, DomManager is returned, otherwise undefined. Operates just like {@link _.find}
+                 * @example <caption>Return the manager when the result is truthy</caption>
+                 * bodyManager.find(function (manager, index) {
+                 *     manager === bodyManager; // true
+                 *     index === 0; // true
+                 *     return !index;
+                 * }); // bodyManager
+                 */
+                find: function (fn, context) {
+                    var manager = this,
+                        list = [manager];
+                    return fn.call(context || list, manager, 0, list) ? manager : UNDEFINED;
+                },
+                /**
+                 * Returns the boundingClientRect of the target element. Extendes it onto a basic object to make sure only the values come through.
+                 * @return {Object}
+                 * @example
+                 * bodyManager.client();
+                 * // {
+                 * //     top: 0,
+                 * //     left: 0,
+                 * //     right: 0,
+                 * //     bottom: 0,
+                 * //     height: 701,
+                 * //     width: 1280
+                 * // }
+                 */
+                client: function () {
+                    return clientRect(this.element());
+                },
+                /**
+                 * Gets the box model that it can with the information it has available. If the target element is not attached it will return an object with all 0s. If it is attached then it will get the computed styles as well as the bounding client rect to give the most accurate representation possible.
+                 * @param  {Window} [context] if the manager is in another window from your element, then a context may need to be passed to ensure the boundingClient rect does not return a nullable
+                 * @return {Object}
+                 * @example
+                 * var boxModel = bodyManager.box();
+                 * // {
+                 * //     borderLeft: 0,
+                 * //     borderRight: 0,
+                 * //     borderTop: 0,
+                 * //     bottom: 701,
+                 * //     computedBottom: 0,
+                 * //     computedLeft: 0,
+                 * //     computedRight: 0,
+                 * //     computedTop: 0,
+                 * //     height: 701,
+                 * //     left: 0,
+                 * //     marginBottom: 0,
+                 * //     marginLeft: 0,
+                 * //     marginRight: 0,
+                 * //     marginTop: 0,
+                 * //     paddingBottom: 0,
+                 * //     paddingLeft: 0,
+                 * //     paddingRight: 0,
+                 * //     paddingTop: 0,
+                 * //     right: 1280,
+                 * //     top: 0,
+                 * //     width: 1280
+                 * // };
+                 */
+                box: function (context) {
+                    return box(this.element(), context);
+                },
+                /**
+                 * Gets the flow rect of the target element.
+                 * @param  {Window} context Set a context for pulling flow data off of the element associated with the dom manager.
+                 * @return {Object}
+                 * @example use the context associated with the element
+                 * bodyManager.flow();
+                 */
+                flow: function (context) {
+                    return flow(this.element(), context);
+                },
+                /**
+                 * A wrapper around the {@link Events#dispatchEvent} method, which marks the event object as trust worthy or not.
+                 * @param  {String} name name of the event to be dispatched
+                 * @param  {Object} data data associated with the event
+                 * @param  {Boolean} capturing_ tells the event to dispatch as capturing (true) or as bubbling (false)
+                 * @return {this}
+                 * @example
+                 * targetManager.on('click', function (e) {
+                 *     console.log(e.is('trusted'));
+                 * });
+                 * targetManager.dispatchEvent('click'); // logs false
+                 * targetManager.click(); // logs false
+                 * // ...
+                 * // native click -> logs true
+                 */
+                dispatchEvent: function (name, e, capturing_) {
+                    var cachedTrust = DO_NOT_TRUST;
+                    DO_NOT_TRUST = BOOLEAN_TRUE;
+                    elementEventDispatcher(this, name, capturing_);
+                    DO_NOT_TRUST = cachedTrust;
+                    return this;
+                },
+                /**
+                 * Turns the dom into a serializable object that can be reparsed and recreated at a later time.
+                 * @param  {Boolean} shallow only go shallow on the iteration
+                 * @return {Object} serializable object
+                 * @example <caption>the call below produces the commented out object from a blank div with no attributes and no children</caption>
+                 * div.toJSON();
+                 * // {
+                 * //     children: [],
+                 * //     attributes: {},
+                 * //     tagName: "div"
+                 * // }
+                 */
+                toJSON: function (shallow) {
+                    var previous, temporaryFragment, childrenLength, children, obj, manager = this,
+                        owner = manager.owner,
+                        node = manager.element();
+                    if (manager.is(WINDOW) || manager.is(DOCUMENT)) {
+                        exception('cannot serialize documents and windows');
+                    }
+                    return nodeToJSON(node, shallow === UNDEFINED ? returnsTrue : (isFunction(shallow) ? shallow : returns(shallow)), BOOLEAN_TRUE);
                 }
-                manager.mark(DESTROYED);
-                if (manager.is(IFRAME)) {
-                    manager.owner.data.remove(element.contentWindow);
+            }, wrap(directAttributes, function (attr, api) {
+                if (!attr) {
+                    attr = api;
                 }
-                manager.remove(NULL, handler);
-                if (registeredAs) {
-                    customName = manager.owner.registeredElementName(registeredAs);
-                    manager.directiveDestruction(customName);
-                }
-                manager[DISPATCH_EVENT](DESTROY);
-                // destroy events
-                manager.directiveDestruction(EVENT_MANAGER);
-                // remove from global hash
-                manager.owner.data.remove(element);
-                manager[STOP_LISTENING]();
-                return manager;
-            },
-            item: function () {
-                return this;
-            },
-            each: function (fn, ctx) {
-                var manager = this,
-                    wrapped = [manager],
-                    result = ctx ? fn.call(ctx, manager, 0, wrapped) : fn(manager, 0, wrapped);
-                return wrapped;
-            },
-            find: function (fn) {
-                var manager = this;
-                return fn(manager, 0, [manager]) ? manager : UNDEFINED;
-            },
-            client: function () {
-                return clientRect(this.element());
-            },
-            box: function (context) {
-                return box(this.element(), context);
-            },
-            flow: function (context) {
-                return flow(this.element(), context);
-            },
-            dispatchEvent: function (name, e, capturing_) {
-                var ret, cachedTrust = DO_NOT_TRUST;
-                DO_NOT_TRUST = BOOLEAN_TRUE;
-                elementEventDispatcher(this, name, capturing_);
-                DO_NOT_TRUST = cachedTrust;
-                return ret;
-            },
-            toJSON: function (preventDeep) {
-                var previous, temporaryFragment, childrenLength, children, obj, manager = this,
-                    owner = manager.owner,
-                    node = manager.element();
-                if (manager.is(WINDOW) || manager.is(DOCUMENT)) {
-                    exception('cannot serialize documents and windows');
-                }
-                return nodeToJSON(node, preventDeep === UNDEFINED ? returnsTrue : (isFunction(preventDeep) ? preventDeep : returns(preventDeep)), BOOLEAN_TRUE);
-            }
-        }, wrap(directAttributes, function (attr, api) {
-            if (!attr) {
-                attr = api;
-            }
-            return function (string) {
-                var item, manager = this;
-                if (string !== UNDEFINED) {
-                    return manager.attr(attr, string);
-                }
-                return manager.element()[attr];
-            };
-        }), wrap(videoDirectEvents, triggerEventWrapperManager), wrap(directEvents, function (attr) {
-            return triggerEventWrapperManager(attr);
-        }), wrap(toArray('add,addBack,elements,push,fragment'), function (key) {
-            return function (one, two, three) {
-                return this.wrap()[key](one, two, three);
-            };
-        }))),
+                return function (string) {
+                    var item, manager = this;
+                    if (string !== UNDEFINED) {
+                        return manager.attr(attr, string);
+                    }
+                    return manager.element()[attr];
+                };
+            }), wrap(videoDirectEvents, triggerEventWrapperManager), wrap(directEvents, function (attr) {
+                return triggerEventWrapperManager(attr);
+            }), wrap(toArray('add,addBack,elements,push,fragment'), function (key) {
+                return function (one, two, three) {
+                    return this.wrap()[key](one, two, three);
+                };
+            }))),
         _removeEventListener = function (manager_, name, group, selector_, handler, capture_) {
             var selector = selector_,
                 manager = elementSwapper[selector] ? ((selector = '') || elementSwapper[selector_](manager_)) : manager_,
@@ -3792,19 +4344,13 @@ app.scope(function (app) {
             };
         },
         DOMA = factories.DOMA = factories.Collection.extend('DOMA', extend({}, classApi, {
+            isValidDOMA: BOOLEAN_TRUE,
             /**
-             * @func
+             * DOMA constructor
              * @name DOMA#constructor
              * @param {String | Node | Function} str - string to query the dom with, or a function to run on document load, or an element to wrap in a DOMA instance
              * @returns {DOMA} instance
              */
-            isValidDOMA: BOOLEAN_TRUE,
-            // destroy: function (handler_) {
-            //     var handler = isFunction(handler_) ? handler_ : NULL;
-            //     return this.each(function (manager) {
-            //         manager.destroy(handler);
-            //     });
-            // },
             constructor: function (str, ctx, isValid, validContext, documentContext) {
                 var isArrayResult, els = str,
                     dom = this,
@@ -3888,27 +4434,9 @@ app.scope(function (app) {
                 // to array of elements
                 return this.results(ELEMENT);
             },
-            /**
-             * @func
-             * @name DOMA#isWin
-             * @description asks if the first or specified index of the object is a window type object
-             * @returns {Boolean}
-             */
-            /**
-             * @func
-             * @name DOMA#isDoc
-             * @description asks if the first or specified index of the object is a document type object
-             * @returns {Boolean}
-             */
             fragment: function (els) {
                 return this.context.returnsManager(fragment(els || this.toArray(), this.context));
             },
-            /**
-             * @func
-             * @name DOMA#filter
-             * @param {String|Function|Object} filtr - filter variable that will filter by matching the object that is passed in, or by selector if it is a string, or simply with a custom function
-             * @returns {DOMA} new DOMA instance object
-             */
             filter: attachPrevious(function (context, filter) {
                 return domFilter(context.toArray(), filter, context.owner);
             }),
@@ -3918,12 +4446,6 @@ app.scope(function (app) {
                     return !filter(manager, idx, list) && manager.remove();
                 }));
             }),
-            /**
-             * @func
-             * @name DOMA#find
-             * @param {String} str - string to use query to find against
-             * @returns {DOMA} matching elements
-             */
             $: attachPrevious(function (context, str) {
                 var matchers = [],
                     push = function (el) {
@@ -3934,91 +4456,28 @@ app.scope(function (app) {
                     duff(query(str, manager.element(), manager), push);
                 }) && matchers;
             }),
-            /**
-             * @func
-             * @name DOMA#children
-             * @param {Number} [eq] - index of the children to gather. If none is provided, then all children will be added
-             * @returns {DOMA} all / matching children
-             */
             children: attachPrevious(function (context, eq) {
                 // this should be rewritten as context.foldl
                 return foldl(context.toArray(), function (memo, manager) {
                     return manager.children(eq, memo);
                 }, []);
             }),
-            /**
-             * @func
-             * @name DOMA#once
-             * @param {String} space delimited list of event names to attach handlers to
-             * @param {Function} fn - handler to put on the event loop
-             * @returns {DOMA} instance
-             */
-            /**
-             * @func
-             * @name DOMA#css
-             * @param {...*} splat of objects and key value pairs that create a single object to be applied to the element
-             * @returns {DOMA} instance
-             */
             css: styleManipulator,
-            // style: styleManipulator,
-            /**
-             * @func
-             * @name DOMA#allDom
-             * @returns {Boolean} value indicating whether or not there were any non dom elements found in the collection
-             */
             allElements: function () {
                 return !!(this[LENGTH]() && !find(this.toArray(), function (manager) {
                     return !manager.is(ELEMENT);
                 }));
             },
-            /**
-             * @func
-             * @name DOMA#height
-             * @returns {Number} height of the first object, adjusting for the different types of possible objects such as dom element, document or window
-             */
             height: dimensionFinder(HEIGHT, 'scrollHeight', INNER_HEIGHT),
-            /**
-             * @func
-             * @name DOMA#width
-             * @returns {Number} width of the first object, adjusting for the different types of possible objects such as dom element, document or window
-             */
             width: dimensionFinder(WIDTH, 'scrollWidth', INNER_WIDTH),
             scrollLeft: dimensionFinder('scrollLeft', 'scrollLeft', 'pageXOffset', BOOLEAN_TRUE),
             scrollTop: dimensionFinder('scrollTop', 'scrollTop', 'pageYOffset', BOOLEAN_TRUE),
-            /**
-             * @func
-             * @name DOMA#data
-             * @param {...*} splat of objects and key value pairs that create a single object to be applied to the element
-             * @returns {Object|*} can return the value that is asked for by the initial function call
-             */
-            /**
-             * @func
-             * @name DOMA#attr
-             * @param {...*} splat of objects and key value pairs that create a single object to be applied to the element
-             * @returns {DOMA | *} if multiple attributes were requested then a plain hash is returned, otherwise the DOMA instance is returned
-             */
             attr: attrApi(domIterates),
             data: dataApi(domIterates),
             prop: propApi(domIterates),
-            /**
-             * @func
-             * @name DOMA#eq
-             * @param {Number|Array} [num=0] - index or list of indexes to create a new DOMA element with.
-             * @returns {DOMA} instance
-             */
             eq: attachPrevious(function (context, num) {
                 return eq(context.toArray(), num);
             }),
-            /**
-             * @func
-             * @name DOMA#box
-             * @param {Number} [num=0] - index to get the boxmodel of
-             */
-            /**
-             * @func
-             * @name DOMA#end
-             * @returns {DOMA} object that started the traversal chain
-             */
             end: function () {
                 var that = this;
                 while (that._previous) {
@@ -4028,10 +4487,6 @@ app.scope(function (app) {
             },
             getAttribute: getValueCurried,
             setAttribute: setValueCurried,
-            /**
-             * @func
-             * @name DOMA#append
-             */
             append: function (els, clone) {
                 return this.insertAt(els, NULL, clone);
             },
@@ -4043,34 +4498,14 @@ app.scope(function (app) {
                 $(target).append(this);
                 return this;
             },
-            /**
-             * @func
-             * @name DOMA#next
-             * @returns {DOMA} instance
-             */
             next: horizontalTraverser('next', 1),
-            /**
-             * @func
-             * @name DOMA#previous
-             * @returns {DOMA} instance
-             */
             prev: horizontalTraverser('prev', -1),
-            /**
-             * @func
-             * @name DOMA#skip
-             * @returns {DOMA} instance
-             */
             skip: horizontalTraverser('skip', 0),
             siblings: attachPrevious(function (context, filtr) {
                 return mappedConcat(context, function (manager) {
                     return manager.siblings(filtr).toArray();
                 });
             }),
-            /**
-             * @func
-             * @name DOMA#insertAt
-             * @returns {DOMA} instance
-             */
             insertAt: function (els_, index, clone) {
                 var manager = this,
                     owner = manager.owner,
@@ -4124,12 +4559,6 @@ app.scope(function (app) {
                     return memo;
                 });
             }),
-            /**
-             * @func
-             * @name DOMA#parent
-             * @param {Number} [count=1] - number of elements to go up in the parent chain
-             * @returns {DOMA} instance of collected, unique parents
-             */
             parent: attachPrevious(function (context, original) {
                 // ensure unique
                 var hash = {};
@@ -4142,12 +4571,6 @@ app.scope(function (app) {
                     return memo;
                 }, []);
             }),
-            /**
-             * @func
-             * @name DOMA#has
-             * @param {Node|Array} els - list of elements to check the current instance against
-             * @returns {Boolean} whether or not the current doma element has all of the elements that were passed in
-             */
             has: function (els) {
                 var doma = this,
                     collection = Collection(els),
@@ -4156,22 +4579,8 @@ app.scope(function (app) {
                     return doma.indexOf(el) === -1;
                 });
             },
-            /**
-             * @func
-             * @name DOMA#html
-             * @returns {DOMA} instance
-             */
             html: htmlTextManipulator(HTML),
-            /**
-             * @func
-             * @name DOMA#text
-             * @returns {DOMA} instance
-             */
             text: htmlTextManipulator(TEXT),
-            /**
-             * @func
-             * @name DOMA#childOf
-             */
             map: function (handler, context) {
                 return Collection(map(this.toArray(), handler, context));
             },

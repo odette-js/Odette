@@ -1,10 +1,6 @@
-var gulp = require('gulp'),
-    nodemon = require('gulp-nodemon');
+var gulp = require('gulp');
 module.exports = function (settings, paths) {
-    return function () {
-        nodemon({
-            script: paths.serverIndex,
-            ignore: paths.ignoreFiles
-        });
-    };
+    gulp.task('serve', ['altserver'], function () {
+        return require(process.cwd())(settings.http.port);
+    });
 };

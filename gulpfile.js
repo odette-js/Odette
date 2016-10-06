@@ -1,7 +1,7 @@
 var content = ['browserify', 'distribute'],
     server = ['serve', 'open'],
     stackTasks = ['stack', 'stackie', 'stackie9'],
-    docsTasks = ['builddocumentation', 'watchdocs'],
+    // docsTasks = ['builddocumentation', 'watchdocs'],
     devTasks = content.concat(['watch'], server),
     // devTasks = allTasks.concat(content),
     gulp = require('gulp'),
@@ -21,13 +21,29 @@ var content = ['browserify', 'distribute'],
             }
         });
     },
-    modules = 'scopeStart constants utils shims Strings Directives Collection Messenger Events Model directives/Events directives/Data directives/Children directives/Linguistics Promise Associator HTTP Module DOMA ElementWatcher Looper directives/Element View Buster tests scopeEnd'.split(' '),
+    setup = '../wrappers/start ../wrappers/constants'.split(' '),
+    end = '../wrappers/end'.split(' '),
+    modules = 'utils shims Strings Directives Collection Messenger Events Model directives/Events directives/Data directives/Children directives/Linguistics Promise Associator HTTP Module DOMA ElementWatcher Looper directives/Element View Buster tests'.split(' '),
+    library = setup.concat(modules, end),
+    auto_app = ['odette', 'application'],
     // just to make a new one
-    specModules = modules.concat(['odette']),
+    specModules = modules.concat(auto_app),
     extraModules = 'Socket Router LocalStorage NoSock'.split(' '),
     framedModules = 'index'.split(' '),
     makeSpecPath = function (name) {
-        return './src/spec/' + name + '.js';
+        return path.join('./src/spec/', name + '.js');
+    },
+    libPath = function (name) {
+        return path.join('./src/lib/', name + '.js');
+    },
+    extraPath = function (name) {
+        return path.join('./src/extras/', name + '.js');
+    },
+    specPath = function (name) {
+        return path.join('./src/spec/', name + '.js');
+    },
+    framedPath = function (name) {
+        return path.join('./src/framed/', name + '.js');
     },
     paths = _.extend(makePath({
         // watch path
@@ -35,19 +51,11 @@ var content = ['browserify', 'distribute'],
         // build list
         jsOdette: ['./src/lib/odette.js'],
         jsApplication: ['./src/lib/application.js'],
-        jsLibraryList: _.map(modules, function (name) {
-            return './src/lib/' + name + '.js';
-        }),
-        jsExtra: _.map(extraModules, function (name) {
-            return './src/extras/' + name + '.js';
-        }),
+        jsLibraryList: _.map(library, libPath),
+        jsExtra: _.map(extraModules, extraPath),
         jsTestList: _.map(specModules, makeSpecPath),
-        jsExtraTest: _.map(extraModules, function (name) {
-            return './src/spec/' + name + '.js';
-        }),
-        jsFramed: _.map(framedModules, function (name) {
-            return './src/framed/' + name + '.js';
-        }),
+        jsExtraTest: _.map(extraModules, specPath),
+        jsFramed: _.map(framedModules, framedPath),
         jspublic: './dist/js/',
         jsTestsPublic: './dist/js/',
         serverIndex: './index.js',
@@ -69,18 +77,25 @@ var content = ['browserify', 'distribute'],
         jsOdetteDistribute: 'odette.js',
         jsApplicationDistribute: 'application.js',
         jsLibraryDistribute: 'library.js',
-        jsDistributes: './dist/build/'
-    });
-gulpTasker(devTasks.concat(stackTasks, docsTasks), [require('./settings'), paths]);
+        jsDistributes: './dist/build/',
+        jsFull: _.map(auto_app.concat(library, ['../wrappers/auto_setup']), libPath),
+        jsFullOutput: 'odette-full.js'
+    }),
+    settings = require('./settings'),
+    argv = require('optimist').argv;
+console.log(library);
+// console.log(argv.port);
+settings.http.altport = (argv.port || settings.http.port) - 80;
+gulpTasker(devTasks.concat(stackTasks, ['altserver']), [settings, paths, {}]);
 gulp.task('build', content);
 gulp.task('dev', devTasks);
-gulp.task('docs', function (cb) {
-    runSequence('build', 'builddocumentation', cb);
-});
-gulp.task('devdocs', ['dev', 'builddocumentation', 'watchdocs']);
-gulp.task('uploaddocs', function (cb) {
-    runSequence('default', 'builddocs', 'upload', cb);
-});
+// gulp.task('docs', function (cb) {
+//     runSequence('build', 'builddocumentation', cb);
+// });
+// gulp.task('devdocs', ['dev', 'builddocumentation', 'watchdocs']);
+// gulp.task('uploaddocs', function (cb) {
+//     runSequence('default', 'builddocs', 'upload', cb);
+// });
 gulp.task('browserstack', ['default', 'stack']);
 gulp.task('browserstackie', ['default', 'stackie']);
 gulp.task('browserstackie9', ['default', 'stackie9']);
