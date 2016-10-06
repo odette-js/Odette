@@ -2542,24 +2542,19 @@ app.scope(function (app) {
                     return registeredConstructors[name];
                 },
                 script: function (url, attrs, inner) {
-                    var proimse = Promise(),
-                        script = manager.createElement('script', attrs);
+                    var script = manager.createElement('script', attrs);
                     // should this be head
-                    manager.$('body').item(0).append(script);
-                    script.on({
-                        load: function (e) {
-                            // logic for failure or success
-                            promise.resolve();
-                        },
-                        'error timeout cancel abort': function () {
-                            promise.reject();
-                        }
-                    });
-                    script.attr({
-                        src: url || BOOLEAN_FALSE,
-                        innerHTML: inner || BOOLEAN_FALSE
-                    });
-                    return promise;
+                    return Promise(function (success, failure) {
+                        manager.$('body').item(0).append(script);
+                        script.on({
+                            load: success,
+                            'error timeout cancel abort': failure
+                        });
+                        script.attr({
+                            src: url || BOOLEAN_FALSE,
+                            innerHTML: inner || BOOLEAN_FALSE
+                        });
+                    }, BOOLEAN_TRUE);
                 }
             });
             extend(manager, wrapped);

@@ -27,7 +27,6 @@ module.exports = function (settings, paths, context, name) {
     });
     gulp.task('library-build', function () {
         return q.Promise(function (success, failure) {
-            console.log(paths.jsLibraryList);
             gulp.src(paths.jsLibraryList) //
                 .pipe(concat(paths.jsLibraryOutput)) //
                 .pipe(gulp.dest(paths.jspublic)).on('end', success).on('error', failure);
@@ -42,7 +41,6 @@ module.exports = function (settings, paths, context, name) {
     });
     gulp.task('spec-build', function () {
         return q.Promise(function (success, failure) {
-            // console.log(paths.jsTestList);
             gulp.src(paths.jsTestList) //
                 .pipe(concat(paths.jsTestOutput)) //
                 .pipe(gulp.dest(paths.jsTestsPublic)).on('end', success).on('error', failure);

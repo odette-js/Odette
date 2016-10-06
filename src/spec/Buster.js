@@ -37,7 +37,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 }).send();
             });
             _.test.it('windows without a source', function (done) {
-                pagePromise.success(function (response) {
+                pagePromise.then(function (response) {
                     var iframe = $.createElement('iframe');
                     documentView.directive('RegionManager').get('main').el.append(iframe);
                     var buster = scopedFactories.Buster(window, iframe, {

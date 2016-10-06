@@ -121,8 +121,8 @@ app.scope(function (app) {
                     module.mark(INITIALIZED);
                     initResult = module.run(windo, fn);
                     // allows us to create dependency graphs
-                    if (initResult && Promise.fn.isChildType(initResult)) {
-                        initResult.success(triggerBubble);
+                    if (initResult && _.isPromise(initResult)) {
+                        initResult.then(triggerBubble);
                     } else {
                         triggerBubble();
                     }
@@ -184,20 +184,22 @@ app.scope(function (app) {
                     module = app.module(modulename);
                     return module.is(DEFINED) ? module[EXPORTS] : exception(notDefinedYetMessage);
                 } else {
-                    promise = Promise();
-                    list = toArray(modulename, SPACE).slice(0);
-                    promise.success(bind(handler, app));
-                    if ((mappedArguments = checks(app, list))) {
-                        promise.fulfill(mappedArguments);
-                    } else {
-                        app.on(INITIALIZED_COLON_SUBMODULE, function () {
-                            if ((mappedArguments = checks(app, list))) {
-                                app.off();
-                                promise.fulfill(mappedArguments);
-                            }
-                        });
-                    }
-                    return promise;
+                    // promise = Promise();
+                    return Promise(function (success, failure) {
+                        list = toArray(modulename, SPACE).slice(0);
+                        promise.success(bind(handler, app));
+                        if ((mappedArguments = checks(app, list))) {
+                            success(mappedArguments);
+                        } else {
+                            app.on(INITIALIZED_COLON_SUBMODULE, function () {
+                                if ((mappedArguments = checks(app, list))) {
+                                    app.off();
+                                    success(mappedArguments);
+                                }
+                            });
+                        }
+                    });
+                    // return promise;
                 }
             }
         }));

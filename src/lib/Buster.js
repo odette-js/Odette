@@ -140,15 +140,15 @@ app.scope(function (app) {
         },
         disconnected = function () {
             var buster = this;
-            if (buster.connectPromise) {
-                buster.connectPromise.reject();
+            if (buster.connectDeferred) {
+                buster.connectDeferred.reject();
             }
             buster.unmark(CONNECTED);
             buster[DISPATCH_EVENT](DISCONNECTED);
-            buster.connectPromise = _.Promise(noop, BOOLEAN_TRUE);
+            buster.connectDeferred = _.Deferred();
         },
         connected = function (buster, message) {
-            buster.connectPromise.fulfill(message);
+            buster.connectDeferred.fulfill(message);
             buster.mark(CONNECTED);
             buster[DISPATCH_EVENT](CONNECTED);
         },
@@ -180,7 +180,7 @@ app.scope(function (app) {
             return this.respond(e.message.id);
         },
         connected: function () {
-            this.connectPromise.success(arguments);
+            this.connectDeferred.success(toArray(arguments));
             return this;
         },
         response: function (original, data) {
@@ -321,7 +321,7 @@ app.scope(function (app) {
             buster[CONSTRUCTOR + COLON + 'Model'](settings);
             buster.on(CONNECTED, function (e) {
                 var firstMessage = buster.directive(CHILDREN).first();
-                buster.connectPromise.fulfill(firstMessage);
+                buster.connectDeferred.fulfill(firstMessage);
                 buster.flush();
             });
             buster.on({

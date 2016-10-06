@@ -83,8 +83,6 @@ var content = ['browserify', 'distribute'],
     }),
     settings = require('./settings'),
     argv = require('optimist').argv;
-console.log(library);
-// console.log(argv.port);
 settings.http.altport = (argv.port || settings.http.port) - 80;
 gulpTasker(devTasks.concat(stackTasks, ['altserver']), [settings, paths, {}]);
 gulp.task('build', content);

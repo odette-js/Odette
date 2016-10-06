@@ -85,10 +85,10 @@ application.scope().run(window, function (app, _, factories, documentView, scope
             var returnValue = _.test.it('for example this dummy test', function () {
                 _.test.expect(1).toEqual(1);
             });
-            _.test.it('will return a promise, and so will the describe method', function () {
-                _.test.expect(_.Promise.isInstance(returnValue)).toEqual(true);
-                _.test.expect(_.Promise.isInstance(describeReturnValue)).toEqual(true);
-            });
+            // _.test.it('will return a promise, and so will the describe method', function () {
+            //     _.test.expect(_.Promise.isInstance(returnValue)).toEqual(true);
+            //     _.test.expect(_.Promise.isInstance(describeReturnValue)).toEqual(true);
+            // });
         });
         _.test.describe('expect can also be extended to include custom tests using the maker method which is a member of the expect method', function () {
             _.test.it('including value / object comparison', function () {

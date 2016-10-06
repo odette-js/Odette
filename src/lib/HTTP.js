@@ -26,17 +26,17 @@ app.scope(function (app) {
                     // we put it directly on the xhr object so we can
                     // account for certain ie bugs that show up
                     req['on' + evnt] = function (e) {
-                        if (!e) {
-                            return;
-                        }
-                        var percent = (e.loaded / e.total);
-                        prog++;
-                        ajax[DISPATCH_EVENT](PROGRESS, {
-                            percent: percent || (prog / (prog + 1)),
-                            counter: prog
-                        }, {
-                            originalEvent: e
-                        });
+                        // if (!e) {
+                        //     return;
+                        // }
+                        // var percent = (e.loaded / e.total);
+                        // prog++;
+                        // ajax[DISPATCH_EVENT](PROGRESS, {
+                        //     percent: percent || (prog / (prog + 1)),
+                        //     counter: prog
+                        // }, {
+                        //     originalEvent: e
+                        // });
                     };
                 } else {
                     req['on' + evnt] = function (e) {
@@ -65,6 +65,35 @@ app.scope(function (app) {
         STATUS_400s = 'status:4xx',
         STATUS_500s = 'status:5xx',
         cache = {},
+        states = function () {
+            return {
+                // cross domain error
+                'status:0': FAILURE,
+                'status:2xx': SUCCESS,
+                'status:200': STATUS_200s,
+                'status:202': STATUS_200s,
+                'status:204': STATUS_200s,
+                'status:205': STATUS_200s,
+                'status:3xx': SUCCESS,
+                'status:302': STATUS_300s,
+                'status:304': STATUS_300s,
+                'status:4xx': FAILURE,
+                'status:400': STATUS_400s,
+                'status:401': STATUS_400s,
+                'status:403': STATUS_400s,
+                'status:404': STATUS_400s,
+                'status:405': STATUS_400s,
+                'status:406': STATUS_400s,
+                'timeout': STATUS_400s,
+                'status:408': 'timeout',
+                'status:5xx': FAILURE,
+                'status:500': STATUS_500s,
+                'status:502': STATUS_500s,
+                'status:505': STATUS_500s,
+                'status:511': STATUS_500s,
+                'abort': FAILURE
+            };
+        },
         HTTP = factories.HTTP = Promise.extend('HTTP', {
             /**
              * @func
@@ -142,7 +171,7 @@ app.scope(function (app) {
                         hasFinished = BOOLEAN_FALSE,
                         method = ajax.options.method,
                         handler = function (evnt) {
-                            var status, doIt, allStates, rawData, xhrReqObj = this;
+                            var type, lasttype, path, status, doIt, allStates, rawData, xhrReqObj = this;
                             if (!xhrReqObj || hasFinished) {
                                 return;
                             }
@@ -152,7 +181,18 @@ app.scope(function (app) {
                                 allStates = result(ajax, 'allStates');
                                 rawData = ajax.options.preventParse ? rawData : ajax.parse(rawData);
                                 hasFinished = BOOLEAN_TRUE;
-                                custom(STATUS + COLON + (xhrReqObj[STATUS] === UNDEFINED ? 200 : xhrReqObj[STATUS]), rawData);
+                                type = STATUS + COLON + (xhrReqObj[STATUS] === UNDEFINED ? 200 : xhrReqObj[STATUS]);
+                                path = states();
+                                while (isString(type)) {
+                                    lasttype = type;
+                                    type = path[type];
+                                }
+                                if (lasttype === SUCCESS) {
+                                    success(rawData);
+                                } else {
+                                    failure(rawData);
+                                }
+                                // custom(STATUS + COLON + (xhrReqObj[STATUS] === UNDEFINED ? 200 : xhrReqObj[STATUS]), rawData);
                             }
                         };
                     if (!xhrReqObj[method]) {
@@ -176,53 +216,26 @@ app.scope(function (app) {
                 return this.handle(STATUS + COLON + code, handler);
             },
             headers: function (headers) {
-                var ajax = this,
-                    xhrReq = ajax.options.requestObject;
-                each(headers, function (val, key) {
-                    xhrReq.setRequestHeader(key, val);
-                });
-                return ajax;
-            },
-            /**
-             * @description specialized function to stringify url if it is an object
-             * @returns {string} returns the completed string that will be fetched / posted / put / or deleted against
-             * @name HTTP#getUrl
-             */
-            /**
-             * @description makes public the ability to attach a response handler if one has not already been attached. We recommend not passing a function in and instead just listening to the various events that the xhr object will trigger directly, or indirectly on the ajax object
-             * @param {function} [fn=handler] - pass in a function to have a custom onload, onreadystatechange handler
-             * @returns {ajax}
-             * @name HTTP#attachResponseHandler
-             */
-            auxiliaryStates: function () {
-                return {
-                    // cross domain error
-                    'status:0': FAILURE,
-                    'status:2xx': SUCCESS,
-                    'status:200': STATUS_200s,
-                    'status:202': STATUS_200s,
-                    'status:204': STATUS_200s,
-                    'status:205': STATUS_200s,
-                    'status:3xx': SUCCESS,
-                    'status:302': STATUS_300s,
-                    'status:304': STATUS_300s,
-                    'status:4xx': FAILURE,
-                    'status:400': STATUS_400s,
-                    'status:401': STATUS_400s,
-                    'status:403': STATUS_400s,
-                    'status:404': STATUS_400s,
-                    'status:405': STATUS_400s,
-                    'status:406': STATUS_400s,
-                    'timeout': STATUS_400s,
-                    'status:408': 'timeout',
-                    'status:5xx': FAILURE,
-                    'status:500': STATUS_500s,
-                    'status:502': STATUS_500s,
-                    'status:505': STATUS_500s,
-                    'status:511': STATUS_500s,
-                    'abort': FAILURE
-                };
-            }
+                    var ajax = this,
+                        xhrReq = ajax.options.requestObject;
+                    each(headers, function (val, key) {
+                        xhrReq.setRequestHeader(key, val);
+                    });
+                    return ajax;
+                }
+                // ,
+                /**
+                 * @description specialized function to stringify url if it is an object
+                 * @returns {string} returns the completed string that will be fetched / posted / put / or deleted against
+                 * @name HTTP#getUrl
+                 */
+                /**
+                 * @description makes public the ability to attach a response handler if one has not already been attached. We recommend not passing a function in and instead just listening to the various events that the xhr object will trigger directly, or indirectly on the ajax object
+                 * @param {function} [fn=handler] - pass in a function to have a custom onload, onreadystatechange handler
+                 * @returns {ajax}
+                 * @name HTTP#attachResponseHandler
+                 */
+                // auxiliaryStates:
         });
     _.foldl(validTypes, function (memo, key_) {
         var key = key_;

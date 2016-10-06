@@ -94,15 +94,15 @@ app.scope(function (app) {
             stack.pop();
             if (failedTests || expectation.erred) {
                 failedIts.push(expectation);
-                expectation.promise.reject(expectation.err);
+                expectation.deferred.reject(expectation.err);
             } else {
                 successfulIts.push(expectation);
-                expectation.promise.fulfill();
+                expectation.deferred.fulfill();
             }
             failedTests = 0;
             runningEach(expectation.afterStack);
             testisrunning = BOOLEAN_FALSE;
-            // promise.resolveAs();
+            // deferred.resolveAs();
             if (queue[0]) {
                 queued = queue.shift();
                 clearTimeout(queued.runId);
@@ -111,7 +111,7 @@ app.scope(function (app) {
             setupPoller();
         },
         describe = function (string, handler) {
-            var resolution = Promise(_.noop, BOOLEAN_TRUE);
+            var resolution = Deferred();
             describes.push(resolution);
             stack.push(string);
             globalBeforeEachStack.push([]);
@@ -175,7 +175,7 @@ app.scope(function (app) {
                 current: copy,
                 afterStack: globalAfterEachStack.slice(0),
                 beforeStack: globalBeforeEachStack.slice(0),
-                promise: Promise(_.noop, BOOLEAN_TRUE)
+                deferred: Deferred()
             };
             allIts.push(expectation);
             if (testisrunning) {
@@ -183,7 +183,7 @@ app.scope(function (app) {
             } else {
                 setup(expectation);
             }
-            return expectation.promise;
+            return expectation.deferred;
         },
         runningEach = function (globalStack) {
             var i, j, itemized;
@@ -202,8 +202,8 @@ app.scope(function (app) {
         },
         resetTests = function () {
             pollerTimeout = UNDEFINED;
-            _.each(describes, function (promise) {
-                promise.resolve();
+            _.each(describes, function (deferred) {
+                deferred.resolve();
             });
             expectationCount = 0;
             describes = [];
