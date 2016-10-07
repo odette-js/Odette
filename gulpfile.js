@@ -23,7 +23,7 @@ var content = ['browserify', 'distribute'],
     },
     setup = '../wrappers/start ../wrappers/constants'.split(' '),
     end = '../wrappers/end'.split(' '),
-    modules = 'utils shims Strings Directives Collection Messenger Events Model directives/Events directives/Data directives/Children directives/Linguistics Promise Associator HTTP Module DOMA ElementWatcher Looper directives/Element View Buster tests'.split(' '),
+    modules = 'utils shims Strings Directives Collection Messenger Events Model directives/Events directives/Data directives/Children directives/Linguistics Promise Deferred Associator HTTP Module DOMA ElementWatcher Looper directives/Element View Buster tests'.split(' '),
     library = setup.concat(modules, end),
     auto_app = ['odette', 'application'],
     // just to make a new one

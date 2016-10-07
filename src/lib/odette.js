@@ -304,6 +304,9 @@
                     var fn = name_ && (isFunction(name_) ? name_ : (isFunction(fn_) ? fn_ : NULL));
                     return this[PARENT].scope(name, fn);
                 },
+                block: function (fn) {
+                    return fn.apply(this, [this]);
+                },
                 /**
                  * Proxy for the global Odette counter
                  * @memberof Odette
@@ -505,7 +508,7 @@
                         if (!isFunction(fn)) {
                             return scoped;
                         }
-                        fn.apply(app, [scoped]);
+                        scoped.block(fn);
                         return scoped;
                     },
                     hoist: function (windo, toHere) {

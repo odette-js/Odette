@@ -27,8 +27,20 @@ module.exports = function (settings, paths) {
         // library
         // console.log();
         gulp.src(paths.jsLibraryList).pipe(plumber()) //
-            .pipe(concat(paths.jsLibraryDistribute)).pipe(gulp.dest(paths.jsDistributes)) //
+            .pipe(concat(paths.jsLibraryDistribute)) //
+            .pipe(gulp.dest(paths.jsDistributes)) //
             .pipe(uglify()).pipe(rename(minName(paths.jsLibraryDistribute))) //
             .pipe(gulp.dest(paths.jsDistributes));
+        // gulp.src(paths.jsLibraryList).pipe(plumber()) //
+        //     .pipe(concat(paths.jsLibraryDistribute)).pipe(gulp.dest(paths.jsDistributes)) //
+        //     .pipe(uglify()).pipe(rename(minName(paths.jsLibraryDistribute))) //
+        //     .pipe(gulp.dest(paths.jsDistributes));
+        // gulp.src(paths.jsFull) //
+        //     .pipe(concat(paths.jsFullOutput)) //
+        //     .pipe(gulp.dest(paths.jsDistributes)) //
+        //     .pipe(uglify()) //
+        //     .pipe(rename(minName(paths.jsFullOutput))) //
+        //     .pipe(gulp.dest(paths.jsDistributes));
+        // .on('end', success).on('error', failure);
     };
 };

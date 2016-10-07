@@ -63,7 +63,7 @@ app.scope(function (app) {
         },
         sendWithData = function (syncer, url, type) {
             var json = syncer.toJSON();
-            return factories.HTTP({
+            return _.HTTP({
                 url: url,
                 type: type,
                 data: syncer.stringifyPosts ? syncer.stringify(json) : json

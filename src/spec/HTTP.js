@@ -4,19 +4,19 @@ application.scope().run(window, function (app, _, factories, documentView, scope
     _.test.describe('HTTP', function () {
         var allstates;
         _.test.it('is an object', function () {
-            var ajax = factories.HTTP('/json/reporting.json');
+            var ajax = _.HTTP('/json/reporting.json');
             // allstates = ajax.allStates();
             _.test.expect(isObject(ajax)).toEqual(BOOLEAN_TRUE);
         });
         // _.test.it('can accept an object as a first argument', function (done) {
-        //     factories.HTTP('/json/reporting.json').success(function (json) {
+        //     _.HTTP('/json/reporting.json').success(function (json) {
         //         _.test.expect(isObject(json)).toEqual(BOOLEAN_TRUE);
         //         done();
         //     });
         // });
         _.test.it('can accept a string as a first argument', function (done) {
             var original, handlerCounter = 0;
-            factories.HTTP('/json/reporting.json').then(function (json) {
+            _.HTTP('/json/reporting.json').then(function (json) {
                 _.test.expect(true).toEqual(true);
                 done();
             });
@@ -33,7 +33,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
             // });
         });
         _.test.it('can post', function (done) {
-            factories.HTTP({
+            _.HTTP({
                 type: 'POST',
                 url: '/postecho',
                 data: {
@@ -49,7 +49,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
         _.test.describe('can handle', function () {
             _.test.it('failures', function (done) {
                 var handlerCounter = 0;
-                var prom = factories.HTTP('https://google.com').then(function () {
+                var prom = _.HTTP('https://google.com').then(function () {
                     throw new Error('did not handle error well');
                 }, function (result) {
                     _.test.expect(true).toBe(true);
@@ -67,7 +67,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
             });
             _.test.it('errors', function (done) {
                 // var handlerCounter = 0;
-                factories.HTTP('/json/reporting.json').then(function (result) {
+                _.HTTP('/json/reporting.json').then(function (result) {
                     _.test.expect(result).not.toBe(null);
                     throw new Error("some msg here");
                 }).catch(function (e) {
@@ -89,7 +89,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
             _.test.describe('status codes (more than the ones listed here)', function () {
                 _.test.it('200', function (done) {
                     var handlerCounter = 0;
-                    factories.HTTP('/gibberish/200').then(function (data) {
+                    _.HTTP('/gibberish/200').then(function (data) {
                         _.test.expect(handlerCounter).toEqual(0);
                         done();
                     });
@@ -107,7 +107,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 });
                 _.test.it('404', function (done) {
                     var handlerCounter = 0;
-                    factories.HTTP('/gibberish/404').then(function (data) {
+                    _.HTTP('/gibberish/404').then(function (data) {
                         debugger;
                         throw new Error('404 test failed');
                     }, function (data) {
@@ -126,7 +126,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 });
                 _.test.it('500', function (done) {
                     var handlerCounter = 0;
-                    factories.HTTP('/gibberish/500').then(function (data) {
+                    _.HTTP('/gibberish/500').then(function (data) {
                         throw new Error('500 test failed');
                     }, function (data) {
                         _.test.expect(handlerCounter).toEqual(0);

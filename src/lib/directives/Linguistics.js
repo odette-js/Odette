@@ -1,4 +1,4 @@
-app.scope(function (app) {
+var Linguistics = app.block(function (app) {
     var STATE = 'state',
         EVERY = 'every',
         ORIGIN = 'origin',
@@ -470,4 +470,5 @@ app.scope(function (app) {
             }
         });
     app.defineDirective(LINGUISTICS, LinguisticsManager[CONSTRUCTOR]);
+    return Linguistics;
 });

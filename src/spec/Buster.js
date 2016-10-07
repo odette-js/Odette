@@ -9,7 +9,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
         },
         protocol = window.location.protocol,
         framed_pathway = '/test/' + (app.BROWSERSTACKING ? 'browserstack/' : '') + 'framed.html',
-        pagePromise = factories.HTTP.get('/test/framed.html');
+        pagePromise = _.HTTP.get('/test/framed.html');
     // testing from same server across different origins
     if (!window.location.port) {
         return;

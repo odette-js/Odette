@@ -1,4 +1,4 @@
-app.scope(function (app) {
+app.block(function (app) {
     var CATCH = 'catch',
         ERROR = 'error',
         STATUS = 'status',
@@ -26,17 +26,17 @@ app.scope(function (app) {
                     // we put it directly on the xhr object so we can
                     // account for certain ie bugs that show up
                     req['on' + evnt] = function (e) {
-                        // if (!e) {
-                        //     return;
-                        // }
-                        // var percent = (e.loaded / e.total);
-                        // prog++;
-                        // ajax[DISPATCH_EVENT](PROGRESS, {
-                        //     percent: percent || (prog / (prog + 1)),
-                        //     counter: prog
-                        // }, {
-                        //     originalEvent: e
-                        // });
+                        if (!e) {
+                            return;
+                        }
+                        var percent = (e.loaded / e.total);
+                        prog++;
+                        ajax[DISPATCH_EVENT](PROGRESS, {
+                            percent: percent || (prog / (prog + 1)),
+                            counter: prog
+                        }, {
+                            originalEvent: e
+                        });
                     };
                 } else {
                     req['on' + evnt] = function (e) {
@@ -56,7 +56,7 @@ app.scope(function (app) {
         },
         /**
          * @class HTTP
-         * @alias factories.HTTP
+         * @alias _.HTTP
          * @augments Model
          * @classdesc XHR object wrapper Triggers events based on xhr state changes and abstracts many anomalies that have to do with IE
          */
@@ -94,12 +94,12 @@ app.scope(function (app) {
                 'abort': FAILURE
             };
         },
-        HTTP = factories.HTTP = Promise.extend('HTTP', {
+        HTTP = _.HTTP = factories.Deferred.extend('HTTP', {
             /**
-             * @func
-             * @name HTTP#constructor
-             * @param {string} str - url to get from
-             * @returns {HTTP} new ajax object
+             * Set a parser for the retrieved value. By default the [parse]{@link _.parse} function is used from the {@link _} object, but this can be overwritten if needed. If it is overwritten, the user will have to account for any and all parts of the response.
+             * @method
+             * @example
+             *
              */
             parse: parse,
             constructor: function (str) {
@@ -164,7 +164,7 @@ app.scope(function (app) {
                     cache[key] = this;
                 }
                 // have to wrap in set timeout for ie
-                ajax[CONSTRUCTOR + COLON + 'Promise'](function (success, failure, custom) {
+                ajax.promise = Promise(function (success, failure, custom) {
                     var sending = sendthething(xhrReq, data, ajax, success, failure);
                     // attachResponseHandler(ajax);
                     var xhrReqObj = ajax.options.requestObject,
@@ -192,7 +192,6 @@ app.scope(function (app) {
                                 } else {
                                     failure(rawData);
                                 }
-                                // custom(STATUS + COLON + (xhrReqObj[STATUS] === UNDEFINED ? 200 : xhrReqObj[STATUS]), rawData);
                             }
                         };
                     if (!xhrReqObj[method]) {
@@ -216,26 +215,19 @@ app.scope(function (app) {
                 return this.handle(STATUS + COLON + code, handler);
             },
             headers: function (headers) {
-                    var ajax = this,
-                        xhrReq = ajax.options.requestObject;
-                    each(headers, function (val, key) {
-                        xhrReq.setRequestHeader(key, val);
-                    });
-                    return ajax;
-                }
-                // ,
-                /**
-                 * @description specialized function to stringify url if it is an object
-                 * @returns {string} returns the completed string that will be fetched / posted / put / or deleted against
-                 * @name HTTP#getUrl
-                 */
-                /**
-                 * @description makes public the ability to attach a response handler if one has not already been attached. We recommend not passing a function in and instead just listening to the various events that the xhr object will trigger directly, or indirectly on the ajax object
-                 * @param {function} [fn=handler] - pass in a function to have a custom onload, onreadystatechange handler
-                 * @returns {ajax}
-                 * @name HTTP#attachResponseHandler
-                 */
-                // auxiliaryStates:
+                var ajax = this,
+                    xhrReq = ajax.options.requestObject;
+                each(headers, function (val, key) {
+                    xhrReq.setRequestHeader(key, val);
+                });
+                return ajax;
+            },
+            then: function (one, two) {
+                return this.promise.then(one, two);
+            },
+            catch: function (one) {
+                return this.promise.catch(one);
+            }
         });
     _.foldl(validTypes, function (memo, key_) {
         var key = key_;
