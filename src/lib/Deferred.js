@@ -196,6 +196,7 @@ var Deferred = app.block(function (app) {
         /**
          * A class for creating deferred objects. If you are looking for async process management and are able to contain your resolution logic in a single place, then [Promises]{@link Promise} may be for you. Deferred objects allow async processes that may need to be resolved externally. (good for aborts or other types of cancels)
          * @class Deferred
+         * @extends {Events}
          */
         Deferred = factories[DEFERRED] = _[DEFERRED] = Events.extend(DEFERRED,
             /**
@@ -360,20 +361,12 @@ var Deferred = app.block(function (app) {
                  * @method
                  * @param {Function} failure callback when the code errs out or simply fails.
                  * @returns {this}
-                 * @example <caption>the examples below produce identical results.</caption>
+                 * @example <caption>Use the same pattern as the Promise object, (though, with less sophistocated routing).</caption>
                  * return Deferred(function () {
                  *     // some async code
                  * }).then(function () {
                  *     // success
                  * }, function () {
-                 *     // something failed
-                 * });
-                 * @example
-                 * return Proimse(function () {
-                 *     // some async code
-                 * }).then(function () {
-                 *     // success
-                 * }).catch(function () {
                  *     // something failed
                  * });
                  */

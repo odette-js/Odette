@@ -454,28 +454,60 @@ application.scope().run(window, function (app, _, factories, documentView, scope
             });
             test.describe('there are also special handlers', function () {
                 test.it('like create', function () {
-                    $.registerElement('test0', {
-                        creation: handler
+                    $.registerElement('test-zero', {
+                        create: handler
                     });
                     test.expect(count).toEqual(0);
-                    $.createElement('test0');
+                    $.createElement('test-zero');
                     test.expect(count).toEqual(1);
                 });
                 test.it('and destroy', function () {
-                    $.registerElement('test1', {
-                        destruction: handler
+                    $.registerElement('test-one', {
+                        events: {
+                            destroy: handler
+                        }
                     });
-                    var div = $.createElement('test1');
+                    var div = $.createElement('test-one');
                     test.expect(count).toEqual(0);
                     div.destroy();
                     test.expect(count).toEqual(1);
                 });
+                test.it('understands how to handle attach and detach', function () {
+                    $.registerElement('tester-time', {
+                        attach: true,
+                        detach: true,
+                        create: true,
+                        events: {
+                            create: handler,
+                            attach: handler,
+                            detach: handler
+                        }
+                    });
+                    test.expect(count).toBe(0);
+                    var created = $.createElement('tester-time');
+                    test.expect(count).toBe(1);
+                    $.returnsManager(document.body).append(created);
+                    test.expect(count).toBe(2);
+                    created.remove();
+                    test.expect(count).toBe(3);
+                });
+                test.it('can handle attribute changes', function () {
+                    $.registerElement('tester-timer', {
+                        attributeChange: true,
+                        events: {
+                            attributeChange: handler
+                        }
+                    });
+                    var el = $.createElement('tester-timer');
+                    test.expect(count).toBe(0);
+                    el.data({
+                        here: 'there'
+                    });
+                    test.expect(count).toBe(1);
+                });
             });
         });
         test.it('tags cannot be created without being registered first', function () {
-            test.expect(function () {
-                $.createElement('unregistered-test');
-            }).toThrow();
             test.expect($.registeredElements['unregistered-test']).toEqual(undefined);
             $.registerElement('unregistered-test');
             test.expect(function () {

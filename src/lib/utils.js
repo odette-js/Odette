@@ -712,6 +712,19 @@ var factories = {},
      * Perform a deep comparison to check if two objects are equal.
      * @name _#isEqual
      * @method
+     * @param {*} a object or value to deep compare against b.
+     * @param {*} b object or value to deep compare against a.
+     * @returns {Boolean} result of the comparison. True is returned if the objects' values are identical. False will be returned if ther are any differences.
+     * @example <caption>The isEqual method can compare values as well as pointers since pointers will be iterated through, looking for differences. The following calls will both result in true.</caption>
+     * _.isEqual(true, true);
+     * _.isEqual({}, {});
+     * @example <caption>The isEqual method finds differences if they exist. The following calls will return false</caption>
+     * _.isEqual(true, false);
+     * _.isEqual({
+     *     diff: 1
+     * }, {
+     *     diff: true
+     * });
      */
     isEqual = function (a, b) {
         return eq(a, b, [], []);

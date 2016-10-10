@@ -9,15 +9,9 @@ var REGION_MANAGER = 'RegionManager',
         exception('object needs an owner$ function to scope itself against a ' + DOCUMENT);
     };
 app.scope(function (app) {
-    var protoProp = _.protoProp,
-        isFragment = _.isFragment,
-        isInstance = _.isInstance,
-        isFunction = _.isFunction,
-        isArrayLike = _.isArrayLike,
-        intendedObject = _.intendedObject,
-        RENDER = 'render',
-        RENDERING = RENDER + 'ing',
+    var RENDER = 'render',
         RENDERED = RENDER + 'ed',
+        RENDERING = RENDER + 'ing',
         OPTIONS = 'options',
         MODEL_ID = 'modelId',
         ESTABLISHED = 'established',
@@ -27,11 +21,10 @@ app.scope(function (app) {
         noRegionMessage = 'that region does not exist',
         invalidRegionMessage = 'invalid key passed for region name',
         elementDoesNotExistAt = function (key) {
-            return exception('an element does not exist at ' + key);
+            return exception('an element does not exist at key: ' + key);
         },
         /**
          * @class View
-         * @augments Model
          * @augments Model
          * @classDesc Objects that have one or more element associated with them, such as a template that needs constant updating from the data
          */
@@ -233,9 +226,11 @@ app.scope(function (app) {
             tagName: returns('div'),
             template: returns(BOOLEAN_FALSE),
             canRenderAsync: returns(BOOLEAN_FALSE),
-        linguisticsOrigin: function () {
-                return this.model;
-            },
+            'directive:creation:LinguisticsManager': factories.LinguisticsManager.extend({
+                knot: function () {
+                    return this.target.model;
+                }
+            }),
             getChildViews: function (key) {
                 return this.getRegion(key).directive(CHILDREN);
             },

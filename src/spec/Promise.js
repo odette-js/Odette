@@ -40,6 +40,21 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 done();
             });
         });
+        _.test.it('allows for thens after a catch', function (done) {
+            _.Promise(function (s) {
+                // async process
+                s(1);
+            }).then(function () {
+                throw new Error("invalid result detected");
+            }).catch(function (e) {
+                _.test.expect(_.isObject(e)).toBe(true);
+                _.test.expect(e.message).toBe("invalid result detected");
+                return "default value";
+            }).then(function (result) {
+                _.test.expect(result).toEqual("default value"); // true
+                done();
+            });
+        });
         //         _.test.it('allows for async resolution of state', function () {
         //             _.test.expect(_.isObject(promise)).toEqual(true);
         //             promise.always(handler);

@@ -85,18 +85,18 @@ app.scope(function (app) {
             cancelled: _.noop,
             validate: returns(BOOLEAN_TRUE),
             constructor: function (target) {
-                var eventsDirective = this;
-                eventsDirective.target = target;
-                eventsDirective.listenId = 'l' + (++listeningCounter);
-                eventsDirective.handlers = {};
-                eventsDirective.listeningTo = {};
-                eventsDirective.running = {};
-                eventsDirective.queued = {};
-                eventsDirective.stack = Collection();
-                eventsDirective.removeQueue = Collection();
-                eventsDirective.proxyStack = Collection();
-                eventsDirective.proxyStack.unmark('dirty');
-                return eventsDirective;
+                var directive = this;
+                directive.target = target;
+                directive.listenId = 'l' + (++listeningCounter);
+                directive.handlers = {};
+                directive.listeningTo = {};
+                directive.running = {};
+                directive.queued = {};
+                directive.stack = Collection();
+                directive.removeQueue = Collection();
+                directive.proxyStack = Collection();
+                directive.proxyStack.unmark('dirty');
+                return directive;
             },
             attach: function (name, eventObject, modifier) {
                 var list, eventsDirective = this,

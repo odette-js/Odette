@@ -1,8 +1,9 @@
 var content = ['browserify', 'distribute'],
     server = ['serve', 'open'],
     stackTasks = ['stack', 'stackie', 'stackie9'],
+    watch = ['watch'],
     // docsTasks = ['builddocumentation', 'watchdocs'],
-    devTasks = content.concat(['watch'], server),
+    devTasks = content.concat(watch, server),
     // devTasks = allTasks.concat(content),
     gulp = require('gulp'),
     gulpTasker = require('./gulp'),
@@ -23,11 +24,15 @@ var content = ['browserify', 'distribute'],
     },
     setup = '../wrappers/start ../wrappers/constants'.split(' '),
     end = '../wrappers/end'.split(' '),
-    modules = 'utils shims Strings Directives Collection Messenger Events Model directives/Events directives/Data directives/Children directives/Linguistics Promise Deferred Associator HTTP Module DOMA ElementWatcher Looper directives/Element View Buster tests'.split(' '),
+    shims = '../wrappers/shims_start shims registerElement ../wrappers/shims_end'.split(' '),
+    specs = 'utils Strings Directives Collection Messenger Events Model directives/Events directives/Data directives/Children directives/Linguistics Promise Deferred Associator HTTP Module DOMA ElementWatcher Looper directives/Element View Buster tests'.split(' '),
+    modules = specs.slice(0),
+    removed = modules.splice.apply(modules, [1, 0].concat(shims)),
+    // result = console.log(modules),
     library = setup.concat(modules, end),
     auto_app = ['odette', 'application'],
     // just to make a new one
-    specModules = modules.concat(auto_app),
+    specModules = specs.concat(auto_app),
     extraModules = 'Socket Router LocalStorage NoSock'.split(' '),
     framedModules = 'index'.split(' '),
     makeSpecPath = function (name) {
@@ -85,15 +90,12 @@ var content = ['browserify', 'distribute'],
     argv = require('optimist').argv;
 settings.http.altport = (argv.port || settings.http.port) - 80;
 gulpTasker(devTasks.concat(stackTasks, ['altserver']), [settings, paths, {}]);
-gulp.task('build', content);
-gulp.task('dev', devTasks);
-// gulp.task('docs', function (cb) {
-//     runSequence('build', 'builddocumentation', cb);
-// });
-// gulp.task('devdocs', ['dev', 'builddocumentation', 'watchdocs']);
-// gulp.task('uploaddocs', function (cb) {
-//     runSequence('default', 'builddocs', 'upload', cb);
-// });
+gulp.task('build', function (cb) {
+    runSequence('browserify', 'distribute', cb);
+});
+gulp.task('dev', function (cb) {
+    runSequence('build', 'watch', 'serve', 'open', cb);
+});
 gulp.task('browserstack', ['default', 'stack']);
 gulp.task('browserstackie', ['default', 'stackie']);
 gulp.task('browserstackie9', ['default', 'stackie9']);

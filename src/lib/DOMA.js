@@ -1350,12 +1350,11 @@ app.scope(function (app) {
                 }
             }
             foundElement = registeredElements && registeredElements[tag];
-            elementName = foundElement === BOOLEAN_TRUE ? tag : foundElement;
             // native create
-            if (!elementName) {
+            if (!tag) {
                 exception('custom tag names must be registered before they can be used');
             }
-            newElement = documnt.createElement(elementName);
+            newElement = documnt.createElement(tag);
             if (foundElement && foundElement !== BOOLEAN_TRUE) {
                 attributeApi.write(newElement, CUSTOM_KEY, tag);
             }
@@ -1868,6 +1867,12 @@ app.scope(function (app) {
                 var managers = [];
                 // mark all managers first
                 duff(list, function (element) {
+                    var tagname = element[TAG_NAME].toLowerCase();
+                    var registeredOptions = owner.registeredElementOptions[tagname] || {};
+                    var autotriggers = registeredOptions.autotriggers || {};
+                    if (autotriggers[evnt]) {
+                        return;
+                    }
                     var m = owner.returnsManager(element);
                     if (m.remark(ATTACHED, mark) && m.is(ELEMENT) && m.is(CUSTOM_LISTENER)) {
                         managers.push(m);
@@ -1935,6 +1940,7 @@ app.scope(function (app) {
                     attributeValuesHash[currentMerge](attributeManager, isString(second) ? second.split(SPACE) : second, third, read);
                 });
                 if (attributeManager.changeCounter) {
+                    manager.mark(ATTRIBUTES_CHANGING);
                     if (attributeManager.is(REMOVING)) {
                         attributeManager.unmark(REMOVING);
                         api.remove(el, kebabCased);
@@ -1948,13 +1954,16 @@ app.scope(function (app) {
                     }
                 }
                 if (generated !== read && manager.is(CUSTOM_LISTENER)) {
-                    manager.mark(ATTRIBUTES_CHANGING);
-                    manager[DISPATCH_EVENT](ATTRIBUTE_CHANGE + COLON + trigger, {
-                        previous: read,
-                        current: convertAttributeValue(generated)
-                    });
+                    dispatchAttrChange(manager, trigger, read, generated);
                 }
             };
+        },
+        dispatchAttrChange = function (manager, trigger, old, newish) {
+            // manager.mark(ATTRIBUTES_CHANGING);
+            return manager[DISPATCH_EVENT](ATTRIBUTE_CHANGE + COLON + trigger, {
+                previous: old,
+                current: convertAttributeValue(newish)
+            });
         },
         domAttributeManipulatorExtended = function (proc, innerHandler, api) {
             return function (normalize) {
@@ -2198,12 +2207,12 @@ app.scope(function (app) {
         markElement = function (manager, owner, element) {
             manager.unmark(ELEMENT);
             manager.unmark(IFRAME);
-            manager.tagName = BOOLEAN_FALSE;
+            manager[TAG_NAME] = BOOLEAN_FALSE;
             if (manager.is(WINDOW)) {
                 return;
             }
             if ((manager.remark(ELEMENT, isElement(element)))) {
-                manager.tagName = tag(element);
+                manager.tagName = tag(element).toLowerCase();
                 manager.owner = owner;
                 testIframe(manager, element);
                 markCustom(manager, BOOLEAN_FALSE, element);
@@ -2264,6 +2273,7 @@ app.scope(function (app) {
                 cachedMotionEvent, lastCalculatedMotionEvent = 0,
                 cachedMotionCalculation = {},
                 registeredConstructors = {},
+                registeredDomConstructors = {},
                 registeredElementOptions = {},
                 defaultMotion = function () {
                     cachedMotionEvent = NULL;
@@ -2281,6 +2291,47 @@ app.scope(function (app) {
                         gamma: 0,
                         absolute: 0
                     };
+                },
+                // autoTriggerAttrChange = unmarkChange(function (manager, idx) {
+                //     return dispatchAttrChange(manager, key, old, newish);
+                // }),
+                registerElDefaultHandlers = {
+                    create: function (e) {
+                        var elManager = manager.returnsManager(this);
+                        elManager.mark('created');
+                        return elManager.dispatchEvent('create', e);
+                    },
+                    attributeChange: function (key, old, newish) {
+                        var elManager = manager.returnsManager(this);
+                        if (elManager.is(ATTRIBUTES_CHANGING)) {
+                            return;
+                        }
+                        return unmarkChange(function (manager, idx) {
+                            elManager.mark(ATTRIBUTES_CHANGING);
+                            return dispatchAttrChange(elManager, key, old, newish);
+                        })(elManager);
+                    }
+                },
+                formsCallbacks = function (opts, list, autotriggers) {
+                    return foldl(list, function (memo, evnt, item) {
+                        var val = opts[evnt] === BOOLEAN_TRUE;
+                        if (val) {
+                            autotriggers[evnt] = val;
+                        }
+                        memo[item + 'Callback'] = (val ? (registerElDefaultHandlers[evnt] ? registerElDefaultHandlers[evnt] : function (e) {
+                            return manager.returnsManager(this).dispatchEvent(evnt, e);
+                        }) : (opts[evnt] || opts[item + 'Callback']));
+                    }, {});
+                },
+                remap = function (options) {
+                    return foldl(options, function (memo, value, key) {
+                        if (value === NULL) {
+                            return;
+                        }
+                        memo[key] = isObject(value) ? value : {
+                            value: value
+                        };
+                    }, {});
                 },
                 deltas = {
                     update: function (node, attrs, children, hash) {
@@ -2400,6 +2451,7 @@ app.scope(function (app) {
                 },
                 supports: {},
                 deltas: deltas,
+                registeredDomConstructors: registeredDomConstructors,
                 registeredConstructors: registeredConstructors,
                 registeredElementOptions: registeredElementOptions,
                 iframeContent: iframeContent,
@@ -2516,14 +2568,40 @@ app.scope(function (app) {
                 unregisteredElement: function (manager) {
                     unregisteredElements.keep(manager.registeredElementName(), manager[__ELID__], manager);
                 },
-                registerElement: function (name, options_) {
-                    var generatedTagName, creation, group, wasDefined, options = options_ || {},
-                        lastKey = [],
-                        extendss = options.extends,
-                        events = options.events,
-                        prototype = options[PROTOTYPE],
-                        destruction = options.destruction,
-                        newName = manager.registeredElementName(name);
+                // registerElement: function (name, options_) {
+                //     var generatedTagName, creation, group, wasDefined, options = options_ || {},
+                //         lastKey = [],
+                //         extendss = options.extends,
+                //         events = options.events,
+                //         prototype = options[PROTOTYPE],
+                //         destruction = options.destruction,
+                //         newName = manager.registeredElementName(name);
+                //     if (registeredElements[name]) {
+                //         if (registeredElements[name] === BOOLEAN_TRUE) {
+                //             exception('custom element names must not be used natively by browsers');
+                //         } else {
+                //             exception('custom element names can only be registered once per document');
+                //         }
+                //     } else {
+                //         registeredElements[name] = extendss ? registeredElements[extendss] : DIV;
+                //     }
+                //     options.creation = (extendss ? _.flows(registeredElementOptions[extendss].creation, options.creation || noop) : options.creation) || noop;
+                //     registeredElementOptions[name] = options;
+                //     registeredConstructors[name] = (extendss ? (registeredConstructors[extendss] || DomManager) : DomManager).extend(capitalize(camelCase(name)), extend({}, prototype));
+                //     if (this.document.is('ready')) {
+                //         manager.$(manager.customAttribute(name)).each(manager.returnsManager);
+                //     }
+                //     return registeredConstructors[name];
+                // },
+                registerElement: function (name, options) {
+                    var opts = options || {};
+                    var manager = this;
+                    var docManager = this.document;
+                    var document = docManager.element();
+                    var events = merge({}, opts.events);
+                    var managerFn = opts.managerFn || {};
+                    var sup = opts.super;
+                    var autotriggers = {};
                     if (registeredElements[name]) {
                         if (registeredElements[name] === BOOLEAN_TRUE) {
                             exception('custom element names must not be used natively by browsers');
@@ -2531,25 +2609,43 @@ app.scope(function (app) {
                             exception('custom element names can only be registered once per document');
                         }
                     } else {
-                        registeredElements[name] = extendss ? registeredElements[extendss] : DIV;
+                        registeredElements[name] = xtends ? registeredElements[xtends] : xtends;
                     }
-                    options.creation = (extendss ? _.flows(registeredElementOptions[extendss].creation, options.creation || noop) : options.creation) || noop;
-                    registeredElementOptions[name] = options;
-                    registeredConstructors[name] = (extendss ? (registeredConstructors[extendss] || DomManager) : DomManager).extend(capitalize(camelCase(name)), extend({}, prototype));
-                    if (this.document.is('ready')) {
-                        manager.$(manager.customAttribute(name)).each(manager.returnsManager);
-                    }
-                    return registeredConstructors[name];
+                    delete opts.managerFn;
+                    delete managerFn.events;
+                    var fn = (sup ? sup[PROTOTYPE] : opts[PROTOTYPE]) || HTMLElement[PROTOTYPE];
+                    var xtends = opts.extends;
+                    var constructor = opts.create;
+                    var passedProto = remap(extend(formsCallbacks(opts, {
+                        created: 'create',
+                        attached: 'attach',
+                        detached: 'detach',
+                        attributeChanged: 'attributeChange'
+                    }, autotriggers), opts.fn || {}));
+                    passedProto.fn = passedProto;
+                    var arg2 = {
+                        extends: xtends,
+                        prototype: Object.create(fn, passedProto)
+                    };
+                    // constructor
+                    docManager.registeredElementOptions[name] = {
+                        events: events,
+                        autotriggers: autotriggers
+                    };
+                    var constrktr = registeredConstructors[name] = DomManager.extend(capitalize(camelCase(name)), managerFn || {});
+                    var con = document.registerElement(name, arg2);
+                    registeredDomConstructors[name] = con;
+                    return constrktr;
                 },
                 script: function (url, attrs, inner) {
                     var script = manager.createElement('script', attrs);
                     // should this be head
                     return Promise(function (success, failure) {
-                        manager.$('body').item(0).append(script);
                         script.on({
                             load: success,
                             'error timeout cancel abort': failure
                         });
+                        manager.$('body').item(0).append(script);
                         script.attr({
                             src: url || BOOLEAN_FALSE,
                             innerHTML: inner || BOOLEAN_FALSE
@@ -3515,9 +3611,9 @@ app.scope(function (app) {
                         extend(manager, el);
                         // run it through it's scoped constructor
                         registeredOptions = owner.registeredElementOptions[manager[REGISTERED_AS]];
-                        registeredOptions.creation.call(manager, manager);
+                        // manager.on(DESTROY, );
                         manager.on(registeredOptions.events);
-                        manager.on(DESTROY, registeredOptions.destruction);
+                        // manager.on(DESTROY, registeredOptions.destruction);
                         return manager;
                     }
                     test(manager, owner, el);
@@ -3543,13 +3639,16 @@ app.scope(function (app) {
                     if (manager.is(IFRAME)) {
                         manager.on(ATTRIBUTE_CHANGE + ':src detach attach', iframeChangeHandler);
                     }
-                    // manager.mark('constructing');
                     if (manager.is(WINDOW)) {
                         markGlobal(manager, el);
                     }
                     if (manager.is(ELEMENT)) {
                         if (!attributeApi.read(el, 'is')) {
-                            attributeApi.write(el, 'is', true);
+                            attributeApi.write(el, 'is', BOOLEAN_TRUE);
+                        }
+                        if (!validTagsNamesHash[manager[TAG_NAME]]) {
+                            manager[REGISTERED_AS] = manager[TAG_NAME];
+                            manager.mark(CUSTOM);
                         }
                         if (manager[REGISTERED_AS] && manager[REGISTERED_AS] !== BOOLEAN_TRUE) {
                             manager = wraptry(function () {
@@ -3559,10 +3658,6 @@ app.scope(function (app) {
                         if (has(manager, REGISTERED_AS)) {
                             delete manager[REGISTERED_AS];
                         }
-                        // } else {
-                        //     if (manager.is(DOCUMENT)) {
-                        //         app.definition(manager[TARGET][DEFAULT_VIEW]);
-                        //     }
                     }
                     return manager;
                 },
@@ -4338,6 +4433,10 @@ app.scope(function (app) {
                 return element && element[property];
             };
         },
+        /**
+         * DOMA is the document object model abstraction. A wrapper for the dom objects available in the browser's window. Operates off of the assumption that all dom interactions should be normalized, and efficient as possible.
+         * @class DOMA
+         */
         DOMA = factories.DOMA = factories.Collection.extend('DOMA', extend({}, classApi, {
             isValidDOMA: BOOLEAN_TRUE,
             /**

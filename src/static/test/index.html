@@ -30,7 +30,7 @@
         <a id="nodatahere"></a>
         <a id="datahere" is></a>
         <div class="test-div"></div>
-        <div is="tester"></div>
+        <tester-div></tester-div>
         <div class="tree">
             <div class="branch">
                 <div class="leaves">
@@ -98,7 +98,7 @@
                 <div class="leaves"></div>
             </div>
         </div>
-        <script>window.onerror = function(e) {console.log(e);};</script>
+        <script>window.onerror = function(e) {console.log('uncaught error:', e);};</script>
         <script type="text/javascript" src="__ROOT_URL__/js/odette.js"></script>
         <script type="text/javascript" src="__ROOT_URL__/js/application.js"></script>
         <script type="text/javascript" src="__ROOT_URL__/js/library.js"></script>

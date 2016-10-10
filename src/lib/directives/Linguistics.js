@@ -2,6 +2,7 @@ var Linguistics = app.block(function (app) {
     var STATE = 'state',
         EVERY = 'every',
         ORIGIN = 'origin',
+        MANAGER = 'manager',
         SUCCESS = 'success',
         COUNTER = 'counter',
         REGISTRY = 'Registry',
@@ -73,7 +74,7 @@ var Linguistics = app.block(function (app) {
          * @classdesc Linguistics class for abstracting logic away from event handlers and having to set any of them up. The Linguistics object works by distilling all of the values into a binary system of measurement i.e. did you pass the test or did you fail it. If block of logic fails, then the Linguistics manager can be put into a falsey state. However it is possible to have multiple blocks of logic, as you will see with the or operator that you can use with this class.
          * @class  Linguistics
          * @example <caption>The Linguistics class uses a series of logic blocks grouped one layer deep (referred to as logic groups) with or statements in order to achieve a linguistically natural way of abstracting logic behind function calls that appear very similar to sentences.</caption>
-         * var linguistic = origin.when("time").is(16)
+         * var linguistic = origin.when("timeHour").is(16)
          *     .and("activity").isNot("cooking")
          *     .or("spiceCount").isLessThan(10)
          *     .then(function () {
@@ -197,18 +198,16 @@ var Linguistics = app.block(function (app) {
                  * @param {object} origin object that the {@link Linguistics} class will listen to for events.
                  * @returns {this}
                  */
-                constructor: function (origin) {
+                constructor: function (origin, manager) {
                     var sequencer = this;
-                    this.directive(REGISTRY).keep(INSTANCES, ORIGIN, origin);
+                    var registry = sequencer.directive(REGISTRY);
+                    registry.keep(INSTANCES, ORIGIN, origin);
+                    registry.keep(INSTANCES, MANAGER, manager);
                     sequencer[COUNTER] = 0;
                     sequencer[GROUP_INDEX] = 0;
                     sequencer[REGISTERED] = {};
                     sequencer.logic = Collection();
-                    // sequencer[SUCCESS] = Collection();
-                    // sequencer[FAILURES] = Collection();
-                    // sequencer[EVERY] = Collection();
-                    sequencer.listenToOrigin();
-                    return this;
+                    return sequencer;
                 },
                 /**
                  * Retreives the origin that was stashed during the constructor call.
@@ -258,7 +257,11 @@ var Linguistics = app.block(function (app) {
                     sequencer.bind(key);
                     return sequencer;
                 },
-                current: function (key) {
+                /**
+                 * Method for checking the current key being added to.
+                 * @return {String} Property of the logic block that is being added to
+                 */
+                current: function () {
                     return this.directive(REGISTRY).get(INSTANCES, CURRENT);
                 },
                 /**
@@ -300,6 +303,12 @@ var Linguistics = app.block(function (app) {
                 /**
                  * Increment counter for change event listener to check. If this function is called, then the next time the change event is dispatched on the origin object the Linguistics object will check through the logic it was given and check to see if the logic has changed.
                  * @return {this}
+                 * @example
+                 * var linguistics = origin.when("key").is(true) //
+                 *     ...
+                 * linguistics.apply();
+                 * linguistics.increment();
+                 * linguistics.apply();
                  */
                 increment: function () {
                     ++this[COUNTER];
@@ -307,6 +316,17 @@ var Linguistics = app.block(function (app) {
                 },
                 eventName: function (evnt) {
                     return CHANGE_COLON + evnt;
+                },
+                /**
+                 * Proxy for returning values being held on the origin model.
+                 * @param  {String} key property to be accessed by the origin model.
+                 * @return {*} whatever is being held on the origin model.
+                 * @example
+                 * linguistics.get("property"); // equivalent to code below
+                 * linguistics.origin().get("property");
+                 */
+                get: function (key) {
+                    return this.origin().get(key);
                 },
                 /**
                  * Binds linguistics to origin object's data specific events. this is so an incrementation can occur and the data can be calculated at the end of the pipe, or at the change event. The event will only be bound once, so if bind is called multiple times, only one handler will ever be listening to the model.
@@ -332,12 +352,16 @@ var Linguistics = app.block(function (app) {
                  */
                 unbind: curryBind(STOP_LISTENING, BOOLEAN_TRUE),
                 /**
-                 * Resolves a value against a default function
+                 * Wraps a value against a default function. This function contains the logic for distilling values into functions to be run when the origin changes.
                  * @param  {*} value curried function or value to run save in a callback to be used to compare to the actual value
-                 * @param  {Function} [defaultFn] curried function to fallback to in order to resolve the actual value to compare.
+                 * @param  {Function} [defaultFn] curried function to fallback to in order to resolve the actual value to compare. If no function is passed, then an equivalence function will be used, which utilizes the [isEqual]{@link _#isEqual} method.
                  * @return {Function} curried result of the comparison.
                  * @example
-                 * var fn = linguistics.value(true, function () {});
+                 * var fn = linguistics.value(true, function (value) {
+                 *     return function (current) {
+                 *         return current === value;
+                 *     };
+                 * });
                  */
                 value: function (value, defaultFn) {
                     return isFunction(value) ? value : (defaultFn || curriedEquivalence)(value);
@@ -345,7 +369,7 @@ var Linguistics = app.block(function (app) {
                 /**
                  * Adds a logic block to the queue in the current logic group, to be evaluated with all of the others.
                  * @param {*} value value to add to the queue (will use current key for the key / property)
-                 * @param {Boolean} negate denotes the result as a negative value so that when the curried function is called, it will automatically be evaluated into the correct state (it's why we can have isNot, and isNotGreaterThan) methods.
+                 * @param {Boolean} [negate] denotes the result as a negative value so that when the curried function is called, it will automatically be evaluated into the correct state (it's why we can have isNot, and isNotGreaterThan) methods.
                  * @param {Function} [defaultFn] a function that will be curried and eventually evaluate as a boolean.
                  * @returns {this}
                  * @example <caption>an example of how the add method might be called internally. In this case, the is not greater than function is being expressed.</caption>
@@ -391,17 +415,6 @@ var Linguistics = app.block(function (app) {
                     });
                 },
                 /**
-                 * Proxy for returning values being held on the origin model.
-                 * @param  {String} key property to be accessed by the origin model.
-                 * @return {*} whatever is being held on the origin model.
-                 * @example
-                 * linguistics.get("property"); // equivalent to code below
-                 * linguistics.origin().get("property");
-                 */
-                get: function (key) {
-                    return this.origin().get(key);
-                },
-                /**
                  * Resets the increment counter. This allows you to say, hey, don't actually run your check this time. Wait until the next time the data changes.
                  * @return {this}
                  * @example
@@ -428,6 +441,15 @@ var Linguistics = app.block(function (app) {
                     this.directive(REGISTRY).get('collections', key, makeCollection).call(arg);
                     return sequencer;
                 },
+                /**
+                 * Reapplies the handlers based on the key. Groups will be applied according to the order dictated by the handle method, but only groups will be applied at the same time, since that is what the handle method indicates.
+                 * @param  {*} arg Argument to be passed to the handlers (usually an event object)
+                 * @return {Linguistics}
+                 * @example <caption>the object passed into run will be passed as the first and only argument to the run method. In this case, the handlers will have access to they you variable on the me property.</caption>
+                 * linguistics.run({
+                 *     me: you
+                 * });
+                 */
                 run: function (arg) {
                     var key, sequencer = this;
                     if (sequencer[STATE]) {
@@ -437,9 +459,17 @@ var Linguistics = app.block(function (app) {
                     }
                     return sequencer.handle(key, arg).handle(EVERY, arg);
                 },
+                /**
+                 * Applies the correct state to the sequencer and if that state has changed, then it will trigger all of the handlers associated with that sequencer that need to be applied. If an argument is passed, then the change counter will be checked before the [check]{@link Linguistics#check} method is called.
+                 * @param  {*} e Argument to pass to all of the handlers. [Run]{@link Linguistics#run} is called internally to this method.
+                 * @return {Linguistics}
+                 * @example <caption>the following example will trigger the event handlers on the first, but not the second apply call, since nothing has changed / happen since then.</caption>
+                 * linguistics.apply(e);
+                 * linguistics.apply(e); // nothing happens
+                 */
                 apply: function (e) {
                     var sequencer = this,
-                        checked = e ? sequencer[COUNTER] && sequencer.check() : sequencer.check();
+                        checked = !!(e ? (sequencer[COUNTER] && sequencer.check()) : sequencer.check());
                     sequencer.restart();
                     if (sequencer[STATE] !== checked) {
                         sequencer[STATE] = checked;
@@ -449,26 +479,37 @@ var Linguistics = app.block(function (app) {
                 }
             }),
         LINGUISTICS_MANAGER = LINGUISTICS + 'Manager',
-        LinguisticsManager = factories[LINGUISTICS_MANAGER] = factories.Model.extend(LINGUISTICS_MANAGER, {
-            when: function (key) {
-                return this.make().or(key);
-            },
-            make: function () {
-                var ling = new Linguistics[CONSTRUCTOR](this.target.linguisticsOrigin());
-                this.add(ling);
-                return ling;
-            },
+        LinguisticsManager = factories[LINGUISTICS_MANAGER] = factories.Collection.extend(LINGUISTICS_MANAGER, {
             constructor: function (target) {
                 // save it for later
                 this.target = target;
+                // required if we're not going to call the Collection constructor
+                this[CONSTRUCTOR + ':Collection']();
                 return this;
             },
-            remove: function (lm) {
+            when: function (key) {
+                return this.make().listenToOrigin().or(key);
+            },
+            knot: function () {
+                return this.target;
+            },
+            create: function () {
+                // it is important to use the new keyword and access the constructor
+                // because the origin could be an Linguistics object
+                return new Linguistics[CONSTRUCTOR](this.knot(), this);
+            },
+            make: function () {
+                var manager = this;
+                var ling = manager.create();
+                manager.add(ling);
+                return ling;
+            },
+            wipe: function (lm) {
                 this.remove(lm);
                 lm.stopListeningToOrigin();
                 return this;
             }
         });
-    app.defineDirective(LINGUISTICS, LinguisticsManager[CONSTRUCTOR]);
+    app.defineDirective(LINGUISTICS_MANAGER, LinguisticsManager[CONSTRUCTOR]);
     return Linguistics;
 });
