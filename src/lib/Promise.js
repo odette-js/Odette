@@ -221,6 +221,13 @@ var PROMISE = 'Promise',
                         });
                     });
                 };
+            },
+            autoResolve = function (bool) {
+                return function (value) {
+                    return Promise(function (success, failure) {
+                        return bool ? success(value) : failure(value);
+                    });
+                };
             };
         /**
          * Waits for all promises passed into it to wait and succeed. Will be rejected if any of the promises are rejcted
@@ -242,6 +249,8 @@ var PROMISE = 'Promise',
          * });
          */
         Promise.race = raceAllCurry();
+        Promise.resolve = autoResolve(BOOLEAN_TRUE);
+        Promise.reject = autoResolve();
         _.is.promise = isPromise;
         _.publicize({
             Promise: Promise,
