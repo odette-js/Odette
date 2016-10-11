@@ -210,7 +210,7 @@ var STATUS = 'Status',
             return messenger;
         }
     });
-app.defineDirective(MESSENGER, Messenger);
+defineDirective(MESSENGER, Messenger[CONSTRUCTOR]);
 defineDirective(STATUS, Status[CONSTRUCTOR]);
 app.defineDirective = defineDirective;
 app.extendDirective = extendDirective;
