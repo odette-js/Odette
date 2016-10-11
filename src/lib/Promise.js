@@ -118,14 +118,10 @@ var PROMISE = 'Promise',
             /**
              * Implementation just like the native one. Use this object in order to ensure that your promises will work across all browsers, including those that do not support Promises natively. Pass true as the second argument to make the class execute the function synchronously. This prevents the stack jump that regular promises enforce.
              * @class Promise
-             * @example <caption>The following promise executes asynchronously.</caption>
+             * @example <caption>The following promise executes and waits until the success or failure callback is called to resolve.</caption>
              * _.Promise(function (success, failure) {
              *     success();
              * });
-             * @example <caption>The following promise executes synchronously.</caption>
-             * _.Promise(function (success, failure) {
-             *     success();
-             * }, true);
              */
             Promise = _[PROMISE] = factories.Events.extend(PROMISE,
                 /**
@@ -210,6 +206,10 @@ var PROMISE = 'Promise',
                                 success(data);
                             }
                         };
+                        if (!list[LENGTH]) {
+                            success([]);
+                            return;
+                        }
                         duff(list, function (promise, index) {
                             if (isPromise(promise)) {
                                 promise.then(function (data) {
@@ -219,7 +219,7 @@ var PROMISE = 'Promise',
                                 counter(index, promise);
                             }
                         });
-                    }, BOOLEAN_TRUE);
+                    });
                 };
             };
         /**
