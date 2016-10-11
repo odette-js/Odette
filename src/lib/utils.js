@@ -1296,6 +1296,7 @@ var factories = {},
     },
     returnsTrue = returns.true = returns(BOOLEAN_TRUE),
     returnsFalse = returns.false = returns(BOOLEAN_FALSE),
+    returnsNull = returns.null = returns(NULL),
     returnsArray = returns.array = function () {
         return [];
     },

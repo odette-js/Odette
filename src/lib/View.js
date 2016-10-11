@@ -23,11 +23,6 @@ app.scope(function (app) {
         elementDoesNotExistAt = function (key) {
             return exception('an element does not exist at key: ' + key);
         },
-        /**
-         * @class View
-         * @augments Model
-         * @classDesc Objects that have one or more element associated with them, such as a template that needs constant updating from the data
-         */
         // region views are useful if you're constructing different components
         // from a separate place and just want it to be in the buffer pipeline
         // very useful for componentizing your ui
@@ -64,6 +59,11 @@ app.scope(function (app) {
             children.drop(MODEL_ID, model.id);
             return region;
         },
+        /**
+         * @class Region
+         * @augments Parent
+         * @classDesc Objects that have one or more element associated with them, such as a template that needs constant updating from the data
+         */
         Region = factories.Region = Parent.extend('Region', {
             attributes: returns(BOOLEAN_FALSE),
             childConstructor: function () {
@@ -215,6 +215,11 @@ app.scope(function (app) {
         getRegion = parody(REGION_MANAGER, 'get'),
         removeRegion = parody(REGION_MANAGER, 'remove'),
         // view needs to be pitted against a document
+        /**
+         * @class View
+         * @augments Parent
+         * @classDesc Objects that have one or more element associated with them, such as a template that needs constant updating from the data
+         */
         View = factories.View = Parent.extend('View', {
             Model: Model,
             modifiers: noop,

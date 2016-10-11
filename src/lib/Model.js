@@ -172,333 +172,348 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                     update: []
                 };
             },
-            Parent = factories.Parent = factories.Events.extend('Parent', {
-                Child: BOOLEAN_TRUE,
-                childOptions: noop,
-                parentEvents: noop,
-                childEvents: noop,
-                childConstructor: function () {
-                    return this.Child === BOOLEAN_TRUE ? this.__constructor__ : (this.Child || Parent);
-                },
-                isChildType: function (child) {
-                    return isInstance(child, this.childConstructor());
-                },
-                diff: function (opts_, secondary_) {
-                    var models, remove, parent = this,
-                        opts = opts_,
-                        secondary = secondary_ || {},
-                        children = parent.directive(CHILDREN),
-                        memo = setMemo(),
-                        diff = Collection(opts.add).foldl(function (memo, obj) {
-                            var isChildType = parent.isChildType(obj),
-                                // create a new model
-                                // call it with new in case they use a constructor
-                                Constructor = parent.childConstructor(),
-                                newModel = isChildType ? obj : new Constructor(obj, secondary.shared),
-                                // unfortunately we can only find by the newly created's id
-                                // which we only know for sure after the child has been created ^
-                                foundModel = children.get(ID, newModel.id);
-                            if (foundModel) {
-                                // update the old
-                                foundModel.set(isChildType ? obj[TO_JSON]() : obj);
-                                memo.update.push(foundModel);
-                            } else {
-                                // add the new
-                                children.attach(newModel);
-                                memo.add.push(newModel);
-                            }
-                        }, opts.remove ? Collection(opts.remove).foldl(function (memo, model) {
-                            var children, parent = model && model[PARENT];
-                            if (!parent) {
-                                return;
-                            }
-                            children = parent[CHILDREN];
-                            if (children && children.detach(model)) {
-                                memo.remove.push(model);
-                            }
-                        }, memo) : memo);
-                    if (secondary.silent) {
-                        return diff;
-                    }
-                    if (diff.remove.length) {
-                        parent[DISPATCH_EVENT](CHILD + COLON + REMOVED, diff);
-                    }
-                    if (diff.add.length) {
-                        parent[DISPATCH_EVENT](CHILD + COLON + ADDED, diff);
-                    }
-                    if (diff.add.length || diff.remove.length) {
-                        parent[DISPATCH_EVENT](CHANGE_COLON + CHILD + COLON + 'count', diff);
-                    }
-                    return diff;
-                },
-                // public facing version filters
-                add: function (objs_, secondary_) {
-                    var childAdded, diff, parent = this,
-                        children = parent.directive(CHILDREN),
-                        secondary = extend(result(parent, CHILD_OPTIONS), secondary_ || {}),
-                        list = Collection(objs_);
-                    // unwrap it if you were passed a collection
-                    if (!list[LENGTH]()) {
-                        return list[UNWRAP]();
-                    }
-                    return Collection(parent.diff({
-                        add: list
-                    }, {
-                        shared: secondary
-                    }).add);
-                },
-                remove: function (idModel_) {
-                    var children, models, parent = this,
-                        idModel = idModel_;
-                    if (idModel == NULL) {
-                        parent = parent[PARENT];
-                        return parent.remove(this);
-                    }
-                    if (!isObject(idModel) && (children = parent.directive(CHILDREN))) {
-                        // it's an id
-                        idModel = children.get(ID, idModel);
-                    }
-                    if (!idModel || !isObject(idModel)) {
-                        return setMemo();
-                    }
-                    return Collection(parent.diff({
-                        // make sure you get a copy
-                        remove: (idModel && Collection.isInstance(idModel) ? idModel.toArray() : toArray(idModel)).slice(0)
-                    }).remove);
-                },
+            /**
+             * Class for holding other objects as children. Only one Children directive is available, but children can be nested infinitely.
+             * @class Parent
+             * @augments {Events}
+             */
+            Parent = factories.Parent = factories.Events.extend('Parent',
                 /**
-                 * @description basic sort function
-                 * @param {Function|String} comparator - argument to sort children against
-                 * @returns {Model} instance
-                 * @func
-                 * @name Model#sort
+                 * @lends Parent.prototype
                  */
-                sort: function (comparator_) {
-                    var children, comparator, comparingAttribute, isReversed, model = this;
-                    if (!(children = model[CHILDREN])) {
+                {
+                    /**
+                     * Default constructor for children of this object. By default, the Child property on the prototype is set to the Boolean true. This means that the parent object will create children that are instances of the constructor that they originated from. If this is set to a truthy value, then the Child property will be reponsible for holding the constructor that should be used for that child.
+                     * @method
+                     */
+                    Child: BOOLEAN_TRUE,
+                    childOptions: noop,
+                    parentEvents: noop,
+                    childEvents: noop,
+                    childConstructor: function () {
+                        return this.Child === BOOLEAN_TRUE ? this.__constructor__ : (this.Child || Parent);
+                    },
+                    isChildType: function (child) {
+                        return isInstance(child, this.childConstructor());
+                    },
+                    diff: function (opts_, secondary_) {
+                        var models, remove, parent = this,
+                            opts = opts_,
+                            secondary = secondary_ || {},
+                            children = parent.directive(CHILDREN),
+                            memo = setMemo(),
+                            diff = Collection(opts.add).foldl(function (memo, obj) {
+                                var isChildType = parent.isChildType(obj),
+                                    // create a new model
+                                    // call it with new in case they use a constructor
+                                    Constructor = parent.childConstructor(obj),
+                                    newModel = isChildType ? obj : new Constructor(obj, secondary.shared),
+                                    // unfortunately we can only find by the newly created's id
+                                    // which we only know for sure after the child has been created ^
+                                    foundModel = children.get(ID, newModel.id);
+                                if (foundModel) {
+                                    // update the old
+                                    foundModel.set(isChildType ? obj[TO_JSON]() : obj);
+                                    memo.update.push(foundModel);
+                                } else {
+                                    // add the new
+                                    children.attach(newModel);
+                                    memo.add.push(newModel);
+                                }
+                            }, opts.remove ? Collection(opts.remove).foldl(function (memo, model) {
+                                var children, parent = model && model[PARENT];
+                                if (!parent) {
+                                    return;
+                                }
+                                children = parent[CHILDREN];
+                                if (children && children.detach(model)) {
+                                    memo.remove.push(model);
+                                }
+                            }, memo) : memo);
+                        if (secondary.silent) {
+                            return diff;
+                        }
+                        if (diff.remove.length) {
+                            parent[DISPATCH_EVENT](CHILD + COLON + REMOVED, diff);
+                        }
+                        if (diff.add.length) {
+                            parent[DISPATCH_EVENT](CHILD + COLON + ADDED, diff);
+                        }
+                        if (diff.add.length || diff.remove.length) {
+                            parent[DISPATCH_EVENT](CHANGE_COLON + CHILD + COLON + 'count', diff);
+                        }
+                        return diff;
+                    },
+                    // public facing version filters
+                    add: function (objs_, secondary_) {
+                        var childAdded, diff, parent = this,
+                            children = parent.directive(CHILDREN),
+                            secondary = extend(result(parent, CHILD_OPTIONS), secondary_ || {}),
+                            list = Collection(objs_);
+                        // unwrap it if you were passed a collection
+                        if (!list[LENGTH]()) {
+                            return list[UNWRAP]();
+                        }
+                        return Collection(parent.diff({
+                            add: list
+                        }, {
+                            shared: secondary
+                        }).add);
+                    },
+                    remove: function (idModel_) {
+                        var children, models, parent = this,
+                            idModel = idModel_;
+                        if (idModel == NULL) {
+                            parent = parent[PARENT];
+                            return parent.remove(this);
+                        }
+                        if (!isObject(idModel) && (children = parent.directive(CHILDREN))) {
+                            // it's an id
+                            idModel = children.get(ID, idModel);
+                        }
+                        if (!idModel || !isObject(idModel)) {
+                            return setMemo();
+                        }
+                        return Collection(parent.diff({
+                            // make sure you get a copy
+                            remove: (idModel && Collection.isInstance(idModel) ? idModel.toArray() : toArray(idModel)).slice(0)
+                        }).remove);
+                    },
+                    /**
+                     * @description basic sort function
+                     * @param {Function|String} comparator - argument to sort children against
+                     * @returns {Model} instance
+                     */
+                    sort: function (comparator_) {
+                        var children, comparator, comparingAttribute, isReversed, model = this;
+                        if (!(children = model[CHILDREN])) {
+                            return model;
+                        }
+                        comparator = comparator_ || model.comparator;
+                        if (isString(comparator)) {
+                            isReversed = comparator[0] === '!';
+                            comparingAttribute = comparator;
+                            if (isReversed) {
+                                comparingAttribute = comparator.slice(1);
+                            }
+                            comparator = function (a, b) {
+                                var val_, val_A = a.get(comparingAttribute),
+                                    val_B = b.get(comparingAttribute);
+                                if (isReversed) {
+                                    val_ = val_B - val_A;
+                                } else {
+                                    val_ = val_A - val_B;
+                                }
+                                return val_;
+                            };
+                        }
+                        children[SORT](comparator);
+                        model[DISPATCH_EVENT](SORT);
+                        return model;
+                    },
+                    destroy: function () {
+                        var removeRet, model = this;
+                        if (!model.is(DESTROYING)) {
+                            // notify things like parent that it's about to destroy itself
+                            model[DISPATCH_EVENT](BEFORE_DESTROY);
+                        }
+                        // actually detach
+                        removeRet = model[PARENT] && model[PARENT].remove(model);
+                        // stop listening to other views
+                        model[DISPATCH_EVENT](DESTROY);
+                        // stops listening to everything
+                        model.stopListening();
                         return model;
                     }
-                    comparator = comparator_ || model.comparator;
-                    if (isString(comparator)) {
-                        isReversed = comparator[0] === '!';
-                        comparingAttribute = comparator;
-                        if (isReversed) {
-                            comparingAttribute = comparator.slice(1);
-                        }
-                        comparator = function (a, b) {
-                            var val_, val_A = a.get(comparingAttribute),
-                                val_B = b.get(comparingAttribute);
-                            if (isReversed) {
-                                val_ = val_B - val_A;
-                            } else {
-                                val_ = val_A - val_B;
-                            }
-                            return val_;
-                        };
-                    }
-                    children[SORT](comparator);
-                    model[DISPATCH_EVENT](SORT);
-                    return model;
-                },
-                destroy: function () {
-                    var removeRet, model = this;
-                    if (!model.is(DESTROYING)) {
-                        // notify things like parent that it's about to destroy itself
-                        model[DISPATCH_EVENT](BEFORE_DESTROY);
-                    }
-                    // actually detach
-                    removeRet = model[PARENT] && model[PARENT].remove(model);
-                    // stop listening to other views
-                    model[DISPATCH_EVENT](DESTROY);
-                    // stops listening to everything
-                    model.stopListening();
-                    return model;
-                }
-            }),
+                }),
             /**
              * @class Model
-             * @augments Events
+             * @augments Parent
              */
             uniqueCounter = 0,
             setId = function (model, id) {
                 model.id = (id === UNDEFINED ? ++uniqueCounter : id);
                 return uniqueCounter;
             },
-            Model = factories.Model = factories.Parent.extend('Model', {
-                // this id prefix is nonsense
-                // define the actual key
-                // idAttribute: ID,
+            Model = factories.Model = factories.Parent.extend('Model',
                 /**
-                 * @description remove attributes from the Model object. Does not completely remove from object with delete, but instead simply sets it to UNDEFINED / undefined
-                 * @param {String} attr - property string that is on the attributes object
-                 * @returns {Model} instance the method was called on
-                 * @func
-                 * @name Model#unset
+                 * @lends Model.prototype
                  */
-                unset: function (key) {
-                    var dataDirective = this[DATA_MANAGER];
-                    if (!dataDirective) {
-                        return BOOLEAN_FALSE;
-                    }
-                    var result = dataDirective.unset(key);
-                    this.modified([key]);
-                    return result;
-                },
-                /**
-                 * @description returns attribute passed into
-                 * @param {String} attr - property string that is being gotten from the attributes object
-                 * @returns {*} value that is present on the attributes object
-                 * @func
-                 * @name Model#get
-                 */
-                get: checkParody(DATA_MANAGER, 'get'),
-                escape: function (key) {
-                    return escape(this.get(key));
-                },
-                /**
-                 * @func
-                 * @param {String} attr - property string that is being gotten from the attributes object
-                 * @returns {Boolean} evaluation of whether or not the Model instance has a value at that attribute key
-                 * @description checks to see if the current attribute is on the attributes object as anything other an undefined
-                 * @name Model#has
-                 */
-                keys: checkParody(DATA_MANAGER, 'keys', returnsArray),
-                values: checkParody(DATA_MANAGER, 'values', returnsArray),
-                has: checkParody(DATA_MANAGER, 'has', BOOLEAN_FALSE),
-                idAttribute: returns('id'),
-                constructor: function (attributes, secondary) {
-                    var model = this;
-                    model.reset(attributes);
-                    this[CONSTRUCTOR + COLON + EVENT_STRING](secondary);
-                    return model;
-                },
-                defaults: function () {
-                    return {};
-                },
-                reset: function (data_) {
-                    var dataDirective, childModel, hasResetBefore, children, model = this,
-                        // automatically checks to see if the data is a string
-                        passed = parse(data_) || {},
-                        // build new data
-                        defaultsResult = model.defaults(passed),
-                        newAttributes = extend(defaultsResult, passed),
-                        // try to get the id from the attributes
-                        idAttributeResult = model.idAttribute(newAttributes),
-                        idResult = setId(model, newAttributes[idAttributeResult]),
-                        keysResult = keys(newAttributes);
-                    // set id and let parent know what your new id is
-                    // setup previous data
-                    if ((hasResetBefore = model.is(RESET))) {
-                        model[DISPATCH_EVENT](BEFORE_COLON + RESET);
-                    }
-                    if (hasResetBefore || keysResult[LENGTH]) {
-                        dataDirective = model.directive(DATA_MANAGER);
-                        dataDirective[RESET](newAttributes);
-                    }
-                    // let everything know that it is changing
-                    model.mark(RESET);
-                    if (hasResetBefore) {
-                        model[DISPATCH_EVENT](RESET, newAttributes);
-                    }
-                    return model;
-                },
-                /**
-                 * @description collects a splat of arguments and condenses them into a single object. Object is then extended onto the attributes object and any items that are different will be fired as events
-                 * @param {...*} series - takes a series of key value pairs. can be mixed with objects. All key value pairs will be placed on a new object, which is to be passed into the function below
-                 * @func
-                 * @name Model#set
-                 * @returns {Model} instance
-                 */
-                destroy: function () {
-                    // just a wrapper around the parent
-                    Parent.fn.destroy.call(this);
-                    delete this.id;
-                    return this;
-                },
-                set: function (key, value_, returnmodified_) {
-                    var changedList = [],
-                        model = this,
-                        value = value_,
-                        dataDirective = model.directive(DATA_MANAGER),
-                        previous = {},
-                        returnmodified = returnmodified_;
-                    intendedObject(key, value, function (key, value, third) {
-                        if (!returnmodified && third) {
-                            returnmodified = value_;
+                {
+                    // this id prefix is nonsense
+                    // define the actual key
+                    // idAttribute: ID,
+                    /**
+                     * @description remove attributes from the Model object. Does not completely remove from object with delete, but instead simply sets it to UNDEFINED / undefined
+                     * @param {String} attr - property string that is on the attributes object
+                     * @returns {Model} instance the method was called on
+                     * @func
+                     * @name Model#unset
+                     */
+                    unset: function (key) {
+                        var dataDirective = this[DATA_MANAGER];
+                        if (!dataDirective) {
+                            return BOOLEAN_FALSE;
                         }
-                        // defconinitely set the value, and let us know what happened
-                        // and if you're not changing already, (already)
-                        if (dataDirective.set(key, value) && !dataDirective.changing[name]) {
-                            changedList.push(key);
-                        }
-                    });
-                    if (returnmodified) {
-                        return changedList;
-                    }
-                    model.modified(changedList);
-                    return model;
-                },
-                modified: function (list) {
-                    var dataDirective, model = this;
-                    if (!list || !list[LENGTH]) {
-                        // do not digest... this time
+                        var result = dataDirective.unset(key);
+                        this.modified([key]);
+                        return result;
+                    },
+                    /**
+                     * @description returns attribute passed into
+                     * @param {String} attr - property string that is being gotten from the attributes object
+                     * @returns {*} value that is present on the attributes object
+                     * @func
+                     * @name Model#get
+                     */
+                    get: checkParody(DATA_MANAGER, 'get'),
+                    escape: function (key) {
+                        return escape(this.get(key));
+                    },
+                    /**
+                     * @func
+                     * @param {String} attr - property string that is being gotten from the attributes object
+                     * @returns {Boolean} evaluation of whether or not the Model instance has a value at that attribute key
+                     * @description checks to see if the current attribute is on the attributes object as anything other an undefined
+                     * @name Model#has
+                     */
+                    keys: checkParody(DATA_MANAGER, 'keys', returnsArray),
+                    values: checkParody(DATA_MANAGER, 'values', returnsArray),
+                    has: checkParody(DATA_MANAGER, 'has', BOOLEAN_FALSE),
+                    idAttribute: returns('id'),
+                    constructor: function (attributes, secondary) {
+                        var model = this;
+                        model.reset(attributes);
+                        this[CONSTRUCTOR + COLON + EVENT_STRING](secondary);
                         return model;
-                    }
-                    dataDirective = model.directive(DATA_MANAGER);
-                    model.digest(list, function (name) {
-                        dataDirective.changing[name] = BOOLEAN_TRUE;
-                        model[DISPATCH_EVENT](CHANGE_COLON + name);
-                        dataDirective.changing[name] = BOOLEAN_FALSE;
-                    });
-                    return model;
-                },
-                digest: function (handler, fn) {
-                    var model = this,
-                        // cache the data directive in case it gets swapped out
+                    },
+                    defaults: function () {
+                        return {};
+                    },
+                    reset: function (data_) {
+                        var dataDirective, childModel, hasResetBefore, children, model = this,
+                            // automatically checks to see if the data is a string
+                            passed = parse(data_) || {},
+                            // build new data
+                            defaultsResult = model.defaults(passed),
+                            newAttributes = extend(defaultsResult, passed),
+                            // try to get the id from the attributes
+                            idAttributeResult = model.idAttribute(newAttributes),
+                            idResult = setId(model, newAttributes[idAttributeResult]),
+                            keysResult = keys(newAttributes);
+                        // set id and let parent know what your new id is
+                        // setup previous data
+                        if ((hasResetBefore = model.is(RESET))) {
+                            model[DISPATCH_EVENT](BEFORE_COLON + RESET);
+                        }
+                        if (hasResetBefore || keysResult[LENGTH]) {
+                            dataDirective = model.directive(DATA_MANAGER);
+                            dataDirective[RESET](newAttributes);
+                        }
+                        // let everything know that it is changing
+                        model.mark(RESET);
+                        if (hasResetBefore) {
+                            model[DISPATCH_EVENT](RESET, newAttributes);
+                        }
+                        return model;
+                    },
+                    /**
+                     * @description collects a splat of arguments and condenses them into a single object. Object is then extended onto the attributes object and any items that are different will be fired as events
+                     * @param {...*} series - takes a series of key value pairs. can be mixed with objects. All key value pairs will be placed on a new object, which is to be passed into the function below
+                     * @func
+                     * @name Model#set
+                     * @returns {Model} instance
+                     */
+                    destroy: function () {
+                        // just a wrapper around the parent
+                        Parent.fn.destroy.call(this);
+                        delete this.id;
+                        return this;
+                    },
+                    set: function (key, value_, returnmodified_) {
+                        var changedList = [],
+                            model = this,
+                            value = value_,
+                            dataDirective = model.directive(DATA_MANAGER),
+                            previous = {},
+                            returnmodified = returnmodified_;
+                        intendedObject(key, value, function (key, value, third) {
+                            if (!returnmodified && third) {
+                                returnmodified = value_;
+                            }
+                            // defconinitely set the value, and let us know what happened
+                            // and if you're not changing already, (already)
+                            if (dataDirective.set(key, value) && !dataDirective.changing[name]) {
+                                changedList.push(key);
+                            }
+                        });
+                        if (returnmodified) {
+                            return changedList;
+                        }
+                        model.modified(changedList);
+                        return model;
+                    },
+                    modified: function (list) {
+                        var dataDirective, model = this;
+                        if (!list || !list[LENGTH]) {
+                            // do not digest... this time
+                            return model;
+                        }
                         dataDirective = model.directive(DATA_MANAGER);
-                    dataDirective.increment();
-                    if (isFunction(handler)) {
-                        handler();
-                    } else {
-                        duff(handler, fn, model);
-                    }
-                    dataDirective.decrement();
-                    // this event should only ever exist here
-                    if (dataDirective.static()) {
+                        model.digest(list, function (name) {
+                            dataDirective.changing[name] = BOOLEAN_TRUE;
+                            model[DISPATCH_EVENT](CHANGE_COLON + name);
+                            dataDirective.changing[name] = BOOLEAN_FALSE;
+                        });
+                        return model;
+                    },
+                    digest: function (handler, fn) {
+                        var model = this,
+                            // cache the data directive in case it gets swapped out
+                            dataDirective = model.directive(DATA_MANAGER);
                         dataDirective.increment();
-                        model[DISPATCH_EVENT](CHANGE, dataDirective[CHANGING]);
+                        if (isFunction(handler)) {
+                            handler();
+                        } else {
+                            duff(handler, fn, model);
+                        }
                         dataDirective.decrement();
-                        dataDirective.finish();
+                        // this event should only ever exist here
+                        if (dataDirective.static()) {
+                            dataDirective.increment();
+                            model[DISPATCH_EVENT](CHANGE, dataDirective[CHANGING]);
+                            dataDirective.decrement();
+                            dataDirective.finish();
+                        }
+                    },
+                    /**
+                     * @description basic json clone of the attributes object
+                     * @func
+                     * @name Model#toJSON
+                     * @returns {Object} json clone of the attributes object
+                     */
+                    toJSON: function () {
+                        // does not prevent circular dependencies.
+                        // swap this out for something else if you want
+                        // to prevent circular dependencies
+                        return this.clone();
+                    },
+                    clone: checkParody(DATA_MANAGER, 'clone', function () {
+                        return {};
+                    }),
+                    valueOf: function () {
+                        return this.id;
+                    },
+                    /**
+                     * @description stringified version of attributes object
+                     * @func
+                     * @name Model#toString
+                     * @returns {String} stringified json version of
+                     */
+                    toString: function () {
+                        return stringify(this.clone());
                     }
-                },
-                /**
-                 * @description basic json clone of the attributes object
-                 * @func
-                 * @name Model#toJSON
-                 * @returns {Object} json clone of the attributes object
-                 */
-                toJSON: function () {
-                    // does not prevent circular dependencies.
-                    // swap this out for something else if you want
-                    // to prevent circular dependencies
-                    return this.clone();
-                },
-                clone: checkParody(DATA_MANAGER, 'clone', function () {
-                    return {};
-                }),
-                valueOf: function () {
-                    return this.id;
-                },
-                /**
-                 * @description stringified version of attributes object
-                 * @func
-                 * @name Model#toString
-                 * @returns {String} stringified json version of
-                 */
-                toString: function () {
-                    return stringify(this.clone());
-                }
-            });
+                });
         // children should actually extend from collection.
         // it should require certain things of the children it is tracking
         // and should be able to listen to them
