@@ -1,5 +1,7 @@
 var STATUS = 'Status',
     STATUSES = 'statuses',
+    DIRECTIVE = 'Directive',
+    MESSENGER = 'Messenger',
     directives = {
         creation: {},
         destruction: {}
@@ -117,6 +119,8 @@ var STATUS = 'Status',
              * Method for creating and setting directives on the context of the
              * @method
              */
+            request: parody('Messenger', 'request'),
+            reply: parody('Messenger', 'reply'),
             directive: contextDirective,
             directiveDestruction: function (name) {
                 var directive;
@@ -185,7 +189,28 @@ var STATUS = 'Status',
             toJSON: function () {
                 return this[STATUSES];
             }
-        });
+        }),
+    Messenger = Directive.extend(MESSENGER, {
+        constructor: function (a, b, c, d, e, f) {
+            var messenger = this,
+                hash = {};
+            messenger[CONSTRUCTOR + COLON + DIRECTIVE](a, b, c, d, e, f);
+            messenger.request = function (key, arg) {
+                return hash && hash[key] && hash[key](arg);
+            };
+            messenger.reply = function (key, handler) {
+                intendedObject(key, handler, function (key, handler) {
+                    return hash && (hash[key] = bind(isFunction(handler) ? handler : returns(handler), NULL));
+                });
+                return messenger;
+            };
+            messenger.destroy = function () {
+                hash = UNDEFINED;
+            };
+            return messenger;
+        }
+    });
+app.defineDirective(MESSENGER, Messenger);
 defineDirective(STATUS, Status[CONSTRUCTOR]);
 app.defineDirective = defineDirective;
 app.extendDirective = extendDirective;
