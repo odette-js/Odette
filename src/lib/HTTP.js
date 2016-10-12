@@ -123,7 +123,7 @@ app.block(function (app) {
                  */
                 parse: parse,
                 constructor: function (str) {
-                    var promise, url, thingToDo, typeThing, type, ajax = this,
+                    var url, thingToDo, typeThing, type, ajax = this,
                         method = 'onreadystatechange',
                         // Add a cache buster to the url
                         xhrReq = new XMLHttpRequest();
@@ -184,7 +184,7 @@ app.block(function (app) {
                         cache[key] = this;
                     }
                     // have to wrap in set timeout for ie
-                    ajax.promise = Promise(function (success, failure, custom) {
+                    var promise = ajax.promise = Promise(function (success, failure, custom) {
                         var sending = sendthething(xhrReq, data, ajax, success, failure);
                         // attachResponseHandler(ajax);
                         var xhrReqObj = ajax.options.requestObject,
@@ -192,7 +192,7 @@ app.block(function (app) {
                             method = ajax.options.method;
                         if (!xhrReqObj[method]) {
                             xhrReqObj[method] = function (evnt) {
-                                var type, lasttype, path, status, doIt, allStates, rawData, xhrReqObj = this;
+                                var type, originalType, lasttype, path, status, doIt, allStates, rawData, xhrReqObj = this;
                                 if (!xhrReqObj || hasFinished) {
                                     return;
                                 }
@@ -203,6 +203,7 @@ app.block(function (app) {
                                     rawData = ajax.options.preventParse ? rawData : ajax.parse(rawData);
                                     hasFinished = BOOLEAN_TRUE;
                                     type = STATUS + COLON + (xhrReqObj[STATUS] === UNDEFINED ? 200 : xhrReqObj[STATUS]);
+                                    originalType = type;
                                     path = states();
                                     while (isString(type)) {
                                         lasttype = type;
@@ -213,6 +214,7 @@ app.block(function (app) {
                                     } else {
                                         failure(rawData);
                                     }
+                                    ajax.resolveAs(originalType, rawData);
                                 }
                             };
                         }
