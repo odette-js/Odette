@@ -1,20 +1,17 @@
 var ACTIONS = 'actions',
     PROPAGATION = 'propagation',
     UPCASED_STOPPED = 'Stopped',
+    PASSED_DATA = 'passedData',
     DEFAULT_PREVENTED = 'defaultPrevented',
     PROPAGATION_HALTED = PROPAGATION + 'Halted',
     PROPAGATION_STOPPED = PROPAGATION + UPCASED_STOPPED,
     IMMEDIATE_PROP_STOPPED = 'immediate' + capitalize(PROPAGATION) + UPCASED_STOPPED;
 app.scope(function (app) {
-    var //_ = app._,
-    // factories = _.factories,
-        event_incrementer = 1,
-        // Collection = factories.Collection,
+    var event_incrementer = 1,
         listeningCounter = 0,
         returnsId = returns.id = function () {
             return this.id;
         },
-        PASSED_DATA = 'passedData',
         ObjectEvent = factories.ObjectEvent = factories.Directive.extend('ObjectEvent', {
             constructor: function (data, target, name, options, when) {
                 var evnt = this;
@@ -81,7 +78,7 @@ app.scope(function (app) {
                 }
             }
         }),
-        EventsDirective = factories.EventsDirective = factories.Directive.extend('EventsDirective', {
+        EventsManager = factories.EventsManager = factories.Directive.extend('EventsManager', {
             cancelled: _.noop,
             validate: returns(BOOLEAN_TRUE),
             constructor: function (target) {
@@ -309,5 +306,5 @@ app.scope(function (app) {
                 return !!bus;
             }
         });
-    app.defineDirective(EVENT_MANAGER, factories.EventsDirective[CONSTRUCTOR]);
+    app.defineDirective(EVENT_MANAGER, factories.EventsManager[CONSTRUCTOR]);
 });

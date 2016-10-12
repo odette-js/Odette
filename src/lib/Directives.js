@@ -41,11 +41,9 @@ var STATUS = 'Status',
         var Handler = handler_ || returnsThird;
         var oldDirective = directives.creation[oldName] || exception('directives must exist before they can be extended');
         return app.defineDirective(newName, function (instance, name, third) {
-            var directive = new directives.creation[oldName](instance, name, third);
-            return new Handler(instance, name, directive);
+            return new Handler(instance, name, new directives.creation[oldName](instance, name, third));
         }, function (instance, name, third) {
-            var directive = directives.destruction[oldName](instance, name, third);
-            return Destruction(instance, name, directive);
+            return Destruction(instance, name, directives.destruction[oldName](instance, name, third));
         });
     },
     directive = function (that, name) {
@@ -194,7 +192,7 @@ var STATUS = 'Status',
         constructor: function (a, b, c, d, e, f) {
             var messenger = this,
                 hash = {};
-            messenger[CONSTRUCTOR + COLON + DIRECTIVE](a, b, c, d, e, f);
+            // messenger[CONSTRUCTOR + COLON + DIRECTIVE](a, b, c, d, e, f);
             messenger.request = function (key, arg) {
                 return hash && hash[key] && hash[key](arg);
             };

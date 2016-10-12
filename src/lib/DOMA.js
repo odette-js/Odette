@@ -2950,7 +2950,7 @@ app.scope(function (app) {
             }
             delete mainHandler[capturing];
         },
-        DomEventsDirective = factories.EventsDirective.extend('DomEventsDirective', {
+        DomEventsManager = factories.EventsManager.extend('DomEventsManager', {
             remove: function (list, evnt) {
                 var events = this,
                     elementHandlers = events.elementHandlers,
@@ -3249,7 +3249,7 @@ app.scope(function (app) {
              * @lends DomManager.prototype
              */
             {
-                'directive:creation:EventManager': DomEventsDirective,
+                'directive:creation:EventManager': DomEventsManager,
                 /**
                  * Flag to let other objects know that this is a valid dom manager
                  * @private

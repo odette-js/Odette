@@ -231,11 +231,14 @@ app.scope(function (app) {
             tagName: returns('div'),
             template: returns(BOOLEAN_FALSE),
             canRenderAsync: returns(BOOLEAN_FALSE),
-            'directive:creation:LinguisticsManager': factories.LinguisticsManager.extend({
-                knot: function () {
-                    return this.target.model;
-                }
-            }),
+            // 'directive:creation:LinguisticsManager': factories.LinguisticsManager.extend({
+            //     knot: function () {
+            //         return this.target.model;
+            //     },
+            //     namespaceEvent: function (evnt) {
+            //         return CHANGE_COLON + evnt;
+            //     }
+            // }),
             getChildViews: function (key) {
                 return this.getRegion(key).directive(CHILDREN);
             },

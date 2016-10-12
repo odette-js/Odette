@@ -340,6 +340,11 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                  * @lends Model.prototype
                  */
                 {
+                    'directive:creation:LinguisticsManager': factories.LinguisticsManager.extend({
+                        namespaceEvent: function (evnt) {
+                            return CHANGE_COLON + evnt;
+                        }
+                    }),
                     // this id prefix is nonsense
                     // define the actual key
                     // idAttribute: ID,
@@ -367,6 +372,11 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                      * @name Model#get
                      */
                     get: checkParody(DATA_MANAGER, 'get'),
+                    /**
+                     * Create an escaped version of the key. Useful for putting into html
+                     * @param  {String} key Property that you would like to escape
+                     * @return {String}
+                     */
                     escape: function (key) {
                         return escape(this.get(key));
                     },

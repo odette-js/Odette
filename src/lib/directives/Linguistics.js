@@ -12,6 +12,7 @@ var Linguistics = app.block(function (app) {
         GROUP_INDEX = 'groupIndex',
         LINGUISTICS = 'Linguistics',
         STOP_LISTENING = 'stopListening',
+        LINGUISTICS_MANAGER = LINGUISTICS + 'Manager',
         makeCollection = function () {
             return Collection();
         },
@@ -63,7 +64,7 @@ var Linguistics = app.block(function (app) {
             return function (target) {
                 var sequencer = this,
                     registered = sequencer[REGISTERED],
-                    t = this.eventName(target);
+                    t = this.namespaceEvent(target);
                 if (registered[t] !== bool) {
                     registered[t] = bool;
                     this[method](this[ORIGIN](), t, sequencer.increment);
@@ -198,9 +199,12 @@ var Linguistics = app.block(function (app) {
                  * @param {object} origin object that the {@link Linguistics} class will listen to for events.
                  * @returns {this}
                  */
-                constructor: function (origin, manager) {
+                constructor: function (origin, manager, namespacer) {
                     var sequencer = this;
                     var registry = sequencer.directive(REGISTRY);
+                    if (namespacer) {
+                        sequencer.namespaceEvent = namespacer;
+                    }
                     registry.keep(INSTANCES, ORIGIN, origin);
                     registry.keep(INSTANCES, MANAGER, manager);
                     sequencer[COUNTER] = 0;
@@ -314,8 +318,8 @@ var Linguistics = app.block(function (app) {
                     ++this[COUNTER];
                     return this;
                 },
-                eventName: function (evnt) {
-                    return CHANGE_COLON + evnt;
+                namespaceEvent: function (evnt) {
+                    return evnt;
                 },
                 /**
                  * Proxy for returning values being held on the origin model.
@@ -478,13 +482,13 @@ var Linguistics = app.block(function (app) {
                     return sequencer;
                 }
             }),
-        LINGUISTICS_MANAGER = LINGUISTICS + 'Manager',
         LinguisticsManager = factories[LINGUISTICS_MANAGER] = factories.Collection.extend(LINGUISTICS_MANAGER, {
+            Child: Linguistics[CONSTRUCTOR],
             constructor: function (target) {
                 // save it for later
                 this.target = target;
                 // required if we're not going to call the Collection constructor
-                this[CONSTRUCTOR + ':Collection']();
+                this[CONSTRUCTOR + COLON + COLLECTION]();
                 return this;
             },
             when: function (key) {
@@ -496,7 +500,7 @@ var Linguistics = app.block(function (app) {
             create: function () {
                 // it is important to use the new keyword and access the constructor
                 // because the origin could be an Linguistics object
-                return new Linguistics[CONSTRUCTOR](this.knot(), this);
+                return new this.Child(this.knot(), this, this.namespaceEvent);
             },
             make: function () {
                 var manager = this;

@@ -123,7 +123,7 @@ var PROMISE = 'Promise',
              *     success();
              * });
              */
-            Promise = _[PROMISE] = factories.Events.extend(PROMISE,
+            Promise = _[PROMISE] = factories.Directive.extend(PROMISE,
                 /**
                  * @lends Promise.prototype
                  */

@@ -388,18 +388,18 @@ var EVENT_STRING = 'Events',
                      * eventer1.stopListening(eventer2, "eventname", pointerFromBefore);
                      */
                     stopListening: function (target, name, callback) {
-                        var listeningTo, notTalking, ids, targetEventsDirective, stillListening = 0,
+                        var listeningTo, notTalking, ids, targetEventsManager, stillListening = 0,
                             origin = this,
-                            originEventsDirective = origin[EVENT_MANAGER];
-                        if (!originEventsDirective) {
+                            originEventsManager = origin[EVENT_MANAGER];
+                        if (!originEventsManager) {
                             return origin;
                         }
-                        listeningTo = originEventsDirective[LISTENING_TO];
-                        notTalking = (target && !(targetEventsDirective = target[EVENT_MANAGER]));
+                        listeningTo = originEventsManager[LISTENING_TO];
+                        notTalking = (target && !(targetEventsManager = target[EVENT_MANAGER]));
                         if (notTalking) {
                             return origin;
                         }
-                        ids = target ? [targetEventsDirective[TALKER_ID]] : keys(listeningTo);
+                        ids = target ? [targetEventsManager[TALKER_ID]] : keys(listeningTo);
                         duff(ids, function (id) {
                             var listening = listeningTo[id];
                             if (listening) {
@@ -410,7 +410,7 @@ var EVENT_STRING = 'Events',
                         if (!stillListening && !find(target ? keys(listeningTo) : ids, function (id, key) {
                                 return listeningTo[id];
                             })) {
-                            originEventsDirective[LISTENING_TO] = {};
+                            originEventsManager[LISTENING_TO] = {};
                         }
                         return origin;
                     },
