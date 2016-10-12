@@ -4126,8 +4126,10 @@ app.scope(function (app) {
                  */
                 frame: function (head, body, passedContent) {
                     var manager = this,
-                        content = head || '';
-                    if (!passedContent && (body || content.slice(0, 10).toLowerCase() !== '<!doctype ')) {
+                        content = head || '',
+                        bod = isString(body) ? body : '',
+                        passed = !passedContent && isObject(body) ? body : NULL;
+                    if (!passedContent && (bod || content.slice(0, 10).toLowerCase() !== '<!doctype ')) {
                         content = manager.owner.iframeContent(content, body);
                     }
                     var sharedVars = isObject(passedContent) ? passedContent : (isObject(body) ? body : {});
