@@ -3616,7 +3616,7 @@ app.scope(function (app) {
                     var elId, ownerDoc, registeredOptions, isDocument, owner = owner_,
                         manager = this;
                     if (!el) {
-                        exception('element must be an element');
+                        exception('DomManager target must be an element, document, documentfragment, or window');
                     }
                     if (DomManager.isInstance(el)) {
                         // extend what we already know
