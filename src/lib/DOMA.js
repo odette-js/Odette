@@ -3631,7 +3631,7 @@ app.scope(function (app) {
                     if (manager.is(ELEMENT) || manager.is(FRAGMENT)) {
                         hash[DOM_MANAGER_STRING] = manager;
                         ownerDoc = el.ownerDocument;
-                        if (!ownerDoc[__ELID__]) {
+                        if (!ownerDoc[__ELID__] || !globalAssociator.get(ownerDoc)[DOM_MANAGER_STRING]) {
                             app.run(ownerDoc.defaultView, noop);
                         }
                         owner = ensure(ownerDoc, BOOLEAN_TRUE);
