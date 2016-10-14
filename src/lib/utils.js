@@ -583,6 +583,15 @@ var factories = {},
         constructor[PROTOTYPE][CONSTRUCTOR_KEY] = child;
         return child;
     },
+    factory = function (name, func_) {
+        var func = func_ ? func_ : name;
+        var extensor = {
+            constructor: function () {
+                return func.apply(this.super.apply(this, arguments), arguments);
+            }
+        };
+        return this.extend.apply(this, func === func_ ? [name, extensor] : [extensor]);
+    },
     constructorWrapper = function (Constructor, parent) {
         var __ = function (one, two, three, four, five, six) {
             return one != NULL && one instanceof Constructor ? one : new Constructor(one, two, three, four, five, six);
@@ -590,6 +599,7 @@ var factories = {},
         __.isInstance = Constructor.isInstance = function (instance) {
             return isInstance(instance, Constructor);
         };
+        __.factory = Constructor.factory = factory;
         __.fn = Constructor.fn = Constructor[PROTOTYPE].fn = Constructor[PROTOTYPE];
         __[CONSTRUCTOR] = Constructor;
         __[EXTEND] = Constructor[EXTEND] = bind(constructorExtend, Constructor);

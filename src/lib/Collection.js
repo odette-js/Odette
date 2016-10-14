@@ -326,7 +326,14 @@ var COLLECTION = 'Collection',
                 eachRight: eachRight,
                 duffRight: duffRight,
                 flatten: flatten,
-                eq: eq
+                eq: eq,
+                generate: function (next, continues) {
+                    var list = [];
+                    while (continues(current)) {
+                        list.push(next());
+                    }
+                    return this[CONSTRUCTOR_KEY](list);
+                }
             }),
             unwrapper = function () {
                 return this.items;

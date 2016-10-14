@@ -2,6 +2,7 @@ var STATUS = 'Status',
     STATUSES = 'statuses',
     DIRECTIVE = 'Directive',
     MESSENGER = 'Messenger',
+    ITERATOR = 'Iterator',
     directives = {
         creation: {},
         destruction: {}
@@ -188,25 +189,94 @@ var STATUS = 'Status',
                 return this[STATUSES];
             }
         }),
-    Messenger = Directive.extend(MESSENGER, {
-        constructor: function (a, b, c, d, e, f) {
-            var messenger = this,
-                hash = {};
-            // messenger[CONSTRUCTOR + COLON + DIRECTIVE](a, b, c, d, e, f);
-            messenger.request = function (key, arg) {
-                return hash && hash[key] && hash[key](arg);
-            };
-            messenger.reply = function (key, handler) {
-                intendedObject(key, handler, function (key, handler) {
-                    return hash && (hash[key] = bind(isFunction(handler) ? handler : returns(handler), NULL));
+    Messenger = factories[MESSENGER] = Directive.factory(MESSENGER, function () {
+        var messenger = this,
+            hash = {};
+        messenger.request = function (key, arg) {
+            return hash && hash[key] && hash[key].call(this, arg);
+        };
+        messenger.reply = intendedApi(function (key, handler) {
+            return hash && (hash[key] = bind(isFunction(handler) ? handler : returns(handler), NULL));
+        });
+        messenger.destroy = function () {
+            hash = UNDEFINED;
+            this.mark(DESTROYED);
+        };
+    }),
+    Iterator = factories[ITERATOR] = Extendable.factory(ITERATOR, function (array) {
+        var iterator = this;
+        iterator.counter = 0;
+        iterator.done = function () {
+            return iterator.counter >= array[LENGTH];
+        };
+        iterator.get = function (idx) {
+            return array[idx];
+        };
+        // iterator.next = function () {
+        //     var d;
+        //     return {
+        //         value: iterator.done() ? NULL : iterator.get((iterator.counter++) - 1),
+        //         done: iterator.done()
+        //     };
+        // };
+    }),
+    generates = function (defaultFn_) {
+        var defaultFn = defaultFn_ || noop;
+        return function (passnext, passfirst_) {
+            var passfirst = passfirst_ || defaultFn;
+            return function (item, value) {
+                return passnext(item, value, function () {
+                    return passfirst(item, value);
                 });
-                return messenger;
             };
-            messenger.destroy = function () {
-                hash = UNDEFINED;
+        };
+    },
+    GENERATOR = 'Generator',
+    GENERATOR_MAKER = GENERATOR + 'Maker',
+    Generator = Directive.extend(GENERATOR, {
+        constructor: function (starts, next, continues) {
+            var generator = this;
+            generator.counter = 0;
+            generator.produceNextValue = next || function (value, counter) {
+                return counter;
             };
-            return messenger;
+            generator.canContinue = continues || function () {
+                return BOOLEAN_TRUE;
+            };
+            generator.current = {
+                value: starts
+            };
+            // generator.target = target;
+            return generator;
+        },
+        next: function () {
+            var counter, value = NULL,
+                generator = this,
+                finished = generator.is('finished'),
+                curnt = generator.current,
+                cVal = curnt.value,
+                current = generator.current = {
+                    value: (!finished && generator.canContinue(cVal, (counter = generator.counter))) ? (value = generator.produceNextValue(cVal, (counter = ++generator.counter) - 1)) : NULL,
+                    done: finished || !generator.canContinue(value, counter)
+                };
+            return current;
+        },
+        throw: function (msg) {
+            throw new Error(msg);
+        },
+        return: function () {
+            var generator = this;
+            generator.mark('finished');
+            return generator.current.value;
         }
+    }),
+    GeneratorMaker = factories[GENERATOR] = Directive.factory(GENERATOR, function (next, continues) {
+        return function (target, nxt, cntns) {
+            if (this) {
+                throw new Error('TypeError: ' + (this.constructor.name || 'this') + ' is not a constructor');
+            }
+            return Generator(target, nxt || next, cntns || continues);
+        };
     });
 defineDirective(MESSENGER, Messenger[CONSTRUCTOR]);
 defineDirective(STATUS, Status[CONSTRUCTOR]);

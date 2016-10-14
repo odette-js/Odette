@@ -3237,6 +3237,9 @@ app.scope(function (app) {
         dommanagerunwrapper = function () {
             return [this];
         },
+        parentGenerator = GeneratorMaker(function (value, counter) {
+            return counter ? value[PARENT_NODE] : value;
+        }),
         /**
          * Manager for DOM elements, as well as documents and windows. Odette's DomManager is a very powerful abstraction of the DOM api. It abstracts a variety of tests as well as tasks away from you so you don't have to worry about them, such as events on attachment, detachment, contentChanges, attributeChanges, destruction and more. To access a DomManager, simply query the dom using the {@link DOMA} and find the element that you would like to manipulate through any of the methods that the doma provides. A simple one is [item]{@link DOMA#item} which will return the element in that location on the list of possible DomManagers
          * @class  DomManager
@@ -3599,6 +3602,16 @@ app.scope(function (app) {
                 elements: function () {
                     return [this.element()];
                 },
+                chain: function (filter) {
+                    var next, list = [],
+                        manager = this,
+                        filtr = negate(createDomFilter(filter, manager.owner)),
+                        pg = parentGenerator(manager.element(), NULL, filtr);
+                    while (!(next = pg.next()).done) {
+                        list.push(manager.owner.returnsManager(next.value));
+                    }
+                    return manager.wrap(list);
+                },
                 constructor: function (el, hash, owner_) {
                     var elId, registeredOptions, isDocument, owner = owner_,
                         manager = this;
@@ -3611,9 +3624,7 @@ app.scope(function (app) {
                         extend(manager, el);
                         // run it through it's scoped constructor
                         registeredOptions = owner.registeredElementOptions[manager[REGISTERED_AS]];
-                        // manager.on(DESTROY, );
                         manager.on(registeredOptions.events);
-                        // manager.on(DESTROY, registeredOptions.destruction);
                         return manager;
                     }
                     test(manager, owner, el);
@@ -3624,11 +3635,9 @@ app.scope(function (app) {
                             manager[__ELID__] = el[__ELID__];
                         }
                     } else {
-                        // hash[]
                         if ((isDocument = manager.is(DOCUMENT))) {
                             owner = manager;
                             manager[__ELID__] = elId = el[__ELID__];
-                            // hash.manager
                         } else {
                             manager[__ELID__] = app.counter('win');
                         }
@@ -4354,7 +4363,7 @@ app.scope(function (app) {
          */
         eq = _.eq,
         objectMatches = _.matches,
-        createDomFilter = function (filtr_, owner) {
+        createDomFilter = function (filtr_, owner, negative) {
             var filtr = filtr_;
             return isFunction(filtr) ? filtr : (isString(filtr) ? (filterExpressions[filtr] || (filtr = convertSelector(filtr, owner)) && function (item) {
                 return matchesSelector(item, filtr, owner);
@@ -4462,7 +4471,7 @@ app.scope(function (app) {
                     }
                 } else {
                     if (!isValid) {
-                        if (isString(str)) {
+                        if (!str) {} else if (isString(str)) {
                             if (str[0] === '<') {
                                 els = makeTree(str, owner);
                             } else {
@@ -4532,6 +4541,12 @@ app.scope(function (app) {
             },
             fragment: function (els) {
                 return this.context.returnsManager(fragment(els || this.toArray(), this.context));
+            },
+            chain: function (filtr) {
+                var empty = [];
+                return this.owner.$(empty.concat.apply(empty, this.map(function (item) {
+                    return item.chain(filtr).toArray();
+                }).toArray()));
             },
             filter: attachPrevious(function (context, filter) {
                 return domFilter(context.toArray(), filter, context.owner);

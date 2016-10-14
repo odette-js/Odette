@@ -34,7 +34,7 @@ var PROMISE = 'Promise',
                 return fn ? fn(arg) : arg;
             },
             emptyQueue = function (p, bool, result, original, catching) {
-                var erred, sliced, resultIsPromise, registry = p.directive(REGISTRY),
+                var erred, sliced, resultIsPromise, i, current, execute, argument, caught, nextp, registry = p.directive(REGISTRY),
                     queue = registry.get(INSTANCES, QUEUE);
                 if (original && !p.unmark(PENDING)) {
                     return result;
@@ -45,33 +45,37 @@ var PROMISE = 'Promise',
                 if (!queue || !queue.length()) {
                     return result;
                 }
-                sliced = queue.slice(0);
+                sliced = queue.slice(0).toArray();
                 p[REGISTRY].drop(INSTANCES, QUEUE);
-                sliced.each(function (current) {
-                    var caught = registry.get(INSTANCES, CAUGHT),
-                        nextp = current[0],
-                        argument = wraptry(function () {
-                            var target, res = result;
-                            if (bool) {
-                                target = current[1];
-                            } else {
-                                target = current[2];
-                            }
-                            if (catching) {
-                                target = current[3];
-                                res = catching;
-                            }
-                            res = distillary(target, res);
-                            nextp.directive(REGISTRY).keep(INSTANCES, RESULTS, res);
-                            return res;
-                        }, function (e) {
-                            var nextpReg = nextp.directive(REGISTRY);
-                            p.mark(CAUGHT);
-                            nextpReg.keep(INSTANCES, RESULTS, result);
-                            nextpReg.keep(INSTANCES, CAUGHT, e);
-                            caught = e;
-                            return result;
-                        });
+                execute = function () {
+                    return wraptry(function () {
+                        var target, res = result;
+                        if (bool) {
+                            target = current[1];
+                        } else {
+                            target = current[2];
+                        }
+                        if (catching) {
+                            target = current[3];
+                            res = catching;
+                        }
+                        res = distillary(target, res);
+                        nextp.directive(REGISTRY).keep(INSTANCES, RESULTS, res);
+                        return res;
+                    }, function (e) {
+                        var nextpReg = nextp.directive(REGISTRY);
+                        p.mark(CAUGHT);
+                        nextpReg.keep(INSTANCES, RESULTS, result);
+                        nextpReg.keep(INSTANCES, CAUGHT, e);
+                        caught = e;
+                        return result;
+                    });
+                };
+                for (i = 0; i < sliced.length; i++) {
+                    current = sliced[i];
+                    caught = registry.get(INSTANCES, CAUGHT);
+                    nextp = current[0];
+                    argument = execute();
                     if (isPromise(argument)) {
                         if (caught) {
                             argument.then(emptiesQueue(nextp, BOOLEAN_TRUE, BOOLEAN_TRUE, caught), emptiesQueue(nextp, BOOLEAN_FALSE, BOOLEAN_TRUE, caught));
@@ -85,7 +89,7 @@ var PROMISE = 'Promise',
                             emptyQueue(nextp, bool, argument, BOOLEAN_FALSE);
                         }
                     }
-                });
+                }
                 return result;
             },
             emptiesQueue = function (p, bool, original, caught) {
