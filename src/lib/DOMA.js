@@ -3630,7 +3630,11 @@ app.scope(function (app) {
                     test(manager, owner, el);
                     if (manager.is(ELEMENT) || manager.is(FRAGMENT)) {
                         hash[DOM_MANAGER_STRING] = manager;
-                        owner = ensure(el.ownerDocument, BOOLEAN_TRUE);
+                        ownerDoc = el.ownerDocument;
+                        if (!ownerDoc[__ELID__]) {
+                            app.run(ownerDoc.defaultView, noop);
+                        }
+                        owner = ensure(ownerDoc, BOOLEAN_TRUE);
                         if (manager.is(ELEMENT)) {
                             manager[__ELID__] = el[__ELID__];
                         }
