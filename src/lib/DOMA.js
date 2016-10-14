@@ -3613,7 +3613,7 @@ app.scope(function (app) {
                     return manager.wrap(list);
                 },
                 constructor: function (el, hash, owner_) {
-                    var elId, registeredOptions, isDocument, owner = owner_,
+                    var elId, ownerDoc, registeredOptions, isDocument, owner = owner_,
                         manager = this;
                     if (!el) {
                         exception('element must be an element');
