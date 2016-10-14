@@ -169,13 +169,13 @@ app.scope(function (app) {
             createArguments: function (windo) {
                 var app = this,
                     _ = app._,
-                    id = windo[DOCUMENT][__ELID__],
+                    docu = windo[DOCUMENT],
+                    id = docu[__ELID__],
                     documentManagerDocuments = app.directive(DOCUMENT_MANAGER).documents,
-                    documentView = documentManagerDocuments.get(ID, id);
-                if (!documentView) {
-                    app.global.definition(app.VERSION, windo);
-                    documentView = documentManagerDocuments.get(ID, id);
-                }
+                    documentView = documentManagerDocuments.get(ID, id, function () {
+                        app.global.definition(app.VERSION, windo);
+                        return documentManagerDocuments.get(ID, docu[__ELID__]);
+                    });
                 return [app, _, _ && _.factories, documentView, documentView.factories, documentView.$];
             },
             require: function (modulename, handler) {
