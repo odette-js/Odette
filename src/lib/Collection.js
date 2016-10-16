@@ -233,7 +233,7 @@ var COLLECTION = 'Collection',
                     });
                 },
                 slice: function (one, two) {
-                    return new Collection(this.toArray().slice(one, two));
+                    return this[CONSTRUCTOR_KEY](this.toArray().slice(one, two));
                 }
             }, wrap(joinHandlers, function (name) {
                 return function (arg) {

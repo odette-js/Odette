@@ -3687,9 +3687,7 @@ app.scope(function (app) {
                  * @example
                  * manager.length(); // 1
                  */
-                length: function () {
-                    return 1;
-                },
+                length: returns(1),
                 wrap: function (list) {
                     return this.owner.$(list || this);
                 },

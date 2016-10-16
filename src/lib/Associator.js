@@ -21,7 +21,7 @@ app.scope(function (app) {
                     dataArray = current[DATA] = current[DATA] || [];
                 if (objIsObj) {
                     if (obj && current.readData) {
-                        key = obj[__ELID__] = obj[__ELID__] || app.counter();
+                        key = obj[__ELID__] = obj[__ELID__] || app.counter() + HYPHEN + performance.now();
                         if (key) {
                             data = eldata[key] = eldata[key] || {};
                         }
