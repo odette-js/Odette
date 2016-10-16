@@ -3611,7 +3611,7 @@ app.scope(function (app) {
                         list.push(manager.owner.returnsManager(next.value));
                     }
                     if (!stopsBefore && next.value) {
-                        list.unshift(next.value);
+                        list.unshift(manager.owner.returnsManager(next.value));
                     }
                     return manager.wrap(list);
                 },
