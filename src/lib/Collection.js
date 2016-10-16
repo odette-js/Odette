@@ -140,7 +140,7 @@ var COLLECTION = 'Collection',
             },
             recreateSelf = function (fn, ctx) {
                 return function () {
-                    return new this[CONSTRUCTOR_KEY](fn.apply(ctx || this, arguments));
+                    return Collection(fn.apply(ctx || this, arguments));
                 };
             },
             Registry = factories[REGISTRY] = factories.Directive.extend(REGISTRY, {
