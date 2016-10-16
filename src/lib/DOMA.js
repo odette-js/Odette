@@ -4332,11 +4332,11 @@ app.scope(function (app) {
                     attr = api;
                 }
                 return function (string) {
-                    var item, manager = this;
+                    var element, item, manager = this;
                     if (string !== UNDEFINED) {
                         return manager.attr(attr, string);
                     }
-                    return manager.element()[attr];
+                    return (element = manager.element()) && element[attr];
                 };
             }), wrap(videoDirectEvents, triggerEventWrapperManager), wrap(directEvents, function (attr) {
                 return triggerEventWrapperManager(attr);
