@@ -894,9 +894,14 @@ var factories = {},
     },
     unwrapBlock = function (string_) {
         var string = string_.toString(),
-            split = string.split('{');
-        string = split.shift();
-        return (string = split.join('{')).slice(0, string[LENGTH] - 1);
+            split = string.split('{'),
+            first = split[0],
+            fTrimmed = first && first.trim();
+        if (fTrimmed.slice(0, 8) === 'function') {
+            string = split.shift();
+            return (string = split.join('{')).slice(0, string[LENGTH] - 1);
+        }
+        return split.join('{');
     },
     blockWrapper = function (block, context) {
         return 'with(' + (context || 'this') + '){\n' + block + '\n}';
