@@ -3602,13 +3602,16 @@ app.scope(function (app) {
                 elements: function () {
                     return [this.element()];
                 },
-                chain: function (filter) {
+                chain: function (filter, stopsBefore) {
                     var next, list = [],
                         manager = this,
                         filtr = negate(createDomFilter(filter, manager.owner)),
                         pg = parentGenerator(manager.element(), NULL, filtr);
                     while (!(next = pg.next()).done) {
                         list.push(manager.owner.returnsManager(next.value));
+                    }
+                    if (!stopsBefore && next.value) {
+                        list.unshift(next.value);
                     }
                     return manager.wrap(list);
                 },
