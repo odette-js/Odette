@@ -233,7 +233,7 @@ var COLLECTION = 'Collection',
                     });
                 },
                 slice: function (one, two) {
-                    return this[CONSTRUCTOR_KEY](this.toArray().slice(one, two));
+                    return new Collection(this.toArray().slice(one, two));
                 }
             }, wrap(joinHandlers, function (name) {
                 return function (arg) {
@@ -326,14 +326,15 @@ var COLLECTION = 'Collection',
                 eachRight: eachRight,
                 duffRight: duffRight,
                 flatten: flatten,
-                eq: eq,
-                generate: function (next, continues) {
-                    var list = [];
-                    while (continues(current)) {
-                        list.push(next());
-                    }
-                    return this[CONSTRUCTOR_KEY](list);
-                }
+                eq: eq
+                    // ,
+                    // generate: function (next, continues) {
+                    //     var list = [];
+                    //     while (continues(current)) {
+                    //         list.push(next());
+                    //     }
+                    //     return this[CONSTRUCTOR_KEY](list);
+                    // }
             }),
             unwrapper = function () {
                 return this.items;
