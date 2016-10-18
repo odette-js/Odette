@@ -10,7 +10,7 @@ var DependencyManager = Collection.extend('DependencyManager', {
             return this;
         }
         if (!deps.find(function (promise) {
-                if (!promise.is('resolved')) {
+                if (!promise.is('fulfilled')) {
                     return promise;
                 }
             })) {
