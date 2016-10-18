@@ -19,17 +19,17 @@ var DependencyManager = Collection.extend('DependencyManager', {
         }
     },
     depend: function (promises) {
-        var depManager = this,
+        var deps = this,
             registry = deps.directive(REGISTRY);
         Collection(promises).each(function (promise) {
-            if (depManager.add(promise)) {
+            if (deps.add(promise)) {
                 promise.then(registry.get('prebound', 'check', function () {
                     return bind(deps.check, deps);
                 }));
             }
         });
-        depManager.check();
-        return depManager;
+        deps.check();
+        return deps;
     },
     stopDepending: function (promises) {
         var deps = this;
