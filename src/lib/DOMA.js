@@ -1821,7 +1821,7 @@ app.scope(function (app) {
                 owner = manager.owner,
                 doc = owner.element(),
                 view = doc.defaultView;
-            if (view.Event) {
+            if (view.Event && !_.isIE) {
                 evnt = new view.Event(name, (isBoolean(opts) ? {
                     bubbles: opts
                 } : opts) || {});
