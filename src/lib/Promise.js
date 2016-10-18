@@ -132,9 +132,17 @@ var PROMISE = 'Promise',
                  * @lends Promise.prototype
                  */
                 {
-                    constructor: function (one, bool) {
-                        var p = this;
+                    constructor: function (one_, bool) {
+                        var pro, p = this,
+                            one = one_;
                         p.mark(PENDING);
+                        if (isPromise(one) && !Promise.isInstance(one)) {
+                            // native promise
+                            pro = one;
+                            one = function (s, f) {
+                                pro.then(s, f);
+                            };
+                        }
                         one(once(emptiesQueue(p, BOOLEAN_TRUE, BOOLEAN_TRUE)), once(emptiesQueue(p, BOOLEAN_FALSE, BOOLEAN_TRUE)));
                         return p;
                     },

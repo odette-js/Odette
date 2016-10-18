@@ -438,7 +438,7 @@ var factories = {},
     },
     duff = function (values, runner_, context, direction_) {
         var direction, runner, iterations, val, i, leftover, deltaFn;
-        if (!values) {
+        if (!values || !runner_) {
             return;
         }
         i = 0;

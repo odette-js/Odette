@@ -551,9 +551,9 @@ var Deferred = app.block(function (app) {
             return deferred[key].apply(deferred, arguments);
         };
     });
-    app.extend({
-        dependency: Deferred.all
-    });
+    // app.extend({
+    //     dependency: Deferred.all
+    // });
     _.publicize({
         isDeferred: isDeferred
     });
