@@ -1817,8 +1817,28 @@ app.scope(function (app) {
             return returnValue;
         },
         elementEventDispatcher = function (manager, name, opts) {
-            var view, el = manager.element();
-            return el.dispatchEvent && (view = manager.owner.window().element()) && el.dispatchEvent(new view.Event(name, isBoolean(opts) ? {} : opts));
+            var evnt, el = manager.element(),
+                owner = manager.owner,
+                doc = owner.element(),
+                view = doc.defaultView;
+            if (view.Event) {
+                evnt = new view.Event(name, isBoolean(opts) ? {} : opts);
+            } else if (doc.createEvent) {
+                evnt = doc.createEvent('HTMLEvents');
+                evnt.initEvent(name, true, true);
+            } else if (doc.createEventObject) { // IE < 9
+                evnt = doc.createEventObject();
+                evnt.eventType = name;
+            }
+            evnt.name = name;
+            if (el.dispatchEvent) {
+                el.dispatchEvent(evnt);
+            } else if (el.fireEvent && htmlEvents['on' + name]) { // IE < 9
+                el.fireEvent('on' + evnt.eventType, evnt);
+                // can trigger only real event (e.g. 'click')
+            } else if (el[name]) {
+                el[name]();
+            }
         },
         /*
          * missing these
