@@ -1,3 +1,4 @@
+'use strict';
 var UNDEFINED, win = window,
     doc = win.document,
     EMPTY_STRING = '',
