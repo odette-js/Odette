@@ -4334,6 +4334,7 @@ app.scope(function (app) {
                 return function (string) {
                     var element, item, manager = this;
                     if (string !== UNDEFINED) {
+                        // write, so trigger is possible
                         return manager.attr(attr, string);
                     }
                     return (element = manager.element()) && element[attr];

@@ -140,20 +140,22 @@ var COLLECTION = 'Collection',
             },
             recreateSelf = function (fn, ctx) {
                 return function () {
-                    return Collection(fn.apply(ctx || this, arguments));
+                    return this.wrap(fn.apply(ctx || this, arguments));
                 };
             },
             Registry = factories[REGISTRY] = factories.Directive.extend(REGISTRY, {
-                constructor: function () {
+                constructor: function (target) {
+                    this.target = target;
                     this.reset();
                     return this;
                 },
                 get: function (category, id, method) {
-                    var cat = this.register[category];
-                    var item = cat && cat[id];
+                    var registry = this,
+                        cat = registry.register[category],
+                        item = cat && cat[id];
                     if (item === UNDEFINED && method) {
-                        item = method();
-                        this.keep(category, id, item);
+                        item = method(registry, category, id);
+                        registry.keep(category, id, item);
                     }
                     return item;
                 },
@@ -375,6 +377,9 @@ var COLLECTION = 'Collection',
                 },
                 toArray: unwrapper,
                 unwrap: unwrapper,
+                wrap: function (list) {
+                    return Collection(list);
+                },
                 length: function () {
                     return this.toArray()[LENGTH];
                 },
@@ -417,6 +422,7 @@ var COLLECTION = 'Collection',
                     // this allows us to mix collections with regular arguments
                     var base = this.toArray();
                     return base.concat.apply(base, map(arguments, function (arg) {
+                        // auto checks for collection / array combo
                         return Collection(arg).toArray();
                     }));
                 })
