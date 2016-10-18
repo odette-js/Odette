@@ -379,6 +379,7 @@ var deburredLetters = {
     '\u017f': 'ss'
 };
 var deburrLetter = basePropertyOf(deburredLetters);
+var Symbol = window.Symbol;
 var symbolProto = Symbol ? Symbol.prototype : UNDEFINED,
     symbolValueOf = symbolProto ? symbolProto.valueOf : UNDEFINED,
     symbolToString = symbolProto ? symbolProto.toString : UNDEFINED;
