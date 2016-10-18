@@ -2619,7 +2619,7 @@ app.scope(function (app) {
                     var opts = options || {};
                     var manager = this;
                     var docManager = this.document;
-                    var document = docManager.element();
+                    var doc = docManager.element();
                     var events = merge({}, opts.events);
                     var managerFn = opts.managerFn || {};
                     var sup = opts.super;
@@ -2655,7 +2655,7 @@ app.scope(function (app) {
                         autotriggers: autotriggers
                     };
                     var constrktr = registeredConstructors[name] = DomManager.extend(capitalize(camelCase(name)), managerFn || {});
-                    var con = document.registerElement(name, arg2);
+                    var con = doc.registerElement(name, arg2);
                     registeredDomConstructors[name] = con;
                     return constrktr;
                 },
