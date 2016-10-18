@@ -1822,7 +1822,9 @@ app.scope(function (app) {
                 doc = owner.element(),
                 view = doc.defaultView;
             if (view.Event) {
-                evnt = new view.Event(name, isBoolean(opts) ? {} : opts);
+                evnt = new view.Event(name, (isBoolean(opts) ? {
+                    bubbles: opts
+                } : opts) || {});
             } else if (doc.createEvent) {
                 evnt = doc.createEvent('HTMLEvents');
                 evnt.initEvent(name, true, true);
