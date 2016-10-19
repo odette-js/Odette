@@ -2636,7 +2636,7 @@ app.scope(function (app) {
                     delete opts.managerFn;
                     delete managerFn.events;
                     var fn = (sup ? sup[PROTOTYPE] : opts[PROTOTYPE]) || HTMLElement[PROTOTYPE];
-                    var xtends = opts.extends;
+                    var xtends = opts.extends || 'div';
                     var constructor = opts.create;
                     var passedProto = remap(extend(formsCallbacks(opts, {
                         created: 'create',
