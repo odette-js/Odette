@@ -974,7 +974,7 @@ var factories = {},
         return number;
     },
     safeInteger = function (number_) {
-        return baseClamp(number_, -MAX_SAFE_INTEGER, MAX_SAFE_INTEGER);
+        return baseClamp(number_, MIN_SAFE_INTEGER, MAX_SAFE_INTEGER);
     },
     isValidInteger = function (number) {
         return number < MAX_INTEGER && number > -MAX_INTEGER;
