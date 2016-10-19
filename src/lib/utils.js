@@ -186,7 +186,9 @@ var factories = {},
         return thing === thing;
     },
     isFunction = isWrap(FUNCTION),
-    isBoolean = isWrap(BOOLEAN),
+    isBoolean = function (argument) {
+        return argument === BOOLEAN_TRUE || argument === BOOLEAN_FALSE;
+    },
     isInt = function (num) {
         return isNumber(num) && num === Math.round(num);
     },
