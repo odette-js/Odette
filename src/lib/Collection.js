@@ -172,6 +172,9 @@ var COLLECTION = 'Collection',
                 ungroup: function (category) {
                     return this.group(category, {});
                 },
+                ungroups: function (categories) {
+                    return map(toArray(categories), this.ungroup, this);
+                },
                 group: function (category, setter) {
                     var register = this.register;
                     register[category] = setter || register[category] || {};
