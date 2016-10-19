@@ -2663,15 +2663,23 @@ app.scope(function (app) {
                     var script = manager.createElement('script', attrs);
                     // should this be head
                     return Promise(function (success, failure) {
-                        script.on({
-                            load: success,
-                            'error timeout cancel abort': failure
-                        });
                         manager.$('body').item(0).append(script);
-                        script.attr({
-                            src: url || BOOLEAN_FALSE,
-                            innerHTML: inner || BOOLEAN_FALSE
-                        });
+                        var innard = inner || BOOLEAN_FALSE;
+                        var src = url || BOOLEAN_FALSE;
+                        if (src) {
+                            script.src(src);
+                            script.on({
+                                load: success,
+                                'error timeout cancel abort': failure
+                            });
+                        } else {
+                            wraptry(function () {
+                                script.html(innard);
+                                success();
+                            }, function () {
+                                failure();
+                            });
+                        }
                     }, BOOLEAN_TRUE);
                 }
             });
