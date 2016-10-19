@@ -2339,10 +2339,14 @@ app.scope(function (app) {
                         var val = opts[evnt] === BOOLEAN_TRUE;
                         if (val) {
                             autotriggers[evnt] = val;
+                            memo[item + 'Callback'] = (val ? (registerElDefaultHandlers[evnt] ? {
+                                value: registerElDefaultHandlers[evnt]
+                            } : {
+                                value: function (e) {
+                                    return manager.returnsManager(this).dispatchEvent(evnt, e);
+                                }
+                            }) : (opts[evnt] || opts[item + 'Callback']));
                         }
-                        memo[item + 'Callback'] = (val ? (registerElDefaultHandlers[evnt] ? registerElDefaultHandlers[evnt] : function (e) {
-                            return manager.returnsManager(this).dispatchEvent(evnt, e);
-                        }) : (opts[evnt] || opts[item + 'Callback']));
                     }, {});
                 },
                 remap = function (options) {
@@ -2616,13 +2620,13 @@ app.scope(function (app) {
                 //     return registeredConstructors[name];
                 // },
                 registerElement: function (name, options) {
-                    var opts = options || {};
+                    var xtends, opts = options || {};
                     var manager = this;
                     var docManager = this.document;
                     var doc = docManager.element();
                     var events = merge({}, opts.events);
                     var managerFn = opts.managerFn || {};
-                    var sup = opts.super;
+                    // var sup = opts.super;
                     var autotriggers = {};
                     if (registeredElements[name]) {
                         if (registeredElements[name] === BOOLEAN_TRUE) {
@@ -2634,21 +2638,23 @@ app.scope(function (app) {
                         registeredElements[name] = xtends ? registeredElements[xtends] : xtends;
                     }
                     delete opts.managerFn;
-                    delete managerFn.events;
-                    var fn = (sup ? sup[PROTOTYPE] : opts[PROTOTYPE]) || HTMLElement[PROTOTYPE];
-                    var xtends = opts.extends || 'div';
+                    // delete managerFn.events;
+                    managerFn.events = events;
+                    var sup = opts.super || HTMLElement;
                     var constructor = opts.create;
-                    var passedProto = remap(extend(formsCallbacks(opts, {
+                    var newproto = Object.create(sup[PROTOTYPE], remap(extend(newproto, opts.fn || {}, formsCallbacks(opts, {
                         created: 'create',
                         attached: 'attach',
                         detached: 'detach',
                         attributeChanged: 'attributeChange'
-                    }, autotriggers), opts.fn || {}));
-                    passedProto.fn = passedProto;
+                    }, autotriggers))));
+                    newproto.fn = newproto;
                     var arg2 = {
-                        extends: xtends,
-                        prototype: Object.create(fn, passedProto)
+                        prototype: newproto
                     };
+                    if (xtends) {
+                        arg2.extends = opts.extends;
+                    }
                     // constructor
                     docManager.registeredElementOptions[name] = {
                         events: events,
