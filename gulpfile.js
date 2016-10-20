@@ -32,7 +32,7 @@ var content = ['browserify', 'distribute'],
     library = setup.concat(modules, end),
     auto_app = ['odette', 'application'],
     // just to make a new one
-    specModules = specs.concat(auto_app),
+    specModules = ['setup'].concat(specs, auto_app, ['teardown']),
     extraModules = 'Socket Router LocalStorage NoSock'.split(' '),
     framedModules = 'index'.split(' '),
     makeSpecPath = function (name) {

@@ -1,5 +1,4 @@
 application.scope().run(window, function (app, _, factories, documentView, scopedFactories, $) {
-    var test = _.test;
     test.describe('Linguistics', function () {
         var model, counter;
         test.beforeEach(function () {
@@ -24,7 +23,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
             test.expect(counter).toBe(1);
             model.set('awe', 4);
             test.expect(counter).toBe(0);
-        });
+        }, 4);
         test.it('will not apply handlers until it is told to or an event automatically triggers it', function () {
             var linguistics = model.when('this').is(true) //
                 .and('that').is(false) //
@@ -47,6 +46,6 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 that: false
             });
             test.expect(counter).toBe(2);
-        });
+        }, 7);
     });
 });

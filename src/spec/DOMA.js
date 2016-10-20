@@ -1,6 +1,6 @@
 application.scope().run(window, function (app, _, factories, documentView, scopedFactories, $) {
     var elementData = _.associator,
-        test = _.test;
+        divsLength = 5;
     test.describe('DOMA', function () {
         var divs, count, $empty = $(),
             $win = $(window),
@@ -41,7 +41,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
         test.it('is essentially a collection', function () {
             test.expect(_.isInstance($empty, factories.DOMA)).toEqual(true);
             test.expect(_.isInstance($empty, factories.Collection)).toEqual(true);
-        });
+        }, 2);
         test.it('it knows it\'s own client rect', function () {
             var div = divs.first();
             var rect = div.element().getBoundingClientRect();
@@ -53,7 +53,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 left: rect.left,
                 top: rect.top
             });
-        });
+        }, 1);
         test.it('can show and hide elements', function () {
             test.expect(divs.hide().map(function (manager) {
                 var el = manager.element();
@@ -71,19 +71,19 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                     return el.style.display;
                 }
             }).join('')).toEqual('');
-        });
+        }, 2);
         test.it('can attach dom elements', function () {
             var div = divs.eq();
             div.append(divs.item(1));
             test.expect(divs.children().item(0)).toEqual(divs.item(1));
-        });
+        }, 1);
         test.it('can remove dom elements', function () {
             var div = divs.eq();
             div.append(divs.item(1));
             test.expect(divs.children().item(0)).toEqual(divs.item(1));
             div.children().remove();
             test.expect(div.children().length()).toEqual(0);
-        });
+        }, 2);
         test.describe('except it has some methods that are highly pertinant to DOM manipulation... ergo: DOMA', function () {
             // test.it('can check if its items are windows', function () {
             //     test.expect($win.is('window')).toEqual(true);
@@ -100,7 +100,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 test.expect($doc.allElements()).toEqual(false);
                 test.expect($body.allElements()).toEqual(true);
                 test.expect($('div').allElements()).toEqual(true);
-            });
+            }, 4);
             // test.it('can check if its items are document fragments', function () {
             //     var frag = document.createDocumentFragment();
             //     frag.appendChild(document.createElement('div'));
@@ -115,7 +115,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
             test.it('by query string matching', function () {
                 var newDivs = divs.filter('.two');
                 test.expect(newDivs.length()).toEqual(2);
-            });
+            }, 1);
             test.it('by filtering against a function', function () {
                 var newDivs = divs.filter(function (item, idx) {
                     return ((idx % 3) - 1) === 0;
@@ -123,7 +123,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 test.expect(newDivs.length()).toEqual(2);
                 test.expect(newDivs.item()).toEqual(divs.item(1));
                 test.expect(newDivs.item(1)).toEqual(divs.item(4));
-            });
+            }, 3);
             // test.it('by passing in an object', function () {
             //     var newDivs = divs.filter({
             //         className: 'one not'
@@ -132,10 +132,10 @@ application.scope().run(window, function (app, _, factories, documentView, scope
             // });
             test.it('can also get the first item', function () {
                 test.expect(divs.first()).toEqual(divs.item(0));
-            });
+            }, 1);
             test.it('and the last element in the list', function () {
                 test.expect(divs.last()).toEqual(divs.item(divs.length() - 1));
-            });
+            }, 1);
         });
         test.describe('it can find it\'s children', function () {
             test.it('by calling the children method', function () {
@@ -159,7 +159,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 test.expect(kids.toArray()).toEqual(divs.children().filter('.span-2').toArray());
                 test.expect(kids.length()).toEqual(2);
                 test.expect(kids.element() === kids.item(1)).toEqual(false);
-            });
+            }, (divsLength * 2) + 5);
             test.it('by querying the dom elements', function () {
                 divs.duff(function (div, idx) {
                     div.element().innerHTML = '<span></span><img/>';
@@ -169,7 +169,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 kids.duff(function (kid, idx) {
                     test.expect(kid.element().tagName).toEqual('IMG');
                 });
-            });
+            }, 6);
         });
         test.describe('it can also find it\'s parents', function () {
             test.it('either by counting up', function () {
@@ -177,13 +177,13 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                     $end = $('.tree'),
                     end = $start.parent(2);
                 test.expect(end.first().element()).toEqual($end.first().element());
-            });
+            }, 1);
             test.it('or by finding via selector', function () {
                 var $start = $('.leaves'),
                     $end = $('.tree'),
                     end = $start.parent('.tree');
                 test.expect(end.first().element()).toEqual($end.first().element());
-            });
+            }, 1);
             test.it('or by passing a function', function () {
                 var $start = $('.leaves'),
                     end = $start.parent(function (el) {
@@ -191,18 +191,18 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                         return [parent, parent && parent.tagName === 'BODY'];
                     });
                 test.expect(end.item(0).element()).toEqual(document.body);
-            });
+            }, 1);
             test.describe('or by passing a keyword', function () {
                 test.it('like document', function () {
                     var $start = $('.leaves'),
                         end = $start.parent('document');
                     test.expect(end.first().element()).toEqual(document);
-                });
+                }, 1);
                 test.it('or window', function () {
                     var $start = $('.leaves'),
                         end = $start.parent('window');
                     test.expect(end.first().element()).toEqual(window);
-                });
+                }, 1);
             });
         });
         test.describe('all of this traversing can be undone', function () {
@@ -212,7 +212,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 $next = $next.children();
                 $next = $next.end();
                 test.expect($next === $start).toEqual(true);
-            });
+            }, 1);
         });
         test.describe('the domm is also special because it abstracts event listeners for you', function () {
             test.describe('can add handlers', function () {
@@ -221,7 +221,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                     test.expect(count).toEqual(0);
                     divs.click();
                     test.expect(count).toEqual(5);
-                });
+                }, 2);
                 test.it('many at a time', function () {
                     divs.on('click mouseover mouseout', handler);
                     test.expect(count).toEqual(0);
@@ -229,7 +229,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                     divs.dispatchEvent('mouseover');
                     divs.dispatchEvent('mouseout');
                     test.expect(count).toEqual(15);
-                });
+                }, 2);
             });
         });
         test.describe('the domm is also special because it abstracts event listeners for you', function () {
@@ -239,7 +239,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                     test.expect(count).toEqual(0);
                     divs.dispatchEvent('click');
                     test.expect(count).toEqual(5);
-                });
+                }, 2);
                 test.it('many at a time', function () {
                     divs.on('click mouseover mouseout', handler);
                     test.expect(count).toEqual(0);
@@ -247,7 +247,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                     divs.dispatchEvent('mouseover');
                     divs.dispatchEvent('mouseout');
                     test.expect(count).toEqual(15);
-                });
+                }, 2);
             });
             test.describe('also capture handlers', function () {
                 test.it('one at a time', function () {
@@ -255,7 +255,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                     test.expect(count).toEqual(0);
                     divs.dispatchEvent('click', {}, true);
                     test.expect(count).toEqual(5);
-                });
+                }, 2);
                 test.it('many at a time', function () {
                     divs.on('click mouseover mouseout', handler, true);
                     test.expect(count).toEqual(0);
@@ -263,7 +263,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                     divs.dispatchEvent('mouseover', {}, true);
                     divs.dispatchEvent('mouseout', {}, true);
                     test.expect(count).toEqual(15);
-                });
+                }, 2);
             });
             test.it('will only add a method to the queue once. if a duplicate is passed in, it will be ignored (just like the browser implementation)', function () {
                 divs.on('click', handler).on('click', handler);
@@ -272,7 +272,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 test.expect(count).toEqual(5);
                 divs.dispatchEvent('click');
                 test.expect(count).toEqual(10);
-            });
+            }, 3);
             test.it('once wrappers can also be used with the once method and they can be added the same way as once', function () {
                 divs.once('click', handler);
                 test.expect(count).toEqual(0);
@@ -280,7 +280,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 test.expect(count).toEqual(5);
                 divs.dispatchEvent('click');
                 test.expect(count).toEqual(5);
-            });
+            }, 3);
             test.it('be careful with the once function because they can be added multiple times to the queue, since they use a proxy function, like the one available at _.once', function () {
                 divs.once('click', handler);
                 test.expect(count).toEqual(0);
@@ -288,7 +288,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 test.expect(count).toEqual(5);
                 divs.dispatchEvent('click');
                 test.expect(count).toEqual(5);
-            });
+            }, 3);
         });
         test.describe('the each function is special because', function () {
             test.it('it wraps each element in a DOMA object before passing it through your iterator', function () {
@@ -297,7 +297,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                     test.expect(factories.DomManager.isInstance(el)).toEqual(true);
                     test.expect(el.element()).toBe(divs.item(idx).element());
                 });
-            });
+            }, divsLength * 3);
             test.it('where the duff and forEach function just gives you the element at each index, just like a collection', function () {
                 divs.duff(function (el, idx) {
                     test.expect(_.isInstance(el, $)).toEqual(false);
@@ -305,7 +305,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 divs.forEach(function (el, idx) {
                     test.expect(_.isInstance(el, $)).toEqual(false);
                 });
-            });
+            }, divsLength * 2);
         });
         test.describe('adding and removing classes is done by string checking instead of the classList to invoke only one reflow', function () {
             test.it('you can use addClass', function () {
@@ -316,7 +316,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 divs.each(function (div, idx) {
                     test.expect(div.hasClass('three')).toEqual(true);
                 });
-            });
+            }, 10);
             test.it('you can use removeClass', function () {
                 divs.each(function (div, idx) {
                     test.expect(div.hasClass('three')).toEqual(false);
@@ -324,11 +324,11 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 test.expect(divs.hasClass('three')).toEqual(false);
                 divs.addClass('three');
                 test.expect(divs.hasClass('three')).toEqual(true);
-            });
+            }, 7);
             test.it('you can use hasClass to check if all of the elements has a particular class', function () {
                 test.expect(divs.hasClass('two')).toEqual(false);
                 test.expect(divs.hasClass('one')).toEqual(true);
-            });
+            }, 2);
             test.it('you can use toggleClass swap classes depending on whether or not they exist on each element', function () {
                 divs.each(function (div, idx) {
                     test.expect(div.hasClass('one')).toEqual(true);
@@ -337,7 +337,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 divs.each(function (div, idx) {
                     test.expect(div.hasClass('one')).toEqual(false);
                 });
-            });
+            }, divsLength * 2);
             test.it('it will also do this for individual elements', function () {
                 var list = [],
                     unique = [];
@@ -349,9 +349,9 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 divs.toggleClass('two');
                 divs.each(function (div, idx) {
                     test.expect(div.hasClass('two')).toEqual(!list[idx]);
-                });
+                }, divsLength + 1);
                 test.expect(unique.length > 1).toEqual(true);
-            });
+            }, divsLength + 1);
             test.it('you can also use changeClass as a shorthand of removeClass and addClass', function () {
                 divs.changeClass('one not two', 'three');
                 divs.each(function (div, idx) {
@@ -360,7 +360,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                     test.expect(div.hasClass('not')).toEqual(false);
                     test.expect(div.hasClass('three')).toEqual(true);
                 });
-            });
+            }, divsLength * 4);
         });
         test.describe('there is also a data attributes interface', function () {
             test.it('where you can add', function () {
@@ -376,7 +376,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                     test.expect(div.element().getAttribute('data-one')).toEqual('one');
                     test.expect(div.element().getAttribute('data-two')).toEqual('two');
                 });
-            });
+            }, divsLength * 4);
             test.it('remove', function () {
                 divs.data({
                     one: 'one',
@@ -394,7 +394,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                     test.expect(div.element().getAttribute('data-one')).toEqual(null);
                     test.expect(div.element().getAttribute('data-two')).toEqual(null);
                 });
-            });
+            }, divsLength * 4);
             test.it('and update data attributes', function () {
                 divs.data({
                     one: 'one',
@@ -404,7 +404,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                     test.expect(div.element().getAttribute('data-one')).toEqual('one');
                     test.expect(div.element().getAttribute('data-two')).toEqual('two');
                 });
-            });
+            }, divsLength * 2);
         });
         test.describe('it can also manipulate elements in other ways', function () {
             test.it('like by manipulating their attributes', function () {
@@ -417,7 +417,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 divs.each(function (div, idx) {
                     test.expect(div.attr('tabindex')).toEqual(-1);
                 });
-            });
+            }, divsLength * 2);
             test.it('or by manipulating their properties', function () {
                 divs.duff(function (div, idx) {
                     test.expect(div.element().align).toEqual('');
@@ -428,7 +428,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 divs.each(function (div, idx) {
                     test.expect(div.prop('align')).toEqual('left');
                 });
-            });
+            }, divsLength * 2);
         });
         test.describe('can have specialized elements', function () {
             test.describe('has lifecycle events', function () {
@@ -438,19 +438,19 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                     test.expect(count).toEqual(0);
                     $con.append(divs);
                     test.expect(count).toEqual(5);
-                });
+                }, 2);
                 test.it('and detach', function () {
                     divs.once('detach', handler);
                     test.expect(count).toEqual(0);
                     divs.remove();
                     test.expect(count).toEqual(5);
-                });
+                }, 2);
                 test.it('and attribute change', function () {
                     divs.once('attributeChange:data-here', handler);
                     test.expect(count).toEqual(0);
                     divs.data('here', 1);
                     test.expect(count).toEqual(5);
-                });
+                }, 2);
             });
             test.describe('there are also special handlers', function () {
                 test.it('like create', function (done) {
@@ -464,9 +464,9 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                             }
                         }
                     });
-                    // test.expect(count).toEqual(0);
+                    test.expect(count).toEqual(0);
                     $.createElement('test-zero');
-                });
+                }, 2);
                 test.it('and destroy', function () {
                     $.registerElement('test-one', {
                         events: {
@@ -477,7 +477,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                     test.expect(count).toEqual(0);
                     div.destroy();
                     test.expect(count).toEqual(1);
-                });
+                }, 2);
                 test.it('understands how to handle attach and detach', function (done) {
                     $.registerElement('tester-time', {
                         attach: true,
@@ -488,9 +488,9 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                                 handler();
                                 test.expect(count).toBe(1);
                                 var el = this;
-                                setTimeout(function () {
-                                    $.returnsManager(document.body).append(el);
-                                });
+                                // setTimeout(function () {
+                                $.returnsManager(document.body).append(el);
+                                // });
                             },
                             attach: function () {
                                 handler();
@@ -507,7 +507,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                     test.expect(count).toBe(0);
                     $.createElement('tester-time');
                     // test.expect(count).toBe(3);
-                });
+                }, 4);
                 test.it('can handle attribute changes', function () {
                     $.registerElement('tester-timer', {
                         attributeChange: true,
@@ -521,16 +521,16 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                         here: 'there'
                     });
                     test.expect(count).toBe(1);
-                });
+                }, 2);
             });
         });
-        test.it('tags cannot be created without being registered first', function () {
-            test.expect($.registeredElements['unregistered-test']).toEqual(undefined);
-            $.registerElement('unregistered-test');
-            test.expect(function () {
-                $.createElement('unregistered-test');
-            }).not.toThrow();
-        });
+        // test.it('tags cannot be created without being registered first', function () {
+        //     test.expect($.registeredElements['unregistered-test']).toEqual(undefined);
+        //     $.registerElement('unregistered-test');
+        //     test.expect(function () {
+        //         $.createElement('unregistered-test');
+        //     }).not.toThrow();
+        // }, 2);
         test.it('tags are automatically queried for and registered', function () {
             // var nodiv = document.createElement('div');
             // div.id = 'datahere';
@@ -539,21 +539,21 @@ application.scope().run(window, function (app, _, factories, documentView, scope
             test.expect($.document.data.get(document.getElementById('nodatahere')).DomManager).toEqual(void 0);
             // this one has an is property so it will be queried for automatically
             test.expect($.document.data.get(document.getElementById('datahere')).DomManager).not.toEqual(void 0);
-        });
+        }, 2);
         test.it('can use direct parent selectors', function () {
             test.expect($('.branch').eq(0).$('> .leaves').length()).toEqual(5);
-        });
+        }, 1);
         test.it('can traverse horizontally for it\'s siblings', function () {
             var $branch = $('.branch');
             var $item2 = $branch.item(2);
             test.expect(factories.DomManager.isInstance($item2)).toBe(true);
             test.expect($item2.prev()).toEqual($branch.item(1));
-        });
+        }, 2);
         test.it('establishes dom managers immediately after an element\'s html is changed', function () {
             var $tree = $.createElement('div');
             $tree.html('<div><span is></span></div>');
             test.expect($tree.element().querySelectorAll('span')[0].__elid__).not.toEqual(void 0);
-        });
+        }, 1);
         var template1 = function (data) {
             var listItems = _.map(data && data.points, function (item, index) {
                 return [item.tag, {
@@ -617,13 +617,13 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 });
                 applyMutations(diff.mutations);
                 test.expect($root.html()).not.toEqual('');
-            });
+            }, 5);
             test.it('collects keys that the template marks using index 3 of each child', function () {
                 var diff = $.nodeComparison($root.element(), templatized);
                 _.each(diff.keys, function (element, key) {
                     test.expect(element.tagName.toLowerCase()).toEqual(basicTemplateKeyTagNames[key] || 'li');
                 });
-            });
+            }, 4);
             test.it('updates attributes when needed', function () {
                 var attributes = {};
                 var diff = $.nodeComparison($root.element(), templatized);
@@ -633,7 +633,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 attrs = $root.attributes();
                 delete attrs.is;
                 test.expect(attrs).toEqual(templatized[1]);
-            });
+            }, 2);
             test.it('removes nodes when needed', function () {
                 var diff = $.nodeComparison($root.element(), templatized);
                 applyMutations(diff.mutations);
@@ -648,7 +648,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 var $newChildren = $root.$('ul.container').children();
                 test.expect($first.element()).toBe($newChildren.first().element());
                 test.expect($newChildren.length()).toEqual(1);
-            });
+            }, 2);
             test.it('removes nodes even when they\'re at the front', function () {
                 var diff = $.nodeComparison($root.element(), templatized);
                 applyMutations(diff.mutations);
@@ -665,7 +665,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 test.expect($first.element()).not.toBe(void 0);
                 test.expect($first.element()).not.toBe($newChildren.first().element());
                 test.expect($newChildren.length()).toEqual(1);
-            });
+            }, 3);
             test.it('and inserts them at the front when needed', function () {
                 templatized = makeBasicTemplate([{
                     tag: 'li',
@@ -682,7 +682,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 var $newChildren = $root.$('ul.container').children();
                 test.expect($first.element()).not.toBe($newChildren.first().element());
                 test.expect($newChildren.length()).toEqual(2);
-            });
+            }, 2);
             test.it('can rearrange elements as needed', function () {
                 templatized = makeBasicTemplate([{
                     tag: 'li',
@@ -731,7 +731,7 @@ application.scope().run(window, function (app, _, factories, documentView, scope
                 test.expect(list[0]).toBe($newChildren.element(2));
                 test.expect(list[2]).toBe($newChildren.element(3));
                 test.expect($newChildren.length()).toEqual(4);
-            });
+            }, 5);
         });
     });
 });

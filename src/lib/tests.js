@@ -1,6 +1,8 @@
-app.scope(function (app) {
-    var testisrunning,
-        expectationRunning, current, expectationCount, pollerTimeout, allIts, describes, successfulIts, failedIts, stack, queue, allExpectations, successful, failures, successfulExpectations, failedExpectations, globalBeforeEachStack, globalAfterEachStack, currentItFocus, failedTests = 0,
+app.defineDirective('Tests', (function (app) {
+    var id = 0,
+        NULL = null,
+        BOOLEAN_TRUE = !0,
+        BOOLEAN_FALSE = !1,
         EXPECTED = 'expected',
         SPACE_NOT = ' not',
         TO_EQUAL = ' to equal ',
@@ -8,290 +10,290 @@ app.scope(function (app) {
         AN_ERROR = ' an error',
         TO_BE_THROWN = ' to be thrown',
         TO_BE_STRICTLY_EQUAL_TO_STRING = ' to be strictly equal to ',
-        errIfFalse = function (handler, makemessage, execute) {
-            return function (arg) {
-                var result, expectation = {};
-                if (execute) {
-                    current = current();
+        checkFinished = function (states, fn) {
+            return function () {
+                if (!states || states.finished) {
+                    throw new Error('Testing is done! No more tests can be defined.');
                 }
-                result = handler(current, arg);
+                return fn.apply(this, arguments);
+            };
+        },
+        afterEach = function (aeQ) {
+            return function (callback) {
+                aeQ[aeQ.length - 1].push(callback);
+            };
+        },
+        beforeEach = function (beQ) {
+            return function (callback) {
+                beQ[beQ.length - 1].push(callback);
+            };
+        },
+        errIfFalse = function (it, finishedExpecting, retreiver, handler, makemessage, execute) {
+            return function (arg) {
+                var result, expectation = {},
+                    retreived = retreiver(),
+                    tiedTo = it();
+                if (execute) {
+                    retreived = retreived();
+                }
+                result = handler(retreived, arg);
+                finishedExpecting();
                 if (result !== BOOLEAN_TRUE && result !== BOOLEAN_FALSE) {
                     exception('expectation results from the maker method must be of type boolean.');
                 }
                 if (result) {
-                    successfulExpectations.push(expectation);
                     expectation.success = BOOLEAN_TRUE;
                 } else {
-                    ++failedTests;
-                    expectation = new Error(makemessage.call(this, current, arg));
+                    expectation = new Error(makemessage.call(this, retreived, arg));
                     expectation.message = expectation.toString();
                     expectation.success = BOOLEAN_FALSE;
-                    failedExpectations.push(expectation);
+                    err(expectation);
                 }
-                allExpectations.push(expectation);
-                expectation.tiedTo = currentItFocus;
-                expectationRunning = BOOLEAN_FALSE;
+                tiedTo.expectations.push(expectation);
+                expectation.tiedTo = tiedTo;
                 return result;
             };
         },
-        expectationsHash = {
-            not: {}
-        },
-        expect = function (start) {
-            if (expectationRunning) {
-                return exception('expectations cannot be nested or be running at the same time');
-            }
-            expectationRunning = BOOLEAN_TRUE;
-            current = start;
-            return expectationsHash;
-        },
-        maker = expect.maker = function (where, test, positive, negative, execute) {
-            expectationsHash[where] = errIfFalse(test, positive, execute);
-            expectationsHash.not[where] = errIfFalse(negate(test), negative, execute);
-        },
-        internalToThrowResult = maker('toThrow', function (handler) {
-            var errRan = BOOLEAN_FALSE;
-            return wraptry(handler, function () {
-                errRan = BOOLEAN_TRUE;
-            }, function () {
-                return errRan;
-            });
-        }, function () {
-            return EXPECTED + AN_ERROR + TO_BE_THROWN;
-        }, function () {
-            return EXPECTED + AN_ERROR + SPACE_NOT + TO_BE_THROWN;
-        }),
-        internalToBeResult = maker('toBe', function (current, comparison) {
-            return current === comparison;
-        }, function (current, comparison) {
-            return EXPECTED + SPACE + stringify(current) + TO_BE_STRICTLY_EQUAL_TO_STRING + stringify(comparison);
-        }, function (current, comparison) {
-            return EXPECTED + SPACE + stringify(current) + SPACE_NOT + TO_BE_STRICTLY_EQUAL_TO_STRING + stringify(comparison);
-        }),
-        internalToEqualResult = maker('toEqual', function (current, comparison) {
-            return isEqual(current, comparison);
-        }, function (current, comparison) {
-            return EXPECTED + SPACE + stringify(current) + TO_EQUAL + stringify(comparison);
-        }, function (current, comparison) {
-            return EXPECTED + SPACE + stringify(current) + SPACE_NOT + TO_EQUAL + stringify(comparison);
-        }),
-        internalToEvaluateTo = maker('toEvaluateTo', function (current, comparison) {
-            return isEqual(current, comparison);
-        }, function (current, comparison) {
-            return EXPECTED + SPACE + 'function' + TO_EVALUATE_TO + stringify(comparison);
-        }, function (current, comparison) {
-            return EXPECTED + SPACE + 'function not' + TO_EVALUATE_TO + stringify(comparison);
-        }, BOOLEAN_TRUE),
-        errHandler = function (expectation) {
-            return function (err) {
-                expectation.erred = err;
-                console.error(err);
-            };
-        },
-        executedone = function (expectation) {
-            var queued;
-            expectation.endTime = _.performance.now();
-            stack.pop();
-            if (failedTests || expectation.erred) {
-                failedIts.push(expectation);
-                expectation.deferred.reject(expectation.err);
-            } else {
-                successfulIts.push(expectation);
-                expectation.deferred.fulfill();
-            }
-            failedTests = 0;
-            runningEach(expectation.afterStack);
-            testisrunning = BOOLEAN_FALSE;
-            // deferred.resolveAs();
-            if (queue[0]) {
-                queued = queue.shift();
-                clearTimeout(queued.runId);
-                setup(queued);
-            }
-            setupPoller();
-        },
-        describe = function (string, handler) {
-            var resolution = Deferred();
-            describes.push(resolution);
-            stack.push(string);
-            globalBeforeEachStack.push([]);
-            globalAfterEachStack.push([]);
-            wraptry(handler, function (e) {
-                resolution.reject(e);
-            }, function () {
-                globalAfterEachStack.pop();
-                globalBeforeEachStack.pop();
-                stack.pop();
-                resolution.resolve();
-            });
-            return resolution;
-        },
-        setup = function (expectation) {
-            testisrunning = BOOLEAN_TRUE;
-            expectation.runId = setTimeout(function () {
-                var errThat, doThis, errThis, err, finallyThis,
-                    current = expectation.current.slice(0);
-                currentItFocus = expectation;
-                testisrunning = BOOLEAN_TRUE;
-                runningEach(expectation.beforeStack);
-                errThis = errHandler(expectation);
-                if (expectation.handler[LENGTH] === 1) {
-                    err = new Error();
-                    expectation.timeoutId = setTimeout(function () {
-                        console.error('timeout:\n' + current.join('\n'));
-                        errThat(err);
-                        executedone(expectation);
-                    }, 5000);
-                    doThis = function () {
-                        expectation.handler(function () {
-                            clearTimeout(expectation.timeoutId);
-                            executedone(expectation);
-                        });
-                    };
-                    errThat = errThis;
-                    errThis = function (e) {
-                        errThat(e);
-                        executedone(expectation);
-                    };
-                    finallyThis = noop;
-                } else {
-                    doThis = expectation.handler;
-                    finallyThis = function () {
-                        executedone(expectation);
-                    };
-                }
-                expectation.startTime = _.performance.now();
-                wraptry(doThis, errThis, finallyThis);
-            });
-        },
-        it = function (string, handler) {
-            var copy, expectation;
-            stack.push(string);
-            copy = stack.slice(0);
-            stack.pop();
-            expectation = {
-                string: string,
-                handler: handler,
-                current: copy,
-                afterStack: globalAfterEachStack.slice(0),
-                beforeStack: globalBeforeEachStack.slice(0),
-                deferred: Deferred()
-            };
-            allIts.push(expectation);
-            if (testisrunning) {
-                queue.push(expectation);
-            } else {
-                setup(expectation);
-            }
-            return expectation.deferred;
-        },
-        runningEach = function (globalStack) {
-            var i, j, itemized;
-            for (i = 0; i < globalStack[LENGTH]; i++) {
-                itemized = globalStack[i];
-                for (j = 0; j < itemized[LENGTH]; j++) {
-                    itemized[j]();
-                }
-            }
-        },
-        beforeEach = function (handler) {
-            globalBeforeEachStack[globalBeforeEachStack[LENGTH] - 1].push(handler);
-        },
-        afterEach = function (handler) {
-            globalAfterEachStack[globalAfterEachStack[LENGTH] - 1].push(handler);
-        },
-        resetTests = function () {
-            pollerTimeout = UNDEFINED;
-            _.each(describes, function (deferred) {
-                deferred.resolve();
-            });
-            expectationCount = 0;
-            describes = [];
-            allIts = [];
-            successfulIts = [];
-            failedIts = [];
-            stack = [];
-            queue = [];
-            allExpectations = [];
-            successful = [];
-            failures = [];
-            successfulExpectations = [];
-            failedExpectations = [];
-            globalBeforeEachStack = [];
-            globalAfterEachStack = [];
-            testisrunning = BOOLEAN_FALSE;
-            expectationRunning = BOOLEAN_FALSE;
-        },
-        makesItName = function (current, delimiter_) {
-            var target, string, delimiter = delimiter_ || '\n',
-                stringList = current.slice(0);
-            while (stringList.length) {
-                target = stringList.shift();
-                if (string) {
-                    string = string + delimiter + target;
-                } else {
-                    string = target;
-                }
-                delimiter = delimiter + '    ';
-            }
-            return string;
-        },
-        createResults = function (duration) {
+        testy = function () {
+            var cached, focused, expectationsHash = {
+                    not: {}
+                },
+                retreiver = function () {
+                    return cached;
+                },
+                itRetreiver = function () {
+                    return focused;
+                },
+                finishedExpecting = function () {
+                    focusing = BOOLEAN_FALSE;
+                },
+                focusing,
+                currentExpectation,
+                maker = function (where, test, positive, negative, execute) {
+                    expectationsHash[where] = errIfFalse(itRetreiver, finishedExpecting, retreiver, test, positive, execute);
+                    expectationsHash.not[where] = errIfFalse(itRetreiver, finishedExpecting, retreiver, negate(test), negative, execute);
+                };
             return {
-                passed: successfulExpectations[LENGTH],
-                failed: failedExpectations[LENGTH],
-                total: allExpectations[LENGTH],
-                duration: duration,
-                tests: map(allExpectations, function (expectation) {
-                    var target, tiedIt = expectation.tiedTo,
-                        string = makesItName(tiedIt.current);
-                    return {
-                        name: expectation.success ? string : string + '\n',
-                        duration: 0,
-                        result: expectation.success,
-                        message: expectation.message
-                    };
-                })
+                group: expectationsHash,
+                maker: maker,
+                focus: function (it) {
+                    currentExpectation = NULL;
+                    focused = it;
+                },
+                expect: function (anything) {
+                    if (focusing) {
+                        throw new Error('Expectations cannot be nested');
+                    }
+                    focusing = BOOLEAN_TRUE;
+                    cached = anything;
+                    return expectationsHash;
+                }
             };
         },
-        setupPoller = function () {
-            pollerTimeout = pollerTimeout === void 0 ? setTimeout(function loops() {
-                var theIt, string, i = 0,
-                    totalTime = 0;
-                if (!testisrunning) {
-                    for (; i < allIts[LENGTH]; i++) {
-                        theIt = allIts[i];
-                        totalTime += (theIt.endTime - theIt.startTime);
-                    }
-                    if (failedExpectations[LENGTH]) {
-                        console.log('failed');
-                        duff(failedExpectations, function (obj) {
-                            console.log(obj);
-                        });
-                    }
-                    string = successfulExpectations[LENGTH] + ' successful expectations\n' + failedExpectations[LENGTH] + ' failed expectations\n' + allExpectations[LENGTH] + ' expectations ran\n' + successfulIts[LENGTH] + ' out of ' + allIts[LENGTH] + ' tests passed\nin ' + totalTime + 'ms';
-                    results = createResults(totalTime);
-                    resetTests();
-                    eachCallBound(afters, results);
-                    console.log(string, results);
-                } else {
-                    pollerTimeout = setTimeout(loops, 500);
-                }
-            }, 100) : pollerTimeout;
+        describe = function (descriptions, beQ, aeQ) {
+            function add(description) {
+                descriptions.push(description);
+                aeQ.push([]);
+                beQ.push([]);
+            }
+
+            function remove() {
+                descriptions.pop();
+                aeQ.pop();
+                beQ.pop();
+            }
+            return function (description, callback) {
+                add(description);
+                var result = callback.apply(this, arguments);
+                remove();
+                return result;
+            };
         },
-        afters = [],
-        finished = function (fn) {
-            afters.push(fn);
+        it = function (its, descriptions, afterEach, beforeEach) {
+            return function (name, callback, counter) {
+                its.push({
+                    name: descriptions.concat([name]),
+                    callback: callback,
+                    expecting: counter || 0,
+                    before: beforeEach.slice(0),
+                    after: afterEach.slice(0),
+                    delta: 0,
+                    expectations: []
+                });
+            };
+        },
+        finished = function (fin) {
+            return function (callback) {
+                fin.push(callback);
+            };
+        },
+        wraptries = function (one, two, three) {
+            var res, er;
+            try {
+                res = one();
+            } catch (e) {
+                er = e;
+                err(e);
+                if (two) {
+                    res = two(er, res);
+                }
+            } finally {
+                if (three) {
+                    res = three(er, res);
+                }
+            }
+            return res;
+        },
+        time = function () {
+            return performance.now();
+        },
+        runList = function (list) {
+            var cancels, items = [].concat.apply([], list);
+            wraptries(function () {
+                var item, i;
+                for (i = 0; i < items.length; i++) {
+                    item = items[i];
+                    item();
+                }
+            }, function (e) {
+                cancels = e;
+            });
+            return cancels;
+        },
+        err = function (item) {
+            return console.error ? console.error(item) : console.log(item);
+        },
+        makeName = function (list) {
+            return list.join('\n');
+        },
+        run = function (it, settings, finished) {
+            var startTime = 0,
+                three = function () {
+                    it.delta = time() - startTime;
+                    it.running = BOOLEAN_FALSE;
+                    runList(it.after);
+                    if (it.expecting && it.expecting !== it.expectations.length) {
+                        err('Number of expectations expected did not match number of expectations called in: ' + makeName(it.name) + ' expected: ' + it.expecting + ', got: ' + it.expectations.length);
+                    }
+                    finished();
+                },
+                done = three,
+                callback = it.callback,
+                one = function () {
+                    startTime = time();
+                    callback(done);
+                },
+                callLength = callback.length,
+                two = err;
+            if (callLength) {
+                three = BOOLEAN_FALSE;
+            }
+            it.running = BOOLEAN_TRUE;
+            setTimeout(function () {
+                var cancelled;
+                if ((cancelled = runList(it.before))) {
+                    err(cancelled);
+                    finished();
+                } else {
+                    wraptries(one, two, three);
+                }
+            });
+        },
+        triesToRun = function (its, focus, finished) {
+            var settings = {
+                running: BOOLEAN_FALSE,
+                index: 0
+            };
+            return function recurse() {
+                if (settings.running) {
+                    return;
+                }
+                var current = its.length <= settings.index ? NULL : its[settings.index];
+                if (!current) {
+                    return finished();
+                }
+                if (current.running) {
+                    return;
+                }
+                focus(current);
+                run(current, settings, function (argument) {
+                    settings.index++;
+                    settings.running = BOOLEAN_FALSE;
+                    recurse();
+                });
+            };
+        },
+        done = function (states, descriptions, its, tryToRun, aQ) {
+            return function (afterward) {
+                states.finished = BOOLEAN_TRUE;
+                aQ.push(afterward);
+                tryToRun();
+            };
+        },
+        basicTests = function (maker) {
+            maker('toThrow', function (handler) {
+                var errRan = BOOLEAN_FALSE;
+                return wraptries(handler, function () {
+                    errRan = BOOLEAN_TRUE;
+                }, function () {
+                    return errRan;
+                });
+            }, function () {
+                return EXPECTED + AN_ERROR + TO_BE_THROWN;
+            }, function () {
+                return EXPECTED + AN_ERROR + SPACE_NOT + TO_BE_THROWN;
+            });
+            maker('toBe', function (current, comparison) {
+                return current === comparison;
+            }, function (current, comparison) {
+                return EXPECTED + SPACE + stringify(current) + TO_BE_STRICTLY_EQUAL_TO_STRING + stringify(comparison);
+            }, function (current, comparison) {
+                return EXPECTED + SPACE + stringify(current) + SPACE_NOT + TO_BE_STRICTLY_EQUAL_TO_STRING + stringify(comparison);
+            });
+            maker('toEqual', function (current, comparison) {
+                return isEqual(current, comparison);
+            }, function (current, comparison) {
+                return EXPECTED + SPACE + stringify(current) + TO_EQUAL + stringify(comparison);
+            }, function (current, comparison) {
+                return EXPECTED + SPACE + stringify(current) + SPACE_NOT + TO_EQUAL + stringify(comparison);
+            });
+            maker('toEvaluateTo', function (current, comparison) {
+                return isEqual(current, comparison);
+            }, function (current, comparison) {
+                return EXPECTED + SPACE + 'function' + TO_EVALUATE_TO + stringify(comparison);
+            }, function (current, comparison) {
+                return EXPECTED + SPACE + 'function not' + TO_EVALUATE_TO + stringify(comparison);
+            }, BOOLEAN_TRUE);
+        },
+        group = function (target) {
+            var aeQ = [];
+            var beQ = [];
+            var aQ = [];
+            var its = [];
+            var descriptions = [];
+            var fin = fin;
+            var states = {};
+            var tester = testy();
+            var identifier = target.id;
+            var tryToRun = triesToRun(its, tester.focus, function () {
+                var i, item;
+                for (i = 0; i < aQ.length; i++) {
+                    item = aQ[i];
+                    item(its);
+                }
+            });
+            basicTests(tester.maker);
+            return {
+                afterEach: checkFinished(states, afterEach(aeQ)),
+                beforeEach: checkFinished(states, beforeEach(beQ)),
+                expect: tester.expect,
+                describe: checkFinished(states, describe(descriptions, aeQ, beQ)),
+                it: checkFinished(states, it(its, descriptions, aeQ, beQ)),
+                finished: finished(fin),
+                done: done(states, descriptions, its, tryToRun, aQ),
+                maker: tester.maker,
+                group: group.bind(NULL, (identifier ? (identifier + HYPHEN) : EMPTY_STRING) + (++id))
+            };
         };
-    resetTests();
-    _.publicize({
-        test: {
-            afterEach: afterEach,
-            beforeEach: beforeEach,
-            expect: expect,
-            describe: describe,
-            it: it,
-            finished: finished
-        }
-    });
-});
+    return group;
+}(app)));

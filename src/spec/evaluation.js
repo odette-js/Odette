@@ -1,14 +1,14 @@
 // application.scope().run(function (app, _) {
-//     _.test.describe('evaluate needs it\'s own space to be tested', function () {
+//     test.describe('evaluate needs it\'s own space to be tested', function () {
 //         var windo = _.factories.Window(window);
-//         _.test.it('_.evaluate', function (done) {
+//         test.it('_.evaluate', function (done) {
 //             windo._ = _;
 //             windo.done = done;
 //             windo.console.log = function (comparison) {
 //                 // replace windo with a custom log function
-//                 _.test.expect(comparison).not.toBe(window);
+//                 test.expect(comparison).not.toBe(window);
 //             };
-//             _.test.expect(function () {
+//             test.expect(function () {
 //                 _.evaluate(windo, function () {
 //                     var count = 0;
 //                     var called = 0;
@@ -42,7 +42,7 @@
 //                     });
 //                 });
 //             }).not.toThrow();
-//             _.test.expect(function () {
+//             test.expect(function () {
 //                 _.evaluate(windo, function () {
 //                     glob = function () {
 //                         console.log(this);
@@ -50,17 +50,17 @@
 //                     };
 //                 });
 //             }).toThrow();
-//             _.test.expect(function () {
+//             test.expect(function () {
 //                 _.evaluate(windo, function () {
 //                     // remove ability to use Function Constructors if we can't get rid of eval
 //                     eval('var fn = new Function.constructor("console.log(this);");fn();');
 //                 });
 //             }).toThrow();
-//             _.test.expect(_.evaluate(windo, function () {
+//             test.expect(_.evaluate(windo, function () {
 //                 var cachedInnerHeight = innerHeight;
 //                 delete window.innerHeight;
-//                 _.test.expect(window.innerHeight).toEqual(void 0);
-//                 _.test.expect(innerHeight).toEqual(cachedInnerHeight);
+//                 test.expect(window.innerHeight).toEqual(void 0);
+//                 test.expect(innerHeight).toEqual(cachedInnerHeight);
 //                 return innerHeight;
 //             })).toEqual(void 0);
 //         });

@@ -150,7 +150,7 @@ var EVENT_STRING = 'Events',
                 if (talkerId && (listening = listeningTo[talkerId])) {
                     return listening;
                 }
-                // This talkerect is not listening to any other events on `talker` yet.
+                // This talkerId is not listening to any other events on `talker` yet.
                 // Setup the necessary references to track the listening callbacks.
                 talkerId = talkerDirective[TALKER_ID] = talkerDirective[TALKER_ID] || app.counter(TALKER_PREFIX);
                 listening = listeningTo[talkerId] = {

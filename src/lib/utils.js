@@ -741,7 +741,6 @@ var factories = {},
     isEqual = function (a, b) {
         return eq(a, b, [], []);
     },
-    // very shallow clone
     clone = function (obj) {
         return map(obj, function (value) {
             return value;
