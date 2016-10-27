@@ -77,17 +77,9 @@ var PROMISE = 'Promise',
                     nextp = current[0];
                     argument = execute();
                     if (isPromise(argument)) {
-                        if (caught) {
-                            argument.then(emptiesQueue(nextp, BOOLEAN_TRUE, BOOLEAN_TRUE, caught), emptiesQueue(nextp, BOOLEAN_FALSE, BOOLEAN_TRUE, caught));
-                        } else {
-                            argument.then(emptiesQueue(nextp, BOOLEAN_TRUE), emptiesQueue(nextp));
-                        }
+                        argument.then(emptiesQueue(nextp, BOOLEAN_TRUE)).catch(emptiesQueue(nextp));
                     } else {
-                        if (caught) {
-                            emptyQueue(nextp, bool, argument, BOOLEAN_FALSE, caught);
-                        } else {
-                            emptyQueue(nextp, bool, argument, BOOLEAN_FALSE);
-                        }
+                        emptyQueue(nextp, bool, argument, BOOLEAN_FALSE, caught);
                     }
                 }
                 return result;
