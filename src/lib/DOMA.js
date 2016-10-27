@@ -2684,12 +2684,12 @@ app.scope(function (app) {
                         } else {
                             wraptry(function () {
                                 script.html(innard);
-                                success();
+                                success(innard);
                             }, function () {
-                                failure();
+                                failure(innard);
                             });
                         }
-                    }, BOOLEAN_TRUE);
+                    });
                 }
             });
             extend(manager, wrapped);
