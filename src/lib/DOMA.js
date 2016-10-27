@@ -413,7 +413,7 @@ var ATTACHED = 'attached',
         };
         duff(node.attributes, function (attr) {
             var attributes = obj.attributes = obj.attributes || {};
-            attributes[camelCase(attr[LOCAL_NAME])] = attr.nodeValue;
+            attributes[camelCase(attr[LOCAL_NAME])] = attr.value;
         });
         return obj;
     },
@@ -462,10 +462,10 @@ var ATTACHED = 'attached',
         var attributeKey = attribute[LOCAL_NAME];
         if (future) {
             memo.attrsA[attributeKey] = BOOLEAN_TRUE;
-            memo.accessB[attributeKey] = attribute.nodeValue;
+            memo.accessB[attributeKey] = attribute.value;
         } else {
             memo.attrsA[attributeKey] = BOOLEAN_TRUE;
-            memo.accessA[attributeKey] = attribute.nodeValue;
+            memo.accessA[attributeKey] = attribute.value;
         }
         if (memo.hash[attributeKey]) {
             return;
@@ -494,7 +494,7 @@ var ATTACHED = 'attached',
                     key = bKeys[index];
                     collectAttr(memo, {
                         localName: kebabCase(key),
-                        nodeValue: b[1][key]
+                        value: b[1][key]
                     }, BOOLEAN_TRUE);
                 }
             }, {
@@ -916,7 +916,7 @@ app.scope(function (app) {
         },
         foldAttributes = function (attributes) {
             return attributes[LENGTH] ? _.foldl(attributes, function (memo, attribute) {
-                memo[attribute[LOCAL_NAME]] = attribute.nodeValue;
+                memo[attribute[LOCAL_NAME]] = attribute.value;
             }) : NULL;
         },
         virtualizeDom = function (nodes) {
@@ -3356,13 +3356,13 @@ app.scope(function (app) {
                     if (!fun) {
                         memo = {};
                         duff(elementAttributes, function (attribute) {
-                            memo[attribute.localName] = attribute.nodeValue;
+                            memo[attribute.localName] = attribute.value;
                         });
                         return memo;
                     }
                     bound = bindTo(fun, manager);
                     duff(elementAttributes, function (attribute) {
-                        bound(attribute.nodeValue, attribute.localName);
+                        bound(attribute.value, attribute.localName);
                     });
                     return manager;
                 },
