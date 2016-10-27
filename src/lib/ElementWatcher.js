@@ -1,17 +1,21 @@
-app.scope(function (app) {
-    var ElementWatcher = factories.ElementWatcher = factories.Registry.extend('ElementWatcher', {
+var ELEMENT_WATCHER = 'ElementWatcher';
+var WATCHERS = 'watchers';
+var RESIZE = 'resize';
+var AF = _.AF;
+factories[ELEMENT_WATCHER] = app.defineDirective(ELEMENT_WATCHER, app.block(function (app) {
+    return factories.Registry.extend(ELEMENT_WATCHER, {
         watch: function (el, fn) {
             var cached, elementWatcher = this,
-                __elid__ = el.__elid__,
-                watchers = elementWatcher.get('watchers', __elid__) || {},
+                __elid__ = el[__ELID__],
+                watchers = elementWatcher.get(WATCHERS, __elid__) || {},
                 count = watchers.count && ++watchers.count;
-            el.on('resize', fn);
+            el.on(RESIZE, fn);
             if (el.is('window') || watchers.id) {
-                return;
+                return elementWatcher;
             }
-            elementWatcher.keep('watchers', __elid__, (cached = {
+            elementWatcher.keep(WATCHERS, __elid__, (cached = {
                 count: 1,
-                id: _.AF.queue(function () {
+                id: AF.queue(function () {
                     var client = el.client();
                     if (client.height === cached.height && client.width === cached.width) {
                         return;
@@ -22,31 +26,34 @@ app.scope(function (app) {
                         cached.blinking = BOOLEAN_FALSE;
                         return;
                     }
-                    el.dispatchEvent('resize');
+                    el.dispatchEvent(RESIZE);
                 })
             }));
+            return elementWatcher;
         },
         blink: function (el) {
-            var element;
-            var result = (element = elementWatcher.get('watchers', el.__elid__)) && (element.blinking = BOOLEAN_TRUE);
+            var element, elementWatcher = this;
+            var result = (element = elementWatcher.get(WATCHERS, el[__ELID__])) && (element.blinking = BOOLEAN_TRUE);
+            return elementWatcher;
         },
         stop: function (el, fn) {
-            var cached = this.get('watchers', el.__elid__),
-                evntManager = el.directive('EventManager') || {},
+            var elementWatcher = this,
+                cached = elementWatcher.get(WATCHERS, el[__ELID__]),
+                evntManager = el.directive(EVENT_MANAGER) || {},
                 handlers = evntManager.handlers || {},
                 clickHandlers = handlers.click || Collection(),
                 length = clickHandlers.length();
-            el.off('resize', fn);
+            el.off(RESIZE, fn);
             if (!cached.id) {
-                return;
+                return elementWatcher;
             }
             if (length !== clickHandlers.length()) {
                 --cached.count;
             }
             if (!cached.count) {
-                _.AF.dequeue(cached.id);
+                AF.dequeue(cached.id);
             }
+            return elementWatcher;
         }
     });
-    app.defineDirective('ElementWatcher', ElementWatcher);
-});
+}));

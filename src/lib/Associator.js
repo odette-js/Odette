@@ -41,14 +41,6 @@ app.scope(function (app) {
                 data.target = obj;
                 return data;
             },
-            /**
-             * @func
-             * @name Associator#set
-             * @param {Node} el - Element to store data against
-             * @param {Object} obj - object to extend onto current data
-             * @param {String} [type] - toString evaluation of element, if it has already been evaluated
-             * @returns {Object} data that is being held on the Associator
-             */
             set: function (el, extensor, type) {
                 var n, data = this.get(el, type);
                 extend(data, extensor || {});
@@ -67,11 +59,6 @@ app.scope(function (app) {
                     }
                 }
             },
-            /**
-             * @func
-             * @name Associator#sameType
-             * @param {Object} obj - object to find matched types against
-             */
             sameType: function (obj, isObj_) {
                 var instance = this,
                     isObj = isObj_ === UNDEFINED ? isObject(obj) : isObj_,

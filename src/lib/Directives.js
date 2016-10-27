@@ -3,6 +3,8 @@ var STATUS = 'Status',
     DIRECTIVE = 'Directive',
     MESSENGER = 'Messenger',
     ITERATOR = 'Iterator',
+    GENERATOR = 'Generator',
+    GENERATOR_MAKER = GENERATOR + 'Maker',
     directives = {
         creation: {},
         destruction: {}
@@ -231,8 +233,6 @@ var STATUS = 'Status',
             };
         };
     },
-    GENERATOR = 'Generator',
-    GENERATOR_MAKER = GENERATOR + 'Maker',
     Generator = Directive.extend(GENERATOR, {
         constructor: function (starts, next, continues) {
             var generator = this;
@@ -246,7 +246,6 @@ var STATUS = 'Status',
             generator.current = {
                 value: starts
             };
-            // generator.target = target;
             return generator;
         },
         next: function () {

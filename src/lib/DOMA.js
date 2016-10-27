@@ -2336,16 +2336,19 @@ app.scope(function (app) {
                 },
                 formsCallbacks = function (opts, list, autotriggers) {
                     return foldl(list, function (memo, evnt, item) {
-                        var val = opts[evnt] === BOOLEAN_TRUE;
+                        var value = opts[evnt];
+                        var val = !!value;
                         if (val) {
                             autotriggers[evnt] = val;
-                            memo[item + 'Callback'] = (val ? (registerElDefaultHandlers[evnt] ? {
+                            memo[item + 'Callback'] = (isFunction(value) ? {
+                                value: value
+                            } : (val ? (registerElDefaultHandlers[evnt] ? {
                                 value: registerElDefaultHandlers[evnt]
                             } : {
                                 value: function (e) {
                                     return manager.returnsManager(this).dispatchEvent(evnt, e);
                                 }
-                            }) : (opts[evnt] || opts[item + 'Callback']));
+                            }) : (value || opts[item + 'Callback'])));
                         }
                     }, {});
                 },
