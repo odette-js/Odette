@@ -344,7 +344,7 @@ var COLLECTION = 'Collection',
                 item: function (number) {
                     return this.toArray()[number || 0];
                 },
-                has: function (object) {
+                includes: function (object) {
                     return this.indexOf(object) !== -1;
                 },
                 sort: function (fn_) {

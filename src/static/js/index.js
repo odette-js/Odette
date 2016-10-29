@@ -1,4 +1,4 @@
-application.scope().run(function (app, _, factories) {
+application.scope().run(function (module, app, _, factories) {
     var buster = factories.Buster(window, window.parent, {
         strip: true
     }, {

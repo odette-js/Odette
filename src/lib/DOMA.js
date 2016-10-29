@@ -4763,7 +4763,5 @@ app.scope(function (app) {
     // register all custom elements...
     // everything that's created after this should go through the DomManager to be marked appropriately
     // define a hash for attribute caching
-    app.defineDirective(ATTRIBUTES, function () {
-        return {};
-    });
+    app.defineDirective(ATTRIBUTES, returns.object);
 });

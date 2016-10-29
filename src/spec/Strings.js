@@ -1,4 +1,4 @@
-application.scope().run(function (app, _) {
+application.scope().run(function (module, app, _) {
     test.describe('Strings', function () {
         test.it('_.camelCase', function () {
             var thatIsCamelCased = 'thisIsCamelCased';

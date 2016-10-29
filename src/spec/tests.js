@@ -1,4 +1,4 @@
-application.scope().run(window, function (app, _, factories, documentView, scopedFactories, $) {
+application.scope().run(window, function (module, app, _, factories, documentView, scopedFactories, $) {
     test.describe('Tests', function () {
         test.describe('useful for verifying information.', function () {
             test.describe('and you can easily make comparisons with the expect method and it\'s follow-up operations like:', function () {

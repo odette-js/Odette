@@ -111,6 +111,7 @@ app.defineDirective('Tests', (function (app) {
         },
         it = function (its, descriptions, afterEach, beforeEach) {
             return function (name, callback, counter) {
+                console.log(name);
                 its.push({
                     name: descriptions.concat([name]),
                     callback: callback,
@@ -168,12 +169,21 @@ app.defineDirective('Tests', (function (app) {
         },
         run = function (it, settings, finished) {
             var startTime = 0,
+                ran = BOOLEAN_FALSE,
                 three = function () {
+                    var expecting, expectations;
+                    if (ran) {
+                        return;
+                    }
+                    ran = BOOLEAN_TRUE;
                     it.delta = time() - startTime;
                     it.running = BOOLEAN_FALSE;
+                    clearTimeout(it.timeoutId);
                     runList(it.after);
-                    if (it.expecting && it.expecting !== it.expectations.length) {
-                        err('Number of expectations expected did not match number of expectations called in: ' + makeName(it.name) + ' expected: ' + it.expecting + ', got: ' + it.expectations.length);
+                    expecting = it.expecting;
+                    expectations = it.expectations;
+                    if (expecting && expecting !== expectations.length) {
+                        err('Number of expectations expected did not match number of expectations called in: ' + makeName(it.name) + ' expected: ' + expecting + ', got: ' + expectations.length);
                     }
                     finished();
                 },
@@ -195,6 +205,9 @@ app.defineDirective('Tests', (function (app) {
                     err(cancelled);
                     finished();
                 } else {
+                    it.timeoutId = setTimeout(function (argument) {
+                        done(new Error('Timeout'));
+                    }, 5000);
                     wraptries(one, two, three);
                 }
             });

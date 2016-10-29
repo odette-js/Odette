@@ -1,4 +1,4 @@
-application.scope().run(window, function (app, _, factories, documentView, scopedFactories, $) {
+application.scope().run(window, function (module, app, _, factories, documentView, scopedFactories, $) {
     var elementData = _.associator,
         divsLength = 5;
     test.describe('DOMA', function () {

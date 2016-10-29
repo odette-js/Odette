@@ -3,8 +3,10 @@ app.scope(function (app) {
         factories = _.factories,
         Model = factories.Model,
         Collection = factories.Collection,
+        REQUIRE = 'require',
         MODULE = 'module',
         CAPITAL_MODULE = capitalize(MODULE),
+        MODULE_MANAGER = CAPITAL_MODULE + 'Manager',
         MODULES = CAPITAL_MODULE + 's',
         STARTED = START + 'ed',
         INITIALIZED = 'initialized',
@@ -69,8 +71,100 @@ app.scope(function (app) {
         },
         Promise = _.Promise,
         moduleMethods = {
+            run: function (windo_, fn_) {
+                var result, module = this,
+                    fn = isWindow(windo_) ? fn_ : windo_,
+                    windo = fn === windo_ ? window : windo_;
+                if (isFunction(fn)) {
+                    result = fn.apply(module, module.createArguments(windo));
+                }
+                return result === UNDEFINED ? module : result;
+            },
+            publicize: intendedApi(function (key, value) {
+                this[EXPORTS][key] = value;
+            }),
+            require: _.directives.parody(MODULE_MANAGER, REQUIRE),
+            module: _.directives.parody(MODULE_MANAGER, MODULE),
+            startWithParent: returns(BOOLEAN_TRUE),
+            stopWithParent: returns(BOOLEAN_TRUE),
+            constructor: function (attrs, opts) {
+                var module = this;
+                module[EXPORTS] = {};
+                module[CONSTRUCTOR + COLON + 'Model'](attrs, opts);
+                module.listenTo(module[PARENT], {
+                    start: doStart,
+                    stop: doStop
+                });
+                return module;
+            },
+            createArguments: function (windo) {
+                var module = this;
+                return [module].concat(module[APPLICATION].directive(MODULE_MANAGER).createArguments(windo));
+            },
+            topLevel: function () {
+                return !this[APPLICATION] || this[APPLICATION] === this[PARENT];
+            }
+        },
+        newModuleMethods = extend({}, startableMethods, moduleMethods),
+        Module = factories.Module = factories.Model.extend(CAPITAL_MODULE, newModuleMethods),
+        ModuleManager = Collection.extend(MODULE_MANAGER, extend({
+            constructor: function (target) {
+                var manager = this;
+                manager.target = target;
+                manager.application = target.application || target;
+                manager[CONSTRUCTOR + COLON + COLLECTION]();
+                return manager;
+            },
+            createArguments: function (windo) {
+                var manager = this,
+                    app = manager.application,
+                    _ = app._,
+                    docu = windo[DOCUMENT],
+                    id = docu[__ELID__],
+                    documentManagerDocuments = app.directive(DOCUMENT_MANAGER).documents,
+                    documentView = documentManagerDocuments.get(ID, id, function () {
+                        app.global.definition(app.VERSION, windo);
+                        return documentManagerDocuments.get(ID, docu[__ELID__]);
+                    });
+                return [app, _, _ && _.factories, documentView, documentView.factories, documentView.$];
+            },
+            require: function (modulename, handler) {
+                var promise, module, manager = this,
+                    target = manager.target,
+                    app = manager.application;
+                // globalname = ((globalname = module.globalname) ? globalname.split(PERIOD) : []).concat(key.split(PERIOD));
+                // function (key, fn) {
+                // var globalname, module = this;
+                // return module.application.directive(MODULE_MANAGER).require().join(PERIOD), fn);
+                // }
+                // console.log(app);
+                if (!isFunction(handler)) {
+                    module = target.module(modulename);
+                    return module.is(DEFINED) ? module[EXPORTS] : exception(notDefinedYetMessage);
+                } else {
+                    return Promise(function (success, failure) {
+                        var mappedArguments, list = toArray(modulename, SPACE).slice(0);
+                        console.log(list);
+                        if ((mappedArguments = checks(app, list))) {
+                            console.log(mappedArguments);
+                            success(mappedArguments);
+                        } else {
+                            app.on(INITIALIZED_COLON_SUBMODULE, function () {
+                                var mappedArguments;
+                                if ((mappedArguments = checks(app, list))) {
+                                    app.off();
+                                    success(mappedArguments);
+                                }
+                                console.log(mappedArguments);
+                            });
+                        }
+                    });
+                }
+            },
             module: function (name_, windo, fn) {
-                var initResult, list, globalname, arg1, arg2, parentModulesDirective, modules, attrs, parentIsModule, nametree, parent = this,
+                var initResult, list, globalname, arg1, arg2, parentModulesDirective, modules, attrs, parentIsModule, nametree, manager = this,
+                    parent = manager.target,
+                    app = manager.application,
                     originalParent = parent,
                     name = name_,
                     // globalname = name,
@@ -80,6 +174,7 @@ app.scope(function (app) {
                         module.mark(DEFINED);
                         module[PARENT].bubble(INITIALIZED_COLON_SUBMODULE);
                     };
+                console.log(name_);
                 if (module) {
                     // hey, i found it. we're done here
                     parent = module[PARENT];
@@ -121,6 +216,7 @@ app.scope(function (app) {
                     module.mark(INITIALIZED);
                     initResult = module.run(windo, fn);
                     // allows us to create dependency graphs
+                    // look into creating promise
                     if (initResult && _.isPromise(initResult)) {
                         initResult.then(triggerBubble);
                     } else {
@@ -128,81 +224,26 @@ app.scope(function (app) {
                     }
                 }
                 return module;
-            },
-            createArguments: function (windo) {
-                var module = this;
-                return [module].concat(module[APPLICATION].createArguments(windo));
-            },
-            run: function (windo_, fn_) {
-                var result, module = this,
-                    fn = isWindow(windo_) ? fn_ : windo_,
-                    windo = fn === windo_ ? window : windo_;
-                if (isFunction(fn)) {
-                    result = fn.apply(module, module.createArguments(windo));
-                }
-                return result === UNDEFINED ? module : result;
-            },
-            publicize: intendedApi(function (key, value) {
-                this[EXPORTS][key] = value;
-            }),
-            startWithParent: returns(BOOLEAN_TRUE),
-            stopWithParent: returns(BOOLEAN_TRUE),
-            constructor: function (attrs, opts) {
-                var module = this;
-                module[EXPORTS] = {};
-                module[CONSTRUCTOR + COLON + 'Model'](attrs, opts);
-                module.listenTo(module[PARENT], {
-                    start: doStart,
-                    stop: doStop
-                });
-                return module;
-            },
-            topLevel: function () {
-                return !this[APPLICATION] || this[APPLICATION] === this[PARENT];
-            },
-            require: function (key, fn) {
-                return this.application.require(this.globalname + PERIOD + key, fn);
             }
-        },
-        Module = factories.Module = factories.Model.extend(CAPITAL_MODULE, extend({}, startableMethods, moduleMethods)),
-        appextendresult = app.extend(extend({}, factories.Directive[CONSTRUCTOR][PROTOTYPE], factories.Events[CONSTRUCTOR][PROTOTYPE], factories.Parent[CONSTRUCTOR][PROTOTYPE], startableMethods, moduleMethods, {
-            createArguments: function (windo) {
-                var app = this,
-                    _ = app._,
-                    docu = windo[DOCUMENT],
-                    id = docu[__ELID__],
-                    documentManagerDocuments = app.directive(DOCUMENT_MANAGER).documents,
-                    documentView = documentManagerDocuments.get(ID, id, function () {
-                        app.global.definition(app.VERSION, windo);
-                        return documentManagerDocuments.get(ID, docu[__ELID__]);
-                    });
-                return [app, _, _ && _.factories, documentView, documentView.factories, documentView.$];
-            },
-            require: function (modulename, handler) {
-                var promise, module, list, mappedArguments, app = this;
-                if (!isFunction(handler)) {
-                    module = app.module(modulename);
-                    return module.is(DEFINED) ? module[EXPORTS] : exception(notDefinedYetMessage);
-                } else {
-                    // promise = Promise();
-                    return Promise(function (success, failure) {
-                        list = toArray(modulename, SPACE).slice(0);
-                        promise.success(bind(handler, app));
-                        if ((mappedArguments = checks(app, list))) {
-                            success(mappedArguments);
-                        } else {
-                            app.on(INITIALIZED_COLON_SUBMODULE, function () {
-                                if ((mappedArguments = checks(app, list))) {
-                                    app.off();
-                                    success(mappedArguments);
-                                }
-                            });
-                        }
-                    });
-                    // return promise;
+        })),
+        appextendresult = app.extend(extend({}, factories.Directive[CONSTRUCTOR][PROTOTYPE], factories.Events[CONSTRUCTOR][PROTOTYPE], factories.Parent[CONSTRUCTOR][PROTOTYPE], newModuleMethods, {
+            'directive:creation:ModuleManager': ModuleManager.extend({
+                createArguments: function (windo) {
+                    var manager = this,
+                        app = manager.application,
+                        _ = app._,
+                        docu = windo[DOCUMENT],
+                        id = docu[__ELID__],
+                        documentManagerDocuments = app.directive(DOCUMENT_MANAGER).documents,
+                        documentView = documentManagerDocuments.get(ID, id, function () {
+                            app.global.definition(app.VERSION, windo);
+                            return documentManagerDocuments.get(ID, docu[__ELID__]);
+                        });
+                    return [app, _, _ && _.factories, documentView, documentView.factories, documentView.$];
                 }
-            }
+            })
         }));
+    app.defineDirective(MODULE_MANAGER, ModuleManager[CONSTRUCTOR]);
     // delete the prototype link from parent prototype
     delete app.fn;
 });

@@ -1,4 +1,4 @@
-// application.scope().run(function (app, _) {
+// application.scope().run(function (module, app, _) {
 //     test.describe('evaluate needs it\'s own space to be tested', function () {
 //         var windo = _.factories.Window(window);
 //         test.it('_.evaluate', function (done) {

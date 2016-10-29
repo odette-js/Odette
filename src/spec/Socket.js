@@ -1,4 +1,4 @@
-// application.scope().run(window, function (app, _, factories, documentView, scopedFactories, $) {
+// application.scope().run(window, function (module, app, _, factories, documentView, scopedFactories, $) {
 //     test.describe('WebSocket', function () {
 //         var socket, count = 0;
 //         test.beforeEach(function () {
