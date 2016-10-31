@@ -20,16 +20,17 @@ var DependencyManager = Collection.extend('DependencyManager', {
             if (rejection) {
                 deps.failed();
             }
-            deps.reset();
             deps.finished();
         } else if (rejection) {
             deps.failed();
         }
     },
     failed: function () {
+        this.reset();
         this.target.dispatchEvent('dependencies:failed');
     },
     finished: function () {
+        this.reset();
         this.target.dispatchEvent('dependencies:finished');
     },
     depend: function (promises) {
