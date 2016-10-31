@@ -1,3 +1,25 @@
+var PromiseProxy = function (key) {
+    return function (fn) {
+        var deps = this,
+            target = deps.target;
+        return this.directive(REGISTRY).get(INSTANCES, 'finishedPromise', function () {
+            return Promise(function (s, f) {
+                if (deps.done) {
+                    if (deps.erred) {
+                        f();
+                    } else {
+                        s();
+                    }
+                } else {
+                    target.once({
+                        'dependencies:failed': f,
+                        'dependencies:finished': s
+                    });
+                }
+            });
+        })[key](fn);
+    };
+};
 var DependencyManager = Collection.extend('DependencyManager', {
     constructor: function (target) {
         this.target = target;
@@ -25,11 +47,22 @@ var DependencyManager = Collection.extend('DependencyManager', {
             deps.failed();
         }
     },
+    then: PromiseProxy('then'),
+    catch: PromiseProxy('catch'),
     failed: function () {
+        if (this.done) {
+            return;
+        }
+        this.done = BOOLEAN_TRUE;
+        this.erred = BOOLEAN_TRUE;
         this.reset();
         this.target.dispatchEvent('dependencies:failed');
     },
     finished: function () {
+        if (this.done) {
+            return;
+        }
+        this.done = BOOLEAN_TRUE;
         this.reset();
         this.target.dispatchEvent('dependencies:finished');
     },
