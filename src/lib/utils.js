@@ -88,6 +88,14 @@ var factories = {},
     toString = function (obj) {
         return obj == NULL ? EMPTY_STRING : obj + EMPTY_STRING;
     },
+    toFunction = function (argument) {
+        if (isFunction(argument)) {
+            return argument;
+        }
+        return function () {
+            return argument;
+        };
+    },
     stringify = function (obj) {
         return (isObject(obj) ? JSON.stringify(obj) : isFunction(obj) ? obj.toString() : obj) + EMPTY_STRING;
     },
@@ -110,33 +118,6 @@ var factories = {},
             return reversed ? result * -1 : result;
         });
     },
-    normalizeToFunction = function (value, context, argCount) {
-        if (value == NULL) return returns.first;
-        if (isFunction(value)) return bindTo(value, context);
-        // has not been created yet
-        if (isObject(value)) return _.matcher(value);
-        return property(value);
-    },
-    // Sort the object's values by a criterion produced by an iteratee.
-    // _.sortBy = function(obj, iteratee, context) {
-    //   iteratee = cb(iteratee, context);
-    //   return _.pluck(_.map(obj, function(value, index, list) {
-    //     return {
-    //       value: value,
-    //       index: index,
-    //       criteria: iteratee(value, index, list)
-    //     };
-    //   }).sort(function(left, right) {
-    //     var a = left.criteria;
-    //     var b = right.criteria;
-    //     if (a !== b) {
-    //       if (a > b || a === void 0) return 1;
-    //       if (a < b || b === void 0) return -1;
-    //     }
-    //     return left.index - right.index;
-    //   }), 'value');
-    // };
-    // sortBy = function (list, string) {},
     // arg1 is usually a string or number
     sortBy = function (list, arg1, handler_, reversed, context) {
         var handler = handler_ || function (obj, arg1) {
@@ -243,17 +224,19 @@ var factories = {},
             }
         }
     },
-    now = function () {
+    dateNow = function () {
         return +(new Date());
     },
-    now_offset = now(),
+    now_offset = dateNow(),
     now_shim = function () {
-        return now() - now_offset;
+        return dateNow() - now_offset;
     },
     _performance = window.performance,
     performance = _performance ? (_performance.now = (_performance.now || _performance.webkitNow || _performance.msNow || _performance.oNow || _performance.mozNow || now_shim)) && _performance : {
-        now: now_shim,
-        offset: now_offset
+        now: now_shim
+    },
+    now = function () {
+        return performance.now();
     },
     extend = function () {
         var deep = BOOLEAN_FALSE,
@@ -1110,7 +1093,7 @@ var factories = {},
                     }
                 }
                 if (!cryptoCheck) {
-                    rnd = [Math.floor(Math.random() * 10000000000)];
+                    rnd = [Math.floor(Math.random() * 10e12)];
                 }
                 rnd = rnd[0];
                 r = rnd % 16;
@@ -1167,44 +1150,59 @@ var factories = {},
             power = 1;
         }
         mult = Math.pow(base || 10, power);
-        return (parseInt((mult * val), 10) / mult);
+        return (parseInt(mult * val, 10) / mult);
     },
     result = function (obj, str, arg) {
         return obj == NULL ? obj : (isFunction(obj[str]) ? obj[str](arg) : (isObject(obj) ? obj[str] : obj));
     },
-    eachCall = function (array, method, arg) {
-        return duff(array, function (item) {
-            item[method](arg);
-        });
-    },
-    eachCallBound = function (array, arg) {
-        return duff(array, function (fn) {
-            fn(arg);
-        });
-    },
-    eachCallTry = function (array, method, arg, catcher, finallyer) {
-        return duff(array, function (item) {
-            wraptry(function () {
-                item[method](arg);
-            }, catcher, finallyer);
-        });
-    },
-    mapCallTry = function (array, method, arg, catcher, finallyer) {
-        return map(array, function (item) {
+    doTry = function (fn, catcher, finallyer) {
+        return function (item) {
             return wraptry(function () {
-                return item[method](arg);
+                return fn(item);
             }, catcher, finallyer);
-        });
+        };
     },
+    buildCallers = function (prefix, handler) {
+        var memo = {},
+            CALL = 'Call',
+            BOUND = 'Bound',
+            TRY = 'Try';
+        memo[prefix + CALL] = function (array, method, arg) {
+            return duff(array, function (item) {
+                item[method](arg);
+            });
+        };
+        memo[prefix + CALL + BOUND] = function (array, arg) {
+            return duff(array, function (fn) {
+                fn(arg);
+            });
+        };
+        memo[prefix + CALL + TRY] = function (array, method, arg, catcher, finallyer) {
+            return duff(array, doTry(function (item) {
+                item[method](arg);
+            }, catcher, finallyer));
+        };
+        memo[prefix + CALL + BOUND + TRY] = function (array, method, arg, catcher, finallyer) {
+            return duff(array, doTry(function (item) {
+                item(arg);
+            }, catcher, finallyer));
+        };
+        return memo;
+    },
+    eachCallers = buildCallers('each', duff),
+    eachRightCallers = buildCallers('eachRight', duffRight),
+    mapCallers = buildCallers('map', map),
+    findCallers = buildCallers('find', find),
+    findLastCallers = buildCallers('findLast', findLast),
     results = function (array, method, arg) {
         return map(array, function (item) {
             return result(item, method, arg);
         });
     },
-    eachCallRight = function (array, method, arg) {
-        return duff(array, function (item) {
-            result(item, method, arg);
-        }, NULL, -1);
+    shiftSelf = function (fn) {
+        return function (one, two, three, four, five, six) {
+            return fn(this, one, two, three, four, five, six);
+        };
     },
     maths = Math,
     mathArray = function (method) {
@@ -1346,8 +1344,9 @@ var factories = {},
      * @static
      * @namespace _
      */
-    _ = app._ = {
+    _ = app._ = extend({
         is: is,
+        shiftSelf: shiftSelf,
         consolemaker: consolemaker,
         blockWrapper: blockWrapper,
         unwrapBlock: unwrapBlock,
@@ -1376,6 +1375,7 @@ var factories = {},
         object: object,
         wraptry: wraptry,
         toString: toString,
+        toFunction: toFunction,
         throttle: throttle,
         debounce: debounce,
         defer: defer,
@@ -1447,16 +1447,17 @@ var factories = {},
         find: find,
         findLast: findLast,
         console: console,
-        min: mathArray('min'),
-        max: mathArray('max'),
         arrayLikeToArray: arrayLikeToArray,
         objectToArray: objectToArray,
         BIG_INTEGER: BIG_INTEGER,
         NEGATIVE_BIG_INTEGER: NEGATIVE_BIG_INTEGER,
-        math: wrap(toArray('E,LN2,LN10,LOG2E,LOG10E,PI,SQRT1_2,SQRT2,abs,acos,acosh,asin,asinh,atan,atan2,atanh,cbrt,ceil,clz32,cos,cosh,exp,expm1,floor,fround,hypot,imul,log,log1p,log2,log10,pow,random,round,sign,sin,sinh,sqrt,tan,tanh,trunc'), function (key) {
+        math: merge(wrap(toArray('E,LN2,LN10,LOG2E,LOG10E,PI,SQRT1_2,SQRT2,abs,acos,acosh,asin,asinh,atan,atan2,atanh,cbrt,ceil,clz32,cos,cosh,exp,expm1,floor,fround,hypot,imul,log,log1p,log2,log10,pow,random,round,sign,sin,sinh,sqrt,tan,tanh,trunc'), function (key) {
             return Math[key];
+        }), {
+            min: mathArray('min'),
+            max: mathArray('max'),
         })
-    };
+    }, eachCallers, eachRightCallers, mapCallers, findCallers, findLastCallers);
 isBoolean.false = isBoolean.true = BOOLEAN_TRUE;
 app.logWrappedErrors = BOOLEAN_TRUE;
 /**

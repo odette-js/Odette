@@ -147,14 +147,11 @@ var COLLECTION = 'Collection',
                 each: duff,
                 duff: duff,
                 forEach: duff,
-                eachCall: eachCall,
-                eachCallTry: eachCallTry,
-                eachRight: duffRight,
                 duffRight: duffRight,
-                forEachRight: duffRight,
-                eachCallRight: eachCallRight
+                eachRight: duffRight,
+                forEachRight: duffRight
             },
-            eachHandlerKeys = keys(eachHandlers),
+            eachHandlerKeys = keys(eachHandlers).concat(keys(buildCallers('each')), keys(buildCallers('eachRight'))),
             abstractedCanModify = toArray('add'),
             abstractedCannotModify = toArray('insertAt,remove,removeAt'),
             nativeCannotModify = toArray('pop,shift,splice'),
@@ -163,18 +160,35 @@ var COLLECTION = 'Collection',
             joinHandlers = toArray('join'),
             countingCollection = toArray('count,countTo,countFrom,merge'),
             foldIteration = toArray('foldr,foldl,reduce'),
-            findIteration = toArray('find,findLast,findWhere,findLastWhere'),
-            indexers = toArray('indexOf'),
+            findIteration = toArray('find,findLast,findWhere,findLastWhere').concat(keys(buildCallers('find'))),
+            indexers = toArray('indexOf,includes'),
             foldFindIteration = foldIteration.concat(findIteration),
-            marksIterating = function (fn) {
-                return function (one, two, three, four, five, six) {
-                    var result, list = this;
-                    ++list.iterating;
-                    result = fn(list, one, two, three, four, five, six);
-                    --list.iterating;
-                    return result;
-                };
-            },
+            ret = _.publicize({
+                filter: filter,
+                matches: matches,
+                results: results,
+                add: add,
+                removeAll: removeAll,
+                addAll: addAll,
+                insertAt: insertAt,
+                removeAt: removeAt,
+                remove: remove,
+                cycle: cycle,
+                uncycle: uncycle,
+                concat: concat,
+                where: where,
+                findWhere: findWhere,
+                findLastWhere: findLastWhere,
+                range: range,
+                count: count,
+                countTo: countTo,
+                countFrom: countFrom,
+                whereNot: whereNot,
+                eachRight: eachRight,
+                duffRight: duffRight,
+                flatten: flatten,
+                eq: eq
+            }),
             wrappedCollectionMethods = extend({
                 seeker: function (handler, context) {
                     var list = this,
@@ -186,38 +200,30 @@ var COLLECTION = 'Collection',
                     });
                 },
                 slice: function (one, two) {
-                    return new Collection(this.toArray().slice(one, two));
+                    return this.wrap(this.toArray().slice(one, two));
                 }
             }, wrap(joinHandlers, function (name) {
                 return function (arg) {
                     return this.toArray()[name](arg);
                 };
             }), wrap(indexers.concat(abstractedCanModify), function (name) {
+                var fn = _[name];
                 return function (one, two, three, four, five) {
-                    var list = this;
-                    return _[name](list.toArray(), one, two, three, four, five);
+                    return fn(this.toArray(), one, two, three, four, five);
                 };
             }), wrap(splatHandlers, function (name) {
                 return function (args_) {
-                    var args = isArray(args_) ? args_ : arguments,
-                        items = this.toArray();
-                    return items[name].apply(items, args);
+                    var items = this.toArray();
+                    return items[name].apply(items, isArray(args_) ? args_ : arguments);
                 };
             }), wrap(nativeCannotModify, function (name) {
                 return function (one, two, three, four, five, six) {
-                    var list = this;
-                    if (list.iterating) {
-                        return exception(cannotModifyMessage);
-                    }
-                    return list.toArray()[name](one, two, three, four, five, six);
+                    return this.toArray()[name](one, two, three, four, five, six);
                 };
             }), wrap(abstractedCannotModify, function (name) {
+                var fn = _[name];
                 return function (one, two, three, four, five) {
-                    var list = this;
-                    if (list.iterating) {
-                        return exception(cannotModifyMessage);
-                    }
-                    return _[name](list.toArray(), one, two, three, four, five);
+                    return fn(this.toArray(), one, two, three, four, five);
                 };
             }), wrap(reverseCollection, function (name) {
                 return function () {
@@ -226,7 +232,8 @@ var COLLECTION = 'Collection',
                     list.toArray()[name]();
                     return list;
                 };
-            }), wrap(eachHandlers, function (fn) {
+            }), wrap(eachHandlerKeys, function (fn_) {
+                var fn = eachHandlers[fn_] || _[fn_];
                 return function (handler, context) {
                     var list = this,
                         args0 = list.toArray(),
@@ -247,48 +254,11 @@ var COLLECTION = 'Collection',
                     return new Collection[CONSTRUCTOR](_[name](list.toArray(), one, two, three));
                 };
             }), wrap(foldFindIteration, function (name) {
+                var fn = _[name];
                 return function (one, two, three) {
-                    var list = this;
-                    return _[name](list.toArray(), one, two, three);
+                    return fn(this.toArray(), one, two, three);
                 };
             })),
-            ret = _.publicize({
-                eachCall: eachCall,
-                eachCallRight: eachCallRight,
-                filter: filter,
-                matches: matches,
-                results: results,
-                add: add,
-                removeAll: removeAll,
-                addAll: addAll,
-                insertAt: insertAt,
-                removeAt: removeAt,
-                remove: remove,
-                cycle: cycle,
-                uncycle: uncycle,
-                concat: concat,
-                // pluck: pluck,
-                where: where,
-                findWhere: findWhere,
-                findLastWhere: findLastWhere,
-                range: range,
-                count: count,
-                countTo: countTo,
-                countFrom: countFrom,
-                whereNot: whereNot,
-                eachRight: eachRight,
-                duffRight: duffRight,
-                flatten: flatten,
-                eq: eq
-                    // ,
-                    // generate: function (next, continues) {
-                    //     var list = [];
-                    //     while (continues(current)) {
-                    //         list.push(next());
-                    //     }
-                    //     return this[CONSTRUCTOR_KEY](list);
-                    // }
-            }),
             unwrapper = function () {
                 return this.items;
             },
@@ -302,12 +272,12 @@ var COLLECTION = 'Collection',
                     this.reset(items);
                     return this;
                 },
-                call: function (arg) {
-                    this.each(function (fn) {
-                        fn(arg);
-                    });
-                    return this;
-                },
+                // call: function (arg) {
+                //     this.each(function (fn) {
+                //         fn(arg);
+                //     });
+                //     return this;
+                // },
                 obliteration: function (handler, context) {
                     duffRight(this.toArray(), handler, context === UNDEFINED ? this : context);
                     return this;
@@ -321,7 +291,6 @@ var COLLECTION = 'Collection',
                     // can be array like
                     var list = this,
                         old = list.toArray() || [];
-                    list.iterating = list.iterating ? exception(cannotModifyMessage) : 0;
                     list.items = items == NULL ? [] : (Collection.isInstance(items) ? items.toArray().slice(0) : toArray(items));
                     list.unmark(REVERSED);
                     return list;
@@ -491,8 +460,8 @@ var COLLECTION = 'Collection',
                     }
                     if (!string.isValid()) {
                         // canibalize the list as you join
-                        string.parent.drop(ID, value);
-                        string.parent.removeAt(parent.indexer);
+                        parent.drop(ID, value);
+                        parent.removeAt(parent.indexer);
                         return EMPTY_STRING;
                     }
                     // is it the first
@@ -599,38 +568,37 @@ var COLLECTION = 'Collection',
                     return string;
                 },
                 current: function (delimiter, current) {
-                    var value, sm = this;
+                    var value, manager = this;
                     if (arguments[LENGTH] === 1) {
-                        return (value = sm.get(DELIMITED, delimiter)) === UNDEFINED ? sm.join(delimiter) : value;
+                        return (value = manager.get(DELIMITED, delimiter)) === UNDEFINED ? manager.join(delimiter) : value;
                     } else {
-                        sm.keep(DELIMITED, delimiter, current);
-                        return sm;
+                        manager.keep(DELIMITED, delimiter, current);
+                        return manager;
                     }
                 },
                 ensure: function (value_, splitter) {
-                    var sm = this,
+                    var manager = this,
                         value = value_,
                         delimiter = splitter === UNDEFINED ? SPACE : splitter,
                         isArrayResult = isArray(value),
                         madeString = (isArrayResult ? value.join(delimiter) : value);
-                    if (sm.current(delimiter) === madeString) {
-                        return sm;
+                    if (manager.current(delimiter) === madeString) {
+                        return manager;
                     }
-                    sm.load(isArrayResult ? value : (isString(value) ? value.split(delimiter) : BOOLEAN_FALSE));
-                    sm.current(delimiter, madeString);
-                    return sm;
+                    manager.load(isArrayResult ? value : (isString(value) ? value.split(delimiter) : BOOLEAN_FALSE));
+                    manager.current(delimiter, madeString);
+                    return manager;
                 },
                 refill: function (array_) {
-                    var sm = this,
+                    var manager = this,
                         array = array_;
-                    sm.empty();
+                    manager.empty();
                     if (array) {
-                        sm.load(array);
+                        manager.load(array);
                     }
-                    sm.increment();
-                    return sm;
+                    manager.increment();
+                    return manager;
                 }
             });
-        app.defineDirective(REGISTRY, Registry[CONSTRUCTOR]);
         return Collection;
     });

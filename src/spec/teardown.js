@@ -1,9 +1,11 @@
 test.done(function (infos) {
     var item, expectation, j, i = 0,
         successful = [],
-        failures = [];
+        failures = [],
+        time = 0;
     for (; i < infos.length; i++) {
         item = infos[i];
+        time += item.delta;
         for (j = 0; j < item.expectations.length; j++) {
             expectation = item.expectations[j];
             if (expectation.success) {
@@ -16,5 +18,5 @@ test.done(function (infos) {
             console.error('missing expectation count: ', item);
         }
     }
-    console.log(successful, failures);
+    console.log(time, successful, failures);
 });

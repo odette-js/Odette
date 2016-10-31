@@ -49,3 +49,4 @@ var REGISTRY = 'Registry',
             return cached;
         }
     });
+app.defineDirective(REGISTRY, Registry[CONSTRUCTOR]);

@@ -469,7 +469,7 @@ var customUnits = categoricallyCacheable(function (unitList_) {
             sortedUnitList = unitList.sort(function (a, b) {
                 var aLength = a[LENGTH],
                     bLength = b[LENGTH],
-                    value = _.max([-1, _.min([1, aLength - bLength])]);
+                    value = _.math.max([-1, _.math.min([1, aLength - bLength])]);
                 hash[a] = hash[b] = BOOLEAN_TRUE;
                 if (!lengthHash[aLength]) {
                     lengthHash[aLength] = BOOLEAN_TRUE;
@@ -482,7 +482,7 @@ var customUnits = categoricallyCacheable(function (unitList_) {
                 return -1 * (value === 0 ? (a > b ? -1 : 1) : value);
             });
         lengths.sort(function (a, b) {
-            return -1 * _.max([-1, _.min([1, a - b])]);
+            return -1 * _.math.max([-1, _.math.min([1, a - b])]);
         });
         return function (str_) {
             var ch, unitStr, unit,

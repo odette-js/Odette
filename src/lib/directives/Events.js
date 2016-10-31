@@ -101,9 +101,10 @@ app.scope(function (app) {
                 eventObject.id = ++event_incrementer;
                 eventObject.valueOf = returnsId;
                 eventObject.context = eventObject.context || eventObject.origin;
-                if (modifier && isFunction(modifier)) {
-                    modifier(eventsDirective, eventObject);
-                }
+                toFunction(modifier)(eventsDirective, eventObject);
+                // if (modifier && isFunction(modifier)) {
+                //     modifier(eventsDirective, eventObject);
+                // }
                 eventObject.fn = bind(eventObject.fn || eventObject.handler, eventObject.context);
                 // attach the id to the bound function because that instance is private
                 list = handlers[name] = handlers[name] || Collection();

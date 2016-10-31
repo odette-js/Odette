@@ -111,7 +111,6 @@ app.defineDirective('Tests', (function (app) {
         },
         it = function (its, descriptions, afterEach, beforeEach) {
             return function (name, callback, counter) {
-                console.log(name);
                 its.push({
                     name: descriptions.concat([name]),
                     callback: callback,

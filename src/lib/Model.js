@@ -2,52 +2,51 @@ var CHILDREN = capitalize(CHILD + 'ren'),
     CHILD_OPTIONS = CHILD + 'Options',
     CHILD_EVENTS = CHILD + EVENT_STRING,
     DATA_MANAGER = 'DataManager',
+    MODEL = 'Model',
     Model = app.block(function (app) {
-        var Events = factories.Events,
-            List = factories.Collection,
-            SORT = 'sort',
+        var SORT = 'sort',
             ADDED = 'added',
             UNWRAP = 'unwrap',
             REMOVED = 'removed',
             STOP_LISTENING = 'stopListening',
-            _DELEGATED_CHILD_EVENTS = '_delegatedParentEvents',
-            _PARENT_DELEGATED_CHILD_EVENTS = '_parentDelgatedChildEvents',
+            DELEGATED_CHILD_EVENTS = '_delegatedParentEvents',
+            PARENT_DELEGATED_CHILD_EVENTS = '_parentDelgatedChildEvents',
             modelMaker = function (attributes, options) {
                 return Model(attributes, options);
             },
             // ties child events to new child
-            _delegateChildEvents = function (parent, model) {
+            delegateChildEvents = function (parent, model) {
                 var childsEventDirective, childEvents = result(parent, CHILD_EVENTS);
                 if (model && childEvents) {
                     childsEventDirective = model.directive(EVENT_MANAGER);
                     // stash them
-                    childsEventDirective[_PARENT_DELEGATED_CHILD_EVENTS] = childEvents;
+                    childsEventDirective[PARENT_DELEGATED_CHILD_EVENTS] = childEvents;
                     parent.listenTo(model, childEvents);
                 }
             },
             // ties child events to new child
-            _unDelegateChildEvents = function (parent, model) {
-                var childsEventDirective;
-                if (model && parent[STOP_LISTENING] && (childsEventDirective = model[EVENT_MANAGER]) && childsEventDirective[_PARENT_DELEGATED_CHILD_EVENTS]) {
-                    parent[STOP_LISTENING](model, model[_PARENT_DELEGATED_CHILD_EVENTS]);
-                    childsEventDirective[_PARENT_DELEGATED_CHILD_EVENTS] = UNDEFINED;
+            unDelegateChildEvents = function (parent, model) {
+                var childsEventDirective, delegatedChildEvents;
+                if (model && parent[STOP_LISTENING] && (childsEventDirective = model[EVENT_MANAGER]) && (delegatedChildEvents = childsEventDirective[PARENT_DELEGATED_CHILD_EVENTS])) {
+                    parent[STOP_LISTENING](model, delegatedChildEvents);
+                    delete childsEventDirective[DELEGATED_CHILD_EVENTS];
                 }
             },
-            _delegateParentEvents = function (parent_, model) {
+            delegateParentEvents = function (parent_, model) {
                 var childsEventDirective, parent = model[PARENT],
                     parentEvents = result(model, PARENT + 'Events');
                 if (parent && parentEvents) {
                     childsEventDirective = model.directive(EVENT_MANAGER);
-                    childsEventDirective[_DELEGATED_CHILD_EVENTS] = parentEvents;
+                    childsEventDirective[DELEGATED_CHILD_EVENTS] = parentEvents;
                     model.listenTo(parent, parentEvents);
                 }
             },
             // ties child events to new child
-            _unDelegateParentEvents = function (parent, model) {
-                var childsEventDirective;
-                if (model[STOP_LISTENING] && (childsEventDirective = model[EVENT_MANAGER]) && childsEventDirective[_DELEGATED_CHILD_EVENTS]) {
-                    model[STOP_LISTENING](parent, model[_DELEGATED_CHILD_EVENTS]);
-                    childsEventDirective[_DELEGATED_CHILD_EVENTS] = UNDEFINED;
+            unDelegateParentEvents = function (parent, model) {
+                var childsEventDirective, delegatedChildEvents;
+                if (model[STOP_LISTENING] && (childsEventDirective = model[EVENT_MANAGER]) && (delegatedChildEvents = childsEventDirective[DELEGATED_CHILD_EVENTS])) {
+                    model[STOP_LISTENING](parent, delegatedChildEvents);
+                    delete childsEventDirective[DELEGATED_CHILD_EVENTS];
                 }
             },
             SYNCER = 'Syncer',
@@ -103,8 +102,8 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                     // attach events from parent
                     directive.addToHash(model);
                     // ties models together
-                    _delegateParentEvents(parent, model);
-                    _delegateChildEvents(parent, model);
+                    delegateParentEvents(parent, model);
+                    delegateChildEvents(parent, model);
                     evt = model[DISPATCH_EVENT] && model[DISPATCH_EVENT](ADDED);
                     // notify that you were added
                     return model;
@@ -121,9 +120,9 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                     model[DISPATCH_EVENT](BEFORE_COLON + REMOVED);
                     // notify the child that the remove pipeline is starting
                     // remove the parent events
-                    _unDelegateParentEvents(parent, model);
+                    unDelegateParentEvents(parent, model);
                     // have parent remove it's child events
-                    _unDelegateChildEvents(parent, model);
+                    unDelegateChildEvents(parent, model);
                     // attach events from parent
                     directive.removeFromHash(model);
                     // void out the parent member tied directly to the model
@@ -335,7 +334,7 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                 model.id = (id === UNDEFINED ? ++uniqueCounter : id);
                 return uniqueCounter;
             },
-            Model = factories.Model = factories.Parent.extend('Model',
+            Model = factories[MODEL] = factories.Parent.extend(MODEL,
                 /**
                  * @lends Model.prototype
                  */

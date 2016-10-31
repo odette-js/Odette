@@ -442,7 +442,7 @@ var Linguistics = app.block(function (app) {
                  */
                 handle: function (key, arg) {
                     var sequencer = this;
-                    this.directive(REGISTRY).get('collections', key, makeCollection).call(arg);
+                    this.directive(REGISTRY).get('collections', key, makeCollection).eachCallBound(arg);
                     return sequencer;
                 },
                 /**

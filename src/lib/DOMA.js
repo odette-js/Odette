@@ -1884,6 +1884,7 @@ app.scope(function (app) {
             }
             return BOOLEAN_FALSE;
         },
+        eachCall = _.eachCall,
         dispatchDomEvent = function (evnt, mark) {
             return function (list, owner) {
                 var managers = [];
@@ -4542,8 +4543,29 @@ app.scope(function (app) {
                 }
                 return dom;
             },
+            /**
+             * Sets value of an attribute on the DomManagers. Replaces all values in a space delineated list.
+             * @method
+             * @param {String|Object} key property key or object to set multiple values.
+             * @param {*} value value of the property to be set.
+             * @returns {this}
+             */
             setValue: setValue(domIterates),
+            /**
+             * Checks properties for singular value. If value is found in space delineated list, then Boolean true is returned. Otherwise false is returned. DOMA will check all elements and will only return true if all have passed attribute, value pairs.
+             * @method
+             * @param {String|Object} key attribute to check under for a specific value.
+             * @param {*} value value to pass if key was not passed as object.
+             * @returns {Boolean}
+             */
             hasValue: hasValue(domContextFind),
+            /**
+             * Adds a value to the given attribute if the value does not already exist under that attribute.
+             * @method
+             * @param {String|Object} key attribute to check and add if a value is not already there.
+             * @param {*} value value to add if key was not passed as an object.
+             * @return {this}
+             */
             addValue: addValue(domIterates),
             removeValue: removeValue(domIterates),
             toggleValue: toggleValue(domIterates),

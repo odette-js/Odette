@@ -24,13 +24,13 @@ application.scope().run(window, function (module, app, _, factories, documentVie
             test.expect(collection.toArray()).toEqual(collection.items);
         }, 1);
         test.it('or one at a time', function () {
-            numberCollection.duff(function (item, idx) {
+            numberCollection.each(function (item, idx) {
                 test.expect(numberCollection.item(idx)).toEqual(numberCollection.items[idx]);
             });
         }, numberCollectionLength);
         test.it('as well as in reverse order', function () {
             var list = [];
-            numberCollection.duffRight(function (item, idx) {
+            numberCollection.eachRight(function (item, idx) {
                 test.expect(numberCollection.item(idx)).toEqual(numberCollection.items[idx]);
                 list.push(item);
             });
