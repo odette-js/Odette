@@ -287,6 +287,9 @@ _.publicize({
         checkParody: checkParody,
         iterate: iterate,
         create: directive,
-        all: directives
+        all: directives,
+        get: function (key) {
+            return directives.creation[key];
+        }
     }
 });
