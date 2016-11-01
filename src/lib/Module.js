@@ -198,7 +198,7 @@ var REQUIRE = 'require',
                     }
                 },
                 module: function (name_, windo_, fn_) {
-                    var initResult, list, globalname, parentManager, module, arg1, arg2, parentModulesDirective, modules, attrs, parentIsModule, nametree, manager = this,
+                    var initIsPromise, initResult, list, globalname, parentManager, module, arg1, arg2, parentModulesDirective, modules, attrs, parentIsModule, nametree, manager = this,
                         parent = manager.target,
                         app = manager.application,
                         originalParent = parent,
@@ -242,12 +242,13 @@ var REQUIRE = 'require',
                         initResult = module.run(windo, fn);
                         // allows us to create dependency graphs
                         // look into creating promise
+                        initIsPromise = initResult && _.isPromise(initResult);
                         if (module.is('running')) {
-                            if (initResult && isPromise(initResult)) {
+                            if (initIsPromise) {
                                 module.depends(initResult);
                             }
                         } else {
-                            if (initResult && isPromise(initResult)) {
+                            if (initIsPromise) {
                                 initResult.then(triggerBubble);
                             } else {
                                 triggerBubble();
