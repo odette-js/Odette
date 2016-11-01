@@ -2668,7 +2668,7 @@ app.scope(function (app) {
                     }
                     // constructor
                     docManager.registeredElementOptions[name] = {
-                        events: events,
+                    // events: events,
                         autotriggers: autotriggers
                     };
                     var constrktr = registeredConstructors[name] = DomManager.extend(capitalize(camelCase(name)), managerFn || {});
@@ -3674,7 +3674,7 @@ app.scope(function (app) {
                         extend(manager, el);
                         // run it through it's scoped constructor
                         registeredOptions = owner.registeredElementOptions[manager[REGISTERED_AS]];
-                        manager.on(registeredOptions.events);
+                        manager.on(manager.events);
                         return manager;
                     }
                     test(manager, owner, el);
