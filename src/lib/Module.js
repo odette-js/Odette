@@ -94,10 +94,6 @@ var REQUIRE = 'require',
                     });
                     return module;
                 },
-                // createArguments: function (windo) {
-                //     var manager = this;
-                //     return [manager.target].concat(manager[APPLICATION].directive(MODULE_MANAGER).createArguments(windo));
-                // },
                 topLevel: function () {
                     return !this[APPLICATION] || this[APPLICATION] === this[PARENT];
                 }
@@ -119,7 +115,7 @@ var REQUIRE = 'require',
                         fn = isFunction(windo_) ? windo_ : fn_,
                         windo = isWindow(windo_) ? windo_ : window;
                     if (isFunction(fn)) {
-                        result = fn.apply(module, module.createArguments(windo));
+                        result = fn.apply(module, manager.createArguments(windo));
                     }
                     return result === UNDEFINED ? module : result;
                 },
@@ -134,7 +130,7 @@ var REQUIRE = 'require',
                             app.global.definition(app.VERSION, windo);
                             return documentManagerDocuments.get(ID, docu[__ELID__]);
                         });
-                    return [app, _, _ && _.factories, documentView, documentView.factories, documentView.$];
+                    return [manager.target, app, _, _ && _.factories, documentView, documentView.factories, documentView.$];
                 },
                 require: function (modulename, handler) {
                     var promise, module, manager = this,

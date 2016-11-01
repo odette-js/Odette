@@ -363,7 +363,7 @@ application.scope().run(window, function (module, app, _, factories, documentVie
             // });
             // write async test
             test.it('_.fetch', function (done) {
-                _.fetch("data:image/webp;base64,UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA").then(function () {
+                _.fetch("data:image/webp;base64,UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA").then(function (e) {
                     test.expect(typeof e === 'object').toBe(true);
                     done();
                 });
