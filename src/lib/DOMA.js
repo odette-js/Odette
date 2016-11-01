@@ -2346,7 +2346,10 @@ app.scope(function (app) {
                                 value: registerElDefaultHandlers[evnt]
                             } : {
                                 value: function (e) {
-                                    return manager.returnsManager(this).dispatchEvent(evnt, e);
+                                    var m = manager.returnsManager(this);
+                                    if (m.is('created')) {
+                                        return m.dispatchEvent(evnt, e);
+                                    }
                                 }
                             }) : (value || opts[item + 'Callback'])));
                         }
