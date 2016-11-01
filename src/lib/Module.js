@@ -58,7 +58,7 @@ var REQUIRE = 'require',
                 var exporting = [];
                 duff(list, function (path) {
                     var module = app.module(path);
-                    if (module.is(DEFINED)) {
+                    if (module.is(INITIALIZED)) {
                         exporting.push(module[EXPORTS]);
                     }
                 });
@@ -148,12 +148,15 @@ var REQUIRE = 'require',
                     return (this.target && this.target.terminator) || this.target;
                 },
                 run: function (windo_, fn_) {
-                    var result, manager = this,
+                    var running, result, manager = this,
                         module = manager.target,
                         fn = isFunction(windo_) ? windo_ : fn_,
                         windo = isWindow(windo_) ? windo_ : window;
                     if (isFunction(fn)) {
+                        running = module.is('running');
+                        module.mark('running');
                         result = fn.apply(module, manager.createArguments(windo));
+                        module.remark('running', running);
                     }
                     return result === UNDEFINED ? module : result;
                 },
@@ -239,10 +242,16 @@ var REQUIRE = 'require',
                         initResult = module.run(windo, fn);
                         // allows us to create dependency graphs
                         // look into creating promise
-                        if (initResult && _.isPromise(initResult)) {
-                            initResult.then(triggerBubble);
+                        if (module.is('running')) {
+                            if (initResult && isPromise(initResult)) {
+                                module.depends(initResult);
+                            }
                         } else {
-                            triggerBubble();
+                            if (initResult && isPromise(initResult)) {
+                                initResult.then(triggerBubble);
+                            } else {
+                                triggerBubble();
+                            }
                         }
                     }
                     return module;
