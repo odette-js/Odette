@@ -2522,6 +2522,9 @@ app.scope(function (app) {
                 returnsManager: function (item) {
                     return item === manager || item === manager.element() ? manager : returnsManager(item, manager);
                 },
+                hasManager: function (item) {
+                    return element && !isWindow(element) && element.isValidDomManager ? element : !!owner.data.get(el)[DOM_MANAGER_STRING];
+                },
                 expandEvent: function (passedEvent, actualEvent) {
                     var expanders = manager.events.expanders;
                     duff(toArray(actualEvent, SPACE), function (actualEvent) {
