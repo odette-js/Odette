@@ -68,11 +68,11 @@ var REQUIRE = 'require',
             moduleLoadPromise = function (registry) {
                 var module = registry.target;
                 return Promise(function (success, failure) {
-                    if (module.is(INITIALIZED)) {
+                    if (module.is(DEFINED)) {
                         success();
                     } else {
                         module.on(INITIALIZED_COLON_SUBMODULE, function () {
-                            if (!module.is(INITIALIZED)) {
+                            if (!module.is(DEFINED)) {
                                 return;
                             }
                             module.off();
