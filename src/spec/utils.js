@@ -362,9 +362,11 @@ application.scope().run(window, function (module, app, _, factories, documentVie
             //     test.expect(_.unshift(make(), [0])).toEqual(make().unshift(0));
             // });
             // write async test
-            test.it('_.fetch', function () {
-                var img = _.fetch("data:image/webp;base64,UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA");
-                test.expect(img instanceof Image).toEqual(true);
+            test.it('_.fetch', function (done) {
+                _.fetch("data:image/webp;base64,UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA").then(function () {
+                    test.expect(typeof e === 'object').toBe(true);
+                    done();
+                });
             }, 1);
             test.it('_.parse', function () {
                 test.expect(_.parse('{"some":1,"one":true}')).toEqual({

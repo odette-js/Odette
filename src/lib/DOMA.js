@@ -1035,14 +1035,48 @@ app.scope(function (app) {
                 }
             };
         }()),
-        fetch = function (url, callback) {
-            var img = new Image();
-            url = stringifyQuery(url);
-            if (callback) {
-                img.onload = callback;
-            }
+        fetch = function (url) {
+            var load_e, err_e, thens = [],
+                catchs = [],
+                img = new Image(),
+                empty = function (list, e) {
+                    app.map(list, function (fn) {
+                        fn(e);
+                    });
+                },
+                load = function (e) {
+                    if (!err_e) {
+                        load_e = e;
+                        empty(thens, e);
+                    }
+                },
+                err = function (e) {
+                    if (!load_e) {
+                        err_e = e;
+                        empty(thens, e);
+                    }
+                };
+            img.onload = load;
+            img.onerror = img.ontimeout = img.oncancel = err;
             img.src = url;
-            return img;
+            return {
+                then: function (fn) {
+                    if (load_e) {
+                        fn(load_e);
+                    } else {
+                        thens.push(fn);
+                    }
+                    return this;
+                },
+                catch: function (fn) {
+                    if (err_e) {
+                        fn(err_e);
+                    } else {
+                        catchs.push(fn);
+                    }
+                    return this;
+                }
+            };
         },
         DO_NOT_TRUST = BOOLEAN_FALSE,
         triggersOnElement = function (el, key) {

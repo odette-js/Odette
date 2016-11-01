@@ -66,20 +66,22 @@ var REQUIRE = 'require',
             },
             Promise = _.Promise,
             moduleMethods = {
-                run: function (windo_, fn_) {
-                    var result, module = this,
-                        fn = isFunction(windo_) ? windo_ : fn_,
-                        windo = isWindow(windo_) ? windo_ : window;
-                    if (isFunction(fn)) {
-                        result = fn.apply(module, module.createArguments(windo));
-                    }
-                    return result === UNDEFINED ? module : result;
-                },
+                // run: function (windo_, fn_) {
+                //     var result, module = this,
+                //         fn = isFunction(windo_) ? windo_ : fn_,
+                //         windo = isWindow(windo_) ? windo_ : window;
+                //     if (isFunction(fn)) {
+                //         result = fn.apply(module, module.createArguments(windo));
+                //     }
+                //     return result === UNDEFINED ? module : result;
+                // },
                 publicize: intendedApi(function (key, value) {
                     this[EXPORTS][key] = value;
                 }),
+                run: _.directives.parody(MODULE_MANAGER, 'run'),
                 require: _.directives.parody(MODULE_MANAGER, REQUIRE),
                 module: _.directives.parody(MODULE_MANAGER, MODULE),
+                createArguments: _.directives.parody(MODULE_MANAGER, 'createArguments'),
                 startWithParent: returns(BOOLEAN_TRUE),
                 stopWithParent: returns(BOOLEAN_TRUE),
                 constructor: function (attrs, opts) {
@@ -92,10 +94,10 @@ var REQUIRE = 'require',
                     });
                     return module;
                 },
-                createArguments: function (windo) {
-                    var module = this;
-                    return [module].concat(module[APPLICATION].directive(MODULE_MANAGER).createArguments(windo));
-                },
+                // createArguments: function (windo) {
+                //     var manager = this;
+                //     return [manager.target].concat(manager[APPLICATION].directive(MODULE_MANAGER).createArguments(windo));
+                // },
                 topLevel: function () {
                     return !this[APPLICATION] || this[APPLICATION] === this[PARENT];
                 }
@@ -110,6 +112,16 @@ var REQUIRE = 'require',
                     manager.application = target.application || target;
                     manager[CONSTRUCTOR + COLON + COLLECTION]();
                     return manager;
+                },
+                run: function (windo_, fn_) {
+                    var result, manager = this,
+                        module = manager.target,
+                        fn = isFunction(windo_) ? windo_ : fn_,
+                        windo = isWindow(windo_) ? windo_ : window;
+                    if (isFunction(fn)) {
+                        result = fn.apply(module, module.createArguments(windo));
+                    }
+                    return result === UNDEFINED ? module : result;
                 },
                 createArguments: function (windo) {
                     var manager = this,
