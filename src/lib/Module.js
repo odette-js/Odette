@@ -76,7 +76,7 @@ var REQUIRE = 'require',
                 //     return result === UNDEFINED ? module : result;
                 // },
                 parent: function () {
-                    var splitglobal, splitsliced, module = this,
+                    var splitglobal, splitsliced, terminator, module = this,
                         globalname = module.globalname;
                     // terminator
                     if (!globalname) {
@@ -85,10 +85,11 @@ var REQUIRE = 'require',
                     splitglobal = globalname.split(PERIOD);
                     splitsliced = splitglobal.slice(0, splitglobal.length - 1);
                     // terminating points
+                    terminator = module.directive(MODULE_MANAGER).terminator();
                     if (!splitsliced.length) {
-                        return module.terminator;
+                        return terminator;
                     }
-                    return module.terminator.module(splitsliced.join(PERIOD));
+                    return terminator.module(splitsliced.join(PERIOD));
                 },
                 publicize: intendedApi(function (key, value) {
                     this[EXPORTS][key] = value;
@@ -120,10 +121,12 @@ var REQUIRE = 'require',
                 constructor: function (target) {
                     var manager = this;
                     manager.target = target;
-                    manager.terminator = target.terminator || target;
                     manager.application = target.application || target;
                     manager[CONSTRUCTOR + COLON + COLLECTION]();
                     return manager;
+                },
+                terminator: function () {
+                    return (this.target && this.target.terminator) || this.target;
                 },
                 run: function (windo_, fn_) {
                     var result, manager = this,
@@ -137,7 +140,7 @@ var REQUIRE = 'require',
                 },
                 createArguments: function (windo) {
                     var manager = this,
-                        app = manager.terminator,
+                        app = manager.terminator(),
                         _ = app._,
                         docu = windo[DOCUMENT],
                         id = docu[__ELID__],
