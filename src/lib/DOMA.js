@@ -2523,7 +2523,7 @@ app.scope(function (app) {
                     return item === manager || item === manager.element() ? manager : returnsManager(item, manager);
                 },
                 hasManager: function (element) {
-                    return element && !isWindow(element) && element.isValidDomManager ? element : !!owner.data.get(el)[DOM_MANAGER_STRING];
+                    return element && !isWindow(element) && element.isValidDomManager ? element : !!manager.data.get(el)[DOM_MANAGER_STRING];
                 },
                 expandEvent: function (passedEvent, actualEvent) {
                     var expanders = manager.events.expanders;
