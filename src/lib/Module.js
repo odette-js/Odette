@@ -65,6 +65,22 @@ var REQUIRE = 'require',
                 return exporting[LENGTH] === list[LENGTH] ? exporting : BOOLEAN_FALSE;
             },
             Promise = _.Promise,
+            moduleLoadPromise = function (registry) {
+                var promise = registry.target;
+                return Promise(function (success, failure) {
+                    if (module.is(INITIALIZED)) {
+                        success();
+                    } else {
+                        module.on(INITIALIZED_COLON_SUBMODULE, function () {
+                            if (!module.is(INITIALIZED)) {
+                                return;
+                            }
+                            module.off();
+                            success();
+                        });
+                    }
+                });
+            },
             moduleMethods = {
                 // run: function (windo_, fn_) {
                 //     var result, module = this,
@@ -112,6 +128,9 @@ var REQUIRE = 'require',
                 },
                 topLevel: function () {
                     return !this[APPLICATION] || this[APPLICATION] === this[PARENT];
+                },
+                load: function () {
+                    return this.directive(REGISTRY).get(PROMISES, 'load', moduleLoadPromise);
                 }
             },
             newModuleMethods = extend({}, startableMethods, moduleMethods),
@@ -230,7 +249,7 @@ var REQUIRE = 'require',
                 }
             }));
         app.defineDirective(MODULE_MANAGER, ModuleManager[CONSTRUCTOR]);
-        app.extend(extend({}, Directive[CONSTRUCTOR][PROTOTYPE], Events[CONSTRUCTOR][PROTOTYPE], factories.Parent[CONSTRUCTOR][PROTOTYPE], newModuleMethods, {
+        app.extend(extend({}, Directive.fn, Events.fn, factories.Parent.fn, newModuleMethods, {
             app: function () {
                 return this;
             }
