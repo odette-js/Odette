@@ -130,7 +130,7 @@ var REQUIRE = 'require',
                     return !this[APPLICATION] || this[APPLICATION] === this[PARENT];
                 },
                 load: function () {
-                    return this.directive(REGISTRY).get(PROMISES, 'load', moduleLoadPromise);
+                    return this.directive(REGISTRY).get('promises', 'load', moduleLoadPromise);
                 }
             },
             newModuleMethods = extend({}, startableMethods, moduleMethods),
