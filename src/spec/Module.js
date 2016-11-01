@@ -4,8 +4,8 @@ application.scope().run(window, function (module, app, _, factories, documentVie
         var lower = app.module('level.lower');
         var lowered = app.module('level.lower.lowered');
         test.it('can have children', function () {
-            test.expect(lower.parent === level).toEqual(true);
-            test.expect(lower === lowered.parent).toEqual(true);
+            test.expect(lower.parent() === level).toEqual(true);
+            test.expect(lower === lowered.parent()).toEqual(true);
         }, 2);
         test.it('can access it\'s children through the exact same api', function () {
             test.expect(lower.module('lowered') === lowered).toEqual(true);

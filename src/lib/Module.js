@@ -75,6 +75,21 @@ var REQUIRE = 'require',
                 //     }
                 //     return result === UNDEFINED ? module : result;
                 // },
+                parent: function () {
+                    var splitglobal, splitsliced, module = this,
+                        globalname = module.globalname;
+                    // terminator
+                    if (!globalname) {
+                        return NULL;
+                    }
+                    splitglobal = globalname.split(PERIOD);
+                    splitsliced = splitglobal.slice(0, splitglobal.length - 1);
+                    // terminating points
+                    if (!splitsliced.length) {
+                        return module.terminator;
+                    }
+                    return module.terminator.module(splitsliced.join(PERIOD));
+                },
                 publicize: intendedApi(function (key, value) {
                     this[EXPORTS][key] = value;
                 }),
@@ -88,7 +103,7 @@ var REQUIRE = 'require',
                     var module = this;
                     module[EXPORTS] = {};
                     module[CONSTRUCTOR + COLON + MODEL](attrs, opts);
-                    module.listenTo(module[PARENT], {
+                    module.listenTo(module[PARENT](), {
                         start: doStart,
                         stop: doStop
                     });
@@ -105,6 +120,7 @@ var REQUIRE = 'require',
                 constructor: function (target) {
                     var manager = this;
                     manager.target = target;
+                    manager.terminator = target.terminator || target;
                     manager.application = target.application || target;
                     manager[CONSTRUCTOR + COLON + COLLECTION]();
                     return manager;
@@ -121,7 +137,7 @@ var REQUIRE = 'require',
                 },
                 createArguments: function (windo) {
                     var manager = this,
-                        app = manager.application,
+                        app = manager.terminator,
                         _ = app._,
                         docu = windo[DOCUMENT],
                         id = docu[__ELID__],
@@ -166,19 +182,10 @@ var REQUIRE = 'require',
                         wasWindow = isWindow(windo_),
                         windo = wasWindow ? windo_ : NULL,
                         fn = isFunction(fn_) ? fn_ : (!wasWindow && isFunction(windo_) ? windo_ : NULL),
-                        // module = parent.directive(CHILDREN).get(name_),
                         triggerBubble = function () {
                             module.mark(DEFINED);
-                            module[PARENT].bubble(INITIALIZED_COLON_SUBMODULE);
+                            module.bubble(INITIALIZED_COLON_SUBMODULE);
                         };
-                    // if (module) {
-                    //     // hey, i found it. we're done here
-                    //     if (!fn) {
-                    //         return module;
-                    //     }
-                    //     parent = module[PARENT];
-                    //     namespace = [module.id];
-                    // } else {
                     // now i make the chain
                     while (namespace.length > 1) {
                         parent = parent.module(namespace[0]);
@@ -187,35 +194,22 @@ var REQUIRE = 'require',
                     parentManager = parent.directive(MODULE_MANAGER);
                     module = parentManager.get(ID, namespace[0]);
                     if (module && !fn) {
-                        // if (!fn) {
                         return module;
-                        // }
-                        // namespace = [module.id];
                     }
-                    // parentModulesDirective = parent.directive(CHILDREN);
                     name = namespace.join(PERIOD);
-                    // module = parentModulesDirective.get(ID, name);
                     if (!module) {
                         list = parent.globalname ? parent.globalname.split(PERIOD) : [];
                         list.push(name);
                         globalname = list.join(PERIOD);
                         arg2 = extend({}, result(parent, CHILD_OPTIONS) || {}, {
-                            application: app,
-                            parent: parent,
+                            application: app.app(),
+                            terminator: app,
                             id: name,
                             globalname: globalname
                         });
                         module = manager.Module({}, arg2);
                         parentManager.push(module);
                         parentManager.keep(ID, name, module);
-                        // if (parent === app) {
-                        //     module = manager.Module({}, arg2);
-                        //     parentManager.add(module);
-                        //     parentManager.keep(ID, name, module);
-                        // } else {
-                        //     module = parent.add({}, arg2).item(0);
-                        // }
-                        // app[CHILDREN].keep(ID, globalname, module);
                     }
                     if (isWindow(windo) || isFunction(windo) || isFunction(fn)) {
                         module[EXPORTS] = module[EXPORTS] || {};
@@ -233,7 +227,11 @@ var REQUIRE = 'require',
                 }
             }));
         app.defineDirective(MODULE_MANAGER, ModuleManager[CONSTRUCTOR]);
-        app.extend(extend({}, Directive[CONSTRUCTOR][PROTOTYPE], Events[CONSTRUCTOR][PROTOTYPE], factories.Parent[CONSTRUCTOR][PROTOTYPE], newModuleMethods));
+        app.extend(extend({}, Directive[CONSTRUCTOR][PROTOTYPE], Events[CONSTRUCTOR][PROTOTYPE], factories.Parent[CONSTRUCTOR][PROTOTYPE], newModuleMethods, {
+            app: function () {
+                return this;
+            }
+        }));
         // delete the prototype link from parent prototype
         delete app.fn;
         return Module;
