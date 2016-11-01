@@ -66,7 +66,7 @@ var REQUIRE = 'require',
             },
             Promise = _.Promise,
             moduleLoadPromise = function (registry) {
-                var promise = registry.target;
+                var module = registry.target;
                 return Promise(function (success, failure) {
                     if (module.is(INITIALIZED)) {
                         success();
