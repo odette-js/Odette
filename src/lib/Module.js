@@ -58,7 +58,7 @@ var REQUIRE = 'require',
                 var exporting = [];
                 duff(list, function (path) {
                     var module = app.module(path);
-                    if (module.is(INITIALIZED)) {
+                    if (module.is(DEFINED)) {
                         exporting.push(module[EXPORTS]);
                     }
                 });
