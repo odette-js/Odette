@@ -2522,7 +2522,7 @@ app.scope(function (app) {
                 returnsManager: function (item) {
                     return item === manager || item === manager.element() ? manager : returnsManager(item, manager);
                 },
-                hasManager: function (item) {
+                hasManager: function (element) {
                     return element && !isWindow(element) && element.isValidDomManager ? element : !!owner.data.get(el)[DOM_MANAGER_STRING];
                 },
                 expandEvent: function (passedEvent, actualEvent) {
