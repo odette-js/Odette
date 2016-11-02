@@ -135,8 +135,53 @@ var REQUIRE = 'require',
             },
             newModuleMethods = extend({}, startableMethods, moduleMethods),
             Module = factories.Module = Model.extend(CAPITAL_MODULE, newModuleMethods),
+            allModulesLoaded = function (registry) {
+                var manager = registry.target;
+                var check = function () {
+                    return manager.find(function (module) {
+                        return !module.is(DEFINED);
+                    });
+                };
+                var setup = function (success_, failure_) {
+                    var success = function () {
+                        registry.drop('promises', 'load');
+                        success_();
+                    };
+                    var length = manager.length(),
+                        setups = manager.reduce(function (memo, module) {
+                            if (module.is(DEFINED)) {
+                                return memo - 1;
+                            }
+                            module.once(INITIALIZED_COLON_SUBMODULE, function () {
+                                if (!check()) {
+                                    return;
+                                }
+                                if (length === manager.length()) {
+                                    success();
+                                } else {
+                                    setup(success, failure);
+                                }
+                            });
+                        }, length);
+                    if (!setups) {
+                        success();
+                    }
+                };
+                return Promise(setup);
+            },
             ModuleManager = Collection.extend(MODULE_MANAGER, extend({
                 Module: Module,
+                load: function () {
+                    var manager = this;
+                    var registry = manager.directive(REGISTRY);
+                    return this.directive(REGISTRY).get('promises', 'load', allModulesLoaded);
+                },
+                all: function () {
+                    return Promise.all(this.mapCall('load'));
+                },
+                race: function () {
+                    return Promise.race(this.mapCall('load'));
+                },
                 constructor: function (target) {
                     var manager = this;
                     manager.target = target;
