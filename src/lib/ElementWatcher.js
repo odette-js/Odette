@@ -3,13 +3,19 @@ var WATCHERS = 'watchers';
 var RESIZE = 'resize';
 var AF = _.AF;
 factories[ELEMENT_WATCHER] = app.defineDirective(ELEMENT_WATCHER, app.block(function (app) {
+    var counter = 0;
     return factories.Registry.extend(ELEMENT_WATCHER, {
+        namespace: function () {
+            return this.get(WATCHERS, 'namespace', function () {
+                return 'watcher-' + (++counter);
+            });
+        },
         watch: function (el, fn) {
             var cached, elementWatcher = this,
                 __elid__ = el[__ELID__],
                 watchers = elementWatcher.get(WATCHERS, __elid__) || {},
                 count = watchers.count && ++watchers.count;
-            el.on(RESIZE, fn);
+            el.on(RESIZE, elementWatcher.namespace(), fn);
             if (el.is('window') || watchers.id) {
                 return elementWatcher;
             }
@@ -41,18 +47,13 @@ factories[ELEMENT_WATCHER] = app.defineDirective(ELEMENT_WATCHER, app.block(func
                 cached = elementWatcher.get(WATCHERS, el[__ELID__]),
                 evntManager = el.directive(EVENT_MANAGER) || {},
                 handlers = evntManager.handlers || {},
-                clickHandlers = handlers.click || Collection(),
-                length = clickHandlers.length();
-            if (fn) {
-                el.off(RESIZE, fn);
-            }
-            if (!cached.id) {
-                return elementWatcher;
-            }
-            if (length !== clickHandlers.length()) {
+                resizeHandlers = handlers.resize || Collection(),
+                length = resizeHandlers.length();
+            el.off(RESIZE, elementWatcher.namespace());
+            if (length !== resizeHandlers.length()) {
                 --cached.count;
             }
-            if (!cached.count) {
+            if (cached.id && !cached.count) {
                 AF.dequeue(cached.id);
             }
             return elementWatcher;
