@@ -3496,6 +3496,7 @@ app.scope(function (app) {
                     return context;
                 },
                 stopListening: function (other, key, handler) {
+                    var context = this;
                     if (!other) {
                         return context;
                     }
