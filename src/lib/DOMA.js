@@ -3357,8 +3357,14 @@ app.scope(function (app) {
                 },
                 render: function (els) {
                     var el = this.element();
-                    this.owner.nodeComparison(el, [el.localName, this.attributes(), els]);
-                    return this;
+                    var diff = this.owner.nodeComparison(el, [el.localName, this.attributes(), els]);
+                    var memo = BOOLEAN_FALSE;
+                    // if it's a function, then do it last
+                    result = diff.remove() || memo;
+                    result = diff.update() || result;
+                    result = diff.insert() || result;
+                    // return modifiers.insert() || result;
+                    return memo;
                 },
                 registeredElementName: function () {
                     return this.owner.registeredElementName(this[REGISTERED_AS]);

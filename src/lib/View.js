@@ -615,7 +615,7 @@ var REGION_MANAGER = 'RegionManager',
                         modifiers = element.modifiers,
                         memo = BOOLEAN_FALSE;
                     if (!element.mutations) {
-                        return BOOLEAN_FALSE;
+                        return memo;
                     }
                     delete element.mutations;
                     delete element.modifiers;
