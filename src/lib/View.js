@@ -768,7 +768,7 @@ var REGION_MANAGER = 'RegionManager',
                     return directive;
                 },
                 attributes: function () {
-                    return result(this.view, 'attributes');
+                    return _.result(this.view, 'attributes');
                 },
                 bindUI: function () {
                     var directive = this,

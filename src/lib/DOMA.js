@@ -3365,7 +3365,6 @@ app.scope(function (app) {
                     result = mutations.update() || result;
                     result = mutations.insert() || result;
                     diff.changed = result;
-                    // return modifiers.insert() || result;
                     return diff;
                 },
                 registeredElementName: function () {
