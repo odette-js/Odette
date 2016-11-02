@@ -3487,7 +3487,7 @@ app.scope(function (app) {
                                 })) {
                                 handlers.push({
                                     fn: handlr,
-                                    bound: bind(handlr, context)
+                                    bound: (bound = bind(handlr, context))
                                 });
                                 other.on(key, context.__elid__, bound);
                             }
