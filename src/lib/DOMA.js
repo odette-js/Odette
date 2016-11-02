@@ -3358,13 +3358,15 @@ app.scope(function (app) {
                 render: function (els) {
                     var el = this.element();
                     var diff = this.owner.nodeComparison(el, [el.localName, this.attributes(), els]);
+                    var mutations = diff.mutations;
                     var memo = BOOLEAN_FALSE;
                     // if it's a function, then do it last
-                    result = diff.remove() || memo;
-                    result = diff.update() || result;
-                    result = diff.insert() || result;
+                    result = mutations.remove() || memo;
+                    result = mutations.update() || result;
+                    result = mutations.insert() || result;
+                    diff.changed = result;
                     // return modifiers.insert() || result;
-                    return memo;
+                    return diff;
                 },
                 registeredElementName: function () {
                     return this.owner.registeredElementName(this[REGISTERED_AS]);
