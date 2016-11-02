@@ -43,7 +43,9 @@ factories[ELEMENT_WATCHER] = app.defineDirective(ELEMENT_WATCHER, app.block(func
                 handlers = evntManager.handlers || {},
                 clickHandlers = handlers.click || Collection(),
                 length = clickHandlers.length();
-            el.off(RESIZE, fn);
+            if (fn) {
+                el.off(RESIZE, fn);
+            }
             if (!cached.id) {
                 return elementWatcher;
             }
