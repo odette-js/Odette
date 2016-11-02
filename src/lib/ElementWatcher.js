@@ -48,10 +48,14 @@ factories[ELEMENT_WATCHER] = app.defineDirective(ELEMENT_WATCHER, app.block(func
                 evntManager = el.directive(EVENT_MANAGER) || {},
                 handlers = evntManager.handlers || {},
                 resizeHandlers = handlers.resize || Collection(),
-                length = resizeHandlers.length();
-            el.off(RESIZE, elementWatcher.namespace());
-            if (length !== resizeHandlers.length()) {
-                --cached.count;
+                length = resizeHandlers.length(),
+                namespace = elementWatcher.namespace();
+            if (!fn) {
+                cached.count = 0;
+                el.off(RESIZE, namespace);
+            } else {
+                cached.count--;
+                el.off(RESIZE, namespace, fn);
             }
             if (cached.id && !cached.count) {
                 AF.dequeue(cached.id);
