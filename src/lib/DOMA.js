@@ -3356,7 +3356,8 @@ app.scope(function (app) {
                     }, string);
                 },
                 render: function (els) {
-                    this.owner.nodeComparison(this.element(), els);
+                    var el = this.element();
+                    this.owner.nodeComparison(el, [el.tagName, this.attributes(), [els]]);
                     return this;
                 },
                 registeredElementName: function () {
