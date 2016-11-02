@@ -164,7 +164,7 @@ var REQUIRE = 'require',
                             });
                         }, length);
                     if (!setups) {
-                        success();
+                        return success();
                     }
                 };
                 return Promise(setup);
