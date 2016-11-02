@@ -173,9 +173,7 @@ var REQUIRE = 'require',
             ModuleManager = Collection.extend(MODULE_MANAGER, extend({
                 Module: Module,
                 load: function () {
-                    var manager = this;
-                    var registry = manager.directive(REGISTRY);
-                    return this.directive(REGISTRY).get('promises', 'load', allModulesLoaded);
+                    return this.directive(REGISTRY).get('promises', 'load', allModulesLoaded) || Promise.resolve();
                 },
                 all: function () {
                     return Promise.all(this.mapCall('load'));
