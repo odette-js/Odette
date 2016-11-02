@@ -136,7 +136,7 @@ var REQUIRE = 'require',
             newModuleMethods = extend({}, startableMethods, moduleMethods),
             Module = factories.Module = Model.extend(CAPITAL_MODULE, newModuleMethods),
             allModulesLoaded = function (registry) {
-                var promise, manager = registry.target;
+                var promise, returnable, manager = registry.target;
                 var check = function () {
                     return manager.find(function (module) {
                         return !module.is(DEFINED);
