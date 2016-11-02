@@ -164,11 +164,11 @@ var REQUIRE = 'require',
                             });
                         }, length);
                     if (!setups) {
-                        returnable = true;
+                        returnable = BOOLEAN_TRUE;
                         return success();
                     }
                 };
-                return (promise = Promise(setup)) && !returnable ? undefined : promise;
+                return (promise = Promise(setup)) && !returnable ? promise : UNDEFINED;
             },
             ModuleManager = Collection.extend(MODULE_MANAGER, extend({
                 Module: Module,
