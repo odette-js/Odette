@@ -3356,7 +3356,7 @@ app.scope(function (app) {
                     }, string);
                 },
                 render: function (els) {
-                    var el = this.element();
+                    var result, el = this.element();
                     var diff = this.owner.nodeComparison(el, [el.localName, this.attributes(), els]);
                     var mutations = diff.mutations;
                     var memo = BOOLEAN_FALSE;
