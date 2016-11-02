@@ -138,7 +138,7 @@ app.scope(function (app) {
                 }
             },
             nextBubble: function (start) {
-                return result(start, PARENT);
+                return _.result(start, PARENT);
             },
             bubble: function (evnt, data, options) {
                 var previous, events = this,
