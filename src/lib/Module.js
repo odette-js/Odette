@@ -136,7 +136,7 @@ var REQUIRE = 'require',
             newModuleMethods = extend({}, startableMethods, moduleMethods),
             Module = factories.Module = Model.extend(CAPITAL_MODULE, newModuleMethods),
             allModulesLoaded = function (registry) {
-                var manager = registry.target;
+                var promise, manager = registry.target;
                 var check = function () {
                     return manager.find(function (module) {
                         return !module.is(DEFINED);
@@ -164,10 +164,11 @@ var REQUIRE = 'require',
                             });
                         }, length);
                     if (!setups) {
+                        returnable = true;
                         return success();
                     }
                 };
-                return Promise(setup);
+                return (promise = Promise(setup)) && !returnable ? undefined : promise;
             },
             ModuleManager = Collection.extend(MODULE_MANAGER, extend({
                 Module: Module,
