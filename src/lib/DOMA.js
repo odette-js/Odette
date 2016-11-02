@@ -3467,6 +3467,76 @@ app.scope(function (app) {
                 on: addEventListener,
                 addEventListener: addEventListener,
                 once: addEventListenerOnce,
+                listenTo: function (other, key, handler) {
+                    var context = this,
+                        registry = context.directive(REGISTRY);
+                    if (!other) {
+                        return context;
+                    }
+                    intendedObject(key, handler, function (key, handlr_) {
+                        var handlr = isString(handlr_) ? context[handlr_] : handlr_;
+                        if (!isFunction(handlr_)) {
+                            return;
+                        }
+                        duff(toArray(key, SPACE), function (key) {
+                            var bound, handlers = registry.get('boundHandlers-' + other.__elid__, key, function () {
+                                return [];
+                            });
+                            if (!find(handlers, function (item) {
+                                    return item.fn === handlr;
+                                })) {
+                                handlers.push({
+                                    fn: handlr,
+                                    bound: bind(handlr, context)
+                                });
+                                other.on(key, context.__elid__, bound);
+                            }
+                        });
+                    });
+                    return context;
+                },
+                stopListening: function (other, key, handler) {
+                    if (!other) {
+                        return context;
+                    }
+                    var namespace = context.__elid__;
+                    intendedObject(key, handler, function (key, handler_) {
+                        var handler = isString(handler_) ? context[handler_] : handler_;
+                        if (!key && !handler) {
+                            duff(keys(context.directive(REGISTRY).group('boundHandlers-' + other.__elid__)), function (list, key) {
+                                other.off(key, namespace);
+                            });
+                        } else if (key && handler) {
+                            // take a specific one off
+                            duff(toArray(key, SPACE), function (unbounded) {
+                                var found, handlers = registry.get('boundHandlers-' + other.__elid__, key, function () {
+                                    return [];
+                                });
+                                if ((found = find(handlers, function (item) {
+                                        return item.fn === unbounded;
+                                    }))) {
+                                    other.off(item, namespace, found.bound);
+                                }
+                            });
+                        } else if (key) {
+                            duff(toArray(key, SPACE), function (unbounded) {
+                                // take all the handlers that match this key off
+                                other.off(key, namespace);
+                            });
+                        } else if (handler) {
+                            // take all the keys that match this handler off
+                            duff(keys(context.directive(REGISTRY).group('boundHandlers-' + other.__elid__)), function (list, key) {
+                                find(list, function (item) {
+                                    if (item.fn !== handler) {
+                                        return;
+                                    }
+                                    return other.off(key, namespace, item.bound);
+                                });
+                            });
+                        }
+                    });
+                    return context;
+                },
                 /**
                  * Removes event handlers that match the parameters passed into the method.
                  * @method
