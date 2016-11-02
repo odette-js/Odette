@@ -1730,6 +1730,7 @@ app.scope(function (app) {
         },
         setInnard = function (attribute, manager, value, vars) {
             var children, previous, cachedValue, win, doc, windo, doTheThing, parentElement,
+                writes = BOOLEAN_TRUE,
                 owner = manager.owner,
                 appliedvalue = value || EMPTY_STRING;
             if (manager.is(IFRAME)) {
@@ -1751,18 +1752,29 @@ app.scope(function (app) {
                 if (manager.is(ELEMENT)) {
                     parentElement = manager.element();
                     if (attribute === INNER_HTML) {
-                        children = manager.$(CUSTOM_ATTRIBUTE).toArray();
+                        if (isArray(appliedvalue)) {
+                            manager.render(appliedvalue);
+                            appliedvalue = manager.html();
+                            writes = BOOLEAN_FALSE;
+                        } else {
+                            children = manager.$(CUSTOM_ATTRIBUTE).toArray();
+                            previous = parentElement[attribute];
+                        }
                     }
-                    previous = parentElement[attribute];
-                    parentElement[attribute] = appliedvalue;
+                    if (writes) {
+                        previous = parentElement[attribute];
+                        parentElement[attribute] = appliedvalue;
+                    }
                     if (children && children[LENGTH]) {
                         // detach old
                         dispatchDetached(children, owner);
                         // establish new
                     }
-                    manager.$(CUSTOM_ATTRIBUTE, parentElement);
-                    if (previous !== appliedvalue) {
-                        manager.dispatchEvent('contentChanged');
+                    if (writes) {
+                        manager.$(CUSTOM_ATTRIBUTE, parentElement);
+                        if (previous !== appliedvalue) {
+                            manager.dispatchEvent('contentChanged');
+                        }
                     }
                 }
             }
@@ -2668,7 +2680,7 @@ app.scope(function (app) {
                     }
                     // constructor
                     docManager.registeredElementOptions[name] = {
-                    // events: events,
+                        // events: events,
                         autotriggers: autotriggers
                     };
                     var constrktr = registeredConstructors[name] = DomManager.extend(capitalize(camelCase(name)), managerFn || {});
@@ -3342,6 +3354,10 @@ app.scope(function (app) {
                         }
                         return string + makeDataAttr(key, attr);
                     }, string);
+                },
+                render: function (els) {
+                    this.owner.nodeComparison(this.element(), els);
+                    return this;
                 },
                 registeredElementName: function () {
                     return this.owner.registeredElementName(this[REGISTERED_AS]);
