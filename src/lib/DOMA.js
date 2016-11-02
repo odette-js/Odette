@@ -3475,7 +3475,7 @@ app.scope(function (app) {
                     }
                     intendedObject(key, handler, function (key, handlr_) {
                         var handlr = isString(handlr_) ? context[handlr_] : handlr_;
-                        if (!isFunction(handlr_)) {
+                        if (!isFunction(handlr)) {
                             return;
                         }
                         duff(toArray(key, SPACE), function (key) {
