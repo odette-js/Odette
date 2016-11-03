@@ -49,4 +49,9 @@ var REGISTRY = 'Registry',
             return cached;
         }
     });
+Registry.autoCreateOnAccess = function (category, item, method) {
+    return function () {
+        return this.directive(REGISTRY).get(category, item, method);
+    };
+};
 app.defineDirective(REGISTRY, Registry[CONSTRUCTOR]);
