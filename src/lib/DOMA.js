@@ -3771,7 +3771,7 @@ app.scope(function (app) {
                     return manager.wrap(list);
                 },
                 constructor: function (el, hash, owner_) {
-                    var elId, ownerDoc, registeredOptions, isDocument, owner = owner_,
+                    var elId, view, ownerDoc, registeredOptions, isDocument, owner = owner_,
                         manager = this;
                     if (!el) {
                         exception('DomManager target must be an element, document, documentfragment, or window');
@@ -3786,8 +3786,8 @@ app.scope(function (app) {
                         return manager;
                     }
                     test(manager, owner, el);
+                    hash[DOM_MANAGER_STRING] = manager;
                     if (manager.is(ELEMENT) || manager.is(FRAGMENT)) {
-                        hash[DOM_MANAGER_STRING] = manager;
                         ownerDoc = el.ownerDocument;
                         if (!ownerDoc[__ELID__] || !globalAssociator.get(ownerDoc)[DOM_MANAGER_STRING]) {
                             app.run(ownerDoc.defaultView, noop);
@@ -3798,12 +3798,13 @@ app.scope(function (app) {
                         }
                     } else {
                         if ((isDocument = manager.is(DOCUMENT))) {
-                            owner = manager;
+                            owner = owner === BOOLEAN_TRUE ? manager : owner;
+                            // view = el.defaultView;
                             manager[__ELID__] = elId = el[__ELID__];
                         } else {
+                            // view = el;
                             manager[__ELID__] = app.counter('win');
                         }
-                        hash[DOM_MANAGER_STRING] = manager;
                     }
                     manager.owner = owner || BOOLEAN_FALSE;
                     manager[TARGET] = el;
