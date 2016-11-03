@@ -905,6 +905,9 @@ var factories = {},
             memo.push(item);
         }, []);
     },
+    n = function (item) {
+        return isArrayLike(object) ? item : [item];
+    },
     toArray = function (object, delimiter) {
         return isArrayLike(object) ? (isArray(object) ? object.slice(0) : arrayLikeToArray(object)) : (isString(object) ? object.split(isString(delimiter) ? delimiter : COMMA) : [object]);
     },
@@ -1374,6 +1377,7 @@ var factories = {},
         toInteger: toInteger,
         indexOf: indexOf,
         toArray: toArray,
+        n: n,
         isEqual: isEqual,
         isArray: isArray,
         isEmpty: isEmpty,
