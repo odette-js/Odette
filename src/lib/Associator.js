@@ -5,8 +5,6 @@ app.scope(function (app) {
         DATA = 'data',
         DATASET = DATA + 'set',
         IS_ELEMENT = 'isElement',
-        extend = _.extend,
-        isObject = _.isObject,
         removeAt = _.removeAt,
         objectToString = {}.toString,
         Associator = factories.Associator = factories.Directive.extend('Associator', {
@@ -43,7 +41,7 @@ app.scope(function (app) {
             },
             set: function (el, extensor, type) {
                 var n, data = this.get(el, type);
-                extend(data, extensor || {});
+                merge(data, extensor || {});
                 return data;
             },
             remove: function (el) {

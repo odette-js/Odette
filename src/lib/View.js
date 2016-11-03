@@ -350,14 +350,14 @@ var REGION_MANAGER = 'RegionManager',
                     if (isInstance(region, Region)) {
                         return region;
                     }
-                    region = Region(extend({
+                    region = Region(extend([{
                         selector: selector || EMPTY_STRING,
                         owner$: parent.owner$
                     }, isObject(region) ? region : {}, {
                         id: where,
                         key: region_,
                         parent: regionManagerDirective
-                    }));
+                    }]));
                     regionManagerDirective.list.push(region);
                     regionManagerDirective.list.keep(ID, where, region);
                     return region;
@@ -441,7 +441,7 @@ var REGION_MANAGER = 'RegionManager',
                 },
                 constructor: function (options) {
                     var documentView = this;
-                    extend(documentView, options);
+                    merge(documentView, options);
                     return documentView;
                 },
                 chunk: function (id, fn) {

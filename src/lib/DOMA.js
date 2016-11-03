@@ -3318,7 +3318,7 @@ app.scope(function (app) {
          * var $body = $('body');
          * var bodyManager = $body.index(0); // DomManager
          */
-        DomManager = factories[DOM_MANAGER_STRING] = factories.Events.extend(DOM_MANAGER_STRING, extend({}, classApi,
+        DomManager = factories[DOM_MANAGER_STRING] = factories.Events.extend(DOM_MANAGER_STRING, extend([{}, classApi,
             /**
              * @lends DomManager.prototype
              */
@@ -4482,7 +4482,8 @@ app.scope(function (app) {
                     }
                     return nodeToJSON(node, shallow === UNDEFINED ? returnsTrue : (isFunction(shallow) ? shallow : returns(shallow)), BOOLEAN_TRUE);
                 }
-            }, wrap(directAttributes, function (attr, api) {
+            },
+            wrap(directAttributes, function (attr, api) {
                 if (!attr) {
                     attr = api;
                 }
@@ -4500,7 +4501,8 @@ app.scope(function (app) {
                 return function (one, two, three) {
                     return this.wrap()[key](one, two, three);
                 };
-            }))),
+            })
+        ])),
         _removeEventListener = function (manager_, name, group, selector_, handler, capture_) {
             var selector = selector_,
                 manager = elementSwapper[selector] ? ((selector = '') || elementSwapper[selector_](manager_)) : manager_,
