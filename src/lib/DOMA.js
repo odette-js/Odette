@@ -1068,7 +1068,7 @@ app.scope(function (app) {
                 if (ALL_EVENTS_HASH[whichever] && isFunction(el[whichever])) {
                     el[whichever]();
                 } else {
-                    elementEventDispatcher(manager, whichever, data);
+                    managerEventDispatcher(manager, whichever, data);
                 }
                 DO_NOT_TRUST = cachedTrust;
             };
@@ -1839,18 +1839,23 @@ app.scope(function (app) {
             manager.owner.remark(RUNNING_EVENT, DO_NOT_TRUST);
             return returnValue;
         },
-        elementEventDispatcher = function (manager, name, opts) {
-            var evnt, el = manager.element(),
-                owner = manager.owner,
-                doc = owner.element(),
-                view = doc.defaultView;
+        nodeDocument = function (el) {
+            return isElement(el) ? el.ownerDocument : (isDocument(el) ? el : (isWindow(el) ? el.document : document));
+        },
+        nodeWindow = function (el) {
+            return isWindow(el) ? el : (isDocument(el) ? el.defaultView : (isElement(el) ? el.ownerDocument.defaultView : window));
+        },
+        elementEventDispatcher = function (el_, name, opts, doc_, view_) {
+            var evnt, el = el_,
+                doc = doc_ || nodeDocument(el),
+                view = view_ || doc.defaultView;
             if (view.Event && !_.isIE) {
                 evnt = new view.Event(name, (isBoolean(opts) ? {
                     bubbles: opts
                 } : opts) || {});
             } else if (doc.createEvent) {
                 evnt = doc.createEvent('HTMLEvents');
-                evnt.initEvent(name, true, true);
+                evnt.initEvent(name, BOOLEAN_TRUE, BOOLEAN_TRUE);
             } else if (doc.createEventObject) { // IE < 9
                 evnt = doc.createEventObject();
                 evnt.eventType = name;
@@ -1864,6 +1869,10 @@ app.scope(function (app) {
             } else if (el[name]) {
                 el[name]();
             }
+        },
+        managerEventDispatcher = function (manager, name, opts) {
+            var owner = manager.owner;
+            elementEventDispatcher(manager.element(), name, opts, owner.element(), owner.window().element());
         },
         /*
          * missing these
@@ -4458,7 +4467,7 @@ app.scope(function (app) {
                 dispatchEvent: function (name, e, capturing_) {
                     var cachedTrust = DO_NOT_TRUST;
                     DO_NOT_TRUST = BOOLEAN_TRUE;
-                    elementEventDispatcher(this, name, capturing_);
+                    managerEventDispatcher(this, name, capturing_);
                     DO_NOT_TRUST = cachedTrust;
                     return this;
                 },
@@ -4551,6 +4560,9 @@ app.scope(function (app) {
         },
         exportResult = _.publicize({
             isIE: isIE,
+            nodeDocument: nodeDocument,
+            nodeWindow: nodeWindow,
+            elementEventDispatcher: elementEventDispatcher,
             allowsPassiveEvents: allowsPassiveEvents(),
             buildCss: buildCss,
             covers: covers,

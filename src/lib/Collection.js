@@ -29,6 +29,20 @@ var COLLECTION = 'Collection',
             removeAt = function (list, index) {
                 return list.splice(index, 1)[0];
             },
+            removeWhere = function (list, matchr) {
+                var matcher = matches(matchr);
+                duffRight(list, function (item, index) {
+                    if (matcher(item)) {
+                        list.removeAt(index);
+                    }
+                });
+            },
+            findRemoveWhere = function (list, matcher) {
+                var found;
+                if ((found = findWhere(list, matcher))) {
+                    remove(list, found);
+                }
+            },
             add = function (list, item, lookAfter, lookBefore, fromRight) {
                 var value = 0,
                     index = indexOf(list, item, lookAfter, lookBefore, fromRight);
@@ -153,7 +167,7 @@ var COLLECTION = 'Collection',
             },
             eachHandlerKeys = keys(eachHandlers).concat(keys(buildCallers('each')), keys(buildCallers('eachRight'))),
             abstractedCanModify = toArray('add'),
-            abstractedCannotModify = toArray('insertAt,remove,removeAt'),
+            abstractedCannotModify = toArray('insertAt,remove,removeAt,removeWhere,findRemoveWhere'),
             nativeCannotModify = toArray('pop,shift,splice'),
             reverseCollection = toArray('reverse'),
             splatHandlers = toArray('push,unshift'),
