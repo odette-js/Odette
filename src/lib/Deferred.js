@@ -243,7 +243,7 @@ var Deferred = app.block(function (app) {
                     // cannot have been resolved in any way yet
                     // attach some convenience handlers to the
                     // instance so we can call crazy custom methods
-                    intendedObject(extend({}, baseStates, result(deferred, 'associativeStates')), NULL, addMethod, deferred);
+                    intendedObject(extend([{}, baseStates, result(deferred, 'associativeStates')]), NULL, addMethod, deferred);
                     return deferred;
                 },
                 /**
@@ -269,7 +269,7 @@ var Deferred = app.block(function (app) {
                  * // }
                  */
                 allStates: function () {
-                    return extend({}, baseStates, result(this, 'auxiliaryStates'));
+                    return extend([{}, baseStates, result(this, 'auxiliaryStates')]);
                 },
                 /**
                  * Odette's deferreds can be resolved in as many ways as they can be configured. In order to resolve deferreds in the correct state and trigger the subsequent tree, Deferreds proved a resolveAs method which simplifies this process.

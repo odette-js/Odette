@@ -16,7 +16,7 @@ var cacheable = function (fn) {
             return cacher(string);
         };
     },
-    string = _.extend(wrap(toArray('toLowerCase,toUpperCase,trim'), function (method) {
+    string = merge(wrap(toArray('toLowerCase,toUpperCase,trim'), function (method) {
         return cacheable(function (item) {
             return item[method]();
         });

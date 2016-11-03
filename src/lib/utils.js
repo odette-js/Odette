@@ -238,19 +238,11 @@ var factories = {},
     now = function () {
         return performance.now();
     },
-    extend = function () {
-        var deep = BOOLEAN_FALSE,
-            args = arguments,
-            length = args[LENGTH],
+    extend = function (args, deep) {
+        var length = args && args[LENGTH],
             index = 1,
             first = 0,
-            base = args[0];
-        if (base === BOOLEAN_TRUE) {
-            deep = BOOLEAN_TRUE;
-            base = args[1];
-            index = 2;
-        }
-        base = base || {};
+            base = args[0] || {};
         for (; index < length; index++) {
             merge(base, args[index], deep);
         }
@@ -264,7 +256,7 @@ var factories = {},
             var context = this,
                 supertarget = context[CONSTRUCTOR].fn[key],
                 args = toArray(arguments);
-            return extend(BOOLEAN_TRUE, returnOrApply(supertarget, context, args), returnOrApply(handler, context, args));
+            return merge(returnOrApply(supertarget, context, args), returnOrApply(handler, context, args), BOOLEAN_TRUE);
         };
     },
     // merge_count = 0,
@@ -285,9 +277,6 @@ var factories = {},
                             if (!isObject(obj1Val)) {
                                 obj1Val = obj1[key] = returnBaseType(obj2Val);
                             }
-                            // if (merge_count > 20) {
-                            //     debugger;
-                            // }
                             merge(obj1Val, obj2Val, deep);
                         } else {
                             obj1[key] = obj2Val;
@@ -298,7 +287,6 @@ var factories = {},
                 }
             }
         }
-        // merge_count--;
         return obj1;
     },
     values = function (object) {
@@ -526,7 +514,7 @@ var factories = {},
         var nameString, constructorKeyName, child, passedParent, hasConstructor, constructor, parent = this,
             nameIsStr = isString(name);
         if (name === BOOLEAN_FALSE) {
-            extend(parent[PROTOTYPE], protoProps);
+            merge(parent[PROTOTYPE], protoProps);
             return parent;
         }
         if (!nameIsStr) {
@@ -553,7 +541,7 @@ var factories = {},
         child[PROTOTYPE] = new Surrogate;
         // don't call the function if nothing exists
         if (protoProps) {
-            extend(child[PROTOTYPE], protoProps);
+            merge(child[PROTOTYPE], protoProps);
         }
         constructorKeyName = CONSTRUCTOR + COLON + name;
         if (nameIsStr) {
@@ -750,7 +738,7 @@ var factories = {},
         return newObj;
     },
     publicize = function (obj) {
-        return extend(_, obj);
+        return merge(_, obj);
     },
     passesFirstArgument = function (fn) {
         return function (first) {
@@ -1254,7 +1242,7 @@ var factories = {},
     _log = _console.log || noop,
     consolemaker = function (canTrace) {
         // use same name so that we can ensure browser compatability
-        return extend(wrap(toArray('trace,warn,log,dir,error,clear,table,profile,profileEnd,time,timeEnd,timeStamp'), function (key) {
+        return merge(wrap(toArray('trace,warn,log,dir,error,clear,table,profile,profileEnd,time,timeEnd,timeStamp'), function (key) {
             var method = _console[key] || _log;
             return function () {
                 var consoled = method && method.apply && method.apply(_console, arguments);
@@ -1344,7 +1332,7 @@ var factories = {},
      * @static
      * @namespace _
      */
-    _ = app._ = extend({
+    _ = app._ = merge({
         is: is,
         shiftSelf: shiftSelf,
         consolemaker: consolemaker,

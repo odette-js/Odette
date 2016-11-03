@@ -416,10 +416,10 @@ app.scope(function (app) {
         create: function (command, packet, extra) {
             var buster = this,
                 // returns collection
-                message = buster.add(extend({
+                message = buster.add(extend([{
                     command: command,
                     packet: packet
-                }, defaultMessage(buster), extra));
+                }, defaultMessage(buster), extra]));
             return message.item(0);
         },
         /**
@@ -456,8 +456,8 @@ app.scope(function (app) {
             // module to be present, so the inner does not influence the outer
             messageData = originalMessage.directive(DATA_MANAGER);
             messageData.set(RUN_COUNT, (messageData.get(RUN_COUNT) || 0) + 1);
-            packet = extend(BOOLEAN_TRUE, result(buster, 'package') || {}, packet_);
-            newMessage = extend(defaultMessage(buster), {
+            packet = merge(result(buster, 'package') || {}, packet_, BOOLEAN_TRUE);
+            newMessage = merge(defaultMessage(buster), {
                 from: originalMessage.get(POST_TO),
                 postTo: originalMessage.get('from'),
                 messageId: originalMessage.get('originMessageId'),

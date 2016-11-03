@@ -146,7 +146,7 @@ app.block(function (app) {
                             type: type
                         };
                     }
-                    var options = ajax.options = _.extend({
+                    var options = ajax.options = merge({
                         async: BOOLEAN_TRUE,
                         method: method,
                         type: type,
@@ -265,7 +265,7 @@ app.block(function (app) {
         var key = key_;
         key = key.toLowerCase();
         memo[key] = function (url, options) {
-            return HTTP(_.extend({
+            return HTTP(merge({
                 type: key_,
                 url: url
             }, options));

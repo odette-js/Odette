@@ -133,7 +133,7 @@ var REQUIRE = 'require',
                     return this.directive(REGISTRY).get('promises', 'load', moduleLoadPromise);
                 }
             },
-            newModuleMethods = extend({}, startableMethods, moduleMethods),
+            newModuleMethods = extend([{}, startableMethods, moduleMethods]),
             Module = factories.Module = Model.extend(CAPITAL_MODULE, newModuleMethods),
             allModulesLoaded = function (registry) {
                 var promise, returnable, manager = registry.target;
@@ -170,7 +170,7 @@ var REQUIRE = 'require',
                 };
                 return (promise = Promise(setup)) && !returnable ? promise : UNDEFINED;
             },
-            ModuleManager = Collection.extend(MODULE_MANAGER, extend({
+            ModuleManager = Collection.extend(MODULE_MANAGER, {
                 Module: Module,
                 load: function () {
                     return this.directive(REGISTRY).get('promises', 'load', allModulesLoaded) || Promise.resolve();
@@ -270,12 +270,12 @@ var REQUIRE = 'require',
                         list = parent.globalname ? parent.globalname.split(PERIOD) : [];
                         list.push(name);
                         globalname = list.join(PERIOD);
-                        arg2 = extend({}, result(parent, CHILD_OPTIONS) || {}, {
+                        arg2 = extend([{}, result(parent, CHILD_OPTIONS) || {}, {
                             application: app.app(),
                             terminator: app,
                             id: name,
                             globalname: globalname
-                        });
+                        }]);
                         module = manager.Module({}, arg2);
                         parentManager.push(module);
                         parentManager.keep(ID, name, module);
@@ -301,13 +301,13 @@ var REQUIRE = 'require',
                     }
                     return module;
                 }
-            }));
+            });
         app.defineDirective(MODULE_MANAGER, ModuleManager[CONSTRUCTOR]);
-        app.extend(extend({}, Directive.fn, Events.fn, factories.Parent.fn, newModuleMethods, {
+        app.extend(extend([{}, Directive.fn, Events.fn, factories.Parent.fn, newModuleMethods, {
             app: function () {
                 return this;
             }
-        }));
+        }]));
         // delete the prototype link from parent prototype
         delete app.fn;
         return Module;

@@ -68,7 +68,7 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                     data: syncer.stringifyPosts ? syncer.stringify(json) : json
                 });
             },
-            Syncer = factories.Directive.extend(SYNCER, _.extend({
+            Syncer = factories.Directive.extend(SYNCER, extend([{
                 createType: 'POST',
                 updateType: 'PUT',
                 fetchType: 'GET',
@@ -80,7 +80,7 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                     this[TARGET] = target;
                     return this;
                 }
-            }, wrap(['destroy', 'fetch', 'update', 'create'], sendWithData, BOOLEAN_TRUE))),
+            }, wrap(['destroy', 'fetch', 'update', 'create'], sendWithData, BOOLEAN_TRUE)])),
             SyncerDirective = app.defineDirective(SYNCER, Syncer[CONSTRUCTOR]),
             Children = factories[CHILDREN] = Collection.extend(CHILDREN, {
                 constructor: function (instance) {
@@ -247,7 +247,7 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                     add: function (objs_, secondary_) {
                         var childAdded, diff, parent = this,
                             children = parent.directive(CHILDREN),
-                            secondary = extend(result(parent, CHILD_OPTIONS), secondary_ || {}),
+                            secondary = merge(result(parent, CHILD_OPTIONS), secondary_ || {}),
                             list = Collection(objs_);
                         // unwrap it if you were passed a collection
                         if (!list[LENGTH]()) {
@@ -405,7 +405,7 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                             passed = parse(data_) || {},
                             // build new data
                             defaultsResult = model.defaults(passed),
-                            newAttributes = extend(defaultsResult, passed),
+                            newAttributes = merge(defaultsResult, passed),
                             // try to get the id from the attributes
                             idAttributeResult = model.idAttribute(newAttributes),
                             idResult = setId(model, newAttributes[idAttributeResult]),

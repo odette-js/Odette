@@ -189,7 +189,7 @@ var COLLECTION = 'Collection',
                 flatten: flatten,
                 eq: eq
             }),
-            wrappedCollectionMethods = extend({
+            wrappedCollectionMethods = extend([{
                 seeker: function (handler, context) {
                     var list = this,
                         bound = bindTo(handler, context);
@@ -258,11 +258,11 @@ var COLLECTION = 'Collection',
                 return function (one, two, three) {
                     return fn(this.toArray(), one, two, three);
                 };
-            })),
+            })]),
             unwrapper = function () {
                 return this.items;
             },
-            Collection = factories[COLLECTION] = factories.Directive.extend(COLLECTION, extend({
+            Collection = factories[COLLECTION] = factories.Directive.extend(COLLECTION, extend([{
                 get: parody(REGISTRY, 'get'),
                 keep: parody(REGISTRY, 'keep'),
                 drop: parody(REGISTRY, 'drop'),
@@ -272,12 +272,6 @@ var COLLECTION = 'Collection',
                     this.reset(items);
                     return this;
                 },
-                // call: function (arg) {
-                //     this.each(function (fn) {
-                //         fn(arg);
-                //     });
-                //     return this;
-                // },
                 obliteration: function (handler, context) {
                     duffRight(this.toArray(), handler, context === UNDEFINED ? this : context);
                     return this;
@@ -346,7 +340,7 @@ var COLLECTION = 'Collection',
                         return Collection(arg).toArray();
                     }));
                 })
-            }, wrappedCollectionMethods)),
+            }, wrappedCollectionMethods])),
             directiveResult = app.defineDirective(COLLECTION, function () {
                 return new Collection[CONSTRUCTOR]();
             }),

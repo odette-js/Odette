@@ -179,6 +179,18 @@ var ATTACHED = 'attached',
         }
         return prefixed;
     }()),
+    allowsPassiveEvents = function () {
+        return !!wraptry(function () {
+            var supportsPassive = BOOLEAN_FALSE;
+            var opts = Object.defineProperty({}, 'passive', {
+                get: function () {
+                    supportsPassive = BOOLEAN_TRUE;
+                }
+            });
+            window.addEventListener('test', NULL, opts);
+            return supportsPassive;
+        });
+    },
     convertStyleValue = function (key, value) {
         return +value !== +value ? value : (timeBasedCss[key] ? value + 'ms' : (!numberBasedCss[key] ? value + PIXELS : value));
     },
@@ -925,7 +937,7 @@ app.scope(function (app) {
             });
         },
         templateGenerator = function (text_, templateSettings) {
-            var render, template, trimmed, argument, settings = extend({}, templateSettings),
+            var render, template, trimmed, argument, settings = merge({}, templateSettings),
                 text = text_,
                 templateIsFunction = isFunction(text);
             if (templateIsFunction) {
@@ -2467,7 +2479,7 @@ app.scope(function (app) {
                 var context = ctx || manager;
                 return DOMA(sel, context, BOOLEAN_FALSE, manager === context, manager);
             };
-            wrapped = extend(wrap({
+            wrapped = extend([wrap({
                 // $: $,
                 createElements: createElements,
                 createDocumentFragment: createDocumentFragment,
@@ -2665,12 +2677,12 @@ app.scope(function (app) {
                     managerFn.events = events;
                     var sup = opts.super || HTMLElement;
                     var constructor = opts.create;
-                    var newproto = Object.create(sup[PROTOTYPE], remap(extend(newproto, opts.fn || {}, formsCallbacks(opts, {
+                    var newproto = Object.create(sup[PROTOTYPE], remap(extend([newproto, opts.fn || {}, formsCallbacks(opts, {
                         created: 'create',
                         attached: 'attach',
                         detached: 'detach',
                         attributeChanged: 'attributeChange'
-                    }, autotriggers))));
+                    }, autotriggers)])));
                     newproto.fn = newproto;
                     var arg2 = {
                         prototype: newproto
@@ -2711,9 +2723,9 @@ app.scope(function (app) {
                         }
                     });
                 }
-            });
-            extend(manager, wrapped);
-            extend($, wrapped);
+            }]);
+            merge(manager, wrapped);
+            merge($, wrapped);
             runSupport(manager.supports, manager);
             setupDomContentLoaded(setup, manager);
             manager.mark('setupComplete');
@@ -3767,7 +3779,7 @@ app.scope(function (app) {
                     if (DomManager.isInstance(el)) {
                         // extend what we already know
                         hash[DOM_MANAGER_STRING] = manager;
-                        extend(manager, el);
+                        merge(manager, el);
                         // run it through it's scoped constructor
                         registeredOptions = owner.registeredElementOptions[manager[REGISTERED_AS]];
                         manager.on(manager.events);
@@ -4536,6 +4548,7 @@ app.scope(function (app) {
         },
         exportResult = _.publicize({
             isIE: isIE,
+            allowsPassiveEvents: allowsPassiveEvents(),
             buildCss: buildCss,
             covers: covers,
             center: center,
@@ -4597,7 +4610,7 @@ app.scope(function (app) {
          * DOMA is the document object model abstraction. A wrapper for the dom objects available in the browser's window. Operates off of the assumption that all dom interactions should be normalized, and efficient as possible.
          * @class DOMA
          */
-        DOMA = factories.DOMA = factories.Collection.extend('DOMA', extend({}, classApi, {
+        DOMA = factories.DOMA = factories.Collection.extend('DOMA', extend([{}, classApi, {
             isValidDOMA: BOOLEAN_TRUE,
             /**
              * DOMA constructor
@@ -4871,7 +4884,7 @@ app.scope(function (app) {
             toString: function () {
                 return stringify(this);
             }
-        }, wrap(allEachMethods, applyToEach), wrap(firstMethods, applyToFirst), wrap(readMethods, applyToTarget))),
+        }, wrap(allEachMethods, applyToEach), wrap(firstMethods, applyToFirst), wrap(readMethods, applyToTarget)])),
         allSetups = [],
         plugins = [];
     app.undefine(function (app, windo, passed) {

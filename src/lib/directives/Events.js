@@ -26,7 +26,7 @@ app.scope(function (app) {
                 evnt[PASSED_DATA] = {};
                 evnt.data(data);
                 if (options) {
-                    extend(evnt, options);
+                    merge(evnt, options);
                 }
                 return evnt;
             },

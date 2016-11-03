@@ -169,7 +169,7 @@ application.scope().run(window, function (module, app, _, factories, documentVie
                 test.expect(_.stringify(function () {})).toEqual(function () {}.toString());
             }, 3);
             test.it('_.extend', function () {
-                test.expect(_.extend({
+                test.expect(_.extend([{
                     four: 1,
                     three: 3
                 }, {
@@ -177,13 +177,13 @@ application.scope().run(window, function (module, app, _, factories, documentVie
                     three: 2
                 }, {
                     one: 4
-                })).toEqual({
+                }])).toEqual({
                     four: 1,
                     two: 3,
                     three: 2,
                     one: 4
                 });
-                test.expect(_.extend(!0, {
+                test.expect(_.extend([{
                     some: {}
                 }, {
                     some: {
@@ -195,13 +195,13 @@ application.scope().run(window, function (module, app, _, factories, documentVie
                     some: {
                         one: 'is waiting for me'
                     }
-                })).toEqual({
+                }], !0)).toEqual({
                     some: {
                         where: 'across the sea',
                         one: 'is waiting for me'
                     }
                 });
-                test.expect(_.extend({
+                test.expect(_.extend([{
                     some: {}
                 }, {
                     some: {
@@ -213,7 +213,7 @@ application.scope().run(window, function (module, app, _, factories, documentVie
                     some: {
                         one: 'is waiting for me'
                     }
-                })).toEqual({
+                }])).toEqual({
                     some: {
                         one: 'is waiting for me'
                     }

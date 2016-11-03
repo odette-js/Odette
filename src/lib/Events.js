@@ -325,7 +325,7 @@ var EVENT_STRING = 'Events',
                     when: parody('LinguisticsManager', 'when'),
                     constructor: function (opts) {
                         var eventer = this;
-                        extend(eventer, opts);
+                        merge(eventer, opts);
                         eventer[uniqueKey + ID] = eventer[uniqueKey + ID] || app.counter(uniqueKey);
                         // reacting to self
                         eventer.on(result(eventer, 'events'));

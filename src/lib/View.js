@@ -591,7 +591,7 @@ var REGION_MANAGER = 'RegionManager',
                         comparison = view.owner$.nodeComparison(el, virtual, element.hashed, bindTo(element.comparisonFilter, element)),
                         keys = element.hashed = comparison.keys,
                         mutations = element.mutations = comparison.mutations,
-                        modifiers = element.modifiers = extend({
+                        modifiers = element.modifiers = merge({
                             remove: noop,
                             update: noop,
                             insert: noop

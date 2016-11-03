@@ -3,11 +3,10 @@ var WATCHERS = 'watchers';
 var RESIZE = 'resize';
 var AF = _.AF;
 factories[ELEMENT_WATCHER] = app.defineDirective(ELEMENT_WATCHER, app.block(function (app) {
-    var counter = 0;
     return factories.Registry.extend(ELEMENT_WATCHER, {
         namespace: function () {
             return this.get(WATCHERS, 'namespace', function () {
-                return 'watcher-' + (++counter);
+                return 'watcher-' + app.counter();
             });
         },
         watch: function (el, fn) {
