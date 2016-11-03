@@ -1369,7 +1369,7 @@ app.scope(function (app) {
             if (foundElement && foundElement !== BOOLEAN_TRUE) {
                 attributeApi.write(newElement, CUSTOM_KEY, tag);
             }
-            newManager = manager.returnsManager(newElement);
+            newManager = manager.owner.returnsManager(newElement);
             if (!confirmedObject && !attributes && !children) {
                 return newManager;
             }
@@ -2343,12 +2343,12 @@ app.scope(function (app) {
                 // }),
                 registerElDefaultHandlers = {
                     create: function (e) {
-                        var elManager = manager.returnsManager(this);
+                        var elManager = manager.owner.returnsManager(this);
                         elManager.mark('created');
                         return elManager.dispatchEvent('create', e);
                     },
                     attributeChange: function (key, old, newish) {
-                        var elManager = manager.returnsManager(this);
+                        var elManager = manager.owner.returnsManager(this);
                         if (elManager.is(ATTRIBUTES_CHANGING)) {
                             return;
                         }
@@ -2650,7 +2650,7 @@ app.scope(function (app) {
                 //     registeredElementOptions[name] = options;
                 //     registeredConstructors[name] = (extendss ? (registeredConstructors[extendss] || DomManager) : DomManager).extend(capitalize(camelCase(name)), extend({}, prototype));
                 //     if (this.document.is('ready')) {
-                //         manager.$(manager.customAttribute(name)).each(manager.returnsManager);
+                //         manager.$(manager.customAttribute(name)).each(manager.owner.returnsManager);
                 //     }
                 //     return registeredConstructors[name];
                 // },
@@ -4041,7 +4041,7 @@ app.scope(function (app) {
                     }
                     if (manager.is(DOCUMENT)) {
                         // it's a document, so return the manager relative to the inside
-                        return manager.returnsManager(manager.element().defaultView);
+                        return manager.owner.returnsManager(manager.element().defaultView);
                     }
                     if (manager.is(IFRAME)) {
                         // it's an iframe, so return the manager relative to the outside
