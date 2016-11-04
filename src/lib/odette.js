@@ -32,6 +32,14 @@
         BOOLEAN_TRUE = !0,
         BOOLEAN_FALSE = !1,
         NULL = null,
+        openingBracket = {
+            '{': 1,
+            '[': 2
+        },
+        closingBracket = {
+            '}': 1,
+            ']': 2
+        },
         noop = function () {},
         typeConstructor = function (str) {
             return function (thing) {
@@ -172,9 +180,16 @@
             }
         },
         parseSearch = function (search_) {
-            var parms, temp, items, val, converted, i = 0,
+            var parms, temp, items, val, converted, openingBracketType, closingBracketType,
+                i = 0,
                 search = search_,
-                dcUriComp = global_.decodeURIComponent;
+                dcUriComp = global_.decodeURIComponent,
+                tryparse = function () {
+                    return JSON.parse();
+                },
+                returnval = function () {
+                    return val;
+                };
             if (!isString(search)) {
                 search = search[LOCATION].search;
             }
@@ -204,6 +219,8 @@
                         converted = +val;
                         if (converted == val && converted + EMPTY_STRING === val) {
                             val = converted;
+                        } else if ((openingBracketType = openingBracket[val[0]]) && (closingBracketType = closingBracket[val[val.length - 1]]) && openingBracketType === closingBracketType) {
+                            val = wraptry(tryparse, returnval);
                         }
                     }
                     parms[dcUriComp(temp[0])] = val;
