@@ -1,13 +1,10 @@
-app.scope(function (app) {
-    var _ = app._,
-        factories = _.factories,
-        ITEMS = 'items',
+var WeakMap = app.block(function (app) {
+    var ITEMS = 'items',
         DATA = 'data',
         DATASET = DATA + 'set',
         IS_ELEMENT = 'isElement',
-        removeAt = _.removeAt,
         objectToString = {}.toString,
-        Associator = factories.Associator = factories.Directive.extend('Associator', {
+        WeakMap = factories.WeakMap = factories.Directive.extend('WeakMap', {
             get: function (obj, type) {
                 var returnData, idxOf, dataset, n, key, instance = this,
                     canRead = 0,
@@ -61,8 +58,7 @@ app.scope(function (app) {
                 var instance = this,
                     isObj = isObj_ === UNDEFINED ? isObject(obj) : isObj_,
                     type = objectToString.call(obj),
-                    isWindow = obj && obj.window === obj,
-                    lowerType = isWindow ? '[object global]' : type.toLowerCase(),
+                    lowerType = isWindow(obj) ? '[object global]' : type.toLowerCase(),
                     current = instance[lowerType] = instance[lowerType] || {},
                     globalindex = lowerType[INDEX_OF]('global'),
                     indexOfWindow = lowerType[INDEX_OF](WINDOW) === -1;
@@ -73,4 +69,11 @@ app.scope(function (app) {
                 return current;
             }
         });
+    app.undefine(function (app, windo) {
+        if (windo.WeakMap) {
+            return;
+        }
+        windo.WeakMap = WeakMap;
+    });
+    return WeakMap;
 });

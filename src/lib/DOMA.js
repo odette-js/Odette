@@ -837,7 +837,7 @@ var ATTACHED = 'attached',
     collectChildren = function (element) {
         return toArray(element.children || element.childNodes);
     },
-    globalAssociator = factories.Associator(),
+    globalAssociator = factories.WeakMap(),
     openBlock = function (selector, total) {
         return once(function () {
             total.push(selector.join('') + ' {');
@@ -1133,36 +1133,60 @@ app.scope(function (app) {
             });
         },
         box = function (el, ctx) {
-            var clientrect, computed, ret = {};
+            var clientrect, computed, ret;
             if (!isElement(el)) {
+                ret = {
+                    borderBottom: 0,
+                    borderRight: 0,
+                    borderLeft: 0,
+                    borderTop: 0,
+                    paddingBottom: 0,
+                    paddingRight: 0,
+                    paddingLeft: 0,
+                    paddingTop: 0,
+                    marginBottom: 0,
+                    marginRight: 0,
+                    marginLeft: 0,
+                    marginTop: 0,
+                    height: 0,
+                    width: 0
+                };
+                if (isWindow(el)) {
+                    ret.height = el[INNER_HEIGHT];
+                    ret.width = el[INNER_WIDTH];
+                } else if (isDocument(el)) {
+                    ret.height = el.scrollHeight;
+                    ret.width = el.scrollWidth;
+                }
                 return ret;
+            } else {
+                if (el.parentNode) {
+                    computed = getComputed(el, ctx);
+                    clientrect = clientRect(el, ctx);
+                } else {
+                    computed = clientRect = {};
+                }
+                return {
+                    borderBottom: +computed.borderBottomWidth || 0,
+                    borderRight: +computed.borderRightWidth || 0,
+                    borderLeft: +computed.borderLeftWidth || 0,
+                    borderTop: +computed.borderTopWidth || 0,
+                    paddingBottom: +computed.paddingBottom || 0,
+                    paddingRight: +computed.paddingRight || 0,
+                    paddingLeft: +computed.paddingLeft || 0,
+                    paddingTop: +computed.paddingTop || 0,
+                    marginBottom: +computed.marginBottom || 0,
+                    marginRight: +computed.marginRight || 0,
+                    marginLeft: +computed.marginLeft || 0,
+                    marginTop: +computed.marginTop || 0,
+                    top: clientrect[TOP] || 0,
+                    left: clientrect[LEFT] || 0,
+                    right: clientrect[RIGHT] || 0,
+                    bottom: clientrect[BOTTOM] || 0,
+                    width: clientrect[WIDTH] || 0,
+                    height: clientrect[HEIGHT] || 0
+                };
             }
-            computed = getComputed(el, ctx);
-            clientrect = clientRect(el, ctx);
-            return {
-                borderBottom: +computed.borderBottomWidth || 0,
-                borderRight: +computed.borderRightWidth || 0,
-                borderLeft: +computed.borderLeftWidth || 0,
-                borderTop: +computed.borderTopWidth || 0,
-                paddingBottom: +computed.paddingBottom || 0,
-                paddingRight: +computed.paddingRight || 0,
-                paddingLeft: +computed.paddingLeft || 0,
-                paddingTop: +computed.paddingTop || 0,
-                marginBottom: +computed.marginBottom || 0,
-                marginRight: +computed.marginRight || 0,
-                marginLeft: +computed.marginLeft || 0,
-                marginTop: +computed.marginTop || 0,
-                computedBottom: +computed[BOTTOM] || 0,
-                computedRight: +computed[RIGHT] || 0,
-                computedLeft: +computed[LEFT] || 0,
-                computedTop: +computed[TOP] || 0,
-                top: clientrect[TOP] || 0,
-                left: clientrect[LEFT] || 0,
-                right: clientrect[RIGHT] || 0,
-                bottom: clientrect[BOTTOM] || 0,
-                width: clientrect[WIDTH] || 0,
-                height: clientrect[HEIGHT] || 0
-            };
         },
         clientRect = function (item) {
             var returnValue = isElement(item) ? item.getBoundingClientRect() : {};
@@ -2319,6 +2343,12 @@ app.scope(function (app) {
             }
             manager.remark(ATTACHED, isAttached(manager, owner, element));
         },
+        grabConstructor = function (key, windo) {
+            var constrcktr;
+            return (constrcktr = windo[key]) ? function (argument) {
+                return new constrcktr(argument);
+            } : factories[key];
+        },
         DOMA_SETUP = factories.DOMA_SETUP = function (windo_) {
             var registeredElements, $, setup, wrapped, windo = windo_,
                 doc = windo[DOCUMENT],
@@ -2523,7 +2553,7 @@ app.scope(function (app) {
                 registeredElementOptions: registeredElementOptions,
                 iframeContent: iframeContent,
                 ordersEventsByHierarchy: returns(BOOLEAN_TRUE),
-                data: factories.Associator(),
+                // data: factories.WeakMap(),
                 document: manager,
                 devicePixelRatio: devicePixelRatio,
                 constructor: DOMA[CONSTRUCTOR],
@@ -2533,6 +2563,8 @@ app.scope(function (app) {
                     interpolate: /<%=([\s\S]+?)%>/g,
                     escape: /<%-([\s\S]+?)%>/g
                 },
+                WeakMap: grabConstructor('WeakMap', windo),
+                ResizeObserver: grabConstructor('ResizeObserver', windo),
                 events: {
                     custom: {},
                     expanders: cloneJSON(_eventExpander),
@@ -2638,31 +2670,6 @@ app.scope(function (app) {
                 unregisteredElement: function (manager) {
                     unregisteredElements.keep(manager.registeredElementName(), manager[__ELID__], manager);
                 },
-                // registerElement: function (name, options_) {
-                //     var generatedTagName, creation, group, wasDefined, options = options_ || {},
-                //         lastKey = [],
-                //         extendss = options.extends,
-                //         events = options.events,
-                //         prototype = options[PROTOTYPE],
-                //         destruction = options.destruction,
-                //         newName = manager.registeredElementName(name);
-                //     if (registeredElements[name]) {
-                //         if (registeredElements[name] === BOOLEAN_TRUE) {
-                //             exception('custom element names must not be used natively by browsers');
-                //         } else {
-                //             exception('custom element names can only be registered once per document');
-                //         }
-                //     } else {
-                //         registeredElements[name] = extendss ? registeredElements[extendss] : DIV;
-                //     }
-                //     options.creation = (extendss ? _.flows(registeredElementOptions[extendss].creation, options.creation || noop) : options.creation) || noop;
-                //     registeredElementOptions[name] = options;
-                //     registeredConstructors[name] = (extendss ? (registeredConstructors[extendss] || DomManager) : DomManager).extend(capitalize(camelCase(name)), extend({}, prototype));
-                //     if (this.document.is('ready')) {
-                //         manager.$(manager.customAttribute(name)).each(manager.owner.returnsManager);
-                //     }
-                //     return registeredConstructors[name];
-                // },
                 registerElement: function (name, options) {
                     var xtends, opts = options || {};
                     var manager = this;
@@ -2733,6 +2740,7 @@ app.scope(function (app) {
                     });
                 }
             }]);
+            wrapped.data = wrapped.WeakMap();
             merge(manager, wrapped);
             merge($, wrapped);
             runSupport(manager.supports, manager);
@@ -3332,6 +3340,10 @@ app.scope(function (app) {
              * @lends DomManager.prototype
              */
             {
+                variable: function (key) {
+                    var el = this.element();
+                    return this.is('window') ? (this.is('accessable') ? el[key] : UNDEFINED) : this[key];
+                },
                 'directive:creation:EventManager': DomEventsManager,
                 /**
                  * Flag to let other objects know that this is a valid dom manager
@@ -4417,10 +4429,6 @@ app.scope(function (app) {
                  * //     borderRight: 0,
                  * //     borderTop: 0,
                  * //     bottom: 701,
-                 * //     computedBottom: 0,
-                 * //     computedLeft: 0,
-                 * //     computedRight: 0,
-                 * //     computedTop: 0,
                  * //     height: 701,
                  * //     left: 0,
                  * //     marginBottom: 0,

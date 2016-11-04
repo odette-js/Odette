@@ -16,6 +16,9 @@ var PROMISE = 'Promise',
     REJECTED = 'rejected',
     EMPTYING = 'emptying',
     FULFILLED = 'fulfilled',
+    isPromise = _.is.promise = function (p) {
+        return p && isObject(p) && isFunction(p.then) && isFunction(p.catch);
+    },
     Promise = app.block(function (app) {
         var makeCollection = function () {
                 return Collection();
@@ -26,9 +29,6 @@ var PROMISE = 'Promise',
             },
             getQueue = function (p, key) {
                 return p.directive(REGISTRY).get(INSTANCES, key, makeCollection);
-            },
-            isPromise = function (p) {
-                return p && isObject(p) && isFunction(p.then) && isFunction(p.catch);
             },
             distillary = function (fn, arg) {
                 return fn ? fn(arg) : arg;

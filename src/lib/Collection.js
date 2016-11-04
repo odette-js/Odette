@@ -3,159 +3,159 @@ var COLLECTION = 'Collection',
     DELIMITED = 'delimited',
     STRING_MANAGER = 'StringManager',
     SORTED_COLLECTION = 'Sorted' + COLLECTION,
+    doToAll = function (handler) {
+        return function (list, items, lookAfter, lookBefore, fromRight) {
+            var count = 0;
+            duff(items, function (item) {
+                count += remove(list, item, lookAfter, lookBefore, fromRight);
+            });
+            return count === list[LENGTH];
+        };
+    },
+    remove = function (list, item, lookAfter, lookBefore, fromRight) {
+        var index = indexOf(list, item, lookAfter, lookBefore, fromRight);
+        if (index + 1) {
+            removeAt(list, index);
+        }
+        index = index + 1;
+        return !!index;
+    },
+    removeAll = doToAll(remove),
+    removeAt = function (list, index) {
+        return list.splice(index, 1)[0];
+    },
+    removeWhere = function (list, matchr) {
+        var matcher = matches(matchr);
+        duffRight(list, function (item, index) {
+            if (matcher(item)) {
+                removeAt(list, index);
+            }
+        });
+    },
+    findRemoveWhere = function (list, matcher) {
+        var found;
+        if ((found = findWhere(list, matcher))) {
+            remove(list, found);
+        }
+    },
+    add = function (list, item, lookAfter, lookBefore, fromRight) {
+        var value = 0,
+            index = indexOf(list, item, lookAfter, lookBefore, fromRight);
+        if (index === -1) {
+            value = list.push(item);
+        }
+        return !!value;
+    },
+    addAll = doToAll(add),
+    insertAt = function (list, item, index) {
+        var len = list[LENGTH],
+            lastIdx = len || 0;
+        list.splice(index || 0, 0, item);
+        return len !== list[LENGTH];
+    },
+    equalize = function (list, num, caller_) {
+        var n, thisNum, caller = caller_ || noop,
+            items = [],
+            numb = num || 0,
+            isNumberResult = isNumber(numb),
+            isArrayLikeResult = isArrayLike(numb);
+        if (numb < 0) {
+            isNumberResult = !1;
+        }
+        if (!list[LENGTH]) {
+            return items;
+        }
+        if (isNumberResult) {
+            items = [list[numb]];
+            caller(items[0]);
+        } else {
+            if (isArrayLikeResult) {
+                duff(numb, function (num) {
+                    var item = list[num];
+                    items.push(item);
+                    caller(item);
+                });
+            } else {
+                items = [list[0]];
+                caller(items[0]);
+            }
+        }
+        return items;
+    },
+    range = function (start, stop, step, inclusive) {
+        var length, range, idx;
+        if (stop == NULL) {
+            stop = start || 0;
+            start = 0;
+        }
+        if (!isFinite(start) || !isNumber(start)) {
+            start = 0;
+        }
+        step = +step || 1;
+        length = Math.max(Math.ceil((stop - start) / step), 0) + (+inclusive || 0);
+        range = [];
+        idx = 0;
+        while (idx < length) {
+            range[idx] = start;
+            idx++;
+            start += step;
+        }
+        return range;
+    },
+    count = function (list, runner_, ctx_, start, end) {
+        var runner, obj, idx, ctx;
+        if (start >= end || !isNumber(start) || !isNumber(end) || !isFinite(start) || !isFinite(end)) {
+            return list;
+        }
+        ctx = ctx_ || this;
+        runner = bindTo(runner_, ctx);
+        end = Math.abs(end);
+        idx = start;
+        while (idx < end) {
+            obj = NULL;
+            if (list[LENGTH] > idx) {
+                obj = list[idx];
+            }
+            runner(obj, idx, list);
+            idx++;
+        }
+        return list;
+    },
+    countTo = function (list, runner, ctx, num) {
+        return count(list, runner, ctx, 0, num);
+    },
+    countFrom = function (list, runner, ctx, num) {
+        return count(list, runner, ctx, num, list[LENGTH]);
+    },
+    closestIndex = function (array, searchElement, minIndex_, maxIndex_) {
+        var currentIndex, currentElement, found,
+            minIndex = minIndex_ || 0,
+            maxIndex = maxIndex_ || array[LENGTH] - 1;
+        while (minIndex <= maxIndex) {
+            currentIndex = (minIndex + maxIndex) / 2 | 0;
+            currentElement = array[currentIndex];
+            // calls valueOf
+            if (currentElement < searchElement) {
+                minIndex = currentIndex + 1;
+            } else if (currentElement > searchElement) {
+                maxIndex = currentIndex - 1;
+            } else {
+                return currentIndex;
+            }
+        }
+        found = ~~maxIndex;
+        return found;
+    },
+    recreateSelf = function (fn, ctx) {
+        return function () {
+            return this.wrap(fn.apply(ctx || this, arguments));
+        };
+    },
     // now we start with some privacy
     Collection = app.block(function (app) {
         var isNullMessage = 'object must not be null or ' + UNDEFINED,
             validIdMessage = 'objects in sorted collections must have either a number or string for their valueOf result',
-            cannotModifyMessage = 'list cannot be modified while it is being iterated over',
-            doToAll = function (handler) {
-                return function (list, items, lookAfter, lookBefore, fromRight) {
-                    var count = 0;
-                    duff(items, function (item) {
-                        count += remove(list, item, lookAfter, lookBefore, fromRight);
-                    });
-                    return count === list[LENGTH];
-                };
-            },
-            remove = function (list, item, lookAfter, lookBefore, fromRight) {
-                var index = indexOf(list, item, lookAfter, lookBefore, fromRight);
-                if (index + 1) {
-                    removeAt(list, index);
-                }
-                index = index + 1;
-                return !!index;
-            },
-            removeAll = doToAll(remove),
-            removeAt = function (list, index) {
-                return list.splice(index, 1)[0];
-            },
-            removeWhere = function (list, matchr) {
-                var matcher = matches(matchr);
-                duffRight(list, function (item, index) {
-                    if (matcher(item)) {
-                        list.removeAt(index);
-                    }
-                });
-            },
-            findRemoveWhere = function (list, matcher) {
-                var found;
-                if ((found = findWhere(list, matcher))) {
-                    remove(list, found);
-                }
-            },
-            add = function (list, item, lookAfter, lookBefore, fromRight) {
-                var value = 0,
-                    index = indexOf(list, item, lookAfter, lookBefore, fromRight);
-                if (index === -1) {
-                    value = list.push(item);
-                }
-                return !!value;
-            },
-            addAll = doToAll(add),
-            insertAt = function (list, item, index) {
-                var len = list[LENGTH],
-                    lastIdx = len || 0;
-                list.splice(index || 0, 0, item);
-                return len !== list[LENGTH];
-            },
-            eq = function (list, num, caller_) {
-                var n, thisNum, caller = caller_ || noop,
-                    items = [],
-                    numb = num || 0,
-                    isNumberResult = isNumber(numb),
-                    isArrayLikeResult = isArrayLike(numb);
-                if (numb < 0) {
-                    isNumberResult = !1;
-                }
-                if (!list[LENGTH]) {
-                    return items;
-                }
-                if (isNumberResult) {
-                    items = [list[numb]];
-                    caller(items[0]);
-                } else {
-                    if (isArrayLikeResult) {
-                        duff(numb, function (num) {
-                            var item = list[num];
-                            items.push(item);
-                            caller(item);
-                        });
-                    } else {
-                        items = [list[0]];
-                        caller(items[0]);
-                    }
-                }
-                return items;
-            },
-            range = function (start, stop, step, inclusive) {
-                var length, range, idx;
-                if (stop == NULL) {
-                    stop = start || 0;
-                    start = 0;
-                }
-                if (!isFinite(start) || !isNumber(start)) {
-                    start = 0;
-                }
-                step = +step || 1;
-                length = Math.max(Math.ceil((stop - start) / step), 0) + (+inclusive || 0);
-                range = [];
-                idx = 0;
-                while (idx < length) {
-                    range[idx] = start;
-                    idx++;
-                    start += step;
-                }
-                return range;
-            },
-            count = function (list, runner_, ctx_, start, end) {
-                var runner, obj, idx, ctx;
-                if (start >= end || !isNumber(start) || !isNumber(end) || !isFinite(start) || !isFinite(end)) {
-                    return list;
-                }
-                ctx = ctx_ || this;
-                runner = bindTo(runner_, ctx);
-                end = Math.abs(end);
-                idx = start;
-                while (idx < end) {
-                    obj = NULL;
-                    if (list[LENGTH] > idx) {
-                        obj = list[idx];
-                    }
-                    runner(obj, idx, list);
-                    idx++;
-                }
-                return list;
-            },
-            countTo = function (list, runner, ctx, num) {
-                return count(list, runner, ctx, 0, num);
-            },
-            countFrom = function (list, runner, ctx, num) {
-                return count(list, runner, ctx, num, list[LENGTH]);
-            },
-            closestIndex = function (array, searchElement, minIndex_, maxIndex_) {
-                var currentIndex, currentElement, found,
-                    minIndex = minIndex_ || 0,
-                    maxIndex = maxIndex_ || array[LENGTH] - 1;
-                while (minIndex <= maxIndex) {
-                    currentIndex = (minIndex + maxIndex) / 2 | 0;
-                    currentElement = array[currentIndex];
-                    // calls valueOf
-                    if (currentElement < searchElement) {
-                        minIndex = currentIndex + 1;
-                    } else if (currentElement > searchElement) {
-                        maxIndex = currentIndex - 1;
-                    } else {
-                        return currentIndex;
-                    }
-                }
-                found = ~~maxIndex;
-                return found;
-            },
-            recreateSelf = function (fn, ctx) {
-                return function () {
-                    return this.wrap(fn.apply(ctx || this, arguments));
-                };
-            },
+            // cannotModifyMessage = 'list cannot be modified while it is being iterated over',
             recreatingSelfCollection = toArray('eq,where,whereNot,map,results,filter,cycle,uncycle,flatten,gather,unique'),
             eachHandlers = {
                 each: duff,
@@ -186,6 +186,8 @@ var COLLECTION = 'Collection',
                 addAll: addAll,
                 insertAt: insertAt,
                 removeAt: removeAt,
+                removeWhere: removeWhere,
+                findRemoveWhere: findRemoveWhere,
                 remove: remove,
                 cycle: cycle,
                 uncycle: uncycle,
@@ -201,16 +203,17 @@ var COLLECTION = 'Collection',
                 eachRight: eachRight,
                 duffRight: duffRight,
                 flatten: flatten,
-                eq: eq
+                eq: equalize
             }),
             wrappedCollectionMethods = extend([{
                 seeker: function (handler, context) {
                     var list = this,
                         bound = bindTo(handler, context);
                     return duffRight(list.toArray(), function (one, two, three) {
-                        if (bound(one, two, three)) {
-                            list.removeAt(two);
+                        if (!bound(one, two, three)) {
+                            return;
                         }
+                        list.removeAt(two);
                     });
                 },
                 slice: function (one, two) {

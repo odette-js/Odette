@@ -5,11 +5,12 @@ app.defineDirective('Tests', (function (app) {
         BOOLEAN_FALSE = !1,
         EXPECTED = 'expected',
         SPACE_NOT = ' not',
+        TO_BE = ' to be ',
         TO_EQUAL = ' to equal ',
         TO_EVALUATE_TO = ' to evaluate to ',
         AN_ERROR = ' an error',
         TO_BE_THROWN = ' to be thrown',
-        TO_BE_STRICTLY_EQUAL_TO_STRING = ' to be strictly equal to ',
+        TO_BE_STRICTLY_EQUAL_TO_STRING = TO_BE + 'strictly equal to ',
         checkFinished = function (states, fn) {
             return function () {
                 if (!states || states.finished) {
@@ -197,6 +198,7 @@ app.defineDirective('Tests', (function (app) {
             if (callLength) {
                 three = BOOLEAN_FALSE;
             }
+            it.async = !three;
             it.running = BOOLEAN_TRUE;
             setTimeout(function () {
                 var cancelled;
@@ -276,6 +278,13 @@ app.defineDirective('Tests', (function (app) {
             }, function (current, comparison) {
                 return EXPECTED + SPACE + 'function not' + TO_EVALUATE_TO + stringify(comparison);
             }, BOOLEAN_TRUE);
+            each(_.is, function (value, key) {
+                maker('toBe' + capitalize(key), value, function (current, comparison) {
+                    return EXPECTED + SPACE + stringify(current) + TO_BE + key;
+                }, function (current, comparison) {
+                    return EXPECTED + SPACE + stringify(current) + SPACE_NOT + TO_BE + key;
+                });
+            });
         },
         group = function (target) {
             var aeQ = [];

@@ -96,6 +96,9 @@ var factories = {},
             return argument;
         };
     },
+    toBoolean = function (item) {
+        return !!item;
+    },
     stringify = function (obj) {
         return (isObject(obj) ? JSON.stringify(obj) : isFunction(obj) ? obj.toString() : obj) + EMPTY_STRING;
     },
@@ -905,11 +908,14 @@ var factories = {},
             memo.push(item);
         }, []);
     },
-    n = function (item) {
+    toN = function (item) {
         return isArrayLike(object) ? item : [item];
     },
     toArray = function (object, delimiter) {
         return isArrayLike(object) ? (isArray(object) ? object.slice(0) : arrayLikeToArray(object)) : (isString(object) ? object.split(isString(delimiter) ? delimiter : COMMA) : [object]);
+    },
+    toString = function (argument) {
+        return argument ? argument.toString() : ('' + argument);
     },
     nonEnumerableProps = toArray('valueOf,isPrototypeOf,' + TO_STRING + ',propertyIsEnumerable,hasOwnProperty,toLocaleString'),
     flattenArray = function (list, handle, deep) {
@@ -958,6 +964,9 @@ var factories = {},
     floatToInteger = function (value) {
         var remainder = value % 1;
         return value === value ? (remainder ? value - remainder : value) : 0;
+    },
+    toNumber = function (argument) {
+        return +argument;
     },
     toFinite = function (value) {
         if (!value) {
@@ -1331,12 +1340,22 @@ var factories = {},
         arrayLike: isArrayLike,
         instance: isInstance
     },
+    to = {
+        array: toArray,
+        'function': toFunction,
+        n: toN,
+        number: toNumber,
+        string: toString,
+        finite: toFinite,
+        integer: toInteger
+    },
     /**
      * @static
      * @namespace _
      */
     _ = app._ = merge({
         is: is,
+        to: to,
         shiftSelf: shiftSelf,
         consolemaker: consolemaker,
         blockWrapper: blockWrapper,
@@ -1377,7 +1396,7 @@ var factories = {},
         toInteger: toInteger,
         indexOf: indexOf,
         toArray: toArray,
-        n: n,
+        toN: toN,
         isEqual: isEqual,
         isArray: isArray,
         isEmpty: isEmpty,

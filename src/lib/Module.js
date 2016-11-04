@@ -286,7 +286,7 @@ var REQUIRE = 'require',
                         initResult = module.run(windo, fn);
                         // allows us to create dependency graphs
                         // look into creating promise
-                        initIsPromise = initResult && _.isPromise(initResult);
+                        initIsPromise = initResult && isPromise(initResult);
                         if (module.is('running')) {
                             if (initIsPromise) {
                                 module.depends(initResult);
