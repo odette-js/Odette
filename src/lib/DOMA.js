@@ -2567,7 +2567,7 @@ app.scope(function (app) {
                     interpolate: /<%=([\s\S]+?)%>/g,
                     escape: /<%-([\s\S]+?)%>/g
                 },
-                WeakMap: grabConstructor('WeakMap', windo),
+                WeakMap: factories.WeakMap, // grabConstructor('WeakMap', windo),
                 ResizeObserver: grabConstructor('ResizeObserver', windo),
                 events: {
                     custom: {},
