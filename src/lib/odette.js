@@ -25,6 +25,7 @@
         PARENT = 'global',
         PROTOTYPE = 'prototype',
         HAS_ACCESS = 'hasAccess',
+        LOCATION = 'location',
         PERIOD = '.',
         global_ = this || window,
         doc = global_.document,
