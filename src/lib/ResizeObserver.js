@@ -1,6 +1,7 @@
 var ResizeObserver = factories.ResizeObserver = app.block(function (app, window, options) {
     var rect = function (el) {
-            return _.box(el, el.ownerDocument.defaultView);
+            var doc;
+            return _.box(el, (doc = el.ownerDocument) ? doc.defaultView : el.defaultView || el);
         },
         list = toArray('height,width,paddingTop,paddingRight,paddingBottom,paddingLeft,borderTop,borderRight,borderBottom,borderLeft'),
         diff = function (previous, next) {
@@ -23,7 +24,7 @@ var ResizeObserver = factories.ResizeObserver = app.block(function (app, window,
                     }
                     var resized = hash.resized = queue.reduce(function (memo, watcher) {
                         var el = watcher.target;
-                        if (!el.parentNode) {
+                        if (watcher.isEl && !el.parentNode) {
                             return;
                         }
                         var client = rect(el);
@@ -83,7 +84,8 @@ var ResizeObserver = factories.ResizeObserver = app.block(function (app, window,
                 })) {
                 hash.queue.push({
                     target: target,
-                    contentRect: rect(target)
+                    contentRect: rect(target),
+                    isEl: isWindow(target) ? BOOLEAN_FALSE : isElement(target)
                 });
             }
         },

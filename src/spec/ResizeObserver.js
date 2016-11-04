@@ -178,5 +178,27 @@ application.scope().run(window, function (module, app, _, factories, documentVie
                 height: 1
             });
         }, 1);
+        test.it('can also handle documents and windows', function (done) {
+            var iframe = $.createElement('iframe');
+            $('body').append(iframe);
+            setTimeout(function () {
+                var win = iframe.window().element();
+                ro = $.ResizeObserver(function (observations) {
+                    _.each(observations, function (observation) {
+                        test.expect(observation.contentRect).toBeObject();
+                        count++;
+                    });
+                    test.expect(count).toBe(1);
+                    done();
+                    ro.unobserve(win);
+                    ro.disconnect();
+                });
+                ro.observe(win);
+                iframe.css({
+                    height: 1,
+                    width: 1
+                });
+            });
+        }, 3);
     });
 });
