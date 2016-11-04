@@ -902,6 +902,9 @@ app.scope(function (app) {
                 data = globalAssociator.get(el);
             } else {
                 data = owner.data.get(el);
+                if (!data) {
+                    owner.data.set(el, {});
+                }
             }
             if (!data[DOM_MANAGER_STRING]) {
                 data[DOM_MANAGER_STRING] = DomManager(el, data, owner);
