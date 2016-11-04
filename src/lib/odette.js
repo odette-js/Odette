@@ -185,7 +185,7 @@
                 search = search_,
                 dcUriComp = global_.decodeURIComponent,
                 tryparse = function () {
-                    return JSON.parse();
+                    return JSON.parse(val);
                 },
                 returnval = function () {
                     return val;
