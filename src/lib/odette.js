@@ -291,9 +291,20 @@
                 destroy: noop,
                 wraptry: wraptry,
                 now: now,
+                map: map,
+                touchable: touchable,
+                isVersionString: isVersionString,
                 Odette: Odette,
                 stringifyQuery: stringifyQuery,
                 parseSearch: parseSearch,
+                toJSON: function () {
+                    return {
+                        CREATED_AT: this.CREATED_AT,
+                        VERSION: this.VERSION,
+                        SCOPED: this.SCOPED,
+                        WHERE: this.global.WHERE
+                    };
+                },
                 /**
                  * Pass a function to this method to have it run each time the app encounters a new window. When this happens all functions passed to the undefine method are run to set up the window properly.
                  * @param {Function} this function will run everytime a new window is encountered after this point.
