@@ -903,7 +903,8 @@ app.scope(function (app) {
             } else {
                 data = owner.data.get(el);
                 if (!data) {
-                    owner.data.set(el, {});
+                    data = {};
+                    owner.data.set(el, data);
                 }
             }
             if (!data[DOM_MANAGER_STRING]) {
