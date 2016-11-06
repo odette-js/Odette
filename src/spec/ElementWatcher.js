@@ -4,11 +4,12 @@ application.scope().run(window, function (module, app, _, factories, documentVie
         test.beforeEach(function () {
             div = $.createElement('div');
             $('body').append(div);
-            elWatcher = factories.ElementWatcher();
+            elWatcher = elWatcher || factories.ElementWatcher();
             count = 0;
         });
         test.afterEach(function () {
             div.destroy();
+            // elWatcher.observer().disconnect();
         });
         test.it('watches for element resizes', function (done) {
             elWatcher.observe(div, function (client) {

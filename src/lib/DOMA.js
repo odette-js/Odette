@@ -913,26 +913,14 @@ var ATTACHED = 'attached',
             map.super.apply(map, arguments);
         },
         identifier: function (el) {
-                return (el && ((isWindow(el) || isDocument(el)) ? BOOLEAN_FALSE : el[__ELID__]));
-            }
-            // ,
-            // ensure: function (el, owner) {
-            //     var id, data, map = this;
-            //     if (!(data = map.get(el))) {
-            //         id = app.counter() + HYPHEN + now();
-            //         data = {
-            //             id: id
-            //         };
-            //         map.set(el, data, id);
-            //         DomManager(el, data, owner, id);
-            //     }
-            //     return data[DOM_MANAGER_STRING];
-            // }
+            return el && (isWindow(el) ? BOOLEAN_FALSE : el[__ELID__]);
+        }
     }),
     globalAssociator = ElementalWeakMap();
 app.scope(function (app) {
-    var ensure = function (el, owner) {
-            var data, id, attach_id, manager, associator;
+    var noMatch = /(.)^/,
+        ensure = function (el, owner) {
+            var data, id, manager, associator, attach_id = BOOLEAN_TRUE;
             if (owner === BOOLEAN_TRUE) {
                 data = globalAssociator.get(el, el[__ELID__]);
                 associator = globalAssociator;
@@ -940,10 +928,9 @@ app.scope(function (app) {
                 associator = globalAssociator;
                 if (isWindow(el)) {
                     data = globalAssociator.get(el);
-                    id = BOOLEAN_FALSE;
+                    attach_id = id = BOOLEAN_FALSE;
                 } else {
                     associator = owner.data;
-                    attach_id = BOOLEAN_TRUE;
                     id = el[__ELID__];
                     if (id) {
                         data = associator.get(el, id);
@@ -956,40 +943,15 @@ app.scope(function (app) {
             if (!data) {
                 data = {};
                 associator.set(el, data, id);
+                if (attach_id) {
+                    el[__ELID__] = id;
+                }
             }
             if (!(manager = data[DOM_MANAGER_STRING])) {
-                manager = DomManager(el, data, owner, id);
+                manager = DomManager(el, data, owner);
             }
             return manager;
         },
-        noMatch = /(.)^/,
-        // templateMiddleware = function (string) {
-        //     var split = string.split('<');
-        //     var pseudo = foldl(split, function (memo, splitstring) {
-        //         var endsplit = splitstring.split('>');
-        //         if (endsplit[LENGTH] === 1) {
-        //             // just text
-        //             memo.list.push(splitstring);
-        //             return;
-        //         }
-        //         var nexttext = endsplit[1];
-        //         var contained = endsplit[0];
-        //     }, {
-        //         layer: 0,
-        //         list: []
-        //     });
-        //     return string;
-        // },
-        // foldAttributes = function (attributes) {
-        //     return attributes[LENGTH] ? _.foldl(attributes, function (memo, attribute) {
-        //         memo[attribute[LOCAL_NAME]] = attribute.value;
-        //     }) : NULL;
-        // },
-        // virtualizeDom = function (nodes) {
-        //     return _.map(nodes, function (node) {
-        //         return [node.tagName, foldAttributes(node.attributes)];
-        //     });
-        // },
         templateGenerator = function (text_, templateSettings) {
             var render, template, trimmed, argument, settings = merge({}, templateSettings),
                 text = text_,
@@ -1007,7 +969,7 @@ app.scope(function (app) {
                 });
             }
             return function (data, helpers) {
-                return render.call(data, helpers, _);
+                return render.call(data, _, helpers);
             };
             // }
             // var matcher = RegExp([
@@ -1187,23 +1149,25 @@ app.scope(function (app) {
             });
         },
         box = function (el, ctx) {
-            var clientrect, computed, ret;
+            var computed, ret, pf = parseFloat,
+                TEN = 10,
+                ZERO = 0;
             if (!isElement(el)) {
                 ret = {
-                    borderBottom: 0,
-                    borderRight: 0,
-                    borderLeft: 0,
-                    borderTop: 0,
-                    paddingBottom: 0,
-                    paddingRight: 0,
-                    paddingLeft: 0,
-                    paddingTop: 0,
-                    marginBottom: 0,
-                    marginRight: 0,
-                    marginLeft: 0,
-                    marginTop: 0,
-                    height: 0,
-                    width: 0
+                    borderBottom: ZERO,
+                    borderRight: ZERO,
+                    borderLeft: ZERO,
+                    borderTop: ZERO,
+                    paddingBottom: ZERO,
+                    paddingRight: ZERO,
+                    paddingLeft: ZERO,
+                    paddingTop: ZERO,
+                    marginBottom: ZERO,
+                    marginRight: ZERO,
+                    marginLeft: ZERO,
+                    marginTop: ZERO,
+                    height: ZERO,
+                    width: ZERO
                 };
                 if (isWindow(el)) {
                     ret.height = el[INNER_HEIGHT];
@@ -1216,29 +1180,28 @@ app.scope(function (app) {
             } else {
                 if (el.parentNode) {
                     computed = getComputed(el, ctx);
-                    clientrect = clientRect(el, ctx);
                 } else {
-                    computed = clientRect = {};
+                    computed = {};
                 }
                 return {
-                    borderBottom: +computed.borderBottomWidth || 0,
-                    borderRight: +computed.borderRightWidth || 0,
-                    borderLeft: +computed.borderLeftWidth || 0,
-                    borderTop: +computed.borderTopWidth || 0,
-                    paddingBottom: +computed.paddingBottom || 0,
-                    paddingRight: +computed.paddingRight || 0,
-                    paddingLeft: +computed.paddingLeft || 0,
-                    paddingTop: +computed.paddingTop || 0,
-                    marginBottom: +computed.marginBottom || 0,
-                    marginRight: +computed.marginRight || 0,
-                    marginLeft: +computed.marginLeft || 0,
-                    marginTop: +computed.marginTop || 0,
-                    top: clientrect[TOP] || 0,
-                    left: clientrect[LEFT] || 0,
-                    right: clientrect[RIGHT] || 0,
-                    bottom: clientrect[BOTTOM] || 0,
-                    width: clientrect[WIDTH] || 0,
-                    height: clientrect[HEIGHT] || 0
+                    borderBottom: pf(computed.borderBottomWidth, TEN) || ZERO,
+                    borderRight: pf(computed.borderRightWidth, TEN) || ZERO,
+                    borderLeft: pf(computed.borderLeftWidth, TEN) || ZERO,
+                    borderTop: pf(computed.borderTopWidth, TEN) || ZERO,
+                    paddingBottom: pf(computed.paddingBottom, TEN) || ZERO,
+                    paddingRight: pf(computed.paddingRight, TEN) || ZERO,
+                    paddingLeft: pf(computed.paddingLeft, TEN) || ZERO,
+                    paddingTop: pf(computed.paddingTop, TEN) || ZERO,
+                    marginBottom: pf(computed.marginBottom, TEN) || ZERO,
+                    marginRight: pf(computed.marginRight, TEN) || ZERO,
+                    marginLeft: pf(computed.marginLeft, TEN) || ZERO,
+                    marginTop: pf(computed.marginTop, TEN) || ZERO,
+                    top: pf(computed[TOP], TEN) || ZERO,
+                    left: pf(computed[LEFT], TEN) || ZERO,
+                    right: pf(computed[RIGHT], TEN) || ZERO,
+                    bottom: pf(computed[BOTTOM], TEN) || ZERO,
+                    width: pf(computed[WIDTH], TEN) || ZERO,
+                    height: pf(computed[HEIGHT], TEN) || ZERO
                 };
             }
         },
@@ -2219,7 +2182,7 @@ app.scope(function (app) {
             /**
              * This method adds the list or space delineated string to the target manager's element.
              * @method
-             * @name  DomManager#addClass
+             * @name DomManager # addClass
              * @example <caption>Add a spaces separated list of classes.</caption>
              * targetManager.addClass('item1 class2');
              * @example
@@ -3867,7 +3830,7 @@ app.scope(function (app) {
                     hash[DOM_MANAGER_STRING] = manager;
                     if (manager.is(ELEMENT) || manager.is(FRAGMENT)) {
                         ownerDoc = el.ownerDocument;
-                        el[__ELID__] = elid;
+                        // el[__ELID__] = elid;
                         if (!(ownerElId = ownerDoc[__ELID__]) || !ensure(ownerDoc, BOOLEAN_TRUE)) {
                             app.run(ownerDoc.defaultView, noop);
                         }
@@ -3875,7 +3838,7 @@ app.scope(function (app) {
                     } else {
                         if ((isDocument = manager.is(DOCUMENT))) {
                             owner = owner === BOOLEAN_TRUE ? manager : owner;
-                            el[__ELID__] = elid;
+                            // el[__ELID__] = elid;
                         }
                     }
                     manager.owner = owner || BOOLEAN_FALSE;

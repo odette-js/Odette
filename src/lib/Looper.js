@@ -43,7 +43,7 @@ app.scope(function (app) {
         },
         basicHandler = function () {
             // snapshot the time
-            frameTime = _.now();
+            frameTime = now();
             // clear all the things
             win[CANCEL_ANIMATION_FRAME](lastAFId);
             win[CLEAR_TIMEOUT](lastTId);
@@ -149,15 +149,16 @@ app.scope(function (app) {
             },
             run: function (_nowish) {
                 var sliced, slicedLength, finished, i = 0,
-                    tween = this;
+                    tween = this,
+                    nowish = _nowish || now();
                 if (!tween.is(HALTED) && !tween.is(STOPPED) && tween[LENGTH]()) {
                     // stop early if it is halted, stopped, or there's nothing to run
-                    tween.lastRun = _nowish;
+                    tween.lastRun = nowish;
                     tween.sort(sorter);
                     sliced = tween.toArray().slice(0);
                     slicedLength = sliced[LENGTH];
                     for (; i < slicedLength && !finished; i++) {
-                        finished = !tween.is(HALTED) && runner(tween, sliced[i], _nowish);
+                        finished = !tween.is(HALTED) && runner(tween, sliced[i], nowish);
                     }
                 }
                 tween.current = NULL;
@@ -252,7 +253,7 @@ app.scope(function (app) {
                 });
             },
             tween: function (time__, fn_) {
-                var fn, added = nowish(),
+                var fn, added = now(),
                     time_ = time(time__),
                     tween = this;
                 if (!isFunction(fn_)) {
@@ -275,7 +276,7 @@ app.scope(function (app) {
                     minimum = Math.min(min || 0.8, 0.8),
                     expectedFrameRate = 30 * minimum,
                     lastDate = 1,
-                    lastSkip = nowish(),
+                    lastSkip = now(),
                     time_ = time__ || 125;
                 if (!isFunction(fn_)) {
                     return tween;
@@ -325,7 +326,7 @@ app.scope(function (app) {
                     },
                     fn: function (t) {
                         last = t;
-                        bound(t);
+                        return bound(t);
                     },
                     sort: function () {
                         return last + timey;

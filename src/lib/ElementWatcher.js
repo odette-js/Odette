@@ -6,7 +6,7 @@ var ELEMENT_WATCHER = 'ElementWatcher',
     OBSERVER = 'observer',
     AF = _.AF,
     ElementWatcher = factories[ELEMENT_WATCHER] = app.block(function (app) {
-        var namespacer = function () {
+        var ro, namespacer = function () {
                 return 'watcher-' + app.counter();
             },
             element = function (el) {
@@ -54,24 +54,24 @@ var ELEMENT_WATCHER = 'ElementWatcher',
                 elementWatcher[OBSERVER]().unobserve(el);
                 return elementWatcher;
             },
-            sizeChange: function (observation) {
+            resize: function (observation) {
                 var elementWatcher = this,
                     target = observation && observation.target,
                     watcher = elementWatcher.get(WATCHERS, target[__ELID__]);
-                if (watcher.is(DISABLED)) {
+                if (!watcher || watcher.is(DISABLED)) {
                     return elementWatcher;
                 }
                 if (watcher.is(BLINKING)) {
                     watcher.unmark(BLINKING);
                 } else {
-                    watcher.eachCallBound(observation.contentRect);
+                    watcher.slice(0).eachCallBound(observation.contentRect);
                 }
             },
             observer: function () {
                 return this.get(INSTANCES, OBSERVER, function (registry) {
-                    return new ResizeObserver(function (list) {
-                        duff(list, registry.sizeChange, registry);
-                    });
+                    return ro || (ro = new ResizeObserver(function (observations) {
+                        duff(observations, registry.resize, registry);
+                    }));
                 });
             },
             watcher: function (el) {

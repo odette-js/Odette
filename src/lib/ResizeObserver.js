@@ -13,13 +13,19 @@ var ResizeObserver = factories.ResizeObserver = app.block(function (app, window,
         getFromMap = function (observer) {
             return observerMap[observer.id];
         },
+        doc = document,
+        body = doc.body,
+        key = body.previousElemenetSibling ? 'previousElemenetSibling' : 'previousSibling',
         elementEventDispatcher = _.elementEventDispatcher,
+        ResizeObserverError = function () {
+            elementEventDispatcher(window, new ErrorEvent('ResizeObserver loop completed with undelivered notifications.'));
+        },
         bindResizeObserver = function (observer, cb, interval) {
             var queue, id = app.counter('resize-observer'),
                 q = function () {
                     var queue = hash.queue;
                     if (!queue.length()) {
-                        hash.remove();
+                        hash.dequeue();
                         return;
                     }
                     var resized = hash.resized = queue.reduce(function (memo, watcher) {
@@ -28,11 +34,11 @@ var ResizeObserver = factories.ResizeObserver = app.block(function (app, window,
                             return;
                         }
                         var client = rect(el);
-                        if (watcher.isActive || !diff(watcher.contentRect, client)) {
+                        if (watcher.isActive() || !diff(watcher.contentRect, client)) {
                             return;
                         }
                         watcher.contentRect = client;
-                        watcher.isActive = BOOLEAN_TRUE;
+                        watcher.isActive = returns.true;
                         memo.watchers.push(watcher);
                         memo.observations.push({
                             // might want to take some of these properties off
@@ -46,13 +52,12 @@ var ResizeObserver = factories.ResizeObserver = app.block(function (app, window,
                     if (!resized.watchers.length) {
                         return;
                     }
+                    hash.order(resized.observations);
                     wraptry(function () {
                         cb(resized.observations);
-                    }, function () {
-                        elementEventDispatcher(window, new ErrorEvent('ResizeObserver loop completed with undelivered notifications.'));
-                    }, function () {
+                    }, ResizeObserverError, function () {
                         duff(resized.watchers, function (watcher) {
-                            watcher.isActive = BOOLEAN_FALSE;
+                            watcher.isActive = returns.false;
                         });
                     });
                 };
@@ -69,9 +74,31 @@ var ResizeObserver = factories.ResizeObserver = app.block(function (app, window,
                     }
                     hash.afId = AF.interval(baseClamp(hash.interval, 15), q);
                 },
-                remove: function () {
-                    AF.dequeue(hash.afId);
+                dequeue: function () {
+                    var afId = hash.afId;
                     delete hash.afId;
+                    AF.dequeue(afId);
+                },
+                disconnect: once(function () {
+                    queue.eachRight(hash.remove);
+                    hash.dequeue();
+                }),
+                remove: function (watcher, idx) {
+                    if (idx + 1) {
+                        return queue.removeAt(idx);
+                    } else {
+                        return queue.remove(watcher);
+                    }
+                },
+                order: function (list) {
+                    // list.sort(function (a) {
+                    //     var parent = a.target;
+                    //     var doc = parent.ownerDocument;
+                    //     while (parent !== doc) {
+                    //         //
+                    //         parent = parent.parentNode;
+                    //     }
+                    // });
                 }
             };
         };
@@ -86,7 +113,8 @@ var ResizeObserver = factories.ResizeObserver = app.block(function (app, window,
                 hash.queue.push({
                     target: target,
                     contentRect: rect(target),
-                    isEl: isWindow(target) ? BOOLEAN_FALSE : isElement(target)
+                    isEl: isWindow(target) ? BOOLEAN_FALSE : isElement(target),
+                    isActive: returns.false
                 });
             }
         },
@@ -96,7 +124,7 @@ var ResizeObserver = factories.ResizeObserver = app.block(function (app, window,
             });
         },
         disconnect: function () {
-            getFromMap(this).remove();
+            getFromMap(this).disconnect();
         },
         constructor: function (cb, interval) {
             if (!isFunction(cb)) {

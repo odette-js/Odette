@@ -10,7 +10,7 @@ app.defineDirective('Tests', (function (app) {
         TO_EVALUATE_TO = ' to evaluate to ',
         AN_ERROR = ' an error',
         TO_BE_THROWN = ' to be thrown',
-        TO_BE_STRICTLY_EQUAL_TO_STRING = TO_BE + 'strictly equal to ',
+        TO_BE_STRICTLY_EQUAL_TO = TO_BE + 'strictly equal to ',
         checkFinished = function (states, fn) {
             return function () {
                 if (!states || states.finished) {
@@ -260,9 +260,9 @@ app.defineDirective('Tests', (function (app) {
             maker('toBe', function (current, comparison) {
                 return current === comparison;
             }, function (current, comparison) {
-                return EXPECTED + SPACE + stringify(current) + TO_BE_STRICTLY_EQUAL_TO_STRING + stringify(comparison);
+                return EXPECTED + SPACE + stringify(current) + TO_BE_STRICTLY_EQUAL_TO + stringify(comparison);
             }, function (current, comparison) {
-                return EXPECTED + SPACE + stringify(current) + SPACE_NOT + TO_BE_STRICTLY_EQUAL_TO_STRING + stringify(comparison);
+                return EXPECTED + SPACE + stringify(current) + SPACE_NOT + TO_BE_STRICTLY_EQUAL_TO + stringify(comparison);
             });
             maker('toEqual', function (current, comparison) {
                 return isEqual(current, comparison);

@@ -1,14 +1,19 @@
 application.scope().run(window, function (module, app, _, factories, documentView, scopedFactories, $) {
     test.describe('ResizeObserver', function () {
-        var div, ro, count, setDivCss = function (argument) {
-            div.css(argument);
-        };
+        var div, ro, count, counter = 0,
+            setDivCss = function (argument) {
+                div.css(argument);
+            };
         test.beforeEach(function () {
             count = 0;
             div = $.createElement('div');
             $('body').append(div);
+            counter++;
         });
         test.afterEach(function () {
+            // if (counter === 10) {
+            //     debugger;
+            // }
             div.destroy();
             ro.disconnect();
         });
@@ -77,7 +82,7 @@ application.scope().run(window, function (module, app, _, factories, documentVie
                 if (count === 10) {
                     // stop and finish
                     ro.unobserve(div.element());
-                    done();
+                    return done();
                 }
                 setDivCss({
                     height: count
@@ -131,7 +136,7 @@ application.scope().run(window, function (module, app, _, factories, documentVie
                 ro.unobserve(div.element());
                 ro.unobserve(div2.element());
                 div2.destroy();
-                return done();
+                done();
             });
             ro.observe(div.element());
             ro.observe(div2.element());
@@ -192,6 +197,7 @@ application.scope().run(window, function (module, app, _, factories, documentVie
                     done();
                     ro.unobserve(win);
                     ro.disconnect();
+                    iframe.remove();
                 });
                 ro.observe(win);
                 iframe.css({

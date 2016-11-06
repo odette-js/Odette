@@ -122,10 +122,10 @@ var COLLECTION = 'Collection',
         return list;
     },
     countTo = function (list, runner, ctx, num) {
-        return count(list, runner, ctx, 0, num);
+        return count(list, runner, ctx, 0, baseClamp(num, 0));
     },
     countFrom = function (list, runner, ctx, num) {
-        return count(list, runner, ctx, num, list[LENGTH]);
+        return count(list, runner, ctx, baseClamp(num, 0) || 0, list[LENGTH]);
     },
     closestIndex = function (array, searchElement, minIndex_, maxIndex_) {
         var currentIndex, currentElement, found,
