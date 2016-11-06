@@ -1082,9 +1082,10 @@ var factories = {},
         } while (--farDown > 0 && constructor && _isFinite(farDown));
         return val;
     },
-    uuid = function () {
+    uuidHash = {},
+    _uuid = function (idx) {
         var cryptoCheck = 'crypto' in win && 'getRandomValues' in crypto,
-            sid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+            sid = ('xxxxxxxx-xxxx-' + idx + 'xxx-yxxx-xxxxxxxxxxxx').replace(/[xy]/g, function (c) {
                 var rnd, r, v;
                 if (cryptoCheck) {
                     rnd = win.crypto.getRandomValues(new Uint32Array(1));
@@ -1100,7 +1101,11 @@ var factories = {},
                 v = (c === 'x') ? r : (r & 0x3 | 0x8);
                 return v.toString(16);
             });
-        return cryptoCheck ? sid : 'SF' + sid;
+        // if crypto check passes, you can trust the browser
+        return uuidHash[sid] ? _uuid(idx + 1) : (uuidHash[sid] = BOOLEAN_TRUE) && sid;
+    },
+    uuid = function () {
+        return _uuid(4);
     },
     intendedApi = function (fn) {
         return function (one, two) {

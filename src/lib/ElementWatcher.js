@@ -1,6 +1,9 @@
 var ELEMENT_WATCHER = 'ElementWatcher',
     WATCHERS = 'watchers',
     RESIZE = 'resize',
+    BLINKING = 'blinking',
+    DISABLED = 'disabled',
+    OBSERVER = 'observer',
     AF = _.AF,
     ElementWatcher = factories[ELEMENT_WATCHER] = app.block(function (app) {
         var namespacer = function () {
@@ -19,7 +22,7 @@ var ELEMENT_WATCHER = 'ElementWatcher',
                 if (!el) {
                     return elementWatcher;
                 }
-                elementWatcher.observer().observe(el);
+                elementWatcher[OBSERVER]().observe(el);
                 elementWatcher.watcher(el).push(fn);
                 return elementWatcher;
             },
@@ -47,26 +50,25 @@ var ELEMENT_WATCHER = 'ElementWatcher',
                 if (!dropped) {
                     return elementWatcher;
                 }
-                dropped.mark('disabled');
-                observer = this.get(INSTANCES, 'observer');
-                observer.unobserve(el);
+                dropped.mark(DISABLED);
+                elementWatcher[OBSERVER]().unobserve(el);
                 return elementWatcher;
             },
             sizeChange: function (observation) {
                 var elementWatcher = this,
                     target = observation && observation.target,
                     watcher = elementWatcher.get(WATCHERS, target[__ELID__]);
-                if (watcher.is('disabled')) {
+                if (watcher.is(DISABLED)) {
                     return elementWatcher;
                 }
-                if (watcher.is('blinking')) {
-                    watcher.unmark('blinking');
+                if (watcher.is(BLINKING)) {
+                    watcher.unmark(BLINKING);
                 } else {
                     watcher.eachCallBound(observation.contentRect);
                 }
             },
             observer: function () {
-                return this.get(INSTANCES, 'observer', function (registry) {
+                return this.get(INSTANCES, OBSERVER, function (registry) {
                     return new ResizeObserver(function (list) {
                         duff(list, registry.sizeChange, registry);
                     });
@@ -78,7 +80,7 @@ var ELEMENT_WATCHER = 'ElementWatcher',
                 });
             },
             blink: function (el) {
-                this.watcher(el).mark('blinking');
+                this.watcher(el).mark(BLINKING);
                 return this;
             }
         });

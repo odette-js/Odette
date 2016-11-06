@@ -178,7 +178,7 @@ application.scope().run(window, function (module, app, _, factories, documentVie
                 height: 1
             });
         }, 1);
-        test.it('can also handle documents and windows', function (done) {
+        test.it('can also handle windows', function (done) {
             var iframe = $.createElement('iframe');
             $('body').append(iframe);
             setTimeout(function () {
@@ -199,6 +199,6 @@ application.scope().run(window, function (module, app, _, factories, documentVie
                     width: 1
                 });
             });
-        }, 3);
+        }, 2);
     });
 });

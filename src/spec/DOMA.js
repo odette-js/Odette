@@ -536,7 +536,8 @@ application.scope().run(window, function (module, app, _, factories, documentVie
             // div.id = 'datahere';
             // var div = document.createElement('div');
             // div.id = 'datahere';
-            test.expect($.document.data.get(document.getElementById('nodatahere')).DomManager).toEqual(void 0);
+            var data = $.document.data.get(document.getElementById('nodatahere'))
+            test.expect(data).toEqual(void 0);
             // this one has an is property so it will be queried for automatically
             test.expect($.document.data.get(document.getElementById('datahere')).DomManager).not.toEqual(void 0);
         }, 2);

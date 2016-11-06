@@ -14,7 +14,7 @@ var ResizeObserver = factories.ResizeObserver = app.block(function (app, window,
             return observerMap[observer.id];
         },
         elementEventDispatcher = _.elementEventDispatcher,
-        bindResizeObserver = function (observer, cb) {
+        bindResizeObserver = function (observer, cb, interval) {
             var queue, id = app.counter('resize-observer'),
                 q = function () {
                     var queue = hash.queue;
@@ -62,11 +62,12 @@ var ResizeObserver = factories.ResizeObserver = app.block(function (app, window,
                 queue: (queue = Collection()),
                 resized: [],
                 id: id,
+                interval: interval,
                 add: function () {
                     if (hash.afId) {
                         return;
                     }
-                    hash.afId = AF.queue(q);
+                    hash.afId = AF.interval(baseClamp(hash.interval, 15), q);
                 },
                 remove: function () {
                     AF.dequeue(hash.afId);
@@ -97,11 +98,11 @@ var ResizeObserver = factories.ResizeObserver = app.block(function (app, window,
         disconnect: function () {
             getFromMap(this).remove();
         },
-        constructor: function (cb) {
+        constructor: function (cb, interval) {
             if (!isFunction(cb)) {
                 return this;
             }
-            bindResizeObserver(this, cb);
+            bindResizeObserver(this, cb, interval);
         }
     });
 });

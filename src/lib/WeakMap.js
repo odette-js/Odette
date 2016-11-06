@@ -2,76 +2,94 @@ var WeakMap = factories.WeakMap = app.block(function (app) {
     var ITEMS = 'items',
         DATA = 'data',
         DATASET = DATA + 'set',
-        objectToString = {}.toString;
+        weakMapsHash = {},
+        has = _.has,
+        setInstance = function (instance) {
+            var id = instance.id = uuid();
+            weakMapsHash[id] = {
+                target: instance,
+                types: {},
+                getType: function (obj) {
+                    var types = this.types,
+                        key = isWindow(obj) ? '[object global]' : objectToString.call(obj).toLowerCase(),
+                        typesHash = types[key];
+                    if (typesHash) {
+                        return typesHash;
+                    }
+                    typesHash = types[key] = {
+                        key: key,
+                        list: [],
+                        data: [],
+                        hash: {}
+                    };
+                    return typesHash;
+                },
+                get: function (obj, id) {
+                    var item, typeGroup = this.getType(obj),
+                        hash = typeGroup.hash,
+                        list = typeGroup.list;
+                    return id ? (_.has(hash, id) && hash[id]) : typeGroup.data[indexOf(typeGroup.list, obj)];
+                },
+                has: function (obj, id, typeGroup_) {
+                    var item, typeGroup = typeGroup_ || this.getType(obj),
+                        hash = typeGroup.hash,
+                        list = typeGroup.list;
+                    return !!(id ? _.has(hash, id) : (1 + indexOf(typeGroup.list, obj)));
+                },
+                set: function (obj, datum, id) {
+                    var item, idx, typeGroup = this.getType(obj),
+                        hash = typeGroup.hash,
+                        list = typeGroup.list;
+                    if (id) {
+                        hash[id] = datum;
+                    } else {
+                        idx = (idx = indexOf(typeGroup.list, obj) + 1) ? idx - 1 : (list.push(obj) && list.length - 1);
+                        typeGroup.data[idx] = datum;
+                    }
+                    return this;
+                },
+                delete: function (obj, id) {
+                    var idx, typeGroup = this.getType(obj);
+                    if (id) {
+                        return _.has(typeGroup.hash, id);
+                    } else {
+                        idx = indexOf(typeGroup.list, obj);
+                        if (idx === -1) {
+                            return BOOLEAN_FALSE;
+                        }
+                        removeAt(typeGroup.list, idx);
+                        removeAt(typeGroup.data, idx);
+                        return BOOLEAN_TRUE;
+                    }
+                }
+            };
+        },
+        retreiveHash = function (instance) {
+            return weakMapsHash[instance.id];
+        },
+        retreiveData = function (instance, obj, key) {
+            return retreiveHash(instance).get(obj, key);
+        };
     return factories.Directive.extend('WeakMap', {
         constructor: function (items) {
             var map = this;
+            setInstance(map);
             duff(items, function (item) {
                 map.set(item[0], item[1]);
             });
+            return map;
         },
-        get: function (obj, type) {
-            var returnData, idxOf, dataset, n, key, instance = this,
-                canRead = 0,
-                data = {},
-                objIsObj = isObject(obj),
-                current = instance.sameType(obj, objIsObj),
-                els = current[ITEMS] = current[ITEMS] || [],
-                eldata = current[__ELID__] = current[__ELID__] || {},
-                dataArray = current[DATA] = current[DATA] || [];
-            if (objIsObj) {
-                if (obj && current.readData) {
-                    key = obj[__ELID__] = obj[__ELID__] || app.counter() + HYPHEN + performance.now();
-                    if (key) {
-                        data = eldata[key] = eldata[key] || {};
-                    }
-                } else {
-                    idxOf = current[ITEMS][INDEX_OF](obj);
-                    if (idxOf === UNDEFINED || idxOf === -1) {
-                        idxOf = current[ITEMS][LENGTH];
-                        current[ITEMS].push(obj);
-                        dataArray[idxOf] = data;
-                    }
-                    data = dataArray[idxOf];
-                }
-            } else {
-                current[__ELID__][obj] = current[__ELID__][obj] || {};
-                data = current[__ELID__][obj];
-            }
-            data.target = obj;
-            return data;
+        has: function (obj, key) {
+            return retreiveHash(this).has(obj, key);
         },
-        set: function (el, extensor, type) {
-            var n, data = this.get(el, type);
-            merge(data, extensor || {});
-            return data;
+        get: function (obj, key) {
+            return retreiveHash(this).get(obj, key);
         },
-        remove: function (el) {
-            var idx, type = this.sameType(el);
-            if (type.readData) {
-                idx = el[__ELID__];
-                delete type[__ELID__][idx];
-            } else {
-                idx = _[INDEX_OF](type[ITEMS], el);
-                if (idx !== -1) {
-                    removeAt(type[DATA], idx);
-                    removeAt(type[ITEMS], idx);
-                }
-            }
+        set: function (obj, value, key) {
+            return retreiveHash(this).set(obj, value, key);
         },
-        sameType: function (obj, isObj_) {
-            var instance = this,
-                isObj = isObj_ === UNDEFINED ? isObject(obj) : isObj_,
-                type = objectToString.call(obj),
-                lowerType = isWindow(obj) ? '[object global]' : type.toLowerCase(),
-                current = instance[lowerType] = instance[lowerType] || {},
-                globalindex = lowerType[INDEX_OF]('global'),
-                indexOfWindow = lowerType[INDEX_OF](WINDOW) === -1;
-            // skip reading data
-            if (globalindex === -1 && indexOfWindow && isObj) {
-                current.readData = BOOLEAN_TRUE;
-            }
-            return current;
+        delete: function (obj, key) {
+            return retreiveHash(this).delete(obj, key);
         }
     });
 });

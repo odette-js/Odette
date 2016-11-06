@@ -14,16 +14,5 @@ application.scope().run(window, function (module, app, _, factories, documentVie
             });
             test.expect(registry.get(window).some).toEqual('data');
         }, 1);
-        test.it('can also get any group of data that the same type', function () {
-            var one = {},
-                two = {};
-            registry.set(one, {
-                one: 1
-            });
-            registry.set(two, {
-                two: 2
-            });
-            test.expect(_.keys(registry.sameType(two).__elid__).length).toEqual(2);
-        }, 1);
     });
 });
