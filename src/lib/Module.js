@@ -111,7 +111,7 @@ var REQUIRE = 'require',
                     this[EXPORTS][key] = value;
                 }),
                 run: _.directives.parody(MODULE_MANAGER, 'run'),
-        depend: _.directives.parody(DEPENDENCY_MANAGER, 'depend'),
+                depends: _.directives.parody(DEPENDENCY_MANAGER, 'depend'),
                 require: _.directives.parody(MODULE_MANAGER, REQUIRE),
                 module: _.directives.parody(MODULE_MANAGER, MODULE),
                 createArguments: _.directives.parody(MODULE_MANAGER, 'createArguments'),
