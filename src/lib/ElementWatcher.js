@@ -71,7 +71,7 @@ var ELEMENT_WATCHER = 'ElementWatcher',
                 return this.get(INSTANCES, OBSERVER, function (registry) {
                     return ro || (ro = new ResizeObserver(function (observations) {
                         duff(observations, registry.resize, registry);
-                    }));
+                    }, registry.interval));
                 });
             },
             watcher: function (el) {
