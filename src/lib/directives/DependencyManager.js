@@ -1,3 +1,4 @@
+var DEPENDENCY_MANAGER = 'DependencyManager';
 var PromiseProxy = function (key) {
     return function (fn) {
         var deps = this,
@@ -20,7 +21,7 @@ var PromiseProxy = function (key) {
         })[key](fn);
     };
 };
-var DependencyManager = Collection.extend('DependencyManager', {
+var DependencyManager = Collection.extend(DEPENDENCY_MANAGER, {
     constructor: function (target) {
         this.target = target;
         this[CONSTRUCTOR + COLON + COLLECTION]();
@@ -91,4 +92,4 @@ var DependencyManager = Collection.extend('DependencyManager', {
         return deps;
     }
 });
-app.defineDirective('DependencyManager', DependencyManager);
+app.defineDirective(DEPENDENCY_MANAGER, DependencyManager);
