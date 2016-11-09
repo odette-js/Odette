@@ -897,7 +897,7 @@ var factories = {},
         return array && array.length === 0;
     },
     maps = function (iterator) {
-        return function (obj, iteratee, context) {
+        return function (objs, iteratee, context) {
             var collection = returnBaseType(objs),
                 bound = bindTo(iteratee, context),
                 counter = 0,
