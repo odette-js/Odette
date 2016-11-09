@@ -1369,7 +1369,7 @@ var factories = {},
      * @static
      * @namespace _
      */
-    _ = app._ = merge({
+    _ = app._ = extend([{
         is: is,
         to: to,
         shiftSelf: shiftSelf,
@@ -1486,7 +1486,7 @@ var factories = {},
             min: mathArray('min'),
             max: mathArray('max'),
         })
-    }, eachCallers, eachRightCallers, mapCallers, mapRightCallers, findCallers, findLastCallers);
+    }, eachCallers, eachRightCallers, mapCallers, mapRightCallers, findCallers, findLastCallers]);
 isBoolean.false = isBoolean.true = BOOLEAN_TRUE;
 app.logWrappedErrors = BOOLEAN_TRUE;
 /**
