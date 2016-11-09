@@ -1183,23 +1183,23 @@ var factories = {},
             BOUND = 'Bound',
             TRY = 'Try';
         memo[prefix + CALL] = function (array, method, arg) {
-            return duff(array, function (item) {
-                item[method](arg);
+            return handler(array, function (item) {
+                return item[method](arg);
             });
         };
         memo[prefix + CALL + BOUND] = function (array, arg) {
-            return duff(array, function (fn) {
-                fn(arg);
+            return handler(array, function (fn) {
+                return fn(arg);
             });
         };
         memo[prefix + CALL + TRY] = function (array, method, arg, catcher, finallyer) {
-            return duff(array, doTry(function (item) {
-                item[method](arg);
+            return handler(array, doTry(function (item) {
+                return item[method](arg);
             }, catcher, finallyer));
         };
         memo[prefix + CALL + BOUND + TRY] = function (array, method, arg, catcher, finallyer) {
-            return duff(array, doTry(function (item) {
-                item(arg);
+            return handler(array, doTry(function (item) {
+                return item(arg);
             }, catcher, finallyer));
         };
         return memo;
@@ -1207,7 +1207,7 @@ var factories = {},
     eachCallers = buildCallers('each', duff),
     eachRightCallers = buildCallers('eachRight', duffRight),
     mapCallers = buildCallers('map', map),
-    mapRightCallers = buildCallers('mapRight', map),
+    mapRightCallers = buildCallers('mapRight', mapRight),
     findCallers = buildCallers('find', find),
     findLastCallers = buildCallers('findLast', findLast),
     results = function (array, method, arg) {
