@@ -156,7 +156,7 @@ var COLLECTION = 'Collection',
         var isNullMessage = 'object must not be null or ' + UNDEFINED,
             validIdMessage = 'objects in sorted collections must have either a number or string for their valueOf result',
             // cannotModifyMessage = 'list cannot be modified while it is being iterated over',
-            recreatingSelfCollection = toArray('eq,where,whereNot,map,results,filter,cycle,uncycle,flatten,gather,unique').concat(keys(buildCallers('map'), keys(buildCallers('mapRight')), keys(buildCallers('filter')), keys(buildCallers('filterNegative')))),
+            recreatingSelfCollection = toArray('eq,where,whereNot,map,results,filter,cycle,uncycle,flatten,gather,unique').concat(keys(buildCallers('map')), keys(buildCallers('mapRight')), keys(buildCallers('filter')), keys(buildCallers('filterNegative'))),
             eachHandlers = {
                 each: duff,
                 duff: duff,
