@@ -893,13 +893,23 @@ var factories = {},
     returnBaseType = function (obj) {
         return !isObject(obj) || isArrayLike(obj) ? [] : {};
     },
-    map = function (objs, iteratee, context) {
-        var collection = returnBaseType(objs),
-            bound = bindTo(iteratee, context);
-        return !objs ? collection : each(objs, function (item, index) {
-            collection[index] = bound(item, index, objs);
-        }) && collection;
+    emptyArray = function (array) {
+        return array && array.length === 0;
     },
+    maps = function (iterator) {
+        return function (obj, iteratee, context) {
+            var collection = returnBaseType(objs),
+                bound = bindTo(iteratee, context),
+                counter = 0,
+                arraylike = emptyArray(collection);
+            return !objs ? collection : (iterator(objs, function (item, index) {
+                collection[arraylike ? counter : index] = bound(item, index, objs);
+                counter++;
+            }) && collection);
+        };
+    },
+    map = maps(each),
+    mapRight = maps(eachRight),
     arrayLikeToArray = function (arrayLike) {
         return arrayLike[LENGTH] === 1 ? [arrayLike[0]] : ARRAY_CONSTRUCTOR.apply(NULL, arrayLike);
     },
@@ -1197,6 +1207,7 @@ var factories = {},
     eachCallers = buildCallers('each', duff),
     eachRightCallers = buildCallers('eachRight', duffRight),
     mapCallers = buildCallers('map', map),
+    mapRightCallers = buildCallers('mapRight', map),
     findCallers = buildCallers('find', find),
     findLastCallers = buildCallers('findLast', findLast),
     results = function (array, method, arg) {
@@ -1418,6 +1429,8 @@ var factories = {},
         now: now,
         some: some,
         map: map,
+        mapRight: mapRight,
+        emptyArray: emptyArray,
         result: result,
         isUndefined: isUndefined,
         isFunction: isFunction,
@@ -1473,7 +1486,7 @@ var factories = {},
             min: mathArray('min'),
             max: mathArray('max'),
         })
-    }, eachCallers, eachRightCallers, mapCallers, findCallers, findLastCallers);
+    }, eachCallers, eachRightCallers, mapCallers, mapRightCallers, findCallers, findLastCallers);
 isBoolean.false = isBoolean.true = BOOLEAN_TRUE;
 app.logWrappedErrors = BOOLEAN_TRUE;
 /**
