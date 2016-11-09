@@ -1324,6 +1324,9 @@ var factories = {},
             return !!which;
         }
     },
+    euclideanDistance = function (a, b) {
+        return Math.sqrt((a * a) + (b * b));
+    },
     returns = function (thing) {
         return function () {
             return thing;
@@ -1485,6 +1488,7 @@ var factories = {},
         stringifyQuery: stringifyQuery,
         intendedObject: intendedObject,
         arrayLikeToArray: arrayLikeToArray,
+        euclideanDistance: euclideanDistance,
         intendedIteration: intendedIteration,
         constructorWrapper: constructorWrapper,
         NEGATIVE_BIG_INTEGER: NEGATIVE_BIG_INTEGER,
