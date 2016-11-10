@@ -2757,6 +2757,32 @@ app.scope(function (app) {
                             });
                         }
                     });
+                },
+                style: function (url, attrs, inner) {
+                    return Promise(function (success, failure) {
+                        var style, innard = inner || BOOLEAN_FALSE;
+                        var src = url || BOOLEAN_FALSE;
+                        var baseAttrs = {
+                            type: 'text/css',
+                            rel: 'stylesheet'
+                        };
+                        if (src) {
+                            style = manager.createElement('link', extend([baseAttrs, attrs, {
+                                href: url
+                            }]));
+                            manager.$('head').item(0).append(style);
+                            _.HTTP({
+                                type: 'get',
+                                url: url
+                            }).then(function () {
+                                return style;
+                            });
+                        } else {
+                            style = manager.createElement('style', merge(baseAttrs, attrs), innard);
+                            manager.$('head').item(0).append(style);
+                            success(style);
+                        }
+                    });
                 }
             }]);
             var weak = wrapped.data = ElementalWeakMap();

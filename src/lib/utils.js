@@ -1497,7 +1497,7 @@ var factories = {},
             return Math[key];
         }), {
             min: mathArray('min'),
-            max: mathArray('max'),
+            max: mathArray('max')
         })
     }, eachCallers, eachRightCallers, mapCallers, mapRightCallers, findCallers, findLastCallers, filterCallers, filterNegativeCallers]);
 isBoolean.false = isBoolean.true = BOOLEAN_TRUE;
