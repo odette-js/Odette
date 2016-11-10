@@ -55,7 +55,7 @@ application.scope().run(window, function (module, app, _, factories, documentVie
     documentView.addRegion({
         summaries: '#main-region'
     });
-    _.HTTP('/json/data.json').then(function (data) {
+    $.HTTP('/json/data.json').then(function (data) {
         var summaries = app.directive('RegionManager').get('summaries');
         var speclessView = ViewContainer({
             model: {

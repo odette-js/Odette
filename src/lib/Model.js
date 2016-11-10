@@ -62,11 +62,11 @@ var CHILDREN = capitalize(CHILD + 'ren'),
             },
             sendWithData = function (syncer, url, type) {
                 var json = syncer.toJSON();
-                return _.HTTP({
-                    url: url,
-                    type: type,
-                    data: syncer.stringifyPosts ? syncer.stringify(json) : json
-                });
+                // return owner$.HTTP({
+                //     url: url,
+                //     type: type,
+                //     data: syncer.stringifyPosts ? syncer.stringify(json) : json
+                // });
             },
             Syncer = factories.Directive.extend(SYNCER, extend([{
                 createType: 'POST',

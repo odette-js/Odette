@@ -58,7 +58,7 @@ app.block(function (app) {
         },
         /**
          * @class HTTP
-         * @alias _.HTTP
+         * @alias $.HTTP
          * @augments Deferred
          * @classdesc XHR object wrapper Triggers events based on xhr state changes and abstracts many anomalies that have to do with IE, and other browsers that have historically had difficulty with ajax requests.
          */
@@ -97,8 +97,10 @@ app.block(function (app) {
                 'status:511': STATUS_5xx,
                 'abort': FAILURE
             };
-        },
-        HTTP = _.HTTP = factories.Deferred.extend('HTTP',
+        };
+    app.undefine(function (app, view, options) {
+        // body...
+        var HTTP = options.HTTP = factories.Deferred.extend('HTTP',
             /**
              * @lends HTTP.prototype
              */
@@ -113,7 +115,7 @@ app.block(function (app) {
                  * Set a parser for the retrieved value. By default the [parse]{@link _.parse} function is used from the {@link _} object, but this can be overwritten if needed. If it is overwritten, the user will have to account for any and all parts of the response. The parse method is not just a JSON.parse. It will account for numbers, as well as wrapped functions, and will check the string for leading and trailing brackets; "{...}" for objects and "[...]" for arrays.
                  * @method
                  * @example <caption>An example of replacing the parse method with a custom method, in this case, just a JSON.parse.</caption>
-                 * var http = _.HTTP({
+                 * var http = $.HTTP({
                  *     url: "https://someurl.com",
                  *     type: "get"
                  * });
@@ -126,10 +128,10 @@ app.block(function (app) {
                     var url, thingToDo, typeThing, type, ajax = this,
                         method = 'onreadystatechange',
                         // Add a cache buster to the url
-                        xhrReq = new XMLHttpRequest();
+                        xhrReq = new view.XMLHttpRequest();
                     // covers ie9
-                    if (!isUndefined(XDomainRequest)) {
-                        xhrReq = new XDomainRequest();
+                    if (!isUndefined(view.XDomainRequest)) {
+                        xhrReq = new view.XDomainRequest();
                         method = 'onload';
                     }
                     if (!isObject(str)) {
@@ -261,14 +263,15 @@ app.block(function (app) {
                     return this.promise.catch(one);
                 }
             });
-    _.foldl(validTypes, function (memo, key_) {
-        var key = key_;
-        key = key.toLowerCase();
-        memo[key] = function (url, options) {
-            return HTTP(merge({
-                type: key_,
-                url: url
-            }, options));
-        };
-    }, HTTP);
+        _.foldl(validTypes, function (memo, key_) {
+            var key = key_;
+            key = key.toLowerCase();
+            memo[key] = function (url, options) {
+                return HTTP(merge({
+                    type: key_,
+                    url: url
+                }, options));
+            };
+        }, HTTP);
+    });
 });

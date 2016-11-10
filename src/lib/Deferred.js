@@ -276,7 +276,7 @@ var Deferred = app.block(function (app) {
                  * @description Note: In order to resolve the deferred to a non base state, (always, success, failure, error) you need to first add to the auxiliary states. Please see [Auxiliary States]{@link Deferred#auxiliaryStates}.
                  * @method
                  * @example <caption>If you have all of your auxiliary states setup, then you can simply resolve the deferred and the tree will be triggered. Below is an example which uses the same auxiliary states used in the <a href="/api/v0/ajax">Ajax</a> constructor, which is outlined in the [Auxiliary States]{@link Deferred#auxiliaryStates}.</caption>
-                 * _.HTTP().handle("status:200", function () {
+                 * $.HTTP().handle("status:200", function () {
                  *     // 200 (never hit)
                  * }).handle("status:204", function () {
                  *     // no content (hit)

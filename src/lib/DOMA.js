@@ -2771,7 +2771,7 @@ app.scope(function (app) {
                                 href: url
                             }]));
                             manager.$('head').item(0).append(style);
-                            _.HTTP({
+                            $.HTTP({
                                 type: 'get',
                                 url: url
                             }).then(function () {
@@ -4952,6 +4952,7 @@ app.scope(function (app) {
         plugins = [];
     app.undefine(function (app, windo, passed) {
         var setup = DOMA_SETUP(windo);
+        setup.HTTP = setup.document.HTTP = passed.HTTP;
         allSetups.push(setup);
         duff(plugins, function (plugin) {
             plugin(setup);
