@@ -1004,6 +1004,9 @@ var factories = {},
         var converted;
         return floatToInteger((converted = +number) == number ? (notSafe ? converted : safeInteger(converted)) : 0);
     },
+    under1 = function (number) {
+        return number > 1 ? 1 / number : number;
+    },
     isLength = function (number) {
         return isNumber(number) && isValidInteger(number);
     },
@@ -1410,6 +1413,7 @@ var factories = {},
         flows: flows,
         reduce: foldl,
         isNaN: _isNaN,
+        under1: under1,
         invert: invert,
         extend: extend,
         passes: passes,
