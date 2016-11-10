@@ -2739,10 +2739,11 @@ app.scope(function (app) {
                     var script = manager.createElement('script', attrs);
                     // should this be head
                     return Promise(function (success, failure) {
-                        manager.$('body').item(0).append(script);
+                        var $body = manager.$('body').item(0);
                         var innard = inner || BOOLEAN_FALSE;
                         var src = url || BOOLEAN_FALSE;
                         if (src) {
+                            $body.append(script);
                             script.src(src);
                             script.on({
                                 load: success,
@@ -2752,6 +2753,7 @@ app.scope(function (app) {
                             wraptry(function () {
                                 script.html(innard);
                                 success(innard);
+                                $body.append(script);
                             }, function () {
                                 failure(innard);
                             });
