@@ -137,21 +137,21 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                         parent = children[TARGET];
                     newModel[PARENT] = parent;
                     // add to collection
-                    children.add(newModel);
+                    // children.add(newModel);
                     // register with parent
                     children.keep(ID, newModel.id, newModel);
-                    children.keep('cid', newModel.cid, newModel);
+                    children[REGISTRY].keep('cid', newModel.cid, newModel);
                 },
                 removeFromHash: function (child) {
-                    var directive = this;
+                    var children = this;
                     if (!child) {
                         return;
                     }
                     // remove the child from the children hash
-                    directive.remove(child);
-                    directive.drop(ID, child.id);
+                    // children.remove(child);
+                    children.drop(ID, child.id);
                     // unregister from the child hash keys
-                    directive.drop('cid', child.cid);
+                    children[REGISTRY].drop('cid', child.cid);
                 },
                 /**
                  * @description resets the model's attributes to the object that is passed in

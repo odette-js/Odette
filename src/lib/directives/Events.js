@@ -276,13 +276,13 @@ app.scope(function (app) {
             addBus: function (key, target, prefix, filter) {
                 var bus, eventer = this,
                     proxyStack = eventer.proxyStack;
-                if (!(bus = proxyStack.get(key))) {
+                proxyStack.get(ID, key, function () {
                     if (eventer.target === target) {
                         exception('bus target cannot be the same as delegated target');
                     }
-                    bus = {
-                        prefix: prefix || EMPTY_STRING,
+                    proxyStack.push({
                         target: target,
+                        prefix: prefix || EMPTY_STRING,
                         filter: filter || returnsTrue,
                         run: function (evnt) {
                             if (!this.filter(evnt)) {
@@ -290,18 +290,15 @@ app.scope(function (app) {
                             }
                             this.target[DISPATCH_EVENT](this.prefix ? (this.prefix + evnt.name) : evnt.name, evnt);
                         }
-                    };
-                    proxyStack.push(bus);
-                    proxyStack.keep(ID, key, bus);
-                }
+                    });
+                });
                 return this;
             },
             removeBus: function (key) {
                 var eventer = this,
                     proxyStack = eventer.proxyStack;
-                if ((bus = proxyStack.get(key))) {
+                if ((bus = proxyStack.drop(ID, key))) {
                     proxyStack.remove(bus);
-                    proxyStack.drop(ID, key);
                     bus.filter = returnsFalse;
                 }
                 return !!bus;

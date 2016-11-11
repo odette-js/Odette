@@ -798,7 +798,6 @@ var factories = {},
         var isArrayResult = isArrayLike(obj),
             bound = bindTo(iteratee, context);
         return foldl(obj, function (memo, item, key, all) {
-            // runCount++;
             var result = bound(item, key, all);
             if (negated) {
                 result = !result;
@@ -833,7 +832,7 @@ var factories = {},
         return findLast(obj, matches(attrs));
     },
     whereNot = function (obj, attrs) {
-        return filter(obj, negate(matches(attrs)));
+        return filterNegative(obj, matches(attrs));
     },
     baseDataTypes = {
         true: BOOLEAN_TRUE,

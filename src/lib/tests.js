@@ -48,9 +48,10 @@ app.defineDirective('Tests', (function (app) {
                     expectation = new Error(makemessage.call(this, retreived, arg));
                     expectation.message = expectation.toString();
                     expectation.success = BOOLEAN_FALSE;
-                    err(expectation);
                 }
-                tiedTo.expectations.push(expectation);
+                if (tiedTo) {
+                    tiedTo.expectations.push(expectation);
+                }
                 expectation.tiedTo = tiedTo;
                 return result;
             };
@@ -74,6 +75,7 @@ app.defineDirective('Tests', (function (app) {
                     expectationsHash[where] = errIfFalse(itRetreiver, finishedExpecting, retreiver, test, positive, execute);
                     expectationsHash.not[where] = errIfFalse(itRetreiver, finishedExpecting, retreiver, negate(test), negative, execute);
                 };
+            setupBasicTests(maker);
             return {
                 group: expectationsHash,
                 maker: maker,
@@ -185,7 +187,9 @@ app.defineDirective('Tests', (function (app) {
                     if (expecting && expecting !== expectations.length) {
                         err('Number of expectations expected did not match number of expectations called in: ' + makeName(it.name) + ' expected: ' + expecting + ', got: ' + expectations.length);
                     }
-                    finished();
+                    finished(whereNot(it.expectations, {
+                        success: BOOLEAN_TRUE
+                    }));
                 },
                 done = three,
                 callback = it.callback,
@@ -230,9 +234,10 @@ app.defineDirective('Tests', (function (app) {
                     return;
                 }
                 focus(current);
-                run(current, settings, function (argument) {
+                run(current, settings, function (failures) {
                     settings.index++;
                     settings.running = BOOLEAN_FALSE;
+                    duff(failures, err);
                     recurse();
                 });
             };
@@ -244,7 +249,7 @@ app.defineDirective('Tests', (function (app) {
                 tryToRun();
             };
         },
-        basicTests = function (maker) {
+        setupBasicTests = function (maker) {
             maker('toThrow', function (handler) {
                 var errRan = BOOLEAN_FALSE;
                 return wraptries(handler, function () {
@@ -303,18 +308,26 @@ app.defineDirective('Tests', (function (app) {
                     item(its);
                 }
             });
-            basicTests(tester.maker);
             return {
+                maker: tester.maker,
+                expect: tester.expect,
+                finished: finished(fin),
                 afterEach: checkFinished(states, afterEach(aeQ)),
                 beforeEach: checkFinished(states, beforeEach(beQ)),
-                expect: tester.expect,
-                describe: checkFinished(states, describe(descriptions, aeQ, beQ)),
-                it: checkFinished(states, it(its, descriptions, aeQ, beQ)),
-                finished: finished(fin),
                 done: done(states, descriptions, its, tryToRun, aQ),
-                maker: tester.maker,
+                it: checkFinished(states, it(its, descriptions, aeQ, beQ)),
+                describe: checkFinished(states, describe(descriptions, aeQ, beQ)),
                 group: group.bind(NULL, (identifier ? (identifier + HYPHEN) : EMPTY_STRING) + (++id))
             };
         };
+    _.publicize({
+        expect: (function () {
+            var tester;
+            return function (expectation) {
+                tester = tester || testy();
+                return tester.expect(expectation);
+            };
+        }())
+    });
     return group;
 }(app)));

@@ -281,9 +281,43 @@ var COLLECTION = 'Collection',
             },
             Collection = factories[COLLECTION] = factories.Directive.extend(COLLECTION, extend([{
                 get: parody(REGISTRY, 'get'),
-                keep: parody(REGISTRY, 'keep'),
-                drop: parody(REGISTRY, 'drop'),
-                swap: parody(REGISTRY, 'swap'),
+                // keep: parody(REGISTRY, 'keep'),
+                keep: function (category, id, object, index) {
+                    var item, collection = this,
+                        registry = collection.directive(REGISTRY);
+                    registry.keep(category, id, object);
+                    if (index === UNDEFINED || index >= collection.length()) {
+                        collection.push(object);
+                    } else {
+                        collection.insertAt(index, object);
+                    }
+                    return collection;
+                },
+                swap: function (category, id, object, index) {
+                    var item, collection = this,
+                        registry = collection.directive(REGISTRY);
+                    if ((item = registry.drop(category, id)) !== UNDEFINED) {
+                        if (index !== UNDEFINED) {
+                            collection.removeAt(index);
+                        } else {
+                            collection.remove(item);
+                        }
+                    }
+                    collection.keep(category, id, object, index);
+                    return item;
+                },
+                drop: function (category, id, index) {
+                    var item, collection = this,
+                        registry = collection.directive(REGISTRY);
+                    if ((item = registry.drop(category, id)) !== UNDEFINED) {
+                        if (index !== UNDEFINED) {
+                            collection.removeAt(index);
+                        } else {
+                            collection.remove(item);
+                        }
+                    }
+                    return item;
+                },
                 comparator: function () {},
                 constructor: function (items) {
                     this.reset(items);
@@ -491,8 +525,7 @@ var COLLECTION = 'Collection',
                             found.isValid(BOOLEAN_TRUE);
                         } else {
                             found = new sm.Child(string, sm);
-                            sm.toArray().push(found);
-                            sm.keep(ID, string, found);
+                            sm.keep(ID, string, found, sm.length());
                         }
                     }
                     return found;

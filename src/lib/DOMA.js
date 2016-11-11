@@ -308,13 +308,18 @@ var ATTACHED = 'attached',
             });
         }).join(SPACE);
     },
-    superElements = function (context, key) {
-        return isElement(context[key]) ? [context[key]] : [];
+    directSuperAccessor = function (context, key) {
+        return context[key];
     },
     superElementsHash = {
-        body: BOOLEAN_TRUE,
-        head: BOOLEAN_TRUE,
-        document: BOOLEAN_TRUE
+        body: directSuperAccessor,
+        head: directSuperAccessor,
+        document: function (context) {
+            return context;
+        },
+        window: function (context) {
+            return context.defaultView;
+        }
     },
     dataReconstructor = function (list, fn) {
         return foldl(list, function (memo, arg1, arg2, arg3) {
@@ -326,13 +331,17 @@ var ATTACHED = 'attached',
     },
     // takes string to query for, subset of tree to query for and manager so it can always get to the document
     query = function (str_, ctx, manager) {
-        var directSelector, elements, str = str_,
+        var superElement, directSelector, elements, str = (str_ || EMPTY_STRING).trim(),
             context = ctx,
             returnsArray = returns.first,
             owner = manager.owner;
+        if (!str) {
+            return [];
+        }
         if (manager && manager === owner) {
-            if (superElementsHash[str]) {
-                return superElements(context, str);
+            if ((superElement = superElementsHash[str])) {
+                // assume context is window since (manager === owner)
+                return [superElement(context, str)];
             }
         }
         if (manager && str[0] === '>') {
@@ -948,7 +957,7 @@ app.scope(function (app) {
                 }
             }
             if (!(manager = data[DOM_MANAGER_STRING])) {
-                manager = DomManager(el, data, owner);
+                manager = DomManager(el, data, owner, id);
             }
             return manager;
         },
@@ -1763,83 +1772,91 @@ app.scope(function (app) {
                 return attributeApi[method](this.element(), one, two);
             };
         },
-        getInnard = function (attribute, manager) {
-            var windo, win, doc, parentElement, returnValue = EMPTY_STRING;
-            if (manager.is(IFRAME)) {
-                testIframe(manager);
-                windo = manager.window();
-                if (windo && windo.is(ACCESSABLE)) {
-                    parentElement = windo.element();
-                    doc = parentElement[DOCUMENT];
-                    returnValue = doc.body ? doc.body[PARENT_NODE].outerHTML : EMPTY_STRING;
+        getInnard = function (attribute) {
+            return function (manager, index) {
+                var windo, win, doc, parentElement, returnValue = EMPTY_STRING;
+                if (manager.is(IFRAME)) {
+                    testIframe(manager);
+                    windo = manager.window();
+                    if (windo && windo.is(ACCESSABLE)) {
+                        parentElement = windo.element();
+                        return wraptry(function () {
+                            var doc = parentElement[DOCUMENT];
+                            return doc.body ? doc.body[PARENT_NODE].outerHTML : EMPTY_STRING;
+                        });
+                    }
+                } else {
+                    if (manager.is(ELEMENT)) {
+                        parentElement = manager.element();
+                        return parentElement[attribute];
+                    }
                 }
-            } else {
-                if (manager.is(ELEMENT)) {
-                    parentElement = manager.element();
-                    returnValue = parentElement[attribute];
-                }
-            }
-            return returnValue;
+                return EMPTY_STRING;
+            };
         },
-        setInnard = function (attribute, manager, value, vars) {
-            var children, previous, cachedValue, win, doc, windo, doTheThing, parentElement,
-                writes = BOOLEAN_TRUE,
-                owner = manager.owner,
-                appliedvalue = value || EMPTY_STRING;
-            if (manager.is(IFRAME)) {
-                windo = manager.window();
-                testIframe(manager);
-                // if (windo) {
-                if (windo.is(ACCESSABLE)) {
-                    parentElement = windo.element();
-                    doc = parentElement[DOCUMENT];
-                    doc.open();
-                    each(vars, function (value, key) {
-                        parentElement[key] = value;
-                    });
-                    doc.write(appliedvalue);
-                    doc.close();
-                    doTheThing = BOOLEAN_TRUE;
-                }
-            } else {
-                if (manager.is(ELEMENT)) {
-                    parentElement = manager.element();
-                    if (attribute === INNER_HTML) {
-                        if (isArray(appliedvalue)) {
-                            manager.render(appliedvalue);
-                            appliedvalue = manager.html();
-                            writes = BOOLEAN_FALSE;
-                        } else {
-                            children = manager.$(CUSTOM_ATTRIBUTE).toArray();
+        setInnard = function (attribute, value, vars) {
+            return function (manager, index) {
+                var children, previous, cachedValue, win, doc, windo, doTheThing, parentElement,
+                    writes = BOOLEAN_TRUE,
+                    owner = manager.owner,
+                    appliedvalue = value || EMPTY_STRING;
+                if (manager.is(IFRAME)) {
+                    windo = manager.window();
+                    testIframe(manager);
+                    if (windo.is(ACCESSABLE)) {
+                        parentElement = windo.element();
+                        doc = parentElement[DOCUMENT];
+                        doc.open();
+                        each(vars, function (value, key) {
+                            parentElement[key] = value;
+                        });
+                        doc.write(toFunction(appliedvalue)(manager));
+                        doc.close();
+                        doTheThing = BOOLEAN_TRUE;
+                    }
+                } else {
+                    if (manager.is(ELEMENT)) {
+                        parentElement = manager.element();
+                        if (attribute === INNER_HTML) {
+                            if (isArray(appliedvalue)) {
+                                writes = BOOLEAN_FALSE;
+                                manager.render(appliedvalue);
+                                appliedvalue = manager.html();
+                            } else {
+                                children = manager.$(CUSTOM_ATTRIBUTE).toArray();
+                                previous = parentElement[attribute];
+                            }
+                        }
+                        if (writes) {
                             previous = parentElement[attribute];
+                            appliedvalue = toFunction(appliedvalue)(previous, index);
+                            if (appliedvalue !== previous) {
+                                parentElement[attribute] = appliedvalue;
+                            }
                         }
-                    }
-                    if (writes) {
-                        previous = parentElement[attribute];
-                        parentElement[attribute] = appliedvalue;
-                    }
-                    if (children && children[LENGTH]) {
-                        // detach old
-                        dispatchDetached(children, owner);
-                        // establish new
-                    }
-                    if (writes) {
-                        manager.$(CUSTOM_ATTRIBUTE, parentElement);
-                        if (previous !== appliedvalue) {
-                            manager.dispatchEvent('contentChanged');
+                        if (children && children[LENGTH]) {
+                            // detach old
+                            dispatchDetached(children, owner);
+                            // establish new
+                        }
+                        if (writes) {
+                            manager.$(CUSTOM_ATTRIBUTE, parentElement);
+                            if (previous !== appliedvalue) {
+                                manager.dispatchEvent('contentChanged');
+                            }
                         }
                     }
                 }
-            }
+            };
         },
         innardManipulator = function (attribute) {
             return function (value, vars) {
                 var manager = this,
                     returnValue = manager;
                 if (value === UNDEFINED) {
-                    return getInnard(attribute, manager);
+                    return manager.map(getInnard(attribute, manager)).join(EMPTY_STRING);
                 } else {
-                    setInnard(attribute, manager, value, vars);
+                    manager.each(setInnard(attribute, value, vars));
                     return manager;
                 }
             };
@@ -4426,6 +4443,9 @@ app.scope(function (app) {
                         result = context ? fn.call(context, manager, 0, wrapped) : fn(manager, 0, wrapped);
                     return wrapped;
                 },
+                map: function (fn, context) {
+                    return [bind(fn, context, this, 0, [])()];
+                },
                 /**
                  * Parody method of the {@link DOMA} that fake iterates with the single manager.
                  * @param  {Function} fn callback to iterate over the pseudo collection.
@@ -4938,8 +4958,8 @@ app.scope(function (app) {
                     return doma.indexOf(el) === -1;
                 });
             },
-            html: htmlTextManipulator(HTML),
-            text: htmlTextManipulator(TEXT),
+            html: innardManipulator(INNER_HTML),
+            text: innardManipulator(INNER_TEXT),
             map: function (handler, context) {
                 return Collection(map(this.toArray(), handler, context));
             },

@@ -43,18 +43,18 @@ var REGION_MANAGER = 'RegionManager',
                 } else {
                     Child = region.childConstructor();
                     return Child({
-                        model: Child[CONSTRUCTOR][PROTOTYPE].Model(view_)
+                        model: Child.fn.Model(view_)
                     });
                 }
             },
             disown = function (currentParent, view, region) {
                 var model, children = currentParent[CHILDREN];
                 view[PARENT] = NULL;
-                children.remove(view);
                 model = view.model;
-                children.drop('viewCid', view.cid);
-                children.drop('modelCid', model.cid);
-                children.drop(MODEL_ID, model.id);
+                children.remove(view);
+                children[REGISTRY].drop('viewCid', view.cid);
+                children[REGISTRY].drop('modelCid', model.cid);
+                children[REGISTRY].drop(MODEL_ID, model.id);
                 return region;
             },
             /**
@@ -66,7 +66,10 @@ var REGION_MANAGER = 'RegionManager',
                 attributes: returns(BOOLEAN_FALSE),
                 childConstructor: function () {
                     var region = this;
-                    return region.Child === BOOLEAN_TRUE ? region[PARENT][PARENT].childConstructor() : region.Child;
+                    return region.Child === BOOLEAN_TRUE ? region.parentView().childConstructor() : region.Child;
+                },
+                parentView: function () {
+                    return this[PARENT][PARENT];
                 },
                 constructor: function (secondary) {
                     var model = this;
@@ -107,9 +110,9 @@ var REGION_MANAGER = 'RegionManager',
                     view[PARENT] = region;
                     children.attach(view);
                     model = view.model;
-                    children.keep('viewCid', view.cid, view);
-                    children.keep('modelCid', model.cid, view);
-                    children.keep(MODEL_ID, model.id, view);
+                    children[REGISTRY].keep('viewCid', view.cid, view);
+                    children[REGISTRY].keep('modelCid', model.cid, view);
+                    children[REGISTRY].keep(MODEL_ID, model.id, view);
                     return view;
                 },
                 buffer: function (view) {
@@ -358,7 +361,7 @@ var REGION_MANAGER = 'RegionManager',
                         key: region_,
                         parent: regionManagerDirective
                     }]));
-                    regionManagerDirective.list.push(region);
+                    // regionManagerDirective.list.push(region);
                     regionManagerDirective.list.keep(ID, where, region);
                     return region;
                 },
@@ -434,6 +437,9 @@ var REGION_MANAGER = 'RegionManager',
                     view_.render();
                     region.add(view_, NULL, returnsTrue);
                 }),
+                childConstructor: function () {
+                    return this.factories.View;
+                },
                 render: function (preventChain) {
                     var view = this;
                     view.directive(REGION_MANAGER).list.eachCall(RENDER, preventChain);
@@ -457,7 +463,7 @@ var REGION_MANAGER = 'RegionManager',
                         alreadyQueued.counter += 1;
                     }
                     modifications.keep(ID, id, chunk);
-                    modifications.push(chunk);
+                    // modifications.push(chunk);
                     docViewManager.checkRenderLoop();
                 }
             }),
@@ -795,24 +801,21 @@ var REGION_MANAGER = 'RegionManager',
             eachCall(ui, 'destroy');
         });
         app.undefine(function (app, windo, opts) {
-            var doc = windo[DOCUMENT];
-            var documentManager = app.directive(DOCUMENT_MANAGER);
-            var documents = documentManager.documents;
-            var documentView = documents.get(ID, doc[__ELID__]);
+            var doc = windo[DOCUMENT],
+                documentManager = app.directive(DOCUMENT_MANAGER),
+                documents = documentManager.documents,
+                documentView = documents.get(ID, doc[__ELID__]);
             if (documentView) {
                 exception('document has already been setup');
             }
             var $ = opts.$,
-                owner = $.document,
-                ExtendedRegion = Region.extend({
-                    owner$: $
-                }),
-                ExtendedView = View.extend({
-                    owner$: $
-                }),
                 scopedFactories = opts.scopedFactories = {
-                    Region: ExtendedRegion,
-                    View: ExtendedView
+                    Region: Region.extend({
+                        owner$: $
+                    }),
+                    View: View.extend({
+                        owner$: $
+                    })
                 };
             documentView = DocumentView({
                 $: $,
@@ -823,7 +826,6 @@ var REGION_MANAGER = 'RegionManager',
                 factories: scopedFactories
             });
             $.documentView = documentView;
-            documents.push(documentView);
             documents.keep(ID, documentView.id, documentView);
         });
         return View;

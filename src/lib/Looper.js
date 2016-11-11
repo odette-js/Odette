@@ -125,8 +125,7 @@ app.scope(function (app) {
             return this.tween.lastRun;
         },
         actuallyDequeue = function (tween, obj) {
-            tween.drop(ID, obj.id);
-            return tween.remove(obj);
+            return tween.drop(ID, obj.id);
         },
         sorter = function (a, b) {
             var aVal, bVal;
@@ -217,7 +216,6 @@ app.scope(function (app) {
                 obj.sort = obj.sort || returnsNext;
                 obj.filter = obj.filter || returnsTrue;
                 obj.id = id;
-                tween.push(obj);
                 tween.keep(ID, id, obj);
                 len = len ? start(tween) : tween.start();
                 return id;
