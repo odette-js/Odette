@@ -1244,7 +1244,7 @@ app.scope(function (app) {
                 return ((idx + 1) % 2);
             }
         },
-        numberToUnit = {
+        convertUnit = {
             'in': function (val, el, win, styleAttr) {
                 return val / 96;
             },
@@ -1292,7 +1292,7 @@ app.scope(function (app) {
         numToUnits = function (num, unit, el, winTop, styleAttr, returnNum) {
             var number = num;
             if (num) {
-                number = numberToUnit[unit](num, el, winTop, styleAttr);
+                number = convertUnit[unit](num, el, winTop, styleAttr);
             }
             number = (number || 0);
             if (!returnNum) {
@@ -4628,7 +4628,7 @@ app.scope(function (app) {
             isDocument: isDocument,
             isFragment: isFragment,
             unitToNumber: unitToNumber,
-            numberToUnit: numberToUnit
+            convertUnit: convertUnit
         }),
         setupDomContentLoaded = function (handler, documentManager) {
             var bound = bind(handler, documentManager),
