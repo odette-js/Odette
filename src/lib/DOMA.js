@@ -2387,7 +2387,7 @@ app.scope(function (app) {
             var registeredElements, $, setup, wrapped, windo = windo_,
                 doc = windo[DOCUMENT],
                 manager = returnsManager(doc, BOOLEAN_TRUE),
-                unregisteredElements = factories.Registry(),
+                unregisteredElements = Registry(),
                 expanders = cloneJSON(_eventExpander),
                 cachedMotionEvent, lastCalculatedMotionEvent = 0,
                 cachedMotionCalculation = {},

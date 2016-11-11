@@ -11,9 +11,6 @@ application.scope().run(window, function (module, app, _, factories, documentVie
             counter++;
         });
         test.afterEach(function () {
-            // if (counter === 10) {
-            //     debugger;
-            // }
             div.destroy();
             ro.disconnect();
         });
@@ -84,8 +81,10 @@ application.scope().run(window, function (module, app, _, factories, documentVie
                     ro.unobserve(div.element());
                     return done();
                 }
-                setDivCss({
-                    height: count
+                setTimeout(function () {
+                    setDivCss({
+                        height: count
+                    });
                 });
             });
             ro.observe(div.element());
@@ -95,31 +94,37 @@ application.scope().run(window, function (module, app, _, factories, documentVie
         }, 20);
         test.it('will trigger whenever any of the elements it is observing changes', function (done) {
             var div2 = $.createElement('div');
-            $('body').append(div2);
             var targets = [div.element(), div2.element()];
             ro = $.ResizeObserver(function (observations) {
-                _.duff(observations, function (observation) {
-                    var shouldbe = targets[count];
+                _.duff(observations, function (observation, index) {
+                    var shouldbe = targets[count + index];
                     test.expect(observation.target).toBe(shouldbe);
                 });
-                test.expect(observations.length).toBe(1);
                 if (count) {
+                    test.expect(observations.length).toBe(1);
                     ro.unobserve(div.element());
                     ro.unobserve(div2.element());
-                    div2.destroy();
-                    return done();
+                    return setTimeout(function () {
+                        div2.destroy();
+                        done();
+                    });
+                } else {
+                    test.expect(observations.length).toBe(2);
                 }
                 count++;
-                div2.css({
-                    height: 2
+                setTimeout(function () {
+                    div2.css({
+                        height: 2
+                    });
                 });
             });
             ro.observe(div.element());
             ro.observe(div2.element());
+            $('body').append(div2);
             setDivCss({
                 height: 1000
             });
-        }, 4);
+        }, 5);
         test.it('can trigger in response to multiple elements changing', function (done) {
             var div2 = $.createElement('div');
             $('body').append(div2);
@@ -130,9 +135,6 @@ application.scope().run(window, function (module, app, _, factories, documentVie
                     test.expect(observation.target).toBe(shouldbe);
                 });
                 test.expect(observations.length).toBe(2);
-                div2.css({
-                    height: 2
-                });
                 ro.unobserve(div.element());
                 ro.unobserve(div2.element());
                 div2.destroy();
@@ -147,27 +149,6 @@ application.scope().run(window, function (module, app, _, factories, documentVie
                 height: 2
             });
         }, 3);
-        test.it('will only observe while the element is in the dom (has a parent node)', function (done) {
-            ro = $.ResizeObserver(function (observations) {
-                count++;
-                test.expect(observations).toBeArrayLike();
-                if (count > 1) {
-                    return;
-                }
-                div.remove();
-                setTimeout(function () {
-                    test.expect(count).toBe(1);
-                    done();
-                }, 50);
-                div.css({
-                    height: 20
-                });
-            });
-            ro.observe(div.element());
-            div.css({
-                height: 10
-            });
-        }, 2);
         test.it('will only add an element to the queue once', function (done) {
             ro = $.ResizeObserver(function () {
                 count++;
@@ -183,28 +164,5 @@ application.scope().run(window, function (module, app, _, factories, documentVie
                 height: 1
             });
         }, 1);
-        test.it('can also handle windows', function (done) {
-            var iframe = $.createElement('iframe');
-            $('body').append(iframe);
-            setTimeout(function () {
-                var win = iframe.window().element();
-                ro = $.ResizeObserver(function (observations) {
-                    _.each(observations, function (observation) {
-                        test.expect(observation.contentRect).toBeObject();
-                        count++;
-                    });
-                    test.expect(count).toBe(1);
-                    done();
-                    ro.unobserve(win);
-                    ro.disconnect();
-                    iframe.remove();
-                });
-                ro.observe(win);
-                iframe.css({
-                    height: 1,
-                    width: 1
-                });
-            });
-        }, 2);
     });
 });

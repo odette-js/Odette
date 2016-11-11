@@ -291,35 +291,39 @@ app.defineDirective('Tests', (function (app) {
                 });
             });
         },
-        group = function (target) {
-            var aeQ = [];
-            var beQ = [];
-            var aQ = [];
-            var its = [];
-            var descriptions = [];
-            var fin = fin;
-            var states = {};
-            var tester = testy();
-            var identifier = target.id;
-            var tryToRun = triesToRun(its, tester.focus, function () {
-                var i, item;
-                for (i = 0; i < aQ.length; i++) {
-                    item = aQ[i];
-                    item(its);
-                }
-            });
-            return {
-                maker: tester.maker,
-                expect: tester.expect,
-                finished: finished(fin),
-                afterEach: checkFinished(states, afterEach(aeQ)),
-                beforeEach: checkFinished(states, beforeEach(beQ)),
-                done: done(states, descriptions, its, tryToRun, aQ),
-                it: checkFinished(states, it(its, descriptions, aeQ, beQ)),
-                describe: checkFinished(states, describe(descriptions, aeQ, beQ)),
-                group: group.bind(NULL, (identifier ? (identifier + HYPHEN) : EMPTY_STRING) + (++id))
-            };
-        };
+        Tests = Directive.extend("Tests", {
+            constructor: function (target) {
+                var aeQ = [];
+                var beQ = [];
+                var aQ = [];
+                var its = [];
+                var descriptions = [];
+                var fin = fin;
+                var states = {};
+                var tester = testy();
+                var identifier = target.id;
+                var tryToRun = triesToRun(its, tester.focus, function () {
+                    var i, item;
+                    for (i = 0; i < aQ.length; i++) {
+                        item = aQ[i];
+                        item(its);
+                    }
+                });
+                return merge(this, {
+                    maker: tester.maker,
+                    expect: tester.expect,
+                    finished: finished(fin),
+                    afterEach: checkFinished(states, afterEach(aeQ)),
+                    beforeEach: checkFinished(states, beforeEach(beQ)),
+                    done: done(states, descriptions, its, tryToRun, aQ),
+                    it: checkFinished(states, it(its, descriptions, aeQ, beQ)),
+                    describe: checkFinished(states, describe(descriptions, aeQ, beQ)),
+                    group: function () {
+                        return Tests((identifier ? (identifier + HYPHEN) : EMPTY_STRING) + (++id));
+                    }
+                });
+            }
+        });
     _.publicize({
         expect: (function () {
             var tester;
@@ -329,5 +333,5 @@ app.defineDirective('Tests', (function (app) {
             };
         }())
     });
-    return group;
+    return Tests;
 }(app)));

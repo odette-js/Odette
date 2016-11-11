@@ -1,12 +1,16 @@
 var ResizeObserver = factories.ResizeObserver = app.block(function (app, window, options) {
     var rect = function (el) {
             var doc;
-            return _.box(el, (doc = el.ownerDocument) ? doc.defaultView : el.defaultView || el);
+            return {
+                client: _.box(el, el.ownerDocument.defaultView),
+                parent: !!el.parentNode
+            };
         },
         list = toArray('height,width,paddingTop,paddingRight,paddingBottom,paddingLeft,borderTop,borderRight,borderBottom,borderLeft'),
-        diff = function (previous, next) {
-            return find(list, function (item) {
-                return previous[item] !== next[item];
+        diff = function (previous, next, parent) {
+            var client = previous.client;
+            return parent !== previous.parent || find(list, function (item) {
+                return client[item] !== next[item];
             });
         },
         observerMap = {},
@@ -30,21 +34,17 @@ var ResizeObserver = factories.ResizeObserver = app.block(function (app, window,
                     }
                     var resized = hash.resized = queue.reduce(function (memo, watcher) {
                         var el = watcher.target;
-                        if (watcher.isEl && !el.parentNode) {
-                            return;
-                        }
+                        // if (watcher.isEl && !el.parentNode) {
+                        //     return;
+                        // }
                         var client = rect(el);
-                        if (watcher.isActive() || !diff(watcher.contentRect, client)) {
+                        if (watcher.isActive() || !diff(watcher.previous, client.client, client.parent)) {
                             return;
                         }
-                        watcher.contentRect = client;
+                        watcher.previous = client;
                         watcher.isActive = returns.true;
                         memo.watchers.push(watcher);
-                        memo.observations.push({
-                            // might want to take some of these properties off
-                            contentRect: client,
-                            target: watcher.target
-                        });
+                        memo.observations.push(new ResizeObserverEntry(client.client, watcher.target));
                     }, {
                         watchers: [],
                         observations: []
@@ -102,17 +102,26 @@ var ResizeObserver = factories.ResizeObserver = app.block(function (app, window,
                 }
             };
         };
+
+    function ResizeObserverEntry(client, target) {
+        this.contentRect = client;
+        this.target = target;
+        return this;
+    }
     return factories.Directive.extend('ResizeObserver', {
         observe: function (target) {
             var hash = getFromMap(this),
                 queue = hash.queue;
             hash.add();
+            // if (!isElement(target)) {
+            //     exception('this is an exception');
+            // }
             if (!queue.findWhere({
                     target: target
                 })) {
                 hash.queue.push({
                     target: target,
-                    contentRect: rect(target),
+                    previous: rect(target),
                     isEl: isWindow(target) ? BOOLEAN_FALSE : isElement(target),
                     isActive: returns.false
                 });

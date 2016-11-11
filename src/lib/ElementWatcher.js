@@ -7,18 +7,18 @@ var ELEMENT_WATCHER = 'ElementWatcher',
     AF = _.AF,
     ElementWatcher = factories[ELEMENT_WATCHER] = app.block(function (app) {
         var ro, namespacer = function () {
-                return 'watcher-' + app.counter();
-            },
-            element = function (el) {
-                return el && el.isValidDomManager ? el.element() : el;
-            };
+            return 'watcher-' + app.counter();
+        };
         return factories.Registry.extend(ELEMENT_WATCHER, {
             namespace: function () {
                 return this.get(WATCHERS, 'namespace', namespacer);
             },
+            element: function (object) {
+                return object && object.isValidDomManager ? object.element() : object;
+            },
             observe: function (el_, fn) {
                 var elementWatcher = this,
-                    el = element(el_);
+                    el = elementWatcher.element(el_);
                 if (!el) {
                     return elementWatcher;
                 }
@@ -28,7 +28,7 @@ var ELEMENT_WATCHER = 'ElementWatcher',
             },
             unobserve: function (el_, fn) {
                 var unobserve, dropped, observer, elementWatcher = this,
-                    el = element(el_),
+                    el = elementWatcher.element(el_),
                     id = el[__ELID__],
                     watcher = elementWatcher.get(WATCHERS, id),
                     namespace = elementWatcher.namespace();
@@ -75,7 +75,7 @@ var ELEMENT_WATCHER = 'ElementWatcher',
                 });
             },
             watcher: function (el) {
-                return this.get(WATCHERS, element(el)[__ELID__], function () {
+                return this.get(WATCHERS, this.element(el)[__ELID__], function () {
                     return Collection();
                 });
             },

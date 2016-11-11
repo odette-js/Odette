@@ -16,6 +16,7 @@ application.scope().run(window, function (module, app, _, factories, documentVie
                 test.expect(client).toBeObject();
                 test.expect(client.height).toBe(50);
                 test.expect(client.width).toBe(50);
+                elWatcher.unobserve(div);
                 done();
             });
             div.css({
@@ -31,9 +32,9 @@ application.scope().run(window, function (module, app, _, factories, documentVie
             });
             elWatcher.observe(div, function (contentRect) {
                 test.expect(count).toBe(1);
+                elWatcher.unobserve(div);
                 done();
                 // take all off
-                elWatcher.unobserve(div);
             });
             div.css({
                 height: 1,
@@ -50,9 +51,9 @@ application.scope().run(window, function (module, app, _, factories, documentVie
             elWatcher.observe(div2, function (client) {
                 test.expect(client.height).toBe(2);
                 test.expect(client.width).toBe(2);
-                done();
                 elWatcher.unobserve(div);
                 elWatcher.unobserve(div2);
+                done();
             });
             div.css({
                 height: 1,
@@ -71,8 +72,8 @@ application.scope().run(window, function (module, app, _, factories, documentVie
             });
             elWatcher.observe(div, function (client) {
                 test.expect(count).toBe(1);
-                done();
                 elWatcher.unobserve(div);
+                done();
             });
             div.css({
                 height: 1,
