@@ -193,13 +193,11 @@ var REGION_MANAGER = 'RegionManager',
                 if (!force && regionManager.is(ESTABLISHED)) {
                     return;
                 }
-                // var regions = result(view, 'regions');
                 var element = view.directive(CAPITAL_ELEMENT);
                 regionManager.mark(ESTABLISHED);
                 element.renderEl();
                 element.diff();
                 element.renderTemplate();
-                // var regionsResult = keys(regions)[LENGTH] && regionManager.establish(regions);
                 return view;
             },
             addChildView = intendedApi(function (regionKey, views) {
