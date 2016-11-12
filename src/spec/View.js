@@ -1,6 +1,6 @@
 application.scope().run(window, function (module, app, _, factories, $) {
     test.describe('View', function () {
-        var view, complexView, count, ComplexView = scopedFactories.View.extend({
+        var view, complexView, count, ComplexView = $.View.extend({
             ui: {
                 there: '.here'
             },
@@ -28,10 +28,10 @@ application.scope().run(window, function (module, app, _, factories, $) {
                 ];
             }
         });
-        documentView.addRegion('main', '.test-div');
+        $.documentView.addRegion('main', '.test-div');
         test.beforeEach(function () {
             count = 0;
-            view = scopedFactories.View();
+            view = $.View();
             complexView = ComplexView();
         });
         test.afterEach(function () {
@@ -40,7 +40,7 @@ application.scope().run(window, function (module, app, _, factories, $) {
         });
         test.it('is an object', function () {
             test.expect(_.isObject(view)).toEqual(true);
-            test.expect(_.isInstance(view, scopedFactories.View)).toEqual(true);
+            test.expect(_.isInstance(view, $.View)).toEqual(true);
         }, 2);
         test.it('has an element that you can interact with', function () {
             test.expect(_.isInstance(view.el, factories.DomManager)).toEqual(true);
@@ -57,7 +57,7 @@ application.scope().run(window, function (module, app, _, factories, $) {
         }, 2);
         test.it('can be attached to a region', function () {
             test.expect(complexView.el.element().parentNode).toEqual(null);
-            documentView.directive('RegionManager').get('main').add(complexView);
+            $.documentView.directive('RegionManager').get('main').add(complexView);
             test.expect(complexView.el.element().parentNode).not.toEqual(null);
         }, 2);
         test.it('can have extra elements', function () {
@@ -69,7 +69,7 @@ application.scope().run(window, function (module, app, _, factories, $) {
         }, 4);
         test.it('can also attach events to it\'s element', function () {
             test.expect(count).toEqual(0);
-            documentView.directive('RegionManager').get('main').add(complexView);
+            $.documentView.directive('RegionManager').get('main').add(complexView);
             test.expect(count).toEqual(0);
             complexView.el.click();
             test.expect(count).toEqual(1);
@@ -80,7 +80,7 @@ application.scope().run(window, function (module, app, _, factories, $) {
         }, 5);
         test.it('as well as it\'s ui elements', function () {
             test.expect(count).toEqual(0);
-            documentView.directive('RegionManager').get('main').add(complexView);
+            $.documentView.directive('RegionManager').get('main').add(complexView);
             test.expect(count).toEqual(0);
             complexView.ui.there.click();
             test.expect(count).toEqual(1);
@@ -90,7 +90,7 @@ application.scope().run(window, function (module, app, _, factories, $) {
             test.expect(count).toEqual(2);
         }, 5);
         test.it('views can be detached', function () {
-            documentView.directive('RegionManager').get('main').add(complexView);
+            $.documentView.directive('RegionManager').get('main').add(complexView);
             test.expect(count).toEqual(0);
             complexView.ui.there.click();
             test.expect(count).toEqual(1);
@@ -98,7 +98,7 @@ application.scope().run(window, function (module, app, _, factories, $) {
             test.expect(count).toEqual(1);
         }, 3);
         test.it('and still keep their elements and events intact', function () {
-            documentView.directive('RegionManager').get('main').add(complexView);
+            $.documentView.directive('RegionManager').get('main').add(complexView);
             test.expect(count).toEqual(0);
             complexView.ui.there.click();
             test.expect(count).toEqual(1);
@@ -108,19 +108,19 @@ application.scope().run(window, function (module, app, _, factories, $) {
             test.expect(count).toEqual(2);
         }, 4);
         test.it('they can even be reattached', function () {
-            documentView.directive('RegionManager').get('main').add(complexView);
+            $.documentView.directive('RegionManager').get('main').add(complexView);
             test.expect(count).toEqual(0);
             complexView.ui.there.click();
             test.expect(count).toEqual(1);
             complexView.remove();
             test.expect(count).toEqual(1);
-            documentView.directive('RegionManager').get('main').add(complexView);
+            $.documentView.directive('RegionManager').get('main').add(complexView);
             test.expect(count).toEqual(1);
             complexView.ui.there.click();
             test.expect(count).toEqual(2);
         }, 5);
         test.it('when they are destroyed however, their events are detached from the element and the view is automatically removed', function () {
-            documentView.directive('RegionManager').get('main').add(complexView);
+            $.documentView.directive('RegionManager').get('main').add(complexView);
             test.expect(count).toEqual(0);
             // cache it so we can access it after the view has been destroyed
             var there = complexView.ui.there;
@@ -132,7 +132,7 @@ application.scope().run(window, function (module, app, _, factories, $) {
             test.expect(count).toEqual(1);
         }, 4);
         test.it('when rendering a view, if a false is passed, then it will leave the children alone', function () {
-            var LeftAloneView = scopedFactories.View.extend({
+            var LeftAloneView = $.View.extend({
                 template: _.returns(false)
             });
             var leftAloneView = LeftAloneView();
@@ -143,7 +143,7 @@ application.scope().run(window, function (module, app, _, factories, $) {
             test.expect(leftAloneView.el.children().length()).toEqual(1);
         }, 1);
         test.it('when rendering a view if a string is passed, the children will be overwritten', function () {
-            var EmptiedView = scopedFactories.View.extend({
+            var EmptiedView = $.View.extend({
                 template: _.returns('')
             });
             var emptiedView = EmptiedView();
@@ -154,7 +154,7 @@ application.scope().run(window, function (module, app, _, factories, $) {
             test.expect(emptiedView.el.children().length()).toEqual(0);
         }, 1);
         test.it('also allows for triggers to be connected and piped through from element to view', function () {
-            documentView.directive('RegionManager').get('main').add(complexView);
+            $.documentView.directive('RegionManager').get('main').add(complexView);
             complexView.on('sometrigger', function () {
                 count++;
             });

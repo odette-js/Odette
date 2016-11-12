@@ -497,7 +497,6 @@ app.scope(function (app) {
         var documentManager = app.directive(DOCUMENT_MANAGER);
         var documentView = documentManager.documents.get(ID, win[DOCUMENT][__ELID__]);
         var $ = documentView.$;
-        // var scopedFactories = documentView.factories;
         var winTop = win.top;
         var windo = win.parent;
         $[UPCASED_BUSTER] = Buster.extend({

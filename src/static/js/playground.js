@@ -11,7 +11,7 @@ application.scope().run(window, function (module, app, _, factories, $) {
             };
         }
     });
-    var PersonView = scopedFactories.View.extend({
+    var PersonView = $.View.extend({
         Model: Person,
         template: $.compile('profile-summary'),
         tagName: _.returns('li'),
@@ -22,13 +22,13 @@ application.scope().run(window, function (module, app, _, factories, $) {
             click: 'incrementClicks'
         },
         incrementClicks: function () {
-            var model = this.model();
+            var model = this.model;
             model.set({
                 clicks: model.get('clicks') + 1
             });
         }
     });
-    var ViewContainer = scopedFactories.View.extend({
+    var ViewContainer = $.View.extend({
         Child: PersonView,
         Model: Company,
         template: $.compile(function () {
@@ -53,7 +53,7 @@ application.scope().run(window, function (module, app, _, factories, $) {
             employees: 'list'
         }
     });
-    documentView.addRegion({
+    $.documentView.addRegion({
         summaries: '#main-region'
     });
     $.HTTP('/json/data.json').then(function (data) {
@@ -65,7 +65,7 @@ application.scope().run(window, function (module, app, _, factories, $) {
             }
         });
         speclessView.addChildView('employees', data);
-        documentView.addChildView('summaries', speclessView);
+        $.documentView.addChildView('summaries', speclessView);
         console.log(speclessView);
     });
     window.$ = $;

@@ -21,9 +21,9 @@ application.scope().run(window, function (module, app, _, factories, $) {
         test.describe('can receive messages on', function () {
             test.it('unfriendly windows', function (done) {
                 var iframe = $.createElement('iframe');
-                documentView.directive('RegionManager').get('main').el.append(iframe);
+                $.documentView.directive('RegionManager').get('main').el.append(iframe);
                 var split = window.location.origin.split(':');
-                var buster = scopedFactories.Buster(window, iframe, {
+                var buster = $.Buster(window, iframe, {
                     iframeSrc: window.location.protocol + '//' + window.location.hostname + ':' + 9000 + framed_pathway
                 });
                 buster.connected(handler);
@@ -39,8 +39,8 @@ application.scope().run(window, function (module, app, _, factories, $) {
             test.it('windows without a source', function (done) {
                 pagePromise.then(function (response) {
                     var iframe = $.createElement('iframe');
-                    documentView.directive('RegionManager').get('main').el.append(iframe);
-                    var buster = scopedFactories.Buster(window, iframe, {
+                    $.documentView.directive('RegionManager').get('main').el.append(iframe);
+                    var buster = $.Buster(window, iframe, {
                         iframeContent: response
                     });
                     buster.connected(handler);
@@ -56,8 +56,8 @@ application.scope().run(window, function (module, app, _, factories, $) {
             }, 3);
             test.it('friendly windows', function (done) {
                 var iframe = $.createElement('iframe');
-                documentView.directive('RegionManager').get('main').el.append(iframe);
-                var buster = scopedFactories.Buster(window, iframe, {
+                $.documentView.directive('RegionManager').get('main').el.append(iframe);
+                var buster = $.Buster(window, iframe, {
                     iframeSrc: window.location.origin + framed_pathway
                 });
                 buster.connected(handler);
