@@ -442,7 +442,7 @@ var REGION_MANAGER = 'RegionManager',
                     region.add(view_, NULL, returnsTrue);
                 }),
                 childConstructor: function () {
-                    return this.factories.View;
+                    return this.$.View;
                 },
                 render: function (preventChain) {
                     var view = this;
@@ -788,8 +788,8 @@ var REGION_MANAGER = 'RegionManager',
                     return directive;
                 }
             });
-        app.defineDirective(DOCUMENT_MANAGER, DocumentManager[CONSTRUCTOR]);
-        app.defineDirective(REGION_MANAGER, RegionManager[CONSTRUCTOR], function (directive, target, name) {
+        app.defineDirective(DOCUMENT_MANAGER, DocumentManager);
+        app.defineDirective(REGION_MANAGER, RegionManager, function (directive, target, name) {
             if (directive.is(DESTROYING)) {
                 return;
             }
@@ -797,7 +797,7 @@ var REGION_MANAGER = 'RegionManager',
             directive.list.slice().eachCall(DESTROY);
             delete directive.parent;
         });
-        app.defineDirective(BUFFERED_VIEWS, BufferedViews[CONSTRUCTOR]);
+        app.defineDirective(BUFFERED_VIEWS, BufferedViews);
         app.defineDirective(CAPITAL_ELEMENT, Element, function (directive, instance) {
             directive.el.destroy();
             directive.unset();
@@ -813,22 +813,20 @@ var REGION_MANAGER = 'RegionManager',
             if (documentView) {
                 exception('document has already been setup');
             }
-            var $ = opts.$,
-                scopedFactories = opts.scopedFactories = {
-                    Region: Region.extend({
-                        owner$: $
-                    }),
-                    View: View.extend({
-                        owner$: $
-                    })
-                };
+            var $ = merge(opts.$, {
+                Region: Region.extend({
+                    owner$: $
+                }),
+                View: View.extend({
+                    owner$: $
+                })
+            });
             documentView = DocumentView({
                 $: $,
                 owner$: $,
                 id: doc[__ELID__],
                 el: $.returnsManager(doc),
-                parent: documentManager,
-                factories: scopedFactories
+                parent: documentManager
             });
             $.documentView = documentView;
             documents.keep(ID, documentView.id, documentView);

@@ -1,4 +1,4 @@
-application.scope().run(window, function (module, app, _, factories, documentView, scopedFactories, $) {
+application.scope().run(window, function (module, app, _, factories, $) {
     test.describe('ResizeObserver', function () {
         var div, ro, count, counter = 0,
             setDivCss = function (argument) {

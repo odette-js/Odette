@@ -1,4 +1,4 @@
-application.scope().run(window, function (module, app, _, factories, documentView, scopedFactories, $) {
+application.scope().run(window, function (module, app, _, factories, $) {
     test.describe('Looper', function () {
         test.it('queue and deque handlers as they are asked, eliminating the need for individual request animation frame calls', function (done) {
             var count = 0;

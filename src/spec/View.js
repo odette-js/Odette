@@ -1,4 +1,4 @@
-application.scope().run(window, function (module, app, _, factories, documentView, scopedFactories, $) {
+application.scope().run(window, function (module, app, _, factories, $) {
     test.describe('View', function () {
         var view, complexView, count, ComplexView = scopedFactories.View.extend({
             ui: {

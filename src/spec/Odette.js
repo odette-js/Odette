@@ -1,4 +1,4 @@
-application.scope().run(window, function (module, app, _, factories, documentView, scopedFactories, $) {
+application.scope().run(window, function (module, app, _, factories, $) {
     test.describe('Odette', function () {
         test.describe('creates version independent application objects', function () {
             test.it('wherever the "where" array says it has', function () {

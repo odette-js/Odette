@@ -216,7 +216,7 @@ var REQUIRE = 'require',
                             app.global.definition(app.VERSION, windo);
                             return documentManagerDocuments.get(ID, docu[__ELID__]);
                         });
-                    return [manager.target, app, _, _ && _.factories, documentView, documentView.factories, documentView.$];
+                    return [manager.target, app, _, _ && _.factories, documentView.$];
                 },
                 require: function (modulename, handler) {
                     var promise, module, manager = this,

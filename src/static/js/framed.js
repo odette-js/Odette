@@ -1,5 +1,5 @@
 application.hoist(window.parent);
-application.scope().run(window, function (module, app, _, factories, documentView, scopedFactories, $) {
+application.scope().run(window, function (module, app, _, factories, $) {
     var buster = scopedFactories.Buster(window, window.parent, {
         strip: true
     }, {

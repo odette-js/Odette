@@ -1,7 +1,5 @@
 var Deferred = app.block(function (app) {
-    var _ = app._,
-        factories = _.factories,
-        UP_CATCH = capitalize(CATCH),
+    var UP_CATCH = capitalize(CATCH),
         ALL_STATES = 'allStates',
         STASHED_ARGUMENT = 'stashedArgument',
         STASHED_HANDLERS = 'stashedHandlers',

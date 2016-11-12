@@ -1,4 +1,4 @@
-application.scope().run(window, function (module, app, _, factories, documentView, scopedFactories, $) {
+application.scope().run(window, function (module, app, _, factories, $) {
     var console = _.console;
     var Company = factories.Model.extend({
         idAttribute: _.returns('name')
