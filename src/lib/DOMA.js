@@ -685,11 +685,11 @@ var ATTACHED = 'attached',
         var special;
         return (special = HTMLTagSpecial[tag]) ? special(attrs, content) : (HTMLConstantsObject[tag] ? HTMLTagEmpty(tag, attrs) : HTMLTagContent(tag, attrs, content));
     },
-    HTMLBuild = function (template) {
-        return isString(template) ? template : foldl(template, function (memo, child) {
+    HTMLBuild = function (template, bool) {
+        return (bool ? '<!DOCTYPE html>' : '') + (isString(template) ? template : foldl(template, function (memo, child) {
             // can be used recurisvely
             return memo + HTMLTagBuild(child[0], child[1], HTMLBuild(child[2]));
-        }, EMPTY_STRING);
+        }, EMPTY_STRING));
     },
     HTML = function () {
         return {
