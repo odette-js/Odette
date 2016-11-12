@@ -208,7 +208,7 @@ var REGION_MANAGER = 'RegionManager',
             }),
             removeChildView = intendedApi(function (regionKey, views) {
                 var region, regionManager = this.directive(REGION_MANAGER);
-                return regionManager.is(ESTABLISHED) && ((region = regionManager.get(regionKey)) ? region.remove(views) : exception(noRegionMessage));
+                return regionManager.is(ESTABLISHED) && ((region = regionManager.get(regionKey)) ? region.disown(views) : exception(noRegionMessage));
             }),
             addRegion = parody(REGION_MANAGER, 'add'),
             getRegion = parody(REGION_MANAGER, 'get'),
