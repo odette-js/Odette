@@ -109,7 +109,7 @@ var ELEMENT_WATCHER = 'ElementWatcher',
 app.undefine(function (app, windo, passed) {
     passed.$[ELEMENT_WATCHER] = ElementWatcher.extend({
         createObserver: function () {
-            return $.ResizeObserver(this.createHandler(), this.interval());
+            return passed.$.ResizeObserver(this.createHandler(), this.interval());
         }
     });
 });
