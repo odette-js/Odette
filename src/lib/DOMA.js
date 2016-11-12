@@ -622,6 +622,94 @@ var ATTACHED = 'attached',
             return BOOLEAN_TRUE;
         });
     },
+    HTMLAttributesString = function (attr, value) {
+        return value ? (' ' + attr + '="' + value + '"') : '';
+    },
+    HTMLAttributesBuild = function (attrs) {
+        return foldl(attrs, function (memo, value, key) {
+            return value ? memo + HTMLAttributesString(kebabCase(key), value) : memo;
+        }, EMPTY_STRING);
+    },
+    HTMLOpenTag = function (tag, attrs_) {
+        var base, attrs = (base = HTMLAttributesBase[tag]) ? base(attrs_) : attrs_;
+        return '<' + tag + HTMLAttributesBuild(attrs);
+    },
+    basicStyleAttributes = function (attrs) {
+        return merge({
+            rel: 'stylesheet',
+            type: 'text/css'
+        }, attrs);
+    },
+    HTMLAttributesBase = {
+        link: basicStyleAttributes,
+        style: basicStyleAttributes,
+        script: function (attrs) {
+            return merge({
+                type: 'text/javascript'
+            }, attrs);
+        },
+        button: function (attrs) {
+            return merge({
+                type: 'submit'
+            }, attrs);
+        },
+        input: function (attrs) {
+            return merge({
+                type: 'text'
+            }, attrs);
+        },
+        form: function (attrs) {
+            return merge({
+                method: 'get'
+            }, attrs);
+        }
+    },
+    HTMLTagEmpty = function (tag, attrs) {
+        return HTMLOpenTag(tag, attrs) + '/>';
+    },
+    HTMLTagContent = function (tag, attrs, content) {
+        return HTMLOpenTag(tag, attrs) + '>' + content + '</' + tag + '>';
+    },
+    HTMLConstantsArray = toArray('area,base,br,col,colgroup,command,embed,hr,img,input,keygen,link,meta,param,source,track,wbr'),
+    HTMLConstantsObject = wrap(HTMLConstantsArray, BOOLEAN_TRUE),
+    HTMLTagSpecial = {
+        stylesheet: function (attrs, content) {
+            if (attrs.href) {
+                return HTMLTagEmpty('link', attrs);
+            } else {
+                return HTMLTagContent('style', attrs, content);
+            }
+        }
+    },
+    HTMLTagBuild = function (tag, attrs, content) {
+        var special;
+        return (special = HTMLTagSpecial[tag]) ? special(attrs, content) : (HTMLConstantsObject[tag] ? HTMLTagEmpty(tag, attrs) : HTMLTagContent(tag, attrs, content));
+    },
+    HTMLBuild = function (template) {
+        return isString(template) ? template : foldl(template, function (memo, child) {
+            // can be used recurisvely
+            return memo + HTMLTagBuild(child[0], child[1], HTMLBuild(child[2]));
+        }, EMPTY_STRING);
+    },
+    HTML = function () {
+        return {
+            build: HTMLBuild,
+            constants: {
+                array: HTMLConstantsArray,
+                object: HTMLConstantsObject
+            },
+            tag: {
+                open: HTMLOpenTag,
+                empty: HTMLTagEmpty,
+                content: HTMLTagContent,
+                build: HTMLTagBuild
+            },
+            attributes: {
+                build: HTMLAttributesBuild,
+                string: HTMLAttributesString
+            }
+        };
+    },
     diffChildren = function (a, b, hash, stopper, layer_level, diffs, context) {
         var aChildren = a.childNodes;
         var bChildren = b[2];
@@ -2576,6 +2664,7 @@ app.scope(function (app) {
                 };
             }), {
                 $: $,
+                HTML: HTML(),
                 buildCss: buildCss,
                 nodeComparison: function (a, b, hash_, stopper) {
                     return nodeComparison(a, b, hash_, stopper, NULL, NULL, NULL, manager);
