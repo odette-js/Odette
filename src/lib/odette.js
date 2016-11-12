@@ -471,10 +471,10 @@
                         return this;
                     },
                     emptyQueue: function (fn) {
-                        var queued = queue.slice(0);
-                        var shared = this;
-                        var current = shared.scope();
-                        var defining = current.defining;
+                        var shared = this,
+                            queued = queue.slice(0),
+                            current = shared.scope(),
+                            previous = current.defining;
                         queue = [];
                         current.defining = BOOLEAN_TRUE;
                         map(queued, fn || function (q) {
