@@ -30,7 +30,7 @@ var REGION_MANAGER = 'RegionManager',
                 var isModel, child, Child, isView, model = view_,
                     children = region.directive(CHILDREN);
                 if ((isView = View.isInstance(view_))) {
-                    if ((child = children.get(MODEL_ID, view_.model.id))) {
+                    if ((child = children.get(MODEL_ID, view_.model().id))) {
                         return child;
                     } else {
                         return view_;
@@ -50,7 +50,7 @@ var REGION_MANAGER = 'RegionManager',
             disown = function (currentParent, view, region) {
                 var model, children = currentParent[CHILDREN];
                 view[PARENT] = NULL;
-                model = view.model;
+                model = view.model();
                 children.remove(view);
                 children[REGISTRY].drop('viewCid', view.cid);
                 children[REGISTRY].drop('modelCid', model.cid);
@@ -109,7 +109,7 @@ var REGION_MANAGER = 'RegionManager',
                     children = region.directive(CHILDREN);
                     view[PARENT] = region;
                     children.attach(view);
-                    model = view.model;
+                    model = view.model();
                     children[REGISTRY].keep('viewCid', view.cid, view);
                     children[REGISTRY].keep('modelCid', model.cid, view);
                     children[REGISTRY].keep(MODEL_ID, model.id, view);
@@ -234,7 +234,7 @@ var REGION_MANAGER = 'RegionManager',
                 canRenderAsync: returns(BOOLEAN_FALSE),
                 // 'directive:creation:LinguisticsManager': factories.LinguisticsManager.extend({
                 //     knot: function () {
-                //         return this.target.model;
+                //         return this.target.model();
                 //     },
                 //     namespaceEvent: function (evnt) {
                 //         return CHANGE_COLON + evnt;
@@ -263,20 +263,24 @@ var REGION_MANAGER = 'RegionManager',
                     }
                     return found;
                 },
-                bindModel: function (model) {
+                bindModel: function (m) {
                     var view = this,
-                        modelEvents = result(view, 'modelEvents');
-                    view.model = Model.isInstance(model) ? model : view.Model(model);
-                    view.listenTo(view.model, modelEvents);
+                        modelEvents = result(view, 'modelEvents'),
+                        model = Model.isInstance(m) ? m : view.Model(m);
+                    view.directive(REGISTRY).keep(INSTANCES, MODEL, model);
+                    view.listenTo(view.model(), modelEvents);
                     if (view.autoRenders()) {
-                        view.listenTo(view.model, CHANGE, view.render);
+                        view.listenTo(view.model(), CHANGE, view.render);
                     }
+                },
+                model: function () {
+                    return this.directive(REGISTRY).get(INSTANCES, MODEL);
                 },
                 autoRenders: returns(BOOLEAN_TRUE),
                 constructor: function (secondary_) {
                     var view = this;
                     var secondary = secondary_ || {};
-                    view.id = app.counter(BOOLEAN_FALSE, BOOLEAN_TRUE);
+                    view.id = app.counter();
                     view.bindModel(secondary.model);
                     delete secondary.model;
                     Parent[CONSTRUCTOR].call(view, secondary);
@@ -285,7 +289,7 @@ var REGION_MANAGER = 'RegionManager',
                 },
                 // mostly sorting purposes
                 valueOf: function () {
-                    return this.model.valueOf();
+                    return this.model().valueOf();
                 },
                 destroy: function (handler) {
                     var el, view = this;
@@ -591,7 +595,8 @@ var REGION_MANAGER = 'RegionManager',
                         manager = element.el,
                         view = element.view,
                         el = manager.element(),
-                        json = (view.model && view.model.toJSON()) || {},
+                        model = view.model(),
+                        json = (model && model.toJSON()) || {},
                         // try to generate template
                         virtual = element.virtual = [view.tagName(), element.attributes(), view.template(json, result(view, 'helpers') || {})],
                         comparison = view.owner$.nodeComparison(el, virtual, element.hashed, bindTo(element.comparisonFilter, element)),

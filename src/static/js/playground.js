@@ -22,8 +22,9 @@ application.scope().run(window, function (module, app, _, factories, documentVie
             click: 'incrementClicks'
         },
         incrementClicks: function () {
-            this.model.set({
-                clicks: this.model.get('clicks') + 1
+            var model = this.model();
+            model.set({
+                clicks: model.get('clicks') + 1
             });
         }
     });
