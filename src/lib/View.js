@@ -88,7 +88,7 @@ var REGION_MANAGER = 'RegionManager',
                     var region = this,
                         removed = region.super.fn.remove.call(region, view_);
                     return removed.each(function (item) {
-                        region.disown(view_[PARENT], view_);
+                        region.disown(item[PARENT] || region, item);
                     });
                 },
                 adopt: function (view_) {
