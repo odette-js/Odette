@@ -474,10 +474,13 @@
                         var queued = queue.slice(0);
                         var shared = this;
                         var current = shared.scope();
+                        var defining = current.defining;
                         queue = [];
+                        current.defining = BOOLEAN_TRUE;
                         map(queued, fn || function (q) {
                             q.handler.apply(q.context, [shared, current]);
                         });
+                        current.defining = previous;
                         return shared;
                     },
                     registerVersion: function (scopedV, app) {
