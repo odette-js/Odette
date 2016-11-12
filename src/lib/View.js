@@ -47,16 +47,7 @@ var REGION_MANAGER = 'RegionManager',
                     });
                 }
             },
-            disown = function (currentParent, view, region) {
-                var model, children = currentParent[CHILDREN];
-                view[PARENT] = NULL;
-                model = view.model;
-                children.remove(view);
-                children[REGISTRY].drop('viewCid', view.cid);
-                children[REGISTRY].drop('modelCid', model.cid);
-                children[REGISTRY].drop(MODEL_ID, model.id);
-                return region;
-            },
+            // disown = ,
             /**
              * @class Region
              * @augments Parent
@@ -93,6 +84,9 @@ var REGION_MANAGER = 'RegionManager',
                     }
                     return unwrapped;
                 },
+                remove: function (view_) {
+                    return this.disown(view_[PARENT], view_);
+                },
                 adopt: function (view_) {
                     var model, view, children, region = this;
                     if (!view_) {
@@ -103,7 +97,7 @@ var REGION_MANAGER = 'RegionManager',
                         if (view[PARENT] === region) {
                             return BOOLEAN_FALSE;
                         } else {
-                            disown(view[PARENT], view, region);
+                            region.disown(view[PARENT], view);
                         }
                     }
                     children = region.directive(CHILDREN);
@@ -114,6 +108,17 @@ var REGION_MANAGER = 'RegionManager',
                     children[REGISTRY].keep('modelCid', model.cid, view);
                     children[REGISTRY].keep(MODEL_ID, model.id, view);
                     return view;
+                },
+                disown: function (currentParent, view) {
+                    var model, region = this,
+                        children = currentParent[CHILDREN];
+                    view[PARENT] = NULL;
+                    model = view.model;
+                    children.remove(view);
+                    children[REGISTRY].drop('viewCid', view.cid);
+                    children[REGISTRY].drop('modelCid', model.cid);
+                    children[REGISTRY].drop(MODEL_ID, model.id);
+                    return region;
                 },
                 buffer: function (view) {
                     var currentParentNode, bufferDirective, region = this,
@@ -400,7 +405,7 @@ var REGION_MANAGER = 'RegionManager',
                     }
                 }),
                 destroy: function () {},
-        remove: function (region_) {
+                remove: function (region_) {
                     // var regionManager = this;
                     // var region = isString(region_) ? regionManager.get(region_) : region_;
                     // regionManager.remove(region);
