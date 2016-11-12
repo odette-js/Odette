@@ -634,35 +634,24 @@ var ATTACHED = 'attached',
         var base, attrs = (base = HTMLAttributesBase[tag]) ? base(attrs_) : attrs_;
         return '<' + tag + HTMLAttributesBuild(attrs);
     },
-    basicStyleAttributes = function (attrs) {
-        return merge({
-            rel: 'stylesheet',
-            type: 'text/css'
-        }, attrs);
+    basicAttributeCondensation = function (key, value, next) {
+        var nxt = next || returns.first;
+        return function (attrs_) {
+            var attrs = attrs_ || {};
+            if (!attrs[key]) {
+                attrs[key] = value;
+            }
+            return nxt(attrs);
+        };
     },
+    basicStyleAttributes = basicAttributeCondensation('rel', 'stylesheet', basicAttributeCondensation('type', 'text/css')),
     HTMLAttributesBase = {
         link: basicStyleAttributes,
         style: basicStyleAttributes,
-        script: function (attrs) {
-            return merge({
-                type: 'text/javascript'
-            }, attrs);
-        },
-        button: function (attrs) {
-            return merge({
-                type: 'submit'
-            }, attrs);
-        },
-        input: function (attrs) {
-            return merge({
-                type: 'text'
-            }, attrs);
-        },
-        form: function (attrs) {
-            return merge({
-                method: 'get'
-            }, attrs);
-        }
+        script: basicAttributeCondensation('type', 'text/javascript'),
+        button: basicAttributeCondensation('type', 'submit'),
+        input: basicAttributeCondensation('type', 'input'),
+        form: basicAttributeCondensation('method', 'get')
     },
     HTMLTagEmpty = function (tag, attrs) {
         return HTMLOpenTag(tag, attrs) + '/>';
@@ -674,11 +663,7 @@ var ATTACHED = 'attached',
     HTMLConstantsObject = wrap(HTMLConstantsArray, BOOLEAN_TRUE),
     HTMLTagSpecial = {
         stylesheet: function (attrs, content) {
-            if (attrs.href) {
-                return HTMLTagEmpty('link', attrs);
-            } else {
-                return HTMLTagContent('style', attrs, content);
-            }
+            return attrs.href ? HTMLTagEmpty('link', attrs) : HTMLTagContent('style', attrs, content);
         }
     },
     HTMLTagBuild = function (tag, attrs, content) {
@@ -695,8 +680,8 @@ var ATTACHED = 'attached',
         return {
             build: HTMLBuild,
             constants: {
-                array: HTMLConstantsArray,
-                object: HTMLConstantsObject
+                array: HTMLConstantsArray.slice(),
+                object: merge({}, HTMLConstantsObject)
             },
             tag: {
                 open: HTMLOpenTag,
