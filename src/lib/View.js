@@ -85,7 +85,11 @@ var REGION_MANAGER = 'RegionManager',
                     return unwrapped;
                 },
                 remove: function (view_) {
-                    return this.disown(view_[PARENT], view_);
+                    var region = this,
+                        removed = region.super.fn.remove.call(region, view_);
+                    return removed.each(function (item) {
+                        region.disown(view_[PARENT], view_);
+                    });
                 },
                 adopt: function (view_) {
                     var model, view, children, region = this;
