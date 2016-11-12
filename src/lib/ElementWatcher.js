@@ -114,5 +114,5 @@ app.undefine(function (app, windo, passed) {
     });
 });
 app.defineDirective(ELEMENT_WATCHER, function (one, two, three) {
-    return this.owner$[ELEMENT_WATCHER](one, two, three);
+    return one.owner$[ELEMENT_WATCHER](one, two, three);
 });
