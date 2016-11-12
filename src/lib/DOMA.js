@@ -688,7 +688,7 @@ var ATTACHED = 'attached',
     HTMLBuild = function (template, bool) {
         return (bool ? '<!DOCTYPE html>' : '') + (isString(template) ? template : foldl(template, function (memo, child) {
             // can be used recurisvely
-            return memo + HTMLTagBuild(child[0], child[1], HTMLBuild(child[2]));
+            return memo + isString(child) ? child : HTMLTagBuild(child[0], child[1], HTMLBuild(child[2]));
         }, EMPTY_STRING));
     },
     HTML = function () {
