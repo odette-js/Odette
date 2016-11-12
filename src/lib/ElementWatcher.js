@@ -4,6 +4,7 @@ var ELEMENT_WATCHER = 'ElementWatcher',
     BLINKING = 'blinking',
     DISABLED = 'disabled',
     OBSERVER = 'observer',
+    INTERVAL = 'interval',
     AF = _.AF,
     namespacer = function () {
         return 'watcher-' + app.counter();
@@ -94,7 +95,16 @@ var ELEMENT_WATCHER = 'ElementWatcher',
             };
         },
         createObserver: function () {
-            return new ResizeObserver(this.createHandler(), this.interval);
+            return new ResizeObserver(this.createHandler(), this.interval());
+        },
+        interval: function (interval) {
+            var registry = this.directive(REGISTRY);
+            if (interval !== UNDEFINED) {
+                this.keep(CONSTANTS, INTERVAL, isNumber(interval) ? interval : 0);
+                return this;
+            } else {
+                return registry.get(CONSTANTS, INTERVAL) || 0;
+            }
         },
         watcher: function (el) {
             return this.get(WATCHERS, this.element(el)[__ELID__], function () {
