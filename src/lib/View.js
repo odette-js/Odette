@@ -314,6 +314,9 @@ var REGION_MANAGER = 'RegionManager',
                     // }
                     view.directiveDestruction(CAPITAL_ELEMENT);
                     Parent[CONSTRUCTOR][PROTOTYPE].destroy.call(view);
+                    if (view.parent) {
+                        view.parent.remove(view);
+                    }
                     return view;
                 },
                 render: function (preventChain) {
