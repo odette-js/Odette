@@ -699,7 +699,7 @@ var ATTACHED = 'attached',
             tagsEmpty: merge({}, HTMLConstantsObject),
             tagSpecial: {
                 stylesheet: function (attrs, content) {
-                    return attrs.href ? HTML.tagEmpty('link', attrs) : HTML.tagContent('style', attrs, content);
+                    return attrs.href ? HTMLTagEmpty('link', attrs) : HTMLTagContent('style', attrs, content);
                 }
             }
         };
