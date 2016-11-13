@@ -17,7 +17,7 @@ var ATTACHED = 'attached',
     APPEND_CHILD = 'append' + UPPER_CHILD,
     REMOVE = 'remove',
     REMOVE_CHILD = REMOVE + UPPER_CHILD,
-    HTML = 'html',
+    // HTML = 'html',
     INNER_HTML = 'innerHTML',
     TEXT = 'text',
     INNER_TEXT = 'innerText',
@@ -622,17 +622,20 @@ var ATTACHED = 'attached',
             return BOOLEAN_TRUE;
         });
     },
-    HTMLAttributesString = function (attr, value) {
+    HTMLAttribute = function (attr, value) {
         return value ? (' ' + attr + '="' + value + '"') : '';
     },
-    HTMLAttributesBuild = function (attrs) {
+    HTMLAttributes = function (attrs) {
+        var HTML = this;
         return foldl(attrs, function (memo, value, key) {
-            return value ? memo + HTMLAttributesString(kebabCase(key), value) : memo;
+        return value ? memo + HTML.attribute(kebabCase(key), value) : memo;
         }, EMPTY_STRING);
     },
     HTMLOpenTag = function (tag, attrs_) {
-        var base, attrs = (base = HTMLAttributesBase[tag]) ? base(attrs_) : attrs_;
-        return '<' + tag + HTMLAttributesBuild(attrs);
+        var base, prefixer, HTML = this,
+            attrs = (base = HTML.attributesBase[tag]) ? base(attrs_) : attrs_,
+            tagOpenPrefixes = HTML.tagOpenPrefixes;
+        return (tagOpenPrefixes[tag] || tagOpenPrefixes.defaults)(attrs) + tag + HTML.attributes(attrs);
     },
     basicAttributeCondensation = function (key, value, next) {
         var nxt = next || returns.first;
@@ -644,54 +647,60 @@ var ATTACHED = 'attached',
             return nxt(attrs);
         };
     },
-    basicStyleAttributes = basicAttributeCondensation('rel', 'stylesheet', basicAttributeCondensation('type', 'text/css')),
-    HTMLAttributesBase = {
-        link: basicStyleAttributes,
-        style: basicStyleAttributes,
-        script: basicAttributeCondensation('type', 'text/javascript'),
-        button: basicAttributeCondensation('type', 'submit'),
-        input: basicAttributeCondensation('type', 'input'),
-        form: basicAttributeCondensation('method', 'get')
-    },
     HTMLTagEmpty = function (tag, attrs) {
-        return HTMLOpenTag(tag, attrs) + '/>';
+        return this.openTag(tag, attrs) + '/>';
     },
     HTMLTagContent = function (tag, attrs, content) {
-        return HTMLOpenTag(tag, attrs) + '>' + content + '</' + tag + '>';
+        return this.openTag(tag, attrs) + '>' + content + '</' + tag + '>';
     },
     HTMLConstantsArray = toArray('area,base,br,col,colgroup,command,embed,hr,img,input,keygen,link,meta,param,source,track,wbr'),
     HTMLConstantsObject = wrap(HTMLConstantsArray, BOOLEAN_TRUE),
-    HTMLTagSpecial = {
-        stylesheet: function (attrs, content) {
-            return attrs.href ? HTMLTagEmpty('link', attrs) : HTMLTagContent('style', attrs, content);
-        }
-    },
+    // HTMLTagSpecial = {
+    //     stylesheet: function (attrs, content) {
+    //         return attrs.href ? HTMLTagEmpty('link', attrs) : HTMLTagContent('style', attrs, content);
+    //     }
+    // },
     HTMLTagBuild = function (tag, attrs, content) {
-        var special;
-        return (special = HTMLTagSpecial[tag]) ? special(attrs, content) : (HTMLConstantsObject[tag] ? HTMLTagEmpty(tag, attrs) : HTMLTagContent(tag, attrs, content));
+        var special, HTML = this;
+        return (special = HTML.tagSpecial[tag]) ? special(attrs, content) : (HTML.tagsEmpty[tag] ? HTML.tagEmpty(tag, attrs) : HTML.tagContent(tag, attrs, content));
     },
-    HTMLBuild = function (template, bool) {
-        return (bool ? '<!DOCTYPE html>' : '') + (isString(template) ? template : foldl(template, function (memo, child) {
+    HTMLBuild = function (template) {
+        var HTML = this;
+        return isString(template) ? template : reduce(template, function (memo, child) {
             // can be used recurisvely
-            return memo + (isString(child) ? child : HTMLTagBuild(child[0], child[1], HTMLBuild(child[2])));
-        }, EMPTY_STRING));
+            return memo + (isString(child) ? child : HTML.tagBuild(child[0], child[1], HTML.build(child[2])));
+        }, EMPTY_STRING);
     },
     HTML = function () {
+        var addTextCssAttribute = basicAttributeCondensation('type', 'text/css'),
+            basicStyleAttributes = basicAttributeCondensation('rel', 'stylesheet', addTextCssAttribute),
+            attributesBase = {
+                link: basicStyleAttributes,
+                style: basicStyleAttributes,
+                script: basicAttributeCondensation('type', 'text/javascript'),
+                button: basicAttributeCondensation('type', 'submit'),
+                input: basicAttributeCondensation('type', 'input'),
+                form: basicAttributeCondensation('method', 'get')
+            },
+            tagOpenPrefixes = {
+                defaults: returns('<'),
+                html: returns('<!DOCTYPE html><')
+            };
         return {
             build: HTMLBuild,
-            constants: {
-                array: HTMLConstantsArray.slice(),
-                object: merge({}, HTMLConstantsObject)
-            },
-            tag: {
-                open: HTMLOpenTag,
-                empty: HTMLTagEmpty,
-                content: HTMLTagContent,
-                build: HTMLTagBuild
-            },
-            attributes: {
-                build: HTMLAttributesBuild,
-                string: HTMLAttributesString
+            tagOpen: HTMLOpenTag,
+            tagEmpty: HTMLTagEmpty,
+            tagBuild: HTMLTagBuild,
+            tagContent: HTMLTagContent,
+            tagOpenPrefixes: tagOpenPrefixes,
+            attributesBase: attributesBase,
+            attributes: HTMLAttributes,
+            attribute: HTMLAttribute,
+            tagsEmpty: merge({}, HTMLConstantsObject),
+            tagSpecial: {
+                stylesheet: function (attrs, content) {
+                    return attrs.href ? HTML.tagEmpty('link', attrs) : HTML.tagContent('style', attrs, content);
+                }
             }
         };
     },
