@@ -672,7 +672,7 @@ var ATTACHED = 'attached',
         }, EMPTY_STRING);
     },
     HTML = function () {
-        var addTextCssAttribute = basicAttributeCondensation('type', 'text/css'),
+        var HTML, addTextCssAttribute = basicAttributeCondensation('type', 'text/css'),
             basicStyleAttributes = basicAttributeCondensation('rel', 'stylesheet', addTextCssAttribute),
             attributesBase = {
                 link: basicStyleAttributes,
@@ -686,7 +686,7 @@ var ATTACHED = 'attached',
                 defaults: returns('<'),
                 html: returns('<!DOCTYPE html><')
             };
-        return {
+        return (HTML = {
             build: HTMLBuild,
             tagOpen: HTMLOpenTag,
             tagEmpty: HTMLTagEmpty,
@@ -699,10 +699,10 @@ var ATTACHED = 'attached',
             tagsEmpty: merge({}, HTMLConstantsObject),
             tagSpecial: {
                 stylesheet: function (attrs, content) {
-                    return attrs.href ? HTMLTagEmpty('link', attrs) : HTMLTagContent('style', attrs, content);
+                    return attrs.href ? HTML.tagEmpty('link', attrs) : HTML.tagContent('style', attrs, content);
                 }
             }
-        };
+        });
     },
     diffChildren = function (a, b, hash, stopper, layer_level, diffs, context) {
         var aChildren = a.childNodes;
