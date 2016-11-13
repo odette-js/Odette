@@ -341,16 +341,22 @@ var EVENT_STRING = 'Events',
                     off: function (name_, fn_, context_) {
                         var context, currentObj, eventer = this,
                             name = name_,
-                            events = eventer[EVENT_MANAGER];
-                        if (!events) {
-                            return;
-                        }
-                        context = isObject(name) ? fn_ : context_;
-                        if (arguments[LENGTH]) {
-                            if (!name) {
+                            events = eventer[EVENT_MANAGER],
+                            removeAllMatching = function () {
                                 each(events[HANDLERS], function (list, name) {
                                     events.seekAndDestroy(list, fn_, context);
                                 });
+                            };
+                        if (!events) {
+                            return eventer;
+                        }
+                        context = isObject(name) ? fn_ : context_;
+                        if (name === BOOLEAN_TRUE) {
+                            removeAllMatching();
+                        }
+                        if (arguments[LENGTH]) {
+                            if (!name) {
+                                removeAllMatching();
                             } else {
                                 intendedObject(name, fn_, function (name, fn_) {
                                     iterateOverList(eventer, events, name, fn_, [], function (eventer, directive, obj) {
