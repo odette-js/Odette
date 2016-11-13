@@ -1266,6 +1266,7 @@ var factories = {},
     // **Reduce** builds up a single result from a list of values, aka `inject`,
     // or `foldl`.
     foldl = createReduce(1),
+    reduce = foldl,
     // The right-associative version of reduce, also known as `foldr`.
     foldr = createReduce(-1),
     some = function (array, handler) {
