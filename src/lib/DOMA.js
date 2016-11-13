@@ -628,7 +628,7 @@ var ATTACHED = 'attached',
     HTMLAttributes = function (attrs) {
         var HTML = this;
         return foldl(attrs, function (memo, value, key) {
-        return value ? memo + HTML.attribute(kebabCase(key), value) : memo;
+            return value ? memo + HTML.attribute(kebabCase(key), value) : memo;
         }, EMPTY_STRING);
     },
     HTMLOpenTag = function (tag, attrs_) {
@@ -648,10 +648,10 @@ var ATTACHED = 'attached',
         };
     },
     HTMLTagEmpty = function (tag, attrs) {
-        return this.openTag(tag, attrs) + '/>';
+        return this.tagOpen(tag, attrs) + '/>';
     },
     HTMLTagContent = function (tag, attrs, content) {
-        return this.openTag(tag, attrs) + '>' + content + '</' + tag + '>';
+        return this.tagOpen(tag, attrs) + '>' + content + '</' + tag + '>';
     },
     HTMLConstantsArray = toArray('area,base,br,col,colgroup,command,embed,hr,img,input,keygen,link,meta,param,source,track,wbr'),
     HTMLConstantsObject = wrap(HTMLConstantsArray, BOOLEAN_TRUE),
