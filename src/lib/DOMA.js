@@ -622,6 +622,8 @@ var ATTACHED = 'attached',
             return BOOLEAN_TRUE;
         });
     },
+    HTMLConstantsArray = toArray('area,base,br,col,colgroup,command,embed,hr,img,input,keygen,link,meta,param,source,track,wbr'),
+    HTMLConstantsObject = wrap(HTMLConstantsArray, BOOLEAN_TRUE),
     HTMLAttribute = function (attr, value) {
         return value ? (' ' + attr + '="' + value + '"') : '';
     },
@@ -653,13 +655,6 @@ var ATTACHED = 'attached',
     HTMLTagContent = function (tag, attrs, content) {
         return this.tagOpen(tag, attrs) + '>' + content + '</' + tag + '>';
     },
-    HTMLConstantsArray = toArray('area,base,br,col,colgroup,command,embed,hr,img,input,keygen,link,meta,param,source,track,wbr'),
-    HTMLConstantsObject = wrap(HTMLConstantsArray, BOOLEAN_TRUE),
-    // HTMLTagSpecial = {
-    //     stylesheet: function (attrs, content) {
-    //         return attrs.href ? HTMLTagEmpty('link', attrs) : HTMLTagContent('style', attrs, content);
-    //     }
-    // },
     HTMLTagBuild = function (tag, attrs, content) {
         var special, HTML = this;
         return (special = HTML.tagSpecial[tag]) ? special(attrs, content) : (HTML.tagsEmpty[tag] ? HTML.tagEmpty(tag, attrs) : HTML.tagContent(tag, attrs, content));
