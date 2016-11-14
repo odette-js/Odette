@@ -244,20 +244,16 @@ app.scope(function (app) {
                 running[name] = BOOLEAN_TRUE;
                 subset = events.subset(list.toArray(), evnt);
                 stack_length = stack[LENGTH];
-                stopped = wraptry(function () {
-                    var stopped, handler, i = 0,
-                        subLength = subset[LENGTH];
-                    for (; i < subLength && !stopped; i++) {
-                        handler = subset[i];
-                        if (!handler.disabled && events.queue(stack, handler, evnt)) {
-                            handler.fn(evnt);
-                            events.unQueue(stack, handler, evnt);
-                        }
-                        stopped = !!evnt.is(PROPAGATION_HALTED);
+                var handler, i = 0,
+                    subLength = subset[LENGTH];
+                for (; i < subLength && !stopped; i++) {
+                    handler = subset[i];
+                    if (!handler.disabled && events.queue(stack, handler, evnt)) {
+                        handler.fn(evnt);
+                        events.unQueue(stack, handler, evnt);
                     }
-                }, function () {
-                    return BOOLEAN_TRUE;
-                });
+                    stopped = !!evnt.is(PROPAGATION_HALTED);
+                }
                 if (stack_length < stack[LENGTH]) {
                     events.unQueue(stack, handler, evnt);
                 }
