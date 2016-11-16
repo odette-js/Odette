@@ -521,6 +521,59 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                         return model;
                     },
                     /**
+                     * Convenience function for triggering a handler based on a filter.
+                     * @method
+                     * @param {String|Array} list event names, either as a space delineated list, or as an actual Array.
+                     * @param {*} filter Pass any parameter to filter the corresponding value by equality using the [isEqual]{@link _#isEqual} method.
+                     * @param {Function} fn handler when the filter is met, and evaluates truthy.
+                     * @returns {Events}
+                     * @example <caption>below the watch method waits until the property key is set to the string value.</caption>
+                     * events.watch("key", "value", function (e) {
+                     *     events.get("key") === "value"; // true
+                     * });
+                     */
+                    watch: setupWatcher(0),
+                    /**
+                     * Convenience function for triggering a handler based on a filter. Handler will be taken off after first trigger.
+                     * @method
+                     * @param {String|Array} list event names, either as a space delineated list, or as an actual Array.
+                     * @param {*} filter Pass any parameter to filter the corresponding value by equality using the [isEqual]{@link _#isEqual} method.
+                     * @param {Function} fn handler when the filter is met, and evaluates truthy.
+                     * @returns {Events}
+                     * @example <caption>The watchOnce method waits until the property key is set to the string value. Handler is taken off after it is triggered for the first time.</caption>
+                     * events.watchOnce("key", "value", function (e) {
+                     *     events.get("key") === "value"; // true
+                     * });
+                     */
+                    watchOnce: setupWatcher(0, 1),
+                    /**
+                     * Parody for the [listenTo]{@link Events#listenTo} method mixed with [watch]{@link Events#watch}. Basically it allows you to listen to another object and set up the same logic available in [watch]{@link Events#watch}.
+                     * @method
+                     * @param {String|Array} list event names, either as a space delineated list, or as an actual Array.
+                     * @param {*} filter Pass any parameter to filter the corresponding value by equality using the [isEqual]{@link _#isEqual} method.
+                     * @param {Function} fn handler when the filter is met, and evaluates truthy.
+                     * @returns {Events}
+                     * @example <caption>The watchOther method waits until the property key is set on another model to the string value.</caption>
+                     * events.watchOther(otherEvents, "key", "value", function (e) {
+                     *     otherEvents.get("key") === "value"; // true
+                     * });
+                     */
+                    watchOther: setupWatcher(1),
+                    /**
+                     * Convenience function for triggering a handler based on a filter. Handler will be taken off after first trigger.
+                     * @method
+                     * @param {String|Array} list event names, either as a space delineated list, or as an actual Array.
+                     * @param {Events} eventer an object that can have events attached and detached from it via the {@link EventsManager} directive.
+                     * @param {*} filter Pass any parameter to filter the corresponding value by equality using the [isEqual]{@link _#isEqual} method.
+                     * @param {Function} fn handler when the filter is met, and evaluates truthy.
+                     * @returns {Events}
+                     * @example <caption>The watchOther method waits until the property key is set on another model to the string value. Handler is taken off after it is triggered for the first time.</caption>
+                     * events.watchOtherOnce(otherEvents, "key", "value", function (e) {
+                     *     otherEvents.get("key") === "value"; // true
+                     * });
+                     */
+                    watchOtherOnce: setupWatcher(1, 1),
+                    /**
                      * @description stringified version of attributes object
                      * @func
                      * @name Model#toString
