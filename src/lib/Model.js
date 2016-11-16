@@ -513,6 +513,13 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                     valueOf: function () {
                         return this.id;
                     },
+                    change: function (key, fn) {
+                        var model = this,
+                            result = isFunction(key) ? model.on(CHANGE, key) : intendedObject(key, fn, function (key, fn) {
+                                model.on(CHANGE_COLON + key, fn);
+                            });
+                        return model;
+                    },
                     /**
                      * @description stringified version of attributes object
                      * @func

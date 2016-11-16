@@ -128,7 +128,7 @@ var REQUIRE = 'require',
                     return module;
                 },
                 topLevel: function () {
-                    return !this[APPLICATION] || this[APPLICATION] === this[PARENT];
+                    return !this[APPLICATION] || this[APPLICATION] === this[PARENT]();
                 },
                 load: function () {
                     return this.directive(REGISTRY).get('promises', 'load', moduleLoadPromise);

@@ -47,156 +47,214 @@ var REGION_MANAGER = 'RegionManager',
                     });
                 }
             },
-            // disown = ,
             /**
              * @class Region
              * @augments Parent
              * @classDesc Objects that have one or more element associated with them, such as a template that needs constant updating from the data
              */
-            Region = factories.Region = Parent.extend('Region', {
-                attributes: returns(BOOLEAN_FALSE),
-                childConstructor: function () {
-                    var region = this;
-                    return region.Child === BOOLEAN_TRUE ? region.parentView().childConstructor() : region.Child;
-                },
-                parentView: function () {
-                    return this[PARENT][PARENT];
-                },
-                constructor: function (secondary) {
-                    var model = this;
-                    model.super.call(model, secondary);
-                    verifyOwner$(model);
-                    model.directive(CHILDREN);
-                    model.setElement();
-                    return model;
-                },
-                add: function (models_, options_, renderer) {
-                    var bufferedViewsDirective, region = this,
-                        options = options_ || {},
-                        unwrapped = Collection(models_).foldl(function (memo, item) {
-                            var adoption;
-                            if ((adoption = region.adopt(item))) {
-                                memo.push(adoption);
-                            }
-                        }, []);
-                    if (region.el) {
-                        region.render(renderer);
-                    }
-                    return unwrapped;
-                },
-                remove: function (view_) {
-                    var region = this,
-                        removed = region.super.fn.remove.call(region, view_);
-                    return removed.each(function (item) {
-                        region.disown(item[PARENT] || region, item);
-                    });
-                },
-                adopt: function (view_) {
-                    var model, view, children, region = this;
-                    if (!view_) {
-                        return BOOLEAN_FALSE;
-                    }
-                    view = makesView(region, view_);
-                    if (view[PARENT]) {
-                        if (view[PARENT] === region) {
+            Region = factories.Region = Parent.extend('Region',
+                /**
+                 * @lends Region.prototype
+                 */
+                {
+                    /**
+                     * Returns the attributes of the view element that will be diffed and applied on each render.
+                     * @method
+                     * @returns {Object} key value pairs of attributes and respective values.
+                     */
+                    attributes: returns(BOOLEAN_FALSE),
+                    /**
+                     * Returns the constructor of the default view that will be placed in the Region when it is asked to make a child. This is often when add is called usually from the previous view's addChildView.
+                     * @return {Function} The default child View's constructor. The default is the containing view's Child member
+                     * @example
+                     * region.childConstructor(); // factories.View
+                     */
+                    childConstructor: function () {
+                        var region = this;
+                        return region.Child === BOOLEAN_TRUE ? region.parentView().childConstructor() : region.Child;
+                    },
+                    /**
+                     * Gets the parent that this region is housed under. The direct parent is the RegionManager
+                     * @return {View} Closest parent view of the region calling the method
+                     * @example
+                     * region.parentView(); // View
+                     */
+                    parentView: function () {
+                        return this[PARENT][PARENT];
+                    },
+                    constructor: function (secondary) {
+                        var model = this;
+                        model.super.call(model, secondary);
+                        verifyOwner$(model);
+                        model.directive(CHILDREN);
+                        model.setElement();
+                        return model;
+                    },
+                    /**
+                     * Add new views to this region
+                     * @param {Model|Array|Collection} models singular or list of models. Will be normalized through Collection constructor and adopted as necessary.
+                     * @param {Object} options dictionary of key value pairs to be passed as the second argument
+                     * @param {[type]} renderer [description]
+                     */
+                    add: function (models_, renderer) {
+                        var bufferedViewsDirective, region = this,
+                            unwrapped = Collection(models_).foldl(function (memo, item) {
+                                var adoption;
+                                if ((adoption = region.adopt(item))) {
+                                    memo.push(adoption);
+                                }
+                            }, []);
+                        if (region.el) {
+                            region.render(renderer);
+                        }
+                        return unwrapped;
+                    },
+                    /**
+                     * Removes a view that is passed to it. Internally uses its super's remove method then iterates through each one and disowns it.
+                     * @param  {View} view view to remove
+                     * @return {Collection} Collection of views that were removed.
+                     */
+                    remove: function (view_) {
+                        var region = this,
+                            removed = region.super.fn.remove.call(region, view_);
+                        return removed.each(function (item) {
+                            region.disown(item[PARENT] || region, item);
+                        });
+                    },
+                    /**
+                     * Do all of the necessary steps in order to tie the view under this region. That is, disown it from it's previous owner, register various id's with the region's children
+                     * @param  {View|Object} view View or object to be turned into a view and then adopted
+                     * @return {View} View that was adopted
+                     */
+                    adopt: function (view_) {
+                        var model, registry, view, children, region = this;
+                        if (!view_) {
                             return BOOLEAN_FALSE;
-                        } else {
-                            region.disown(view[PARENT], view);
                         }
-                    }
-                    children = region.directive(CHILDREN);
-                    view[PARENT] = region;
-                    children.attach(view);
-                    model = view.model;
-                    children[REGISTRY].keep('viewCid', view.cid, view);
-                    children[REGISTRY].keep('modelCid', model.cid, view);
-                    children[REGISTRY].keep(MODEL_ID, model.id, view);
-                    return view;
-                },
-                disown: function (currentParent, view) {
-                    var model, region = this,
-                        children = currentParent[CHILDREN];
-                    view[PARENT] = NULL;
-                    model = view.model;
-                    children.remove(view);
-                    children[REGISTRY].drop('viewCid', view.cid);
-                    children[REGISTRY].drop('modelCid', model.cid);
-                    children[REGISTRY].drop(MODEL_ID, model.id);
-                    return region;
-                },
-                buffer: function (view) {
-                    var currentParentNode, bufferDirective, region = this,
-                        viewEl = view.el && view.el.element(),
-                        regionElement = region.el.element(),
-                        viewParentElement = view.parentElement(region);
-                    if (!viewEl) {
+                        view = makesView(region, view_);
+                        if (view[PARENT]) {
+                            if (view[PARENT] === region) {
+                                return BOOLEAN_FALSE;
+                            } else {
+                                region.disown(view[PARENT], view);
+                            }
+                        }
+                        children = region.directive(CHILDREN);
+                        view[PARENT] = region;
+                        children.attach(view);
+                        model = view.model;
+                        registry = children.directive(REGISTRY);
+                        registry.keep('viewCid', view.cid, view);
+                        registry.keep('modelCid', model.cid, view);
+                        registry.keep(MODEL_ID, model.id, view);
+                        return view;
+                    },
+                    /**
+                     * Detaches a view from the children registry and array and drops the respective cid's that belong to the view and model.
+                     * @param  {Parent} currentParent A parent object that the view belongs to.
+                     * @param  {View} view child view
+                     * @return {Region} the region that this method was called on.
+                     */
+                    disown: function (currentParent, view) {
+                        var model, registry, region = this,
+                            children = (currentParent || view[PARENT])[CHILDREN];
+                        view[PARENT] = NULL;
+                        model = view.model;
+                        children.remove(view);
+                        registry = children.directive(REGISTRY);
+                        registry.drop('viewCid', view.cid);
+                        registry.drop('modelCid', model.cid);
+                        registry.drop(MODEL_ID, model.id);
                         return region;
-                    }
-                    currentParentNode = viewEl.parentNode;
-                    if (!currentParentNode || currentParentNode !== viewParentElement) {
-                        if (viewParentElement === regionElement) {
-                            bufferDirective = region.directive(BUFFERED_VIEWS);
-                            bufferDirective.els.append(viewEl);
-                        } else {
-                            region.owner$(viewParentElement).append(viewEl);
+                    },
+                    /**
+                     * Buffers view element to a fragment.
+                     * @param  {View} view Buffer the element of this view.
+                     * @return {Region} Region that the view's element was buffered against.
+                     */
+                    buffer: function (view) {
+                        var currentParentNode, bufferDirective, region = this,
+                            viewEl = view.el && view.el.element(),
+                            regionElement = region.el.element(),
+                            viewParentElement = view.parentElement(region);
+                        if (!viewEl) {
+                            return region;
                         }
+                        currentParentNode = viewEl.parentNode;
+                        if (!currentParentNode || currentParentNode !== viewParentElement) {
+                            if (viewParentElement === regionElement) {
+                                bufferDirective = region.directive(BUFFERED_VIEWS);
+                                bufferDirective.els.append(viewEl);
+                            } else {
+                                region.owner$(viewParentElement).append(viewEl);
+                            }
+                        }
+                        return region;
+                    },
+                    /**
+                     * Sets the element based on the selector on the region.
+                     * @retuns {Region} the this
+                     */
+                    setElement: function () {
+                        var region = this,
+                            selector = region[SELECTOR],
+                            parent = region[PARENT][PARENT],
+                            manager = parent[PARENT] && parent[PARENT][PARENT] === app ? parent.$(selector).item(0) : parent.owner$.returnsManager(parent.directive(CAPITAL_ELEMENT).hashed[selector]);
+                        if (!manager) {
+                            return elementDoesNotExistAt(selector);
+                        }
+                        region.directive(CAPITAL_ELEMENT).set(manager);
+                        return region;
+                    },
+                    /**
+                     * Renders the element based on input from the view, which holds the template that the element will be rendered with along with the tag name, and attributes.
+                     * @param  {Function} preventChain_ [description]
+                     * @return {[type]} [description]
+                     */
+                    render: function (preventChain_) {
+                        var children, region = this,
+                            bufferDirective = region.directive(BUFFERED_VIEWS),
+                            elementDirective = region.directive(CAPITAL_ELEMENT),
+                            preventChain = preventChain_ || noop;
+                        region.unmark(RENDERED);
+                        // doc frags on regionviews, list of children to trigger events on
+                        bufferDirective.ensure();
+                        // request extra data or something before rendering: dom is still completely intact
+                        region[DISPATCH_EVENT](BEFORE_COLON + RENDER);
+                        // unbinds and rebinds element only if it changes
+                        region.setElement();
+                        // update new element's attributes
+                        // elementDirective.setAttributes();
+                        // puts children back inside parent
+                        if ((children = region[CHILDREN])) {
+                            if (preventChain(region)) {
+                                // stop rendering child views, just buffer them
+                                children.each(region.buffer, region);
+                            } else {
+                                children.eachCall(RENDER, preventChain);
+                            }
+                        }
+                        // buffer region element
+                        // appends child elements
+                        elementDirective.el.append(bufferDirective.els);
+                        region[DISPATCH_EVENT]('buffered');
+                        // pass the buffered views up
+                        // mark the view as rendered
+                        region.mark(RENDERED);
+                        // reset buffered objects
+                        bufferDirective.reset();
+                        // dispatch the render event
+                        region[DISPATCH_EVENT](RENDER);
+                        return region;
+                    },
+                    destroy: function () {
+                        var children, region = this;
+                        if ((children = region[CHILDREN])) {
+                            children.slice().eachCall(DESTROY);
+                        }
+                        return this;
                     }
-                    return region;
-                },
-                // this needs to be modified for shared windows
-                setElement: function () {
-                    var region = this,
-                        selector = region[SELECTOR],
-                        parent = region[PARENT][PARENT],
-                        manager = parent[PARENT] && parent[PARENT][PARENT] === app ? parent.$(selector).item(0) : parent.owner$.returnsManager(parent.directive(CAPITAL_ELEMENT).hashed[selector]);
-                    if (!manager) {
-                        return elementDoesNotExistAt(selector);
-                    }
-                    region.directive(CAPITAL_ELEMENT).set(manager);
-                    return region;
-                },
-                render: function (preventChain_) {
-                    var region = this,
-                        bufferDirective = region.directive(BUFFERED_VIEWS),
-                        elementDirective = region.directive(CAPITAL_ELEMENT),
-                        preventChain = preventChain_ || noop;
-                    region.unmark(RENDERED);
-                    // doc frags on regionviews, list of children to trigger events on
-                    bufferDirective.ensure();
-                    // request extra data or something before rendering: dom is still completely intact
-                    region[DISPATCH_EVENT](BEFORE_COLON + RENDER);
-                    // unbinds and rebinds element only if it changes
-                    region.setElement();
-                    // update new element's attributes
-                    // elementDirective.setAttributes();
-                    // puts children back inside parent
-                    if (preventChain(region)) {
-                        // stop rendering child views, just buffer them
-                        region[CHILDREN].each(region.buffer, region);
-                    } else {
-                        region[CHILDREN].eachCall(RENDER, preventChain);
-                    }
-                    // buffer region element
-                    // appends child elements
-                    elementDirective.el.append(bufferDirective.els);
-                    region[DISPATCH_EVENT]('buffered');
-                    // pass the buffered views up
-                    // mark the view as rendered
-                    region.mark(RENDERED);
-                    // reset buffered objects
-                    bufferDirective.reset();
-                    // dispatch the render event
-                    region[DISPATCH_EVENT](RENDER);
-                    return region;
-                },
-                destroy: function () {
-                    var children, region = this;
-                    if ((children = region[CHILDREN])) {
-                        children.slice().eachCall(DESTROY);
-                    }
-                    return this;
-                }
-            }),
+                }),
             establishRegions = function (view, force) {
                 var regionManager = view.directive(REGION_MANAGER);
                 if (!force && regionManager.is(ESTABLISHED)) {
@@ -239,14 +297,6 @@ var REGION_MANAGER = 'RegionManager',
                 tagName: returns('div'),
                 template: returns(BOOLEAN_FALSE),
                 canRenderAsync: returns(BOOLEAN_FALSE),
-                // 'directive:creation:LinguisticsManager': factories.LinguisticsManager.extend({
-                //     knot: function () {
-                //         return this.target.model;
-                //     },
-                //     namespaceEvent: function (evnt) {
-                //         return CHANGE_COLON + evnt;
-                //     }
-                // }),
                 getChildViews: function (key) {
                     return this.getRegion(key).directive(CHILDREN);
                 },
@@ -450,7 +500,7 @@ var REGION_MANAGER = 'RegionManager',
                     var regionManager = this.directive(REGION_MANAGER);
                     var region = regionManager.get(key);
                     view_.render();
-                    region.add(view_, NULL, returnsTrue);
+                    region.add(view_, returnsTrue);
                 }),
                 childConstructor: function () {
                     return this.$.View;
