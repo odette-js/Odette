@@ -479,21 +479,36 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                     digest: function (handler, fn) {
                         var model = this,
                             // cache the data directive in case it gets swapped out
-                            dataDirective = model.directive(DATA_MANAGER);
+                            dataDirective = model.directive(DATA_MANAGER),
+                            async = BOOLEAN_FALSE;
                         dataDirective.increment();
                         if (isFunction(handler)) {
-                            handler();
+                            async = handler.length;
+                            if (async) {
+                                dataDirective.increment();
+                                handler(function () {
+                                    dataDirective.decrement();
+                                    model.digest(noop);
+                                });
+                            } else {
+                                handler();
+                            }
                         } else {
                             duff(handler, fn, model);
                         }
                         dataDirective.decrement();
                         // this event should only ever exist here
-                        if (dataDirective.static()) {
-                            dataDirective.increment();
-                            model[DISPATCH_EVENT](CHANGE, dataDirective[CHANGING]);
-                            dataDirective.decrement();
-                            dataDirective.finish();
+                        if (!dataDirective.static()) {
+                            return model;
                         }
+                        dataDirective.increment();
+                        current = dataDirective.current;
+                        model[DISPATCH_EVENT](CHANGE, map(dataDirective[CHANGING], function (value, key) {
+                            return current[key];
+                        }));
+                        dataDirective.decrement();
+                        dataDirective.finish();
+                        return model;
                     },
                     /**
                      * @description basic json clone of the attributes object
