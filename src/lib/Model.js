@@ -502,7 +502,7 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                             return model;
                         }
                         dataDirective.increment();
-                        current = dataDirective.current;
+                        var current = dataDirective.current;
                         model[DISPATCH_EVENT](CHANGE, map(dataDirective[CHANGING], function (value, key) {
                             return current[key];
                         }));
