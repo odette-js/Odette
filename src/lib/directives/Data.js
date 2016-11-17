@@ -1,11 +1,11 @@
 app.scope(function (app) {
     var CHANGE_COUNTER = 'counter',
+        CHANGE_TO = 'changeTo',
         DataManager = factories[DATA_MANAGER] = factories.Directive.extend(DATA_MANAGER, {
             constructor: function () {
                 var dataDirective = this;
                 dataDirective[CURRENT] = {};
-                dataDirective.previous = {};
-                dataDirective[CHANGING] = {};
+                dataDirective.finish();
                 dataDirective[CHANGE_COUNTER] = 0;
                 return dataDirective;
             },
@@ -14,7 +14,7 @@ app.scope(function (app) {
                     current = dataDirective[CURRENT];
                 if (!isEqual(current[key], newValue)) {
                     dataDirective.previous[key] = current[key];
-                    dataDirective[CURRENT][key] = newValue;
+                    dataDirective[CURRENT][key] = dataDirective.changes()[key] = newValue;
                     return BOOLEAN_TRUE;
                 }
                 return BOOLEAN_FALSE;
@@ -25,9 +25,22 @@ app.scope(function (app) {
             clone: function () {
                 return clone(this[CURRENT]);
             },
+            finish: function () {
+                var changeto = this.changes();
+                this[PREVIOUS] = {};
+                this[CHANGE_TO] = {};
+                return changeto;
+            },
+            changes: function () {
+                return this[CHANGE_TO];
+            },
+            changing: function (key) {
+                return has(this.changes(), key);
+            },
             unset: function (key) {
                 var current = this[CURRENT],
                     previous = current[key];
+                this.changes()[key] = UNDEFINED;
                 return (delete current[key]) && previous !== UNDEFINED;
             },
             reset: function (hash) {
@@ -44,11 +57,6 @@ app.scope(function (app) {
             },
             static: function () {
                 return !this[CHANGE_COUNTER];
-            },
-            finish: function () {
-                this[PREVIOUS] = {};
-                this[CHANGING] = {};
-                return this;
             },
             reach: function (key) {
                 var lastkey, previous, dataDirective = this,

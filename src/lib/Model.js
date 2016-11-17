@@ -440,51 +440,56 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                         return this;
                     },
                     set: function (key, value_, returnmodified_) {
-                        var changedList = [],
+                        var everset = BOOLEAN_FALSE,
+                            changedList = [],
                             model = this,
                             value = value_,
                             dataDirective = model.directive(DATA_MANAGER),
+                            eventsDirective = model[EVENT_MANAGER] || {
+                                has: noop
+                            },
                             previous = {},
                             returnmodified = returnmodified_;
                         intendedObject(key, value, function (key, value, third) {
+                            var changing, sets;
                             if (!returnmodified && third) {
                                 returnmodified = value_;
                             }
                             // defconinitely set the value, and let us know what happened
                             // and if you're not changing already, (already)
-                            if (dataDirective.set(key, value) && !dataDirective.changing[name]) {
+                            changing = dataDirective.changing(key);
+                            sets = dataDirective.set(key, value);
+                            everset = sets || everset;
+                            if (sets && !changing && eventsDirective.has(CHANGE_COLON + key)) {
                                 changedList.push(key);
                             }
                         });
                         if (returnmodified) {
                             return changedList;
                         }
-                        model.modified(changedList);
-                        return model;
+                        return model.modified(changedList, everset);
                     },
-                    modified: function (list) {
-                        var dataDirective, model = this;
-                        if (!list || !list[LENGTH]) {
+                    modified: function (list, forcedigest) {
+                        var changes, model = this;
+                        if ((!list || !list[LENGTH]) && !forcedigest) {
                             // do not digest... this time
                             return model;
                         }
-                        dataDirective = model.directive(DATA_MANAGER);
-                        model.digest(list, function (name) {
-                            dataDirective.changing[name] = BOOLEAN_TRUE;
-                            model[DISPATCH_EVENT](CHANGE_COLON + name);
-                            dataDirective.changing[name] = BOOLEAN_FALSE;
+                        changes = model.directive(DATA_MANAGER).changes();
+                        return model.digest(list, function (name) {
+                            this[DISPATCH_EVENT](CHANGE_COLON + name, {
+                                key: name,
+                                value: changes[name]
+                            });
                         });
-                        return model;
                     },
                     digest: function (handler, fn) {
                         var model = this,
                             // cache the data directive in case it gets swapped out
-                            dataDirective = model.directive(DATA_MANAGER),
-                            async = BOOLEAN_FALSE;
+                            dataDirective = model.directive(DATA_MANAGER);
                         dataDirective.increment();
                         if (isFunction(handler)) {
-                            async = handler.length;
-                            if (async) {
+                            if (handler.length) {
                                 dataDirective.increment();
                                 handler(function () {
                                     dataDirective.decrement();
@@ -502,10 +507,7 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                             return model;
                         }
                         dataDirective.increment();
-                        var current = dataDirective.current;
-                        model[DISPATCH_EVENT](CHANGE, map(dataDirective[CHANGING], function (value, key) {
-                            return current[key];
-                        }));
+                        model[DISPATCH_EVENT](CHANGE, dataDirective.changes());
                         dataDirective.decrement();
                         dataDirective.finish();
                         return model;
