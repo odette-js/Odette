@@ -334,6 +334,42 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                 model.id = (id === UNDEFINED ? ++uniqueCounter : id);
                 return uniqueCounter;
             },
+            setOverwriteProxy = function (method) {
+                return function (key, value_, returnmodified_) {
+                    var everset = BOOLEAN_FALSE,
+                        triggerList = [],
+                        changedList = [],
+                        model = this,
+                        value = value_,
+                        data = model.directive(DATA_MANAGER),
+                        events = model[EVENT_MANAGER] || {
+                            has: noop
+                        },
+                        previous = {},
+                        returnmodified = returnmodified_;
+                    intendedObject(key, value, function (key, value, third) {
+                        var changing, sets;
+                        if (!returnmodified && third) {
+                            returnmodified = value_;
+                        }
+                        // definitely set the value, and let us know what happened
+                        // and if you're not changing already
+                        changing = data.changing(key);
+                        sets = data[method](key, value);
+                        everset = sets || everset;
+                        if (sets && !changing) {
+                            changedList.push(key);
+                            if (events.has(CHANGE_COLON + key)) {
+                                triggerList.push(key);
+                            }
+                        }
+                    });
+                    if (returnmodified) {
+                        return changedList;
+                    }
+                    return model.modified(triggerList, everset);
+                };
+            },
             Model = factories[MODEL] = factories.Parent.extend(MODEL,
                 /**
                  * @lends Model.prototype
@@ -360,7 +396,9 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                             return BOOLEAN_FALSE;
                         }
                         var result = dataDirective.unset(key);
-                        this.modified([key]);
+                        if (result) {
+                            this.modified([key]);
+                        }
                         return result;
                     },
                     /**
@@ -390,14 +428,12 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                     values: checkParody(DATA_MANAGER, 'values', returnsArray),
                     has: checkParody(DATA_MANAGER, 'has', BOOLEAN_FALSE),
                     idAttribute: returns('id'),
+                    defaults: returns.object,
                     constructor: function (attributes, secondary) {
                         var model = this;
                         model.reset(attributes);
                         this[CONSTRUCTOR + COLON + EVENT_STRING](secondary);
                         return model;
-                    },
-                    defaults: function () {
-                        return {};
                     },
                     reset: function (data_) {
                         var dataDirective, childModel, hasResetBefore, children, model = this,
@@ -439,36 +475,8 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                         delete this.id;
                         return this;
                     },
-                    set: function (key, value_, returnmodified_) {
-                        var everset = BOOLEAN_FALSE,
-                            changedList = [],
-                            model = this,
-                            value = value_,
-                            dataDirective = model.directive(DATA_MANAGER),
-                            eventsDirective = model[EVENT_MANAGER] || {
-                                has: noop
-                            },
-                            previous = {},
-                            returnmodified = returnmodified_;
-                        intendedObject(key, value, function (key, value, third) {
-                            var changing, sets;
-                            if (!returnmodified && third) {
-                                returnmodified = value_;
-                            }
-                            // defconinitely set the value, and let us know what happened
-                            // and if you're not changing already, (already)
-                            changing = dataDirective.changing(key);
-                            sets = dataDirective.set(key, value);
-                            everset = sets || everset;
-                            if (sets && !changing && eventsDirective.has(CHANGE_COLON + key)) {
-                                changedList.push(key);
-                            }
-                        });
-                        if (returnmodified) {
-                            return changedList;
-                        }
-                        return model.modified(changedList, everset);
-                    },
+                    set: setOverwriteProxy('set'),
+                    overwrite: setOverwriteProxy('overwrite'),
                     modified: function (list, forcedigest) {
                         var changes, model = this;
                         if ((!list || !list[LENGTH]) && !forcedigest) {
