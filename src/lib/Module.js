@@ -130,7 +130,7 @@ var REQUIRE = 'require',
                 topLevel: function () {
                     return !this[APPLICATION] || this[APPLICATION] === this[PARENT]();
                 },
-                ready: function () {
+                load: function () {
                     return this.directive(REGISTRY).get('promises', 'read', moduleLoadPromise);
                 }
             },
@@ -145,7 +145,7 @@ var REQUIRE = 'require',
                 };
                 var setup = function (success_, failure_) {
                     var success = function () {
-                        registry.drop('promises', 'ready');
+                        registry.drop('promises', 'load');
                         success_();
                     };
                     var length = manager.length(),
@@ -173,14 +173,14 @@ var REQUIRE = 'require',
             },
             ModuleManager = Collection.extend(MODULE_MANAGER, {
                 Module: Module,
-                ready: function () {
-                    return this.directive(REGISTRY).get('promises', 'ready', allModulesLoaded) || Promise.resolve();
+                load: function () {
+                    return this.directive(REGISTRY).get('promises', 'load', allModulesLoaded) || Promise.resolve();
                 },
                 all: function () {
-                    return Promise.all(this.mapCall('ready'));
+                    return Promise.all(this.mapCall('load'));
                 },
                 race: function () {
-                    return Promise.race(this.mapCall('ready'));
+                    return Promise.race(this.mapCall('load'));
                 },
                 constructor: function (target) {
                     var manager = this;
