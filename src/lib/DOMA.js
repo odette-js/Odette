@@ -498,7 +498,7 @@ var ATTACHED = 'attached',
         return tagName === 'text' ? 3 : 1;
     },
     checkNeedForCustom = function (el) {
-        return el[__ELID__] && attributeApi.read(el, 'is') !== BOOLEAN_FALSE;
+        return el[__ELID__] && attributeApi.read(el, CUSTOM_KEY) !== BOOLEAN_FALSE;
     },
     diffAttributes = function (a, b, diffs, context) {
         var bKeys, aAttributes = a.attributes,
@@ -529,11 +529,21 @@ var ATTACHED = 'attached',
                 bLength: bLength
             }),
             anElId = a[__ELID__],
-            updates;
+            updates,
+            accessA = attrs.accessA,
+            accessB = attrs.accessB;
         duff(attrs.list, function (key) {
-            if (attrs.accessA[key] !== attrs.accessB[key]) {
+            if (key === CUSTOM_KEY) {
+                return;
+            }
+            var accessAValue = accessA[key];
+            var accessBValue = accessB[key];
+            if (accessAValue !== accessBValue) {
+                if (accessAValue === UNDEFINED && accessBValue === BOOLEAN_FALSE) {
+                    return;
+                }
                 updates = updates || {};
-                updates[key] = attrs.accessB[key] === UNDEFINED ? NULL : attrs.accessB[key];
+                updates[key] = accessBValue === UNDEFINED ? NULL : accessBValue;
             }
         });
         if (!updates) {
@@ -1454,8 +1464,8 @@ app.scope(function (app) {
                     // swap node
                     return;
                 }
-                var isA = attributeApi.read(element, 'is');
-                var isB = attributeApi.read(correspondant, 'is');
+                var isA = attributeApi.read(element, CUSTOM_KEY);
+                var isB = attributeApi.read(correspondant, CUSTOM_KEY);
                 if (isA || isB) {
                     // swap node
                     return;
@@ -3973,8 +3983,8 @@ app.scope(function (app) {
                         markGlobal(manager, el);
                     }
                     if (manager.is(ELEMENT)) {
-                        if (!attributeApi.read(el, 'is')) {
-                            attributeApi.write(el, 'is', BOOLEAN_TRUE);
+                        if (!attributeApi.read(el, CUSTOM_KEY)) {
+                            attributeApi.write(el, CUSTOM_KEY, BOOLEAN_TRUE);
                         }
                         if (!validTagsNamesHash[manager[TAG_NAME]]) {
                             manager[REGISTERED_AS] = manager[TAG_NAME];
@@ -4312,7 +4322,7 @@ app.scope(function (app) {
                     var filter, resultant, manager = this,
                         children = collectChildren(manager.element());
                     if (eq == NULL) {
-                        return memo ? ((children = map(children, manager.owner.returnsManager, manager.owner)) && result(memo, 'is', FRAGMENT) ? memo.append(children) : (memo.push.apply(memo, children) ? memo : memo)) : manager.wrap(children);
+                        return memo ? ((children = map(children, manager.owner.returnsManager, manager.owner)) && result(memo, CUSTOM_KEY, FRAGMENT) ? memo.append(children) : (memo.push.apply(memo, children) ? memo : memo)) : manager.wrap(children);
                     } else {
                         filter = createDomFilter(eq, manager.owner);
                         resultant = foldl(children, function (memo, child, idx, children) {
