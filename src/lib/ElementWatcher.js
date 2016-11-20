@@ -28,7 +28,7 @@ var ELEMENT_WATCHER = 'ElementWatcher',
                     elementWatcher.owner$.returnsManager(el).on('resize', function () {
                         elementWatcher.resize({
                             target: el,
-                            contentRect: box(el)
+                            contentRect: _.box(el)
                         });
                     });
                 }
