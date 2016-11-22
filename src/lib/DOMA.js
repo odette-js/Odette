@@ -1126,7 +1126,7 @@ app.scope(function (app) {
         motionMorph = /^device/,
         rforceEvent = /^webkitmouseforce/,
         Image = win.Image,
-        hasWebP = (function () {
+        hasWebP = function () {
             var countdown = 4,
                 result = BOOLEAN_TRUE,
                 queue = [],
@@ -1137,10 +1137,9 @@ app.scope(function (app) {
                         if (countdown) {
                             return;
                         }
-                        duff(queue, function (item) {
-                            item(result);
-                        });
+                        var q = queue.slice(0);
                         queue = [];
+                        _.eachCallBound(q, result);
                     };
                 };
             duff(["UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA", "UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==", "UklGRkoAAABXRUJQVlA4WAoAAAAQAAAAAAAAAAAAQUxQSAwAAAARBxAR/Q9ERP8DAABWUDggGAAAABQBAJ0BKgEAAQAAAP4AAA3AAP7mtQAAAA==", "UklGRlIAAABXRUJQVlA4WAoAAAASAAAAAAAAAAAAQU5JTQYAAAD/////AABBTk1GJgAAAAAAAAAAAAAAAAAAAGQAAABWUDhMDQAAAC8AAAAQBxAREYiI/gcA"], function (val) {
@@ -1158,7 +1157,14 @@ app.scope(function (app) {
                     queue.push(cb);
                 }
             };
-        }()),
+        },
+        checkingWebP,
+        handlesWebP = function (fn) {
+            if (!checkingWebP) {
+                checkingWebP = hasWebP();
+            }
+            checkingWebP(fn);
+        },
         fetch = function (url) {
             return Promise(function (s, f) {
                 var img = new Image();
@@ -2801,7 +2807,6 @@ app.scope(function (app) {
                     var doc = docManager.element();
                     var events = merge({}, opts.events);
                     var managerFn = opts.managerFn || {};
-                    // var sup = opts.super;
                     var autotriggers = {};
                     if (registeredElements[name]) {
                         if (registeredElements[name] === BOOLEAN_TRUE) {
@@ -4718,6 +4723,7 @@ app.scope(function (app) {
         },
         exportResult = _.publicize({
             isIE: isIE,
+            handlesWebP: handlesWebP,
             nodeDocument: nodeDocument,
             nodeWindow: nodeWindow,
             elementEventDispatcher: elementEventDispatcher,
