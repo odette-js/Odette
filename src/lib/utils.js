@@ -1001,6 +1001,20 @@ var factories = {},
     toLength = function (number) {
         return number ? clampInteger(toInteger(number, BOOLEAN_TRUE), 0, MAX_ARRAY_LENGTH) : 0;
     },
+    dateNow = function () {
+        return +(new Date());
+    },
+    now_offset = dateNow(),
+    now_shim = function () {
+        return dateNow() - now_offset;
+    },
+    _performance = window.performance,
+    performance = _performance ? (_performance.now = (_performance.now || _performance.webkitNow || _performance.msNow || _performance.oNow || _performance.mozNow || now_shim)) && _performance : {
+        now: now_shim
+    },
+    now = function () {
+        return performance.now();
+    },
     debounce = function (func, wait, immediate) {
         var timeout;
         return function () {

@@ -1,18 +1,4 @@
-var dateNow = function () {
-        return +(new Date());
-    },
-    now_offset = dateNow(),
-    now_shim = function () {
-        return dateNow() - now_offset;
-    },
-    _performance = window.performance,
-    performance = _performance ? (_performance.now = (_performance.now || _performance.webkitNow || _performance.msNow || _performance.oNow || _performance.mozNow || now_shim)) && _performance : {
-        now: now_shim
-    },
-    now = function () {
-        return performance.now();
-    },
-    userzone,
+var userzone,
     updateTimezone = function (zone) {
         uzerzone = zone === UNDEFINED ? -(new Date().getTimezoneOffset() / 60) : zone;
     },

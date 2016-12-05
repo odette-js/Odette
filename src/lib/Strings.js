@@ -2,7 +2,7 @@ var cacheable = function (fn) {
         var cache = {};
         return function (input) {
             var value;
-            if ((value = cache[input]) !== UNDEFINED) {
+            if ((value = cache[input]) === UNDEFINED) {
                 value = cache[input] = fn(input);
             }
             return value;
