@@ -1,19 +1,26 @@
 var cacheable = function (fn) {
         var cache = {};
         return function (input) {
-            if (!has(cache, input)) {
-                cache[input] = fn(input);
+            var value;
+            if ((value = cache[input]) !== UNDEFINED) {
+                value = cache[input] = fn(input);
             }
-            return cache[input];
+            return value;
         };
     },
     categoricallyCacheable = function (fn, baseCategory) {
         var cache = {};
-        return function (string, category) {
+        return function (string, category_) {
             var cacher;
-            category = category || baseCategory;
+            var category = category_ || baseCategory;
             cacher = cache[category] = cache[category] || cacheable(fn(category));
             return cacher(string);
+        };
+    },
+    copyCacheable = function (fn, baseCategory) {
+        var handler = categoricallyCacheable(fn, baseCategory);
+        return function (string, cat) {
+            return cloneJSON(handler(string, cat));
         };
     },
     string = merge(wrap(toArray('toLowerCase,toUpperCase,trim'), function (method) {
@@ -854,6 +861,7 @@ _.publicize({
     customUnits: customUnits,
     cacheable: cacheable,
     categoricallyCacheable: categoricallyCacheable,
+    copyCacheable: copyCacheable,
     // cacheable
     deprefix: deprefix,
     deprefixAll: deprefixAll,

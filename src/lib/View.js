@@ -306,9 +306,6 @@ var REGION_MANAGER = 'RegionManager',
                 parentElement: function (region) {
                     return region.el.element();
                 },
-                childrenOf: function (key) {
-                    return this.directive(REGION_MANAGER).get(key).directive(CHILDREN);
-                },
                 parentView: function () {
                     var found, view = this,
                         parent = view[PARENT];
@@ -331,9 +328,9 @@ var REGION_MANAGER = 'RegionManager',
                         view.listenTo(view.model, CHANGE, view.render);
                     }
                 },
-                model: function () {
-                    return this.directive(REGISTRY).get(INSTANCES, MODEL);
-                },
+                // model: function () {
+                //     return this.directive(REGISTRY).get(INSTANCES, MODEL);
+                // },
                 autoRenders: returns(BOOLEAN_TRUE),
                 constructor: function (secondary_) {
                     var view = this;

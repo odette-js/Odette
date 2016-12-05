@@ -347,23 +347,27 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                         },
                         previous = {},
                         returnmodified = returnmodified_;
-                    intendedObject(key, value, function (key, value, third) {
-                        var changing, sets;
-                        if (!returnmodified && third) {
-                            returnmodified = value_;
-                        }
-                        // definitely set the value, and let us know what happened
-                        // and if you're not changing already
-                        changing = data.changing(key);
-                        sets = data[method](key, value);
-                        everset = sets || everset;
-                        if (sets && !changing) {
-                            changedList.push(key);
-                            if (events.has(CHANGE_COLON + key)) {
-                                triggerList.push(key);
+                    if (!data.is('frozen')) {
+                        intendedObject(key, value, function (key, value, third) {
+                            var changing, sets;
+                            if (!returnmodified && third) {
+                                returnmodified = value_;
                             }
-                        }
-                    });
+                            // definitely set the value, and let us know what happened
+                            // and if you're not changing already
+                            changing = data.changing(key);
+                            sets = data[method](key, value);
+                            everset = sets || everset;
+                            if (sets && !changing) {
+                                changedList.push(key);
+                                if (events.has(CHANGE_COLON + key)) {
+                                    triggerList.push(key);
+                                }
+                            }
+                        });
+                    } else if (isObject(key) && value === BOOLEAN_TRUE) {
+                        returnmodified = BOOLEAN_TRUE;
+                    }
                     if (returnmodified) {
                         return changedList;
                     }

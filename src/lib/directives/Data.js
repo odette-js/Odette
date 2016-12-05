@@ -8,10 +8,7 @@ app.scope(function (app) {
                 return this;
             },
             set: function (key, value) {
-                if (!this.is('frozen') && this.mutable(key)) {
-                    return this.overwrite(key, value);
-                }
-                return BOOLEAN_FALSE;
+                return (!this.is('frozen') && this.mutable(key)) ? this.overwrite(key, value) : BOOLEAN_FALSE;
             },
             immutable: function (key) {
                 return this[IMMUTABLES][key];

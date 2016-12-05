@@ -227,20 +227,6 @@ var factories = {},
             }
         }
     },
-    dateNow = function () {
-        return +(new Date());
-    },
-    now_offset = dateNow(),
-    now_shim = function () {
-        return dateNow() - now_offset;
-    },
-    _performance = window.performance,
-    performance = _performance ? (_performance.now = (_performance.now || _performance.webkitNow || _performance.msNow || _performance.oNow || _performance.mozNow || now_shim)) && _performance : {
-        now: now_shim
-    },
-    now = function () {
-        return performance.now();
-    },
     extend = function (args, deep) {
         var length = args && args[LENGTH],
             index = 1,
@@ -967,6 +953,9 @@ var factories = {},
         }
         return number;
     },
+    withinRange = function (number, min, max) {
+        return number === baseClamp(number, min, max);
+    },
     safeInteger = function (number_) {
         return baseClamp(number_, MIN_SAFE_INTEGER, MAX_SAFE_INTEGER);
     },
@@ -1356,6 +1345,7 @@ var factories = {},
         };
     },
     is = {
+        // datetime: isDatetime,
         number: isNumber,
         string: isString,
         object: isObject,
@@ -1472,6 +1462,7 @@ var factories = {},
         toFunction: toFunction,
         roundFloat: roundFloat,
         isFunction: isFunction,
+        withinRange: withinRange,
         isUndefined: isUndefined,
         superExtend: superExtend,
         intendedApi: intendedApi,
