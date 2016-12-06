@@ -677,7 +677,7 @@ var ATTACHED = 'attached',
         }, EMPTY_STRING);
     },
     HTML = function () {
-        var HTML, addTextCssAttribute = basicAttributeCondensation('media', 'screen only', basicAttributeCondensation('type', 'text/css')),
+        var HTML, addTextCssAttribute = basicAttributeCondensation('type', 'text/css'),
             basicStyleAttributes = basicAttributeCondensation('rel', 'stylesheet', addTextCssAttribute),
             attributesBase = {
                 link: basicStyleAttributes,
