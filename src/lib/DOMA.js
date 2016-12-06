@@ -677,7 +677,7 @@ var ATTACHED = 'attached',
         }, EMPTY_STRING);
     },
     HTML = function () {
-        var HTML, addTextCssAttribute = basicAttributeCondensation('type', 'text/css'),
+        var HTML, addTextCssAttribute = basicAttributeCondensation('media', 'screen only', basicAttributeCondensation('type', 'text/css')),
             basicStyleAttributes = basicAttributeCondensation('rel', 'stylesheet', addTextCssAttribute),
             attributesBase = {
                 link: basicStyleAttributes,
@@ -2876,7 +2876,8 @@ app.scope(function (app) {
                         var src = url || BOOLEAN_FALSE;
                         var baseAttrs = {
                             type: 'text/css',
-                            rel: 'stylesheet'
+                            rel: 'stylesheet',
+                            media: 'screen only'
                         };
                         if (src) {
                             style = manager.createElement('link', extend([baseAttrs, attrs, {
