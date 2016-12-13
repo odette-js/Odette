@@ -678,7 +678,7 @@ var customUnits = categoricallyCacheable(function (unitList_) {
         filenamesplit = filename.split(SLASH);
         // if it does not end in a slash, pop off the last bit of text
         if (filenamesplit[filenamesplit.length - 1]) {
-            garbage = filenamesplit.pop();
+            filenamesplit[filename.length - 1] = '';
         }
         dirname = filenamesplit.join(SLASH);
         // handle dot slash
