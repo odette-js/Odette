@@ -614,7 +614,7 @@ var customUnits = categoricallyCacheable(function (unitList_) {
         'https:': BOOLEAN_TRUE
     },
     parseUrl = function (url__, startPath_, windo_) {
-        var garbage, href, origin, hostnameSplit, questionable, firstSlash, object, startPath, hostSplit, originNoProtocol, windo = windo_ || window,
+        var filenamesplit, dirname, filename, garbage, href, origin, hostnameSplit, questionable, firstSlash, object, startPath, hostSplit, originNoProtocol, windo = windo_ || window,
             url = url__ || EMPTY_STRING,
             search = EMPTY_STRING,
             hash = EMPTY_STRING,
@@ -674,15 +674,25 @@ var customUnits = categoricallyCacheable(function (unitList_) {
             port = windo.location.port;
             hostname = windo.location.hostname;
         }
-        startPath = windo.location.pathname.slice(1);
-        if (url[0] === SLASH && url[1] !== SLASH) {
-            url = url.slice(1);
-            startPath = EMPTY_STRING;
+        filename = windo.location.pathname;
+        filenamesplit = filename.split(SLASH);
+        // if it does not end in a slash, pop off the last bit of text
+        if (filenamesplit[filenamesplit - 1]) {
+            garbage = filenamesplit.pop();
         }
-        if (url[0] === PERIOD) {
+        dirname = filenamesplit.join(SLASH);
+        // handle dot slash
+        if (url[0] === PERIOD && url[1] === SLASH) {
             url = url.slice(2);
         }
-        pathname = SLASH + startPath + url;
+        if (url[0] === SLASH && url[1] === SLASH) {
+            // handle removing host
+        }
+        // it's already in the format it needs to be in
+        if (url[0] === SLASH && url[1] !== SLASH) {
+            dirname = EMPTY_STRING;
+        }
+        pathname = dirname + url;
         origin = protocol + (extraslashes[protocol] ? SLASH + SLASH : EMPTY_STRING) + hostname + (port ? COLON + port : EMPTY_STRING);
         href = origin + pathname + (search || EMPTY_STRING) + (hash || EMPTY_STRING);
         return urlToString({

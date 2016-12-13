@@ -413,5 +413,12 @@ var EVENT_STRING = 'Events',
                         return returnValue;
                     }
                 });
+        Events.createEventCheck = function (eventname) {
+            return function (key, fn) {
+                var handler = changeCheckHandle(key, fn, this);
+                this.on(eventname, handler);
+                return handler;
+            };
+        };
         return Events;
     });

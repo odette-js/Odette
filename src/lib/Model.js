@@ -542,13 +542,7 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                     valueOf: function () {
                         return this.id;
                     },
-                    change: function (key, fn) {
-                        var model = this,
-                            result = isFunction(key) ? model.on(CHANGE, key) : intendedObject(key, fn, function (key, fn) {
-                                model.on(CHANGE_COLON + key, fn);
-                            });
-                        return model;
-                    },
+                    change: Events.createEventCheck(CHANGE),
                     /**
                      * Convenience function for triggering a handler based on a filter.
                      * @method
@@ -612,6 +606,13 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                         return stringify(this.clone());
                     }
                 });
+
+        function changeCheckHandle(key, fn, context) {
+            var bound = bindTo(fn, context);
+            return function (e) {
+                return _.has(e.data(), key) ? bound(e) : UNDEFINED;
+            };
+        }
         // children should actually extend from collection.
         // it should require certain things of the children it is tracking
         // and should be able to listen to them

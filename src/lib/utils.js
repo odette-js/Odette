@@ -890,9 +890,11 @@ var factories = {},
     maps = function (iterator) {
         return function (objs, iteratee, context) {
             var collection = returnBaseType(objs),
-                bound = bindTo(iteratee, context),
                 counter = 0,
-                arraylike = emptyArray(collection);
+                arraylike = emptyArray(collection),
+                bound = bindTo(isString(iteratee) ? function (item) {
+                    return item[iteratee];
+                } : iteratee, context);
             return !objs ? collection : (iterator(objs, function (item, index) {
                 collection[arraylike ? counter : index] = bound(item, index, objs);
                 counter++;
