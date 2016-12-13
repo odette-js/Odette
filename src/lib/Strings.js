@@ -677,7 +677,7 @@ var customUnits = categoricallyCacheable(function (unitList_) {
         filename = windo.location.pathname;
         filenamesplit = filename.split(SLASH);
         // if it does not end in a slash, pop off the last bit of text
-        if (filenamesplit[filenamesplit - 1]) {
+        if (filenamesplit[filenamesplit.length - 1]) {
             garbage = filenamesplit.pop();
         }
         dirname = filenamesplit.join(SLASH);
