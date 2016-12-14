@@ -56,6 +56,10 @@ application.scope().run(window, function (module, app, _, factories, $) {
                 testApp.registerVersion('0.0.0');
                 test.expect(testApp.scope(testApp.currentVersion).VERSION).toBe('0.0.0');
             }, 1);
+            test.it('can handle when multiple apps have been created', //
+                function () {
+                    // Odette(window, 'domatestapp', '0.0.0', function () {});
+                });
         });
     });
 });

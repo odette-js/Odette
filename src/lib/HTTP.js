@@ -89,6 +89,7 @@ app.block(function (app) {
                 'status:405': STATUS_4xx,
                 'status:406': STATUS_4xx,
                 'status:408': STATUS_4xx,
+                'status:413': STATUS_4xx,
                 'timeout': 'status:408',
                 'status:5xx': FAILURE,
                 'status:500': STATUS_5xx,
@@ -147,7 +148,7 @@ app.block(function (app) {
                                 type: type
                             };
                         }
-                        var options = ajax.options = merge({
+                        var extraheaders, options = ajax.options = merge({
                             async: BOOLEAN_TRUE,
                             method: method,
                             type: type,
@@ -173,9 +174,9 @@ app.block(function (app) {
                         if (isString(data)) {
                             data = data.replace(/%20/g, '+');
                         }
-                        headers = merge({
+                        headers = extend([{
                             'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
-                        }, options.headers);
+                        }, extraheaders, options.headers]);
                         if (options.cacheable) {
                             key = [options.type, options.url, stringify(headers), data].join(',');
                             cached = cache[key];
