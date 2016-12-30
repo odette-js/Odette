@@ -214,7 +214,7 @@ var PROMISE = 'Promise',
                             success([]);
                             return;
                         }
-                        duff(list, function (promise, index) {
+                        forEach(list, function (promise, index) {
                             if (isPromise(promise)) {
                                 promise.then(function (data) {
                                     counter(index, data);

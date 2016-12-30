@@ -96,7 +96,7 @@ application.scope().run(window, function (module, app, _, factories, $) {
             var div2 = $.createElement('div');
             var targets = [div.element(), div2.element()];
             ro = $.ResizeObserver(function (observations) {
-                _.duff(observations, function (observation, index) {
+                _.forEach(observations, function (observation, index) {
                     var shouldbe = targets[count + index];
                     test.expect(observation.target).toBe(shouldbe);
                 });
@@ -130,7 +130,7 @@ application.scope().run(window, function (module, app, _, factories, $) {
             $('body').append(div2);
             var targets = [div.element(), div2.element()];
             ro = $.ResizeObserver(function (observations) {
-                _.duff(observations, function (observation, idx) {
+                _.forEach(observations, function (observation, idx) {
                     var shouldbe = targets[idx];
                     test.expect(observation.target).toBe(shouldbe);
                 });

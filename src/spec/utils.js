@@ -271,15 +271,15 @@ application.scope().run(window, function (module, app, _, factories, $) {
                     ['three', 2, obj]
                 ]);
             }, 2);
-            test.it('_.duff', function () {
+            test.it('_.forEach', function () {
                 var test1 = [1, 2, 3, 4];
                 var count = 0;
                 test.expect(count).toEqual(0);
-                _.duff(test1, function (item) {
+                _.forEach(test1, function (item) {
                     count += item;
                 });
                 test.expect(count).toEqual(10);
-                _.duff({
+                _.forEach({
                     one: 1,
                     two: 2,
                     three: 3,

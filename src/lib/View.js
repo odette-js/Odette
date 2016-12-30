@@ -18,7 +18,7 @@ var REGION_MANAGER = 'RegionManager',
         var BUFFERED_VIEWS = 'bufferedViews',
             noRegionMessage = 'that region does not exist',
             invalidRegionMessage = 'invalid key passed for region name',
-            eachCall = _.eachCall,
+            forEachCall = _.forEachCall,
             elementDoesNotExistAt = function (key) {
                 return exception('an element does not exist at key: ' + key);
             },
@@ -98,7 +98,7 @@ var REGION_MANAGER = 'RegionManager',
                      */
                     add: function (models_, renderer) {
                         var bufferedViewsDirective, region = this,
-                            unwrapped = Collection(models_).foldl(function (memo, item) {
+                            unwrapped = Collection(models_).reduce(function (memo, item) {
                                 var adoption;
                                 if ((adoption = region.adopt(item))) {
                                     memo.push(adoption);
@@ -117,7 +117,7 @@ var REGION_MANAGER = 'RegionManager',
                     remove: function (view_) {
                         var region = this,
                             removed = region.super.fn.remove.call(region, view_);
-                        return removed.each(function (item) {
+                        return removed.forEach(function (item) {
                             region.disown(item[PARENT] || region, item);
                         });
                     },
@@ -229,9 +229,9 @@ var REGION_MANAGER = 'RegionManager',
                         if ((children = region[CHILDREN])) {
                             if (preventChain(region)) {
                                 // stop rendering child views, just buffer them
-                                children.each(region.buffer, region);
+                                children.forEach(region.buffer, region);
                             } else {
-                                children.eachCall(RENDER, preventChain);
+                                children.forEachCall(RENDER, preventChain);
                             }
                         }
                         // buffer region element
@@ -250,7 +250,7 @@ var REGION_MANAGER = 'RegionManager',
                     destroy: function () {
                         var children, region = this;
                         if ((children = region[CHILDREN])) {
-                            children.slice().eachCall(DESTROY);
+                            children.slice().forEachCall(DESTROY);
                         }
                         return this;
                     }
@@ -379,7 +379,7 @@ var REGION_MANAGER = 'RegionManager',
                     // mark the view as rendered
                     // pass buffered views up to region
                     if (view[REGION_MANAGER]) {
-                        view[REGION_MANAGER].list.eachCall(RENDER, isFunction(preventChain) ? preventChain : returnsTrue);
+                        view[REGION_MANAGER].list.forEachCall(RENDER, isFunction(preventChain) ? preventChain : returnsTrue);
                     }
                     establishRegions(view, BOOLEAN_TRUE);
                     element = view[PARENT] && view[PARENT].buffer(view);
@@ -504,7 +504,7 @@ var REGION_MANAGER = 'RegionManager',
                 },
                 render: function (preventChain) {
                     var view = this;
-                    view.directive(REGION_MANAGER).list.eachCall(RENDER, preventChain);
+                    view.directive(REGION_MANAGER).list.forEachCall(RENDER, preventChain);
                     return view;
                 },
                 constructor: function (options) {
@@ -554,7 +554,7 @@ var REGION_MANAGER = 'RegionManager',
                     // silently set write
                     finisher = documentView.dependency();
                     documentView.mark('writing');
-                    modifications.eachCallTry('fn');
+                    modifications.forEachCallTry('fn');
                     // let everyone know when
                     // you're done writing
                     documentView.unmark('writing');
@@ -778,7 +778,7 @@ var REGION_MANAGER = 'RegionManager',
                     if (!el_) {
                         return directive;
                     }
-                    directive.cachedElementBindings = map(elementBindings, function (method, key) {
+                    directive.cachedElementBindings = mapValues(elementBindings, function (method, key) {
                         var el = el_,
                             object = makeDelegateEventKeys(view.cid, directive.uiBindings, key),
                             bound = object.fn = bindTo(isString(method) ? view[method] : method, view);
@@ -796,7 +796,7 @@ var REGION_MANAGER = 'RegionManager',
                     if (!elementBindings || !el) {
                         return directive;
                     }
-                    duff(elementBindings, function (binding) {
+                    forOwn(elementBindings, function (binding) {
                         el.off(binding.events, binding[SELECTOR] || NULL, binding.fn);
                     });
                     directive.cachedElementBindings = UNDEFINED;
@@ -814,7 +814,7 @@ var REGION_MANAGER = 'RegionManager',
                     if (!el) {
                         return directive;
                     }
-                    each(elementTriggers, function (method, key) {
+                    forOwn(elementTriggers, function (method, key) {
                         var object = makeDelegateEventKeys(view.cid, directive.uiBindings, key),
                             bound = object.fn = bindWith(basicViewTrigger, [view, method]);
                         el.on(object.events, object[SELECTOR], bound, object.capture, object.group);
@@ -830,7 +830,7 @@ var REGION_MANAGER = 'RegionManager',
                     if (!directive.cachedElementTriggers || !el) {
                         return directive;
                     }
-                    duff(elementBindings, function (binding) {
+                    forOwn(elementBindings, function (binding) {
                         el.off(binding.events.join(SPACE), binding[SELECTOR], binding.fn);
                     });
                     directive.cachedElementTriggers = UNDEFINED;
@@ -842,7 +842,7 @@ var REGION_MANAGER = 'RegionManager',
                 bindUI: function () {
                     var directive = this,
                         uiBindings = directive.uiBindings;
-                    directive.ui = directive.view.ui = uiBindings ? map(uiBindings, directive.el.$, directive.el) : {};
+                    directive.ui = directive.view.ui = uiBindings ? mapValues(uiBindings, directive.el.$, directive.el) : {};
                     return directive;
                 }
             });
@@ -852,7 +852,7 @@ var REGION_MANAGER = 'RegionManager',
                 return;
             }
             directive.mark(DESTROYING);
-            directive.list.slice().eachCall(DESTROY);
+            directive.list.slice().forEachCall(DESTROY);
             delete directive.parent;
         });
         app.defineDirective(BUFFERED_VIEWS, BufferedViews);
@@ -861,7 +861,7 @@ var REGION_MANAGER = 'RegionManager',
             directive.unset();
             var ui = directive.ui;
             directive.degenerateUIBindings();
-            eachCall(ui, 'destroy');
+            forEachCall(ui, 'destroy');
         });
         app.undefine(function (app, windo, opts) {
             var doc = windo[DOCUMENT],

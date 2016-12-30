@@ -69,27 +69,20 @@ var WeakMap = factories.WeakMap = app.block(function (app) {
         },
         retreiveData = function (instance, obj, key) {
             return retreiveHash(instance).get(obj, key);
+        },
+        exposedMethods = ['has', 'get', 'set', 'delete'];
+    return factories.Directive.extend('WeakMap', _.reduce(exposedMethods, function (memo, key) {
+        memo[key] = function (one, two, three) {
+            return retreiveHash(this)[key](one, two, three);
         };
-    return factories.Directive.extend('WeakMap', {
+    }, {
         constructor: function (items) {
             var map = this;
             setInstance(map);
-            duff(items, function (item) {
+            forEach(items, function (item) {
                 map.set(item[0], item[1]);
             });
             return map;
-        },
-        has: function (obj, key) {
-            return retreiveHash(this).has(obj, key);
-        },
-        get: function (obj, key) {
-            return retreiveHash(this).get(obj, key);
-        },
-        set: function (obj, value, key) {
-            return retreiveHash(this).set(obj, value, key);
-        },
-        delete: function (obj, key) {
-            return retreiveHash(this).delete(obj, key);
         }
-    });
+    }));
 });

@@ -137,7 +137,7 @@ var EVENT_STRING = 'Events',
     Events = app.block(function (app) {
         var iterateOverList = function (eventer, directive, names, handler, args, iterator) {
                 // only accepts a string or a function
-                return duff(toArray(names, SPACE), function (eventName) {
+                return forEach(toArray(names, SPACE), function (eventName) {
                     iterator(eventer, directive, directive.make(eventName, handler, eventer), args);
                 });
             },
@@ -353,7 +353,7 @@ var EVENT_STRING = 'Events',
                             return origin;
                         }
                         ids = target ? [targetEventsManager[TALKER_ID]] : keys(listeningTo);
-                        duff(ids, function (id) {
+                        forEach(ids, function (id) {
                             var listening = listeningTo[id];
                             if (listening) {
                                 listening.talker.off(name, callback);
@@ -376,7 +376,7 @@ var EVENT_STRING = 'Events',
                      */
                     dispatchEvents: function (names) {
                         var eventer = this;
-                        return duff(toArray(names, SPACE), eventer.dispatchStack, eventer) && eventer;
+                        return forEach(toArray(names, SPACE), eventer.dispatchStack, eventer) && eventer;
                     },
                     /**
                      * Proxy for dispatch event, as a filter during an iteration of a bunch of event names.

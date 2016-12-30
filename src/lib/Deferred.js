@@ -150,7 +150,7 @@ var Deferred = app.block(function (app) {
         listen = function (deferred, unbound) {
             var bound = bind(unbound, deferred),
                 collection = deferred.directive(COLLECTION);
-            collection.each(function (pro) {
+            collection.forEach(function (pro) {
                 if (collection.get(LISTENING, pro.cid)) {
                     return;
                 }
@@ -543,15 +543,12 @@ var Deferred = app.block(function (app) {
      *     // results => [1, 2, 3];
      * });
      */
-    duff(toArray('all,race'), function (key) {
+    forEach(toArray('all,race'), function (key) {
         Deferred[key] = function () {
             var deferred = Deferred();
             return deferred[key].apply(deferred, arguments);
         };
     });
-    // app.extend({
-    //     dependency: Deferred.all
-    // });
     _.publicize({
         isDeferred: isDeferred
     });

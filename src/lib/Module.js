@@ -56,7 +56,7 @@ var REQUIRE = 'require',
             },
             checks = function (app, list) {
                 var exporting = [];
-                duff(list, function (path) {
+                forEach(list, function (path) {
                     var module = app.module(path);
                     if (module.is(INITIALIZED)) {
                         exporting.push(module[EXPORTS]);

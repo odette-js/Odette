@@ -70,7 +70,7 @@ var DependencyManager = Collection.extend(DEPENDENCY_MANAGER, {
     depend: function (promises) {
         var deps = this,
             registry = deps.directive(REGISTRY);
-        Collection(promises).each(function (promise) {
+        Collection(promises).forEach(function (promise) {
             if (deps.add(Promise(promise))) {
                 promise.then(registry.get('prebound', 'check', function () {
                     return bind(deps.check, deps);

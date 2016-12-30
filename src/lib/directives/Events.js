@@ -155,7 +155,7 @@ app.scope(function (app) {
                         exception('bubbling discerners must return a different object each time it is run');
                     }
                 }
-                duff(list, function (target) {
+                forEach(list, function (target) {
                     target[DISPATCH_EVENT](evnt, data, options);
                 });
                 return start;
@@ -260,7 +260,7 @@ app.scope(function (app) {
                 if (stopped) {
                     events.cancelled(stack, evnt);
                 } else {
-                    bus.eachCall('run', evnt);
+                    bus.forEachCall('run', evnt);
                 }
                 evnt.finished();
                 running[name] = !!cached;

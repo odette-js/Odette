@@ -91,7 +91,7 @@ var ELEMENT_WATCHER = 'ElementWatcher',
         createHandler: function () {
             var registry = this;
             return function (observations) {
-                duff(observations, registry.resize, registry);
+                forEach(observations, registry.resize, registry);
             };
         },
         createObserver: function () {

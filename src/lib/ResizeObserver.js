@@ -56,7 +56,7 @@ var ResizeObserver = factories.ResizeObserver = app.block(function (app, window,
                     wraptry(function () {
                         cb(resized.observations);
                     }, ResizeObserverError, function () {
-                        duff(resized.watchers, function (watcher) {
+                        forEach(resized.watchers, function (watcher) {
                             watcher.isActive = returns.false;
                         });
                     });
@@ -72,7 +72,7 @@ var ResizeObserver = factories.ResizeObserver = app.block(function (app, window,
                     if (hash.afId) {
                         return;
                     }
-                    hash.afId = AF.interval(baseClamp(hash.interval, 15), q);
+                    hash.afId = AF.interval(clamp(hash.interval, 15), q);
                 },
                 dequeue: function () {
                     var afId = hash.afId;
@@ -80,7 +80,7 @@ var ResizeObserver = factories.ResizeObserver = app.block(function (app, window,
                     AF.dequeue(afId);
                 },
                 disconnect: once(function () {
-                    queue.eachRight(hash.remove);
+                    queue.forEachRight(hash.remove);
                     hash.dequeue();
                 }),
                 remove: function (watcher, idx) {

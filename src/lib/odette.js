@@ -281,12 +281,13 @@
                 this.definedAgainst = [];
                 return this;
             }
-            Application[PROTOTYPE].extend = function (obj) {
+            var AppPrototype = Application[PROTOTYPE];
+            AppPrototype.extend = function (obj) {
                 return this.merge(this, obj);
             };
-            Application[PROTOTYPE].merge = merge;
-            Application[PROTOTYPE].each = each;
-            Application[PROTOTYPE].extend({
+            AppPrototype.merge = merge;
+            AppPrototype.each = each;
+            AppPrototype.extend({
                 exception: exception,
                 destroy: noop,
                 wraptry: wraptry,

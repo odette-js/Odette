@@ -237,7 +237,7 @@ app.defineDirective('Tests', (function (app) {
                 run(current, settings, function (failures) {
                     settings.index++;
                     settings.running = BOOLEAN_FALSE;
-                    duff(failures, err);
+                    forEach(failures, err);
                     recurse();
                 });
             };

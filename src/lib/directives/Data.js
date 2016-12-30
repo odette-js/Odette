@@ -77,7 +77,7 @@ app.scope(function (app) {
             reach: function (key) {
                 var lastkey, previous, data = this,
                     current = data[CURRENT];
-                return duff(toArray(key, PERIOD), function (key, index, path) {
+                return forEach(toArray(key, PERIOD), function (key, index, path) {
                     var no_more = index === path[LENGTH];
                     lastkey = key;
                     if (!no_more) {

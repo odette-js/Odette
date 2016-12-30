@@ -23,7 +23,7 @@ app.block(function (app) {
         attachBaseListeners = function (ajax) {
             var prog = 0,
                 req = ajax.options.requestObject;
-            duff(baseEvents, function (key) {
+            forEach(baseEvents, function (key) {
                 if (key === PROGRESS) {
                     // we put it directly on the xhr object so we can
                     // account for certain ie bugs that show up
@@ -167,7 +167,7 @@ app.block(function (app) {
                             return exception('http object must have a url and a type');
                         }
                         if (data) {
-                            data = isObject(data) ? foldl(data, function (memo, value, key) {
+                            data = isObject(data) ? reduce(data, function (memo, value, key) {
                                 memo.push(encodeURIComponent(key) + '=' + encodeURIComponent((isObject(value) ? JSON.stringify(value) : (isFunction(value) ? NULL : value))));
                             }, []).join('&') : encodeURIComponent(data);
                         }
@@ -295,7 +295,7 @@ app.block(function (app) {
                         return this.promise.catch(one);
                     }
                 });
-        _.foldl(validTypes, function (memo, key_) {
+        reduce(validTypes, function (memo, key_) {
             var key = key_;
             key = key.toLowerCase();
             memo[key] = function (url, options) {

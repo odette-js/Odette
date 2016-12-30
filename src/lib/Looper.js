@@ -19,7 +19,6 @@ app.scope(function (app) {
         CANCEL_ANIMATION_FRAME = 'cancel' + ANIMATION_FRAME,
         allLoopers = [],
         runningLoopers = [],
-        eachCall = _.eachCall,
         time = _.time,
         remove = _.remove,
         running = BOOLEAN_FALSE,
@@ -65,7 +64,7 @@ app.scope(function (app) {
             request(basicHandler);
         },
         teardown = function () {
-            duff(runningLoopers.slice(0), function (looper, idx) {
+            forEach(runningLoopers.slice(0), function (looper, idx) {
                 if (looper.is(HALTED) || looper.is(STOPPED) || looper.is(DESTROYED) || !looper[LENGTH]()) {
                     looper.stop();
                     runningLoopers.splice(idx, 1);

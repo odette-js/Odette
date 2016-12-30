@@ -208,7 +208,8 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                                     Constructor = parent.childConstructor(obj),
                                     newModel = isChildType ? obj : new Constructor(obj, secondary.shared),
                                     // unfortunately we can only find by the newly created's id
-                                    // which we only know for sure after the child has been created ^
+                                    // which we only know for sure
+                                    // after the child has been created ^
                                     foundModel = children.get(ID, newModel.id);
                                 if (foundModel) {
                                     // update the old
@@ -219,7 +220,7 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                                     children.attach(newModel);
                                     memo.add.push(newModel);
                                 }
-                            }, opts.remove ? Collection(opts.remove).foldl(function (memo, model) {
+                            }, opts.remove ? Collection(opts.remove).reduce(function (memo, model) {
                                 var children, parent = model && model[PARENT];
                                 if (!parent) {
                                     return;
@@ -329,12 +330,11 @@ var CHILDREN = capitalize(CHILD + 'ren'),
              * @class Model
              * @augments Parent
              */
-            uniqueCounter = 0,
             setId = function (model, id) {
-                model.id = (id === UNDEFINED ? ++uniqueCounter : id);
-                return uniqueCounter;
+                var identifier = model.id = (id === UNDEFINED ? app.counter() : id);
+                return identifier;
             },
-            setOverwriteProxy = function (method) {
+            writeProxy = function (method) {
                 return function (key, value_, returnmodified_) {
                     var everset = BOOLEAN_FALSE,
                         triggerList = [],
@@ -439,6 +439,9 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                         this[CONSTRUCTOR + COLON + EVENT_STRING](secondary);
                         return model;
                     },
+                    idValue: function (key, attributes) {
+                        return attributes[key];
+                    },
                     reset: function (data_) {
                         var dataDirective, childModel, hasResetBefore, children, model = this,
                             // automatically checks to see if the data is a string
@@ -447,8 +450,8 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                             defaultsResult = model.defaults(passed),
                             newAttributes = merge(defaultsResult, passed),
                             // try to get the id from the attributes
-                            idAttributeResult = model.idAttribute(newAttributes),
-                            idResult = setId(model, newAttributes[idAttributeResult]),
+                            idValue = model.idValue(model.idAttribute(newAttributes), newAttributes),
+                            idResult = setId(model, idValue),
                             keysResult = keys(newAttributes);
                         // set id and let parent know what your new id is
                         // setup previous data
@@ -475,12 +478,12 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                      */
                     destroy: function () {
                         // just a wrapper around the parent
-                        Parent.fn.destroy.call(this);
+                        this[CONSTRUCTOR + COLON + 'Parent'].fn.destroy.call(this);
                         delete this.id;
                         return this;
                     },
-                    set: setOverwriteProxy('set'),
-                    overwrite: setOverwriteProxy('overwrite'),
+                    set: writeProxy('set'),
+                    overwrite: writeProxy('overwrite'),
                     modified: function (list, forcedigest) {
                         var changes, model = this;
                         if ((!list || !list[LENGTH]) && !forcedigest) {
@@ -511,7 +514,7 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                                 handler();
                             }
                         } else {
-                            duff(handler, fn, model);
+                            forEach(handler, fn, model);
                         }
                         dataDirective.decrement();
                         // this event should only ever exist here

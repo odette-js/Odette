@@ -53,7 +53,7 @@ var ATTACHED = 'attached',
     AudioProcessingEvents = toArray('audioprocess,complete'),
     UIEvents = toArray('abort,error,hashchange,load,orientationchange,readystatechange,resize,scroll,select,unload,beforeunload'),
     ProgressEvent = toArray('abort,error,load,loadend,loadstart,popstate,progress,timeout'),
-    AllEvents = concatUnique(Events, SVGEvent, KeyboardEvent, CompositionEvents, GamePadEvent, MouseEvents, TouchEvents, DeviceEvents, FocusEvents, TimeEvents, AnimationEvents, AudioProcessingEvents, UIEvents, ProgressEvent),
+    AllEvents = concatUnique([Events, SVGEvent, KeyboardEvent, CompositionEvents, GamePadEvent, MouseEvents, TouchEvents, DeviceEvents, FocusEvents, TimeEvents, AnimationEvents, AudioProcessingEvents, UIEvents, ProgressEvent]),
     knownPrefixes = toArray('-o-,-ms-,-moz-,-webkit-,mso-,-xv-,-atsc-,-wap-,-khtml-,-apple-,prince-,-ah-,-hp-,-ro-,-rim-,-tc-'),
     validTagNames = toArray('a,abbr,address,area,article,aside,audio,b,base,bdi,bdo,blockquote,body,br,button,canvas,caption,cite,code,col,colgroup,data,datalist,dd,del,dfn,div,dl,dt,em,embed,fieldset,figcaption,figure,footer,form,h1,h2,h3,h4,h5,h6,head,header,hr,html,i,iframe,img,input,ins,kbd,keygen,label,legend,li,link,main,map,mark,meta,meter,nav,noscript,object,ol,optgroup,option,output,p,param,pre,progress,q,rb,rp,rt,rtc,ruby,s,samp,script,section,select,small,source,span,strong,style,sub,sup,table,tbody,td,template,textarea,tfoot,th,thead,time,title,tr,track,u,ul,var,video,wbr'),
     validTagsNamesHash = wrap(validTagNames, BOOLEAN_TRUE),
@@ -196,7 +196,7 @@ var ATTACHED = 'attached',
     },
     updateStyleWithImportant = function (string, key_, value) {
         var newStyles, found, key = kebabCase(key_);
-        return (newStyles = foldl(string.split(';'), function (memo, item_, index, items) {
+        return (newStyles = reduce(string.split(';'), function (memo, item_, index, items) {
             var item = item_.trim(),
                 itemSplit = item.split(COLON),
                 property = itemSplit[0].trim(),
@@ -221,7 +221,7 @@ var ATTACHED = 'attached',
     updateStyle = function (element, key_, value_) {
         var changed, key = key_,
             value = value_ !== '' ? convertStyleValue(key, value_) : value_;
-        duff(prefixedStyles[camelCase(key)], function (prefix) {
+        forEach(prefixedStyles[camelCase(key)], function (prefix) {
             var styleKey = prefix + kebabCase(key),
                 styleVal = element[STYLE][styleKey];
             if (styleVal !== value) {
@@ -270,7 +270,7 @@ var ATTACHED = 'attached',
                     applyStyle(el, val);
                     return;
                 } else {
-                    val = foldl(val_, function (memo, value, key) {
+                    val = reduce(val_, function (memo, value, key) {
                         if (value) {
                             memo.push(key);
                         }
@@ -322,7 +322,7 @@ var ATTACHED = 'attached',
         }
     },
     dataReconstructor = function (list, fn) {
-        return foldl(list, function (memo, arg1, arg2, arg3) {
+        return reduce(list, function (memo, arg1, arg2, arg3) {
             if (fn(arg1, arg2, arg3)) {
                 memo.push(arg1);
             }
@@ -432,7 +432,7 @@ var ATTACHED = 'attached',
             comment: BOOLEAN_FALSE,
             text: BOOLEAN_FALSE
         };
-        duff(node.attributes, function (attr) {
+        forEach(node.attributes, function (attr) {
             var attributes = obj.attributes = obj.attributes || {};
             attributes[camelCase(attr[LOCAL_NAME])] = attr.value;
         });
@@ -504,7 +504,7 @@ var ATTACHED = 'attached',
         var bKeys, aAttributes = a.attributes,
             aLength = aAttributes.length,
             bLength = (bKeys = keys(b[1])).length,
-            attrs = foldl({
+            attrs = reduce({
                 length: Math.max(aLength, bLength)
             }, function (memo, voided, index) {
                 var key;
@@ -532,7 +532,7 @@ var ATTACHED = 'attached',
             updates,
             accessA = attrs.accessA,
             accessB = attrs.accessB;
-        duff(attrs.list, function (key) {
+        forEach(attrs.list, function (key) {
             if (key === CUSTOM_KEY) {
                 return;
             }
@@ -594,7 +594,7 @@ var ATTACHED = 'attached',
                 };
             }
         }
-        duff(children, function (child, index) {
+        forEach(children, function (child, index) {
             collectVirtualKeys(child, diff, previous_hash, level + 1, index);
         });
     },
@@ -614,7 +614,7 @@ var ATTACHED = 'attached',
     },
     insertMapper = function (els, parent, context, i, hash) {
         var frag = doc.createDocumentFragment();
-        duff(els, function (el) {
+        forEach(els, function (el) {
             context.deltas.create(el, frag, hash);
         });
         return {
@@ -639,7 +639,7 @@ var ATTACHED = 'attached',
     },
     HTMLAttributes = function (attrs) {
         var HTML = this;
-        return foldl(attrs, function (memo, value, key) {
+        return reduce(attrs, function (memo, value, key) {
             return value ? memo + HTML.attribute(kebabCase(key), value) : memo;
         }, EMPTY_STRING);
     },
@@ -767,7 +767,7 @@ var ATTACHED = 'attached',
                 },
                 update: function () {
                     // attributes and content
-                    duff(diffs.updating, function (fn) {
+                    forEach(diffs.updating, function (fn) {
                         fn();
                     });
                 },
@@ -812,7 +812,7 @@ var ATTACHED = 'attached',
                             }
                         }
                     }
-                    duff(actuallyInserting, function (list, idx, lists) {
+                    forEach(actuallyInserting, function (list, idx, lists) {
                         // maintains attach state on dom manager
                         context.returnsManager(list.parent).insertAt(list.el, list.index);
                     });
@@ -898,7 +898,7 @@ var ATTACHED = 'attached',
         if (!(childrenLength = children[LENGTH])) {
             return obj;
         }
-        obj.children = foldl(children, function (memo, child) {
+        obj.children = reduce(children, function (memo, child) {
             if (isElement(child)) {
                 memo.push(nodeToJSON(child, shouldStop, includeComments));
             } else if (child.nodeType === 3) {
@@ -954,7 +954,7 @@ var ATTACHED = 'attached',
         if (beforeAnyMore) {
             beforeAnyMore();
         }
-        result = foldl(json, function (memo, block, key) {
+        result = reduce(json, function (memo, block, key) {
             var cameled, trimmed = key.trim();
             // var media = trimmed[0] === '@';
             // if (media) {
@@ -962,7 +962,7 @@ var ATTACHED = 'attached',
             // handle one way... possible with an extendable handler?
             // } else {
             if (isObject(block)) {
-                duff(toArray(trimmed, COMMA), function (trimmd_) {
+                forEach(toArray(trimmed, COMMA), function (trimmd_) {
                     trimmed = trimmd_.trim();
                     if (baseSelector[LENGTH]) {
                         if (trimmed[0] !== '&') {
@@ -982,7 +982,7 @@ var ATTACHED = 'attached',
                 // always on the same line
                 // console.log(prefixedStyles);
                 cameled = camelCase(trimmed);
-                duff(prefixedStyles[cameled] || [''], function (prefix) {
+                forEach(prefixedStyles[cameled] || [''], function (prefix) {
                     memo.push('\n\t' + prefix + kebabCase(cameled) + ': ' + convertStyleValue(trimmed, block) + ';');
                 });
             }
@@ -991,7 +991,7 @@ var ATTACHED = 'attached',
         return result.join('');
     },
     WeakMapRemap = function (instance, list) {
-        duff(list, function (name) {
+        forEach(list, function (name) {
             var method = instance.get.bind(instance);
             instance[name] = function (element, identifier) {
                 return method(element, identifier || this.identifier(element));
@@ -1141,10 +1141,10 @@ app.scope(function (app) {
                         }
                         var q = queue.slice(0);
                         queue = [];
-                        _.eachCallBound(q, result);
+                        _.forEachCallBound(q, result);
                     };
                 };
-            duff(["UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA", "UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==", "UklGRkoAAABXRUJQVlA4WAoAAAAQAAAAAAAAAAAAQUxQSAwAAAARBxAR/Q9ERP8DAABWUDggGAAAABQBAJ0BKgEAAQAAAP4AAA3AAP7mtQAAAA==", "UklGRlIAAABXRUJQVlA4WAoAAAASAAAAAAAAAAAAQU5JTQYAAAD/////AABBTk1GJgAAAAAAAAAAAAAAAAAAAGQAAABWUDhMDQAAAC8AAAAQBxAREYiI/gcA"], function (val) {
+            forEach(["UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA", "UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==", "UklGRkoAAABXRUJQVlA4WAoAAAAQAAAAAAAAAAAAQUxQSAwAAAARBxAR/Q9ERP8DAABWUDggGAAAABQBAJ0BKgEAAQAAAP4AAA3AAP7mtQAAAA==", "UklGRlIAAABXRUJQVlA4WAoAAAASAAAAAAAAAAAAQU5JTQYAAAD/////AABBTk1GJgAAAAAAAAAAAAAAAAAAAGQAAABWUDhMDQAAAC8AAAAQBxAREYiI/gcA"], function (val) {
                 var img = new Image();
                 img.onload = emptyqueue(noop);
                 img.onerror = emptyqueue(function () {
@@ -1200,7 +1200,7 @@ app.scope(function (app) {
                 if (isFunction(fn) || isFunction(fn2)) {
                     doma.on(attr, fn, fn2, capturing);
                 } else {
-                    doma.each(makeEachTrigger(attr, api, fn));
+                    doma.forEach(makeEachTrigger(attr, api, fn));
                 }
                 return doma;
             };
@@ -1464,7 +1464,7 @@ app.scope(function (app) {
                 first = !diffs_,
                 diffs = diffs_ || [],
                 target = outputA.length > elements.length ? (opposition = outputA) && outputB : (opposition = outputB) && outputA;
-            _.foldl(target, function (diffs, element, index) {
+            _.reduce(target, function (diffs, element, index) {
                 var correspondant = opposition[index];
                 var tagNameA = element.tagName;
                 var tagNameB = correspondant.tagName;
@@ -1551,7 +1551,7 @@ app.scope(function (app) {
             return list.concat.apply(list, items ? map(items, handler) : context.map(handler));
         },
         createElements = function (tagName, context) {
-            return DOMA(foldl(toArray(tagName, SPACE), function (memo, name) {
+            return DOMA(reduce(toArray(tagName, SPACE), function (memo, name) {
                 var createdElement = createElement(name, context);
                 memo.push(createdElement);
                 return memo;
@@ -1569,7 +1569,7 @@ app.scope(function (app) {
                     els = els && toArray(els);
                 }
                 frag = context.createDocumentFragment();
-                duff(els, function (manager_) {
+                forEach(els, function (manager_) {
                     var parentNode, manager = context.returnsManager(manager_),
                         el = manager.element();
                     if (!manager.is(ELEMENT) || manager.is(FRAGMENT)) {
@@ -1588,7 +1588,7 @@ app.scope(function (app) {
         htmlTextManipulator = function (attr) {
             return function (string) {
                 var dom = this;
-                return string !== UNDEFINED ? dom.eachCall(attr, string) && dom : dom.results(attr).join(EMPTY_STRING);
+                return string !== UNDEFINED ? dom.forEachCall(attr, string) && dom : dom.results(attr).join(EMPTY_STRING);
             };
         },
         horizontalTraverser = function (method, _idxChange) {
@@ -1597,7 +1597,7 @@ app.scope(function (app) {
                     list = context.toArray(),
                     idxChange = _idxChange || idxChange_;
                 if (idxChange) {
-                    context.duff(function (manager) {
+                    context.forEach(function (manager) {
                         if ((traversal = manager[method](idxChange))) {
                             add(collected, traversal);
                         }
@@ -1734,7 +1734,7 @@ app.scope(function (app) {
             }
             return capturing;
         },
-        _eventExpander = foldl({
+        _eventExpander = reduce({
             resize: 'resize,orientationchange',
             ready: 'DOMContentLoaded',
             wheel: 'wheel,mousewheel',
@@ -1749,8 +1749,8 @@ app.scope(function (app) {
         }, function (memo, value, key) {
             memo[key] = toArray(value);
         }, {}),
-        distilledEventName = foldl(_eventExpander, function (memo, arr, key) {
-            duff(arr, function (item) {
+        distilledEventName = reduce(_eventExpander, function (memo, arr, key) {
+            forEach(arr, function (item) {
                 memo[item] = key;
             });
             return memo;
@@ -1765,7 +1765,7 @@ app.scope(function (app) {
                     stack.push(name);
                 }
                 if (expanders[name] && !hadInList) {
-                    duff(expanders[name], eventExpander(expanders, fn, stack.slice(0)));
+                    forEach(expanders[name], eventExpander(expanders, fn, stack.slice(0)));
                     stack.pop();
                     return BOOLEAN_TRUE;
                 } else {
@@ -1820,7 +1820,7 @@ app.scope(function (app) {
                     });
                 },
                 expansion = eventExpander(manager.owner.events.expanders, handlesExpansion);
-            duff(spaceList, function (evnt) {
+            forEach(spaceList, function (evnt) {
                 if (expansion(evnt)) {
                     handlesExpansion(evnt, evnt, [evnt]);
                 }
@@ -1951,7 +1951,7 @@ app.scope(function (app) {
                 if (value === UNDEFINED) {
                     return manager.map(getInnard(attribute, manager)).join(EMPTY_STRING);
                 } else {
-                    manager.each(setInnard(attribute, value, vars));
+                    manager.forEach(setInnard(attribute, value, vars));
                     return manager;
                 }
             };
@@ -2069,12 +2069,12 @@ app.scope(function (app) {
             }
             return BOOLEAN_FALSE;
         },
-        eachCall = _.eachCall,
+        forEachCall = _.forEachCall,
         dispatchDomEvent = function (evnt, mark) {
             return function (list, owner) {
                 var managers = [];
                 // mark all managers first
-                duff(list, function (element) {
+                forEach(list, function (element) {
                     var tagname = element[TAG_NAME].toLowerCase();
                     var registeredOptions = owner.registeredElementOptions[tagname] || {};
                     var autotriggers = registeredOptions.autotriggers || {};
@@ -2086,7 +2086,7 @@ app.scope(function (app) {
                         managers.push(m);
                     }
                 });
-                eachCall(managers, DISPATCH_EVENT, evnt);
+                forEachCall(managers, DISPATCH_EVENT, evnt);
             };
         },
         dispatchDetached = dispatchDomEvent('detach', BOOLEAN_FALSE),
@@ -2099,13 +2099,13 @@ app.scope(function (app) {
                 }
             },
             add: function (attributeManager, add) {
-                duff(add, attributeManager.add, attributeManager);
+                forEach(add, attributeManager.add, attributeManager);
             },
             remove: function (attributeManager, remove) {
-                duff(remove, attributeManager.remove, attributeManager);
+                forEach(remove, attributeManager.remove, attributeManager);
             },
             toggle: function (attributeManager, togglers, direction) {
-                duff(togglers, function (toggler) {
+                forEach(togglers, function (toggler) {
                     attributeManager.toggle(toggler, direction);
                 });
             },
@@ -2213,7 +2213,7 @@ app.scope(function (app) {
                         return usingApi.read(context.element(), keyprocess(first));
                     } else {
                         reverseCache = {};
-                        context.each(unmarkChange(intendedIteration(first, second, function (first, second, manager, idx) {
+                        context.forEach(unmarkChange(intendedIteration(first, second, function (first, second, manager, idx) {
                             var processor = reverseCache[first] = reverseCache[first] || proc(first, second, NULL, usingApi, keyprocess, isObject(second) ? NULL : 'set');
                             processor(manager, idx);
                         })));
@@ -2230,7 +2230,7 @@ app.scope(function (app) {
             return first && handler(first, 0);
         },
         domIterates = function (handler, context) {
-            context.each(handler);
+            context.forEach(handler);
             return context;
         },
         returnsFirst = function (fn, context) {
@@ -2241,7 +2241,7 @@ app.scope(function (app) {
         },
         // makeValueTarget = function (target, passed_, api, domaHappy) {
         //     var passed = passed_ || target;
-        //     return _.foldl(toArray('add,remove,toggle,change,has,set'), function (memo, method_) {
+        //     return _.reduce(toArray('add,remove,toggle,change,has,set'), function (memo, method_) {
         //         var method = method_ + 'Value';
         //         memo[method_ + capitalize(target)] = function (one, two) {
         //             return this[method](passed, one, two, api, domaHappy, target);
@@ -2303,7 +2303,7 @@ app.scope(function (app) {
             add: classApplicationWrapper('add', function (element, list) {
                 element.classList.add.apply(element.classList, list);
             }, function (element, current, list) {
-                duff(list, passesFirstArgument(bind(arrayAdds, NULL, current)));
+                forEach(list, passesFirstArgument(bind(arrayAdds, NULL, current)));
                 element[CLASSNAME] = current.join(SPACE);
             }),
             /**
@@ -2318,7 +2318,7 @@ app.scope(function (app) {
             remove: classApplicationWrapper('remove', function (element, list) {
                 element.classList.remove.apply(element.classList, list);
             }, function (element, current, list) {
-                duff(list, passesFirstArgument(bind(arrayRemoves, NULL, current)));
+                forEach(list, passesFirstArgument(bind(arrayRemoves, NULL, current)));
                 element[CLASSNAME] = current.join(SPACE);
             }),
             /**
@@ -2335,7 +2335,7 @@ app.scope(function (app) {
              * targetManager.toggleClass('item1 class2', false); // equivalent to calling removeClass
              */
             toggle: classApplicationWrapper('toggler', noop, function (element, current, list, direction) {
-                duff(list, passesFirstArgument(bind(toggles, NULL, current, direction)));
+                forEach(list, passesFirstArgument(bind(toggles, NULL, current, direction)));
                 element[CLASSNAME] = current.join(SPACE);
             }),
             /*
@@ -2359,8 +2359,8 @@ app.scope(function (app) {
                 element.classList.remove.apply(element.classList, list);
                 element.classList.add.apply(element.classList, toArray(second, SPACE));
             }, function (element, current, list, second) {
-                duff(list, passesFirstArgument(bind(arrayRemoves, NULL, current)));
-                duff(second, passesFirstArgument(bind(arrayAdds, NULL, current)));
+                forEach(list, passesFirstArgument(bind(arrayRemoves, NULL, current)));
+                forEach(second, passesFirstArgument(bind(arrayAdds, NULL, current)));
                 element[CLASSNAME] = current.join(SPACE);
             })
         },
@@ -2371,10 +2371,10 @@ app.scope(function (app) {
                 };
             };
         },
-        classApi = foldl(foldl(toArray('add,remove,toggle,change'), function (memo, key) {
+        classApi = reduce(reduce(toArray('add,remove,toggle,change'), function (memo, key) {
             memo[key] = function (manipulator) {
                 return function (classes, second) {
-                    this.each(manipulator(toArray(classes, SPACE), second ? toArray(second, SPACE) : UNDEFINED));
+                    this.forEach(manipulator(toArray(classes, SPACE), second ? toArray(second, SPACE) : UNDEFINED));
                     return this;
                 };
             };
@@ -2527,7 +2527,7 @@ app.scope(function (app) {
                     }
                 },
                 formsCallbacks = function (opts, list, autotriggers) {
-                    return foldl(list, function (memo, evnt, item) {
+                    return reduce(list, function (memo, evnt, item) {
                         var value = opts[evnt];
                         var val = !!value;
                         if (val) {
@@ -2550,7 +2550,7 @@ app.scope(function (app) {
                     }, {});
                 },
                 remap = function (options) {
-                    return foldl(options, function (memo, value, key) {
+                    return reduce(options, function (memo, value, key) {
                         if (value === NULL) {
                             return;
                         }
@@ -2569,7 +2569,7 @@ app.scope(function (app) {
                                 attributeApi.write(node, kebabCase(key), value);
                             }
                         });
-                        results = isString(children) ? (node.innerHTML = children) : duff(children, function (child) {
+                        results = isString(children) ? (node.innerHTML = children) : forEach(children, function (child) {
                             appendChild(node, deltas.create(child, node, hash));
                         });
                         return node;
@@ -2603,12 +2603,12 @@ app.scope(function (app) {
                                     return element === el;
                                 });
                             });
-                            return removableEls[LENGTH] ? duff(removableEls, passesFirstArgument(removeChild)) : BOOLEAN_FALSE;
+                            return removableEls[LENGTH] ? forEach(removableEls, passesFirstArgument(removeChild)) : BOOLEAN_FALSE;
                         };
                     },
                     addNodes: function (parent, els, context, hash) {
                         var frag = doc.createDocumentFragment();
-                        duff(els, function (el) {
+                        forEach(els, function (el) {
                             deltas.create(el, frag, hash);
                         });
                         return function () {
@@ -2726,8 +2726,8 @@ app.scope(function (app) {
                 // },
                 expandEvent: function (passedEvent, actualEvent) {
                     var expanders = manager.events.expanders;
-                    duff(toArray(actualEvent, SPACE), function (actualEvent) {
-                        duff(toArray(passedEvent, SPACE), function (passedEvent) {
+                    forEach(toArray(actualEvent, SPACE), function (actualEvent) {
+                        forEach(toArray(passedEvent, SPACE), function (passedEvent) {
                             expanders[passedEvent] = expanders[passedEvent] || [];
                             if (indexOf(expanders[passedEvent], actualEvent) === -1) {
                                 expanders[passedEvent].push(actualEvent);
@@ -2737,7 +2737,7 @@ app.scope(function (app) {
                     return manager;
                 },
                 customEvent: function (key, value) {
-                    duff(toArray(key, SPACE), function (key) {
+                    forEach(toArray(key, SPACE), function (key) {
                         manager.events.custom[key] = value;
                     });
                     return manager;
@@ -2786,7 +2786,7 @@ app.scope(function (app) {
                 // shared across all documents running this version
                 plugin: function (handler) {
                     plugins.push(handler);
-                    duff(allSetups, function (setup) {
+                    forEach(allSetups, function (setup) {
                         handler(setup);
                     });
                     return this;
@@ -2795,7 +2795,7 @@ app.scope(function (app) {
                     return compile(id, string, manager);
                 },
                 collectTemplates: function () {
-                    return $('script[id]').each(function (script) {
+                    return $('script[id]').forEach(function (script) {
                         compile(script.prop(ID), script.html(), manager);
                     }).remove();
                 },
@@ -2909,7 +2909,7 @@ app.scope(function (app) {
             return $;
         },
         testWithHandler = function (win, evntname, handler, failure) {
-            duff(toArray(evntname, SPACE), function (evntname) {
+            forEach(toArray(evntname, SPACE), function (evntname) {
                 if (win.addEventListener) {
                     win.addEventListener(evntname, handler);
                     win.removeEventListener(evntname, handler);
@@ -2943,7 +2943,7 @@ app.scope(function (app) {
                     return styles[prefix + unCameled] !== UNDEFINED;
                 })) ? styles[prefix + unCameled] : styles[prefix + unCameled]);
             } else {
-                manager.each(unmarkChange(function (manager) {
+                manager.forEach(unmarkChange(function (manager) {
                     return applyStyle(manager.element(), one, two, important);
                 }));
                 return manager;
@@ -3093,7 +3093,7 @@ app.scope(function (app) {
                 }
                 copy = fixHook.props ? this.props.concat(fixHook.props) : this.props;
                 i = copy[LENGTH];
-                duff(copy, function (prop) {
+                forEach(copy, function (prop) {
                     var val = originalEvent[prop];
                     if (val != NULL) {
                         evnt[prop] = val;
@@ -3273,7 +3273,7 @@ app.scope(function (app) {
                         list.toArray().push(evnt);
                     }
                 }
-                duff(evnt.nameStack, function (name) {
+                forEach(evnt.nameStack, function (name) {
                     evnt.fn = (customEvents[name] || returns.first)(evnt.fn, name, evnt) || evnt.fn;
                 });
                 if (eventHandler) {
@@ -3541,7 +3541,7 @@ app.scope(function (app) {
                 queryString: function () {
                     var clas, json = baseNodeToJSON(this.element()),
                         string = json.tagName;
-                    return foldl(json.attributes, function (string, attr, key) {
+                    return reduce(json.attributes, function (string, attr, key) {
                         if (key === ID || key === CLASS) {
                             return string;
                         }
@@ -3581,13 +3581,13 @@ app.scope(function (app) {
                     var elementAttributes = element.attributes;
                     if (!fun) {
                         memo = {};
-                        duff(elementAttributes, function (attribute) {
+                        forEach(elementAttributes, function (attribute) {
                             memo[attribute.localName] = attribute.value;
                         });
                         return memo;
                     }
                     bound = bindTo(fun, manager);
-                    duff(elementAttributes, function (attribute) {
+                    forEach(elementAttributes, function (attribute) {
                         bound(attribute.value, attribute.localName);
                     });
                     return manager;
@@ -3671,7 +3671,7 @@ app.scope(function (app) {
                         if (!isFunction(handlr)) {
                             return;
                         }
-                        duff(toArray(key, SPACE), function (key) {
+                        forEach(toArray(key, SPACE), function (key) {
                             var bound, handlers = registry.get('boundHandlers-' + other.__elid__, key, function () {
                                 return [];
                             });
@@ -3697,12 +3697,12 @@ app.scope(function (app) {
                     intendedObject(key, handler, function (key, handler_) {
                         var handler = isString(handler_) ? context[handler_] : handler_;
                         if (!key && !handler) {
-                            duff(keys(context.directive(REGISTRY).group('boundHandlers-' + other.__elid__)), function (list, key) {
+                            forEach(keys(context.directive(REGISTRY).group('boundHandlers-' + other.__elid__)), function (list, key) {
                                 other.off(key, namespace);
                             });
                         } else if (key && handler) {
                             // take a specific one off
-                            duff(toArray(key, SPACE), function (unbounded) {
+                            forEach(toArray(key, SPACE), function (unbounded) {
                                 var found, handlers = registry.get('boundHandlers-' + other.__elid__, key, function () {
                                     return [];
                                 });
@@ -3713,13 +3713,13 @@ app.scope(function (app) {
                                 }
                             });
                         } else if (key) {
-                            duff(toArray(key, SPACE), function (unbounded) {
+                            forEach(toArray(key, SPACE), function (unbounded) {
                                 // take all the handlers that match this key off
                                 other.off(key, namespace);
                             });
                         } else if (handler) {
                             // take all the keys that match this handler off
-                            duff(keys(context.directive(REGISTRY).group('boundHandlers-' + other.__elid__)), function (list, key) {
+                            forEach(keys(context.directive(REGISTRY).group('boundHandlers-' + other.__elid__)), function (list, key) {
                                 find(list, function (item) {
                                     if (item.fn !== handler) {
                                         return;
@@ -4333,7 +4333,7 @@ app.scope(function (app) {
                         return memo ? ((children = map(children, manager.owner.returnsManager, manager.owner)) && result(memo, CUSTOM_KEY, FRAGMENT) ? memo.append(children) : (memo.push.apply(memo, children) ? memo : memo)) : manager.wrap(children);
                     } else {
                         filter = createDomFilter(eq, manager.owner);
-                        resultant = foldl(children, function (memo, child, idx, children) {
+                        resultant = reduce(children, function (memo, child, idx, children) {
                             if (filter(child, idx, children)) {
                                 memo.push(manager.owner.returnsManager(child));
                             }
@@ -4528,17 +4528,13 @@ app.scope(function (app) {
                  * @return {Array}
                  * @example <caption>pseudo iterate over the DomManager in question</caption>
                  * @example
-                 * bodyManager.each(function (manager, index) {
+                 * bodyManager.forEach(function (manager, index) {
                  *     manager === bodyManager; // true
                  *     index === 0; // true
                  * });
                  */
-                each: function (fn, context) {
-                    var manager = this,
-                        wrapped = [manager],
-                        result = context ? fn.call(context, manager, 0, wrapped) : fn(manager, 0, wrapped);
-                    return wrapped;
-                },
+                each: managerForEach,
+                forEach: managerForEach,
                 map: function (fn, context) {
                     return [bind(fn, context, this, 0, [])()];
                 },
@@ -4691,7 +4687,7 @@ app.scope(function (app) {
                         }
                     });
                 };
-            return name ? duff(toArray(name, SPACE), eventExpander(manager.owner.events.expanders, function (name, passedName) {
+            return name ? forEach(toArray(name, SPACE), eventExpander(manager.owner.events.expanders, function (name, passedName) {
                 removeFromList(directive[HANDLERS][name], passedName);
             })) : each(directive[HANDLERS], passesFirstArgument(removeFromList));
         },
@@ -4753,7 +4749,7 @@ app.scope(function (app) {
                 domHandler = function (e) {
                     documentManager.off('DOMContentLoaded', domHandler);
                     windo.off('load', domHandler);
-                    documentManager.$(CUSTOM_ATTRIBUTE).each(documentManager.returnsManager);
+                    documentManager.$(CUSTOM_ATTRIBUTE).forEach(documentManager.returnsManager);
                     bound(documentManager.$, e);
                 };
             if (documentManager.is('ready')) {
@@ -4767,7 +4763,7 @@ app.scope(function (app) {
         },
         applyToEach = function (method) {
             return function (one, two, three, four, five, six) {
-                return this.each(function (manager) {
+                return this.forEach(function (manager) {
                     manager[method](one, two, three, four, five, six);
                 });
             };
@@ -4870,7 +4866,7 @@ app.scope(function (app) {
             changeValue: changeValue(domIterates),
             add: attachPrevious(function (context, query) {
                 var found = context.owner.$(query);
-                return concatUnique(context.toArray(), found.toArray());
+                return concatUnique([context.toArray(), found.toArray()]);
             }),
             addBack: attachPrevious(function (context, selector) {
                 var previous = context._previous;
@@ -4887,7 +4883,7 @@ app.scope(function (app) {
             },
             push: function () {
                 var owner = this.context.owner;
-                this.items.push.apply(this.items, foldl(arguments, function (memo, el) {
+                this.items.push.apply(this.items, reduce(arguments, function (memo, el) {
                     if (!el) {
                         return memo;
                     }
@@ -4927,14 +4923,14 @@ app.scope(function (app) {
                     push = function (el) {
                         matchers.push(context.owner.returnsManager(el));
                     };
-                // look into foldl so we do not get duplicate elements
-                return duff(context.toArray(), function (manager) {
-                    duff(query(str, manager.element(), manager), push);
+                // look into reduce so we do not get duplicate elements
+                return forEach(context.toArray(), function (manager) {
+                    forEach(query(str, manager.element(), manager), push);
                 }) && matchers;
             }),
             children: attachPrevious(function (context, eq) {
-                // this should be rewritten as context.foldl
-                return foldl(context.toArray(), function (memo, manager) {
+                // this should be rewritten as context.reduce
+                return reduce(context.toArray(), function (memo, manager) {
                     return manager.children(eq, memo);
                 }, []);
             }),
@@ -4986,7 +4982,7 @@ app.scope(function (app) {
                 var manager = this,
                     owner = manager.owner,
                     els = isAppendable(els_) ? this.context.returnsManager(els_) : owner.$(els_).fragment();
-                return this.each(function (manager) {
+                return this.forEach(function (manager) {
                     var elements = els;
                     if (clone) {
                         elements = elements.clone();
@@ -5028,7 +5024,7 @@ app.scope(function (app) {
                 });
             },
             clone: attachPrevious(function (context) {
-                return context.foldl(function (memo, manager) {
+                return context.reduce(function (memo, manager) {
                     if (manager.is(ELEMENT)) {
                         memo.push(manager.clone());
                     }
@@ -5038,7 +5034,7 @@ app.scope(function (app) {
             parent: attachPrevious(function (context, original) {
                 // ensure unique
                 var hash = {};
-                return context.foldl(function (memo, manager) {
+                return context.reduce(function (memo, manager) {
                     var parent;
                     if ((parent = manager.parent(original)) && !hash[parent.element()[__ELID__]]) {
                         hash[parent.element()[__ELID__]] = parent;
@@ -5069,11 +5065,18 @@ app.scope(function (app) {
         }, wrap(allEachMethods, applyToEach), wrap(firstMethods, applyToFirst), wrap(readMethods, applyToTarget)])),
         allSetups = [],
         plugins = [];
+
+    function managerForEach(fn, context) {
+        var manager = this,
+            wrapped = [manager],
+            result = context ? fn.call(context, manager, 0, wrapped) : fn(manager, 0, wrapped);
+        return wrapped;
+    }
     app.undefine(function (app, windo, passed) {
         var setup = DOMA_SETUP(windo);
         setup.HTTP = setup.document.HTTP = passed.HTTP;
         allSetups.push(setup);
-        duff(plugins, function (plugin) {
+        forEach(plugins, function (plugin) {
             plugin(setup);
         });
         setup.collectTemplates();
