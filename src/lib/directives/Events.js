@@ -209,7 +209,7 @@ app.scope(function (app) {
                 delete this[HANDLERS][list[NAME]];
             },
             reset: function () {
-                return each(this.handlers, this.scrub, this);
+                return forOwn(this.handlers, this.scrub, this);
             },
             queue: function (stack, handler, evnt) {
                 return stack.toArray().push(handler);

@@ -10,14 +10,14 @@ var COLLECTION = 'Collection',
         var isNullMessage = 'object must not be null or ' + UNDEFINED,
             validIdMessage = 'objects in sorted collections must have either a number or string for their valueOf result',
             // cannotModifyMessage = 'list cannot be modified while it is being iterated over',
-            recreatingSelfCollection = toArray('eq,where,whereNot,map,results,filter,filterNegative,cycle,uncycle,flatten,gather,unique').concat(keys(buildCallers('map')), keys(buildCallers('mapRight')), keys(buildCallers('filter')), keys(buildCallers('filterNegative'))),
-            eachHandlers = {
+            recreatingSelfCollection = toArray('eq,where,whereNot,results,cycle,uncycle,flatten,gather,unique').concat(associatedBuilderKeys('map'), associatedBuilderKeys('filter'), associatedBuilderKeys('filterNegative')),
+            forOwnHandlers = {
                 forEach: forEach,
-                each: forEach,
+                forOwn: forEach,
                 forEachRight: forEachRight,
-                eachRight: forEachRight
+                forOwnRight: forEachRight
             },
-            eachHandlerKeys = keys(eachHandlers).concat(keys(buildCallers('forEach')), keys(buildCallers('forOwn')), keys(buildCallers('each')), keys(buildCallers('eachRight'))),
+            eachHandlerKeys = keys(forOwnHandlers).concat(keys(buildCallers('forEach')), keys(buildCallers('forOwn')), keys(buildCallers('each')), keys(buildCallers('eachRight'))),
             abstractedCanModify = toArray('add'),
             abstractedCannotModify = toArray('insertAt,remove,removeAt,removeWhere,findRemoveWhere'),
             nativeCannotModify = toArray('pop,shift,splice'),
@@ -25,8 +25,8 @@ var COLLECTION = 'Collection',
             splatHandlers = toArray('push,unshift'),
             joinHandlers = toArray('join'),
             countingCollection = toArray('count,countTo,countFrom,merge'),
-            foldIteration = toArray('foldr,foldl,reduce'),
-            findIteration = toArray('find,findLast,findWhere,findLastWhere').concat(keys(buildCallers('find'))),
+            foldIteration = toArray('reduce,reduceRight'),
+            findIteration = toArray('find,findRight,findWhere,findWhereRight').concat(keys(buildCallers('find'))),
             indexers = toArray('indexOf,includes'),
             foldFindIteration = foldIteration.concat(findIteration),
             ret = _.publicize({
@@ -46,7 +46,7 @@ var COLLECTION = 'Collection',
                 concat: concat,
                 where: where,
                 findWhere: findWhere,
-                findLastWhere: findLastWhere,
+                findWhereRight: findWhereRight,
                 range: range,
                 count: count,
                 countTo: countTo,
@@ -102,7 +102,7 @@ var COLLECTION = 'Collection',
                     return list;
                 };
             }), wrap(eachHandlerKeys, function (fn_) {
-                var fn = eachHandlers[fn_] || _[fn_];
+                var fn = forOwnHandlers[fn_] || _[fn_];
                 return function (handler, context) {
                     var list = this,
                         args0 = list.toArray(),
@@ -657,4 +657,8 @@ function recreateSelf(fn, ctx) {
     return function () {
         return this.wrap(fn.apply(ctx || this, arguments));
     };
+}
+
+function associatedBuilderKeys(key) {
+    return keys(buildCallers(key, false, true));
 }

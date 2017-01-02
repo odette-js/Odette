@@ -613,7 +613,7 @@ application.scope().run(window, function (module, app, _, factories, $) {
             test.it('and update them', function () {
                 var diff = $.nodeComparison($root.element(), templatized);
                 test.expect($root.html()).toEqual('');
-                _.each(diff.mutations, function (level, key) {
+                _.forOwn(diff.mutations, function (level, key) {
                     test.expect(_.isFunction(level)).toBe(true);
                 });
                 applyMutations(diff.mutations);
@@ -621,7 +621,7 @@ application.scope().run(window, function (module, app, _, factories, $) {
             }, 5);
             test.it('collects keys that the template marks using index 3 of each child', function () {
                 var diff = $.nodeComparison($root.element(), templatized);
-                _.each(diff.keys, function (element, key) {
+                _.forOwn(diff.keys, function (element, key) {
                     test.expect(element.tagName.toLowerCase()).toEqual(basicTemplateKeyTagNames[key] || 'li');
                 });
             }, 4);

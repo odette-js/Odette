@@ -290,7 +290,7 @@ var EVENT_STRING = 'Events',
                             name = name_,
                             events = eventer[EVENT_MANAGER],
                             removeAllMatching = function () {
-                                each(events[HANDLERS], function (list, name) {
+                                forOwn(events[HANDLERS], function (list, name) {
                                     events.seekAndDestroy(list, fn_, context);
                                 });
                             };

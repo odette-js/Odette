@@ -201,7 +201,7 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                             secondary = secondary_ || {},
                             children = parent.directive(CHILDREN),
                             memo = setMemo(),
-                            diff = Collection(opts.add).foldl(function (memo, obj) {
+                            diff = Collection(opts.add).reduce(function (memo, obj) {
                                 var isChildType = parent.isChildType(obj),
                                     // create a new model
                                     // call it with new in case they use a constructor

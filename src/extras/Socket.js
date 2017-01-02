@@ -49,7 +49,7 @@
 //             Socket = _.Socket = factories.Model.extend('Socket', {
 //                 constructor: function (options) {
 //                     var socket = this;
-//                     socket.handlers = _.foldl(list, function (memo, item) {
+//                     socket.handlers = _.reduce(list, function (memo, item) {
 //                         memo[item] = _.bind(handlers[item], socket);
 //                     }, {});
 //                     if (_.isString(options)) {

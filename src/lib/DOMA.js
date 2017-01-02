@@ -551,7 +551,7 @@ var ATTACHED = 'attached',
         }
         diffs.updating.push(function () {
             var manager, props;
-            each(updates, function (value, key) {
+            forOwn(updates, function (value, key) {
                 if (!propsHash[key]) {
                     return;
                 }
@@ -568,10 +568,10 @@ var ATTACHED = 'attached',
                     manager.prop(props);
                 }
             } else {
-                each(updates, function (value, key) {
+                forOwn(updates, function (value, key) {
                     attributeApi.write(a, kebabCase(key), value);
                 });
-                each(props, function (value, key) {
+                forOwn(props, function (value, key) {
                     propertyApi.write(a, kebabCase(key), value);
                 });
             }
@@ -1703,7 +1703,7 @@ app.scope(function (app) {
                     if (isString(args[0])) {
                         selector = args.shift();
                     }
-                    each(nameOrObject, function (handler, key) {
+                    forOwn(nameOrObject, function (handler, key) {
                         createSelector(doma, [key, selector, handler].concat(args), fn);
                     });
                     return doma;
@@ -1902,7 +1902,7 @@ app.scope(function (app) {
                         parentElement = windo.element();
                         doc = parentElement[DOCUMENT];
                         doc.open();
-                        each(vars, function (value, key) {
+                        forOwn(vars, function (value, key) {
                             parentElement[key] = value;
                         });
                         doc.write(toFunction(appliedvalue)(manager));
@@ -2562,7 +2562,7 @@ app.scope(function (app) {
                 deltas = {
                     update: function (node, attrs, children, hash) {
                         var results;
-                        each(attrs, function (value, key) {
+                        forOwn(attrs, function (value, key) {
                             if (propsHash[key]) {
                                 propertyApi.write(node, kebabCase(key), value);
                             } else {
@@ -3014,11 +3014,11 @@ app.scope(function (app) {
             }
             var objects = parse(string);
             var contextDocument = context.element();
-            each(toArray(objects), function (object) {
+            forOwn(toArray(objects), function (object) {
                 var element = contextDocument.createElement(object.tagName);
                 var frag = reconstruct(object.children, context);
                 element.appendChild(frag);
-                each(object.attributes, function (value, key) {
+                forOwn(object.attributes, function (value, key) {
                     attributeApi.write(element, kebabCase(key), value);
                 });
                 fragment.appendChild(element);
@@ -4689,7 +4689,7 @@ app.scope(function (app) {
                 };
             return name ? forEach(toArray(name, SPACE), eventExpander(manager.owner.events.expanders, function (name, passedName) {
                 removeFromList(directive[HANDLERS][name], passedName);
-            })) : each(directive[HANDLERS], passesFirstArgument(removeFromList));
+            })) : forOwn(directive[HANDLERS], passesFirstArgument(removeFromList));
         },
         /**
          * @class DOMA

@@ -8,7 +8,7 @@ application.scope().run(window, function (module, app, _, factories, $) {
             failed: results.failed,
             passed: results.passed,
             total: results.total,
-            stacks: _.foldl(results.tests, function (memo, item) {
+            stacks: _.reduce(results.tests, function (memo, item) {
                 if (!item.result) {
                     memo.push(item);
                 }

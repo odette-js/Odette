@@ -146,7 +146,7 @@
             var val, n, base = obj.url,
                 query = [];
             if (isObject(obj)) {
-                each(obj.query, function (val, n) {
+                forOwn(obj.query, function (val, n) {
                     if (val !== UNDEFINED) {
                         val = encodeURIComponent(stringify(val));
                         query.push(n + '=' + val);
@@ -231,7 +231,7 @@
         exception = function (message) {
             throw new Error(message);
         },
-        each = function (obj_, fn, ctx) {
+        forOwn = function (obj_, fn, ctx) {
             var n, keys, obj = obj_;
             if (isObject(obj)) {
                 if (isArray(obj)) {
@@ -257,7 +257,7 @@
          * @returns {Object} object1
          */
         merge = function (object1, object2) {
-            each(object2, function (value, key) {
+            forOwn(object2, function (value, key) {
                 object1[key] = value;
             });
             return object1;
@@ -286,7 +286,7 @@
                 return this.merge(this, obj);
             };
             AppPrototype.merge = merge;
-            AppPrototype.each = each;
+            AppPrototype.each = forOwn;
             AppPrototype.extend({
                 exception: exception,
                 destroy: noop,

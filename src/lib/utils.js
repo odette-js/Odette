@@ -18,16 +18,17 @@ var garbage, factories = {},
     }),
     // Returns the first index on an array-like that passes a predicate test
     findIndex = createPredicateIndexFinder(1),
-    findLastIndex = createPredicateIndexFinder(-1),
+    findIndexRight = createPredicateIndexFinder(-1),
     find = findAccessor(findIndex),
-    findLast = findAccessor(findLastIndex),
+    findRight = findAccessor(findIndexRight),
     now_offset = dateNow(),
-    forOwn = eachProxy(forEach, keys),
     forIn = eachProxy(forEach, allKeys),
+    forOwn = eachProxy(forEach, keys),
     each = forOwn,
     map = maps(forEach, mapValuesIteratee, returnsArray),
     mapValues = maps(forOwn, mapValuesIteratee, returnBaseType),
     mapKeys = maps(forOwn, mapKeysIteratee, returnBaseType),
+    reduce = createReduce(1),
     forEachRight = tackRight(forEach),
     forOwnRight = tackRight(forOwn),
     forInRight = tackRight(forIn),
@@ -35,6 +36,7 @@ var garbage, factories = {},
     mapRight = maps(forEachRight, mapValuesIteratee, returnsArray),
     mapValuesRight = maps(forOwnRight, mapValuesIteratee, returnBaseType),
     mapKeysRight = maps(eachRight, mapKeysIteratee, returnBaseType),
+    reduceRight = createReduce(-1),
     garbage = buildCallers('forEach', forEach, forEachRight),
     garbage = buildCallers('forOwn', forOwn, forOwnRight),
     garbage = buildCallers('forIn', forIn, forInRight),
@@ -42,12 +44,11 @@ var garbage, factories = {},
     garbage = buildCallers('map', map, mapRight),
     garbage = buildCallers('mapValues', mapValues, mapValuesRight),
     garbage = buildCallers('mapKeys', mapKeys, mapKeysRight),
-    findCallers = buildCallers('find', find),
-    findLastCallers = buildCallers('findLast', findLast),
-    findIndexCallers = buildCallers('findIndex', findIndex),
-    findLastIndexCallers = buildCallers('findLastIndex', findLastIndex),
-    filterCallers = buildCallers('filter', filter),
-    filterNegativeCallers = buildCallers('filterNegative', filterNegative),
+    garbage = buildCallers('find', find, findRight),
+    garbage = buildCallers('findIndex', findIndex, findIndexRight),
+    garbage = buildCallers('filter', filter),
+    garbage = buildCallers('filterNegative', filterNegative),
+    garbage = buildCallers('reduce', reduce, reduceRight),
     _performance = window.performance,
     uuidHash = {},
     maths = Math,
@@ -57,12 +58,6 @@ var garbage, factories = {},
     passes = {
         first: passesFirstArgument
     },
-    // **Reduce** builds up a single result from a list of values, aka `inject`,
-    // or `foldl`.
-    reduce = createReduce(1),
-    reduceRight = createReduce(-1),
-    foldl = reduce,
-    foldr = reduceRight,
     baseDataTypes = {
         true: BOOLEAN_TRUE,
         false: BOOLEAN_FALSE,
@@ -75,22 +70,6 @@ var garbage, factories = {},
     startsWith = itemIs,
     // make global
     exception = console.exception,
-    returnsTrue = returns.true = returns(BOOLEAN_TRUE),
-    returnsFalse = returns.false = returns(BOOLEAN_FALSE),
-    returnsNull = returns.null = returns(NULL),
-    returnsSelf = returns.self = function () {
-        return this;
-    },
-    returnsArray = returns.array = returnsArray,
-    returnsObject = returns.object = function () {
-        return {};
-    },
-    returnsFirstArgument = returns.first = function (value) {
-        return value;
-    },
-    returnsSecondArgument = returns.second = function (nil, value) {
-        return value;
-    },
     is = {
         emptyArray: isEmptyArray,
         number: isNumber,
@@ -120,133 +99,149 @@ var garbage, factories = {},
      * @static
      * @namespace _
      */
-    _ = app._ = extend([{
-            is: is,
-            to: to,
-            pI: pI,
-            toN: toN,
-            zip: zip,
-            has: has,
-            now: now,
-            map: map,
-            noop: noop,
-            bind: bind,
-            sort: sort,
-            wrap: wrap,
-            uuid: uuid,
-            keys: keys,
-            once: once,
-            each: each,
-            find: find,
-            // some: some,
-            foldl: foldl,
-            foldr: foldr,
-            parse: parse,
-            merge: merge,
-            isInt: isInt,
-            defer: defer,
-            clone: clone,
-            clamp: clamp,
-            flows: flows,
-            isNaN: _isNaN,
-            reduce: reduce,
-            under1: under1,
-            invert: invert,
-            extend: extend,
-            passes: passes,
-            values: values,
-            gather: gather,
-            object: object,
-            toggle: toggle,
-            sortBy: sortBy,
-            negate: negate,
-            unique: unique,
-            filter: filter,
-            bindTo: bindTo,
-            result: result,
-            isNull: isNull,
-            notNaN: notNaN,
-            itemIs: itemIs,
-            isEqual: isEqual,
-            isArray: isArray,
-            forEach: forEach,
-            flatten: flatten,
-            wraptry: wraptry,
-            indexOf: indexOf,
-            toArray: toArray,
-            isEmpty: isEmpty,
-            returns: returns,
-            allKeys: allKeys,
-            console: console,
-            evaluate: evaluate,
-            validKey: validKey,
-            findLast: findLast,
-            toString: toString,
-            throttle: throttle,
-            debounce: debounce,
-            iterates: iterates,
-            bindWith: bindWith,
-            mapRight: mapRight,
-            isObject: isObject,
-            isNumber: isNumber,
-            isString: isString,
-            isFinite: _isFinite,
-            isBoolean: isBoolean,
-            factories: factories,
-            cloneJSON: cloneJSON,
-            toBoolean: toBoolean,
-            stringify: stringify,
-            shiftSelf: shiftSelf,
-            eachProxy: eachProxy,
-            toInteger: toInteger,
-            publicize: publicize,
-            eachRight: eachRight,
-            findIndex: findIndex,
-            startsWith: startsWith,
-            isInstance: isInstance,
-            hasEnumBug: hasEnumBug,
-            indexOfNaN: indexOfNaN,
-            toFunction: toFunction,
-            roundFloat: roundFloat,
-            isFunction: isFunction,
-            withinRange: withinRange,
-            isUndefined: isUndefined,
-            superExtend: superExtend,
-            intendedApi: intendedApi,
-            protoProp: protoProperty,
-            isArrayLike: isArrayLike,
-            performance: performance,
-            unwrapBlock: unwrapBlock,
-            BIG_INTEGER: BIG_INTEGER,
-            smartIndexOf: smartIndexOf,
-            consolemaker: consolemaker,
-            forEachRight: forEachRight,
-            blockWrapper: blockWrapper,
-            isEmptyArray: isEmptyArray,
-            parseDecimal: parseDecimal,
-            keyGenerator: keyGenerator,
-            findLastIndex: findLastIndex,
-            protoProperty: protoProperty,
-            reverseParams: reverseParams,
-            objectToArray: objectToArray,
-            sortedIndexOf: sortedIndexOf,
-            filterNegative: filterNegative,
-            stringifyQuery: stringifyQuery,
-            intendedObject: intendedObject,
-            arrayLikeToArray: arrayLikeToArray,
-            euclideanDistance: euclideanDistance,
-            intendedIteration: intendedIteration,
-            constructorWrapper: constructorWrapper,
-            NEGATIVE_BIG_INTEGER: NEGATIVE_BIG_INTEGER,
-            createPredicateIndexFinder: createPredicateIndexFinder,
-            math: merge(wrap(toArray('E,LN2,LN10,LOG2E,LOG10E,PI,SQRT1_2,SQRT2,abs,acos,acosh,asin,asinh,atan,atan2,atanh,cbrt,ceil,clz32,cos,cosh,exp,expm1,floor,fround,hypot,imul,log,log1p,log2,log10,pow,random,round,sign,sin,sinh,sqrt,tan,tanh,trunc'), function (key) {
-                return Math[key];
-            }), {
-                min: mathArray('min'),
-                max: mathArray('max')
-            })
-        }, buildCallers //eachCallers, eachRightCallers, forEachCallers, forEachRightCallers, mapCallers, mapRightCallers, findCallers, findLastCallers, findIndexCallers, findLastIndexCallers, filterCallers, filterNegativeCallers
-    ]);
+    _ = app._ = merge({
+        is: is,
+        to: to,
+        pI: pI,
+        toN: toN,
+        zip: zip,
+        has: has,
+        now: now,
+        // map: map,
+        noop: noop,
+        bind: bind,
+        sort: sort,
+        wrap: wrap,
+        uuid: uuid,
+        keys: keys,
+        once: once,
+        // each: each,
+        // find: find,
+        // some: some,
+        // foldl: foldl,
+        // foldr: foldr,
+        parse: parse,
+        merge: merge,
+        isInt: isInt,
+        defer: defer,
+        clone: clone,
+        clamp: clamp,
+        flows: flows,
+        where: where,
+        isNaN: _isNaN,
+        // forIn: forIn,
+        // forOwn: forOwn,
+        reduce: reduce,
+        under1: under1,
+        invert: invert,
+        extend: extend,
+        passes: passes,
+        values: values,
+        gather: gather,
+        object: object,
+        toggle: toggle,
+        sortBy: sortBy,
+        negate: negate,
+        unique: unique,
+        filter: filter,
+        bindTo: bindTo,
+        result: result,
+        isNull: isNull,
+        notNaN: notNaN,
+        itemIs: itemIs,
+        isEqual: isEqual,
+        isArray: isArray,
+        // forEach: forEach,
+        flatten: flatten,
+        wraptry: wraptry,
+        indexOf: indexOf,
+        toArray: toArray,
+        isEmpty: isEmpty,
+        returns: returns,
+        allKeys: allKeys,
+        console: console,
+        whereNot: whereNot,
+        evaluate: evaluate,
+        validKey: validKey,
+        // findRight: findRight,
+        toString: toString,
+        throttle: throttle,
+        debounce: debounce,
+        iterates: iterates,
+        bindWith: bindWith,
+        mapRight: mapRight,
+        isObject: isObject,
+        isNumber: isNumber,
+        isString: isString,
+        isFinite: _isFinite,
+        isBoolean: isBoolean,
+        factories: factories,
+        cloneJSON: cloneJSON,
+        toBoolean: toBoolean,
+        stringify: stringify,
+        shiftSelf: shiftSelf,
+        eachProxy: eachProxy,
+        toInteger: toInteger,
+        publicize: publicize,
+        // eachRight: eachRight,
+        // findIndex: findIndex,
+        startsWith: startsWith,
+        isInstance: isInstance,
+        hasEnumBug: hasEnumBug,
+        indexOfNaN: indexOfNaN,
+        toFunction: toFunction,
+        roundFloat: roundFloat,
+        isFunction: isFunction,
+        withinRange: withinRange,
+        isUndefined: isUndefined,
+        superExtend: superExtend,
+        intendedApi: intendedApi,
+        protoProp: protoProperty,
+        isArrayLike: isArrayLike,
+        performance: performance,
+        unwrapBlock: unwrapBlock,
+        BIG_INTEGER: BIG_INTEGER,
+        smartIndexOf: smartIndexOf,
+        consolemaker: consolemaker,
+        // forEachRight: forEachRight,
+        blockWrapper: blockWrapper,
+        isEmptyArray: isEmptyArray,
+        parseDecimal: parseDecimal,
+        keyGenerator: keyGenerator,
+        // findIndexRight: findIndexRight,
+        protoProperty: protoProperty,
+        reverseParams: reverseParams,
+        objectToArray: objectToArray,
+        sortedIndexOf: sortedIndexOf,
+        // filterNegative: filterNegative,
+        stringifyQuery: stringifyQuery,
+        intendedObject: intendedObject,
+        arrayLikeToArray: arrayLikeToArray,
+        euclideanDistance: euclideanDistance,
+        intendedIteration: intendedIteration,
+        constructorWrapper: constructorWrapper,
+        NEGATIVE_BIG_INTEGER: NEGATIVE_BIG_INTEGER,
+        createPredicateIndexFinder: createPredicateIndexFinder,
+        math: merge(wrap(toArray('E,LN2,LN10,LOG2E,LOG10E,PI,SQRT1_2,SQRT2,abs,acos,acosh,asin,asinh,atan,atan2,atanh,cbrt,ceil,clz32,cos,cosh,exp,expm1,floor,fround,hypot,imul,log,log1p,log2,log10,pow,random,round,sign,sin,sinh,sqrt,tan,tanh,trunc'), function (key) {
+            return Math[key];
+        }), {
+            min: mathArray('min'),
+            max: mathArray('max')
+        })
+    }, builtCallers),
+    returnsTrue = returns(BOOLEAN_TRUE),
+    returnsFalse = returns(BOOLEAN_FALSE),
+    returnsNull = returns(NULL);
+merge(returns, {
+    true: returnsTrue,
+    false: returnsFalse,
+    null: returnsNull,
+    array: returnsArray,
+    object: returnsObject,
+    self: returnsSelf,
+    first: returnsFirstArgument,
+    second: returnsSecondArgument
+});
 app.logWrappedErrors = isBoolean.false = isBoolean.true = BOOLEAN_TRUE;
 factories.Extendable = constructorWrapper(Extendable, OBJECT_CONSTRUCTOR);
 /**
@@ -254,8 +249,24 @@ factories.Extendable = constructorWrapper(Extendable, OBJECT_CONSTRUCTOR);
  */
 function noop() {}
 
+function returnsSelf() {
+    return this;
+}
+
+function returnsObject() {
+    return {};
+}
+
 function returnsArray() {
     return [];
+}
+
+function returnsFirstArgument(value) {
+    return value;
+}
+
+function returnsSecondArgument(nil, value) {
+    return value;
 }
 
 function indexOfNaN(array, fromIndex, toIndex, fromRight) {
@@ -724,7 +735,7 @@ function tackRight(fn) {
 
 function values(object) {
     var collected = [];
-    each(object, function (value) {
+    forOwn(object, function (value) {
         collected.push(value);
     });
     return collected;
@@ -1010,7 +1021,7 @@ function wrap(obj, fn, noExecute) {
     var newObj = {},
         _isArray = isArray(obj),
         wasfunction = isFunction(fn);
-    each(obj, function (value, key) {
+    forOwn(obj, function (value, key) {
         if (_isArray) {
             if (!wasfunction || noExecute) {
                 newObj[value] = fn;
@@ -1140,16 +1151,16 @@ function findWhere(obj, attrs) {
     return find(obj, matches(attrs));
 }
 
-function findLastWhere(obj, attrs) {
-    return findLast(obj, matches(attrs));
+function findWhereRight(obj, attrs) {
+    return findRight(obj, matches(attrs));
 }
 
 function findIndexWhere(obj, attrs) {
     return findIndex(obj, matches(attrs));
 }
 
-function findLastIndexWhere(obj, attrs) {
-    return findLastIndex(obj, matches(attrs));
+function findIndexWhereRight(obj, attrs) {
+    return findIndexRight(obj, matches(attrs));
 }
 
 function parse(val_) {
@@ -1427,7 +1438,7 @@ function stringifyQuery(obj) {
     var val, n, base = obj.url,
         query = [];
     if (isObject(obj)) {
-        each(obj.query, function (val, n) {
+        forOwn(obj.query, function (val, n) {
             if (val !== UNDEFINED) {
                 val = encodeURIComponent(stringify(val));
                 query.push(n + '=' + val);
@@ -1517,7 +1528,7 @@ function intendedObject(key, value, fn_, ctx) {
         });
     } else {
         if ((obj = isObject(key) ? key : BOOLEAN_FALSE)) {
-            each(obj, reverseParams(fn));
+            forOwn(obj, reverseParams(fn));
         } else {
             fn(key, value);
         }
@@ -1560,6 +1571,7 @@ function buildCallers(prefix, handler, second) {
         CALL = 'Call',
         BOUND = 'Bound',
         TRY = 'Try';
+    memo[prefix] = handler;
     memo[prefix + CALL] = function (array, method, arg) {
         return handler(array, function (item) {
             return item[method](arg);
@@ -1580,7 +1592,7 @@ function buildCallers(prefix, handler, second) {
             return item(arg);
         }, catcher, finallyer));
     };
-    merge(buildCallers, memo);
+    merge(builtCallers, memo);
     if (second) {
         buildCallers(prefix + 'Right', second);
     }

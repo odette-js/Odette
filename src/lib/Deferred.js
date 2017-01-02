@@ -524,7 +524,7 @@ var Deferred = app.block(function (app) {
      * return Deferred.reject("19&3s*oi(s)ee0w");
      */
     // toArray('resolve,reject')
-    // each({
+    // forOwn({
     //     resolve: SUCCESS,
     //     reject: FAILURE
     // }, function (val, key) {

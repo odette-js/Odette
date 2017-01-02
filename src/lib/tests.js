@@ -283,7 +283,7 @@ app.defineDirective('Tests', (function (app) {
             }, function (current, comparison) {
                 return EXPECTED + SPACE + 'function not' + TO_EVALUATE_TO + stringify(comparison);
             }, BOOLEAN_TRUE);
-            each(_.is, function (value, key) {
+            forOwn(_.is, function (value, key) {
                 maker('toBe' + capitalize(key), value, function (current, comparison) {
                     return EXPECTED + SPACE + stringify(current) + TO_BE + key;
                 }, function (current, comparison) {
@@ -291,7 +291,7 @@ app.defineDirective('Tests', (function (app) {
                 });
             });
         },
-        Tests = Directive.extend("Tests", {
+        Tests = Directive.extend('Tests', {
             constructor: function (target) {
                 var aeQ = [];
                 var beQ = [];

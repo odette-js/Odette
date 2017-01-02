@@ -88,8 +88,8 @@ app.scope(function (app) {
             has: function (key) {
                 return this[CURRENT][key] !== UNDEFINED;
             },
-            each: function (fn) {
-                return each(this[CURRENT], fn, this);
+            forOwn: function (fn) {
+                return forOwn(this[CURRENT], fn, this);
             }
         });
     app.defineDirective(DATA_MANAGER, DataManager[CONSTRUCTOR]);

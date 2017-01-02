@@ -245,14 +245,14 @@ application.scope().run(window, function (module, app, _, factories, $) {
                     splice: function () {}
                 })).toEqual(true);
             }, 3);
-            test.it('_.each', function () {
+            test.it('_.forOwn', function () {
                 var args = [],
                     obj = {
                         one: 1,
                         two: 2,
                         three: 3
                     };
-                _.each(obj, function (item, idx, iteratingObj) {
+                _.forOwn(obj, function (item, idx, iteratingObj) {
                     args.push([item, idx, iteratingObj]);
                 });
                 test.expect(args).toEqual([
@@ -262,7 +262,7 @@ application.scope().run(window, function (module, app, _, factories, $) {
                 ]);
                 args = [];
                 obj = ['one', 'two', 'three'];
-                _.each(obj, function (val, idx, o) {
+                _.forOwn(obj, function (val, idx, o) {
                     args.push([val, idx, o]);
                 });
                 test.expect(args).toEqual([
