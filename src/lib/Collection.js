@@ -24,7 +24,7 @@ var COLLECTION = 'Collection',
             reverseCollection = toArray('reverse'),
             splatHandlers = toArray('push,unshift'),
             joinHandlers = toArray('join'),
-            countingCollection = toArray('count,countTo,countFrom,merge'),
+            countingCollection = toArray('count,countTo,countFrom'),
             foldIteration = toArray('reduce,reduceRight'),
             findIteration = toArray('find,findRight,findWhere,findWhereRight').concat(keys(buildCallers('find'))),
             indexers = toArray('indexOf,includes'),
@@ -70,6 +70,11 @@ var COLLECTION = 'Collection',
                 },
                 slice: function (one, two) {
                     return this.wrap(this.toArray().slice(one, two));
+                },
+                merge: function (newish, merger, stack) {
+                    var list = this;
+                    merge(list.toArray(), newish, merger, stack);
+                    return list;
                 }
             }, wrap(joinHandlers, function (name) {
                 return function (arg) {

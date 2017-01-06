@@ -79,7 +79,7 @@ app.scope(function (app) {
             allLoopers.push(looper);
         },
         start = function (looper) {
-            if (!has(runningLoopers, looper, BOOLEAN_TRUE)) {
+            if (!contains(runningLoopers, looper)) {
                 runningLoopers.push(looper);
             }
             if (!running) {

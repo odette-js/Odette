@@ -17,6 +17,9 @@ var garbage, factories = {},
         return !!thing;
     }),
     // Returns the first index on an array-like that passes a predicate test
+    returnsEmptyString = returns(''),
+    iteratesOwn = iterates(keys),
+    iteratesIn = iterates(allKeys),
     findIndex = createPredicateIndexFinder(1),
     findIndexRight = createPredicateIndexFinder(-1),
     find = findAccessor(findIndex),
@@ -29,6 +32,7 @@ var garbage, factories = {},
     mapValues = maps(forOwn, mapValuesIteratee, returnBaseType),
     mapKeys = maps(forOwn, mapKeysIteratee, returnBaseType),
     reduce = createReduce(1),
+    dropWhile = dropsWhile(filter),
     forEachRight = tackRight(forEach),
     forOwnRight = tackRight(forOwn),
     forInRight = tackRight(forIn),
@@ -37,19 +41,25 @@ var garbage, factories = {},
     mapValuesRight = maps(forOwnRight, mapValuesIteratee, returnBaseType),
     mapKeysRight = maps(eachRight, mapKeysIteratee, returnBaseType),
     reduceRight = createReduce(-1),
-    garbage = buildCallers('forEach', forEach, forEachRight),
-    garbage = buildCallers('forOwn', forOwn, forOwnRight),
-    garbage = buildCallers('forIn', forIn, forInRight),
-    garbage = buildCallers('each', each, eachRight),
-    garbage = buildCallers('map', map, mapRight),
-    garbage = buildCallers('mapValues', mapValues, mapValuesRight),
-    garbage = buildCallers('mapKeys', mapKeys, mapKeysRight),
-    garbage = buildCallers('find', find, findRight),
-    garbage = buildCallers('findIndex', findIndex, findIndexRight),
-    garbage = buildCallers('filter', filter),
-    garbage = buildCallers('filterNegative', filterNegative),
-    garbage = buildCallers('reduce', reduce, reduceRight),
-    _performance = window.performance,
+    dropRightWhile = dropsWhile(filterRight),
+    filterable = negatableFilter(filterCommon(returnsArray, arrayAdd), filterCommon(returnsObject, objectSet), filterCommon(returnsEmptyString, stringConcat)),
+    filter = filterable(reduce),
+    filterNegative = filterable(reduce, BOOLEAN_TRUE),
+    filterRight = filterable(reduceRight),
+    filterNegativeRight = filterable(reduceRight, BOOLEAN_TRUE),
+    garbage = buildCallers('forEach', forEach, forEachRight);
+garbage = buildCallers('forOwn', forOwn, forOwnRight);
+garbage = buildCallers('forIn', forIn, forInRight);
+garbage = buildCallers('each', each, eachRight);
+garbage = buildCallers('map', map, mapRight);
+garbage = buildCallers('mapValues', mapValues, mapValuesRight);
+garbage = buildCallers('mapKeys', mapKeys, mapKeysRight);
+garbage = buildCallers('find', find, findRight);
+garbage = buildCallers('findIndex', findIndex, findIndexRight);
+garbage = buildCallers('reduce', reduce, reduceRight);
+garbage = buildCallers('filter', filter, filterRight);
+garbage = buildCallers('filterNegative', filterNegative, filterNegativeRight);
+var _performance = window.performance,
     uuidHash = {},
     maths = Math,
     performance = _performance ? (_performance.now = (_performance.now || _performance.webkitNow || _performance.msNow || _performance.oNow || _performance.mozNow || now_shim)) && _performance : {
@@ -70,7 +80,10 @@ var garbage, factories = {},
     startsWith = itemIs,
     // make global
     exception = console.exception,
-    is = {
+    is = merge(isStrictlyEqual, {
+        of: isOf,
+        equal: isEqual,
+        strictlyEqual: isStrictlyEqual,
         emptyArray: isEmptyArray,
         number: isNumber,
         string: isString,
@@ -81,15 +94,16 @@ var garbage, factories = {},
         'function': isFunction,
         boolean: isBoolean,
         'null': isNull,
-        length: isLength,
+        // length: isLength,
         validInteger: isValidInteger,
         arrayLike: isArrayLike,
-        instance: isInstance
-    },
+        instance: isInstance,
+        truthy: isTruthy,
+        falsey: isFalsey
+    }),
     to = {
         array: toArray,
         'function': toFunction,
-        n: toN,
         number: toNumber,
         string: toString,
         finite: toFinite,
@@ -103,7 +117,6 @@ var garbage, factories = {},
         is: is,
         to: to,
         pI: pI,
-        toN: toN,
         zip: zip,
         has: has,
         now: now,
@@ -115,11 +128,8 @@ var garbage, factories = {},
         uuid: uuid,
         keys: keys,
         once: once,
-        // each: each,
-        // find: find,
-        // some: some,
-        // foldl: foldl,
-        // foldr: foldr,
+        slice: slice,
+        chunk: chunk,
         parse: parse,
         merge: merge,
         isInt: isInt,
@@ -129,8 +139,7 @@ var garbage, factories = {},
         flows: flows,
         where: where,
         isNaN: _isNaN,
-        // forIn: forIn,
-        // forOwn: forOwn,
+        whilst: whilst,
         reduce: reduce,
         under1: under1,
         invert: invert,
@@ -151,7 +160,6 @@ var garbage, factories = {},
         itemIs: itemIs,
         isEqual: isEqual,
         isArray: isArray,
-        // forEach: forEach,
         flatten: flatten,
         wraptry: wraptry,
         indexOf: indexOf,
@@ -163,11 +171,12 @@ var garbage, factories = {},
         whereNot: whereNot,
         evaluate: evaluate,
         validKey: validKey,
-        // findRight: findRight,
         toString: toString,
         throttle: throttle,
         debounce: debounce,
         iterates: iterates,
+        iteratesOwn: iteratesOwn,
+        iteratesIn: iteratesIn,
         bindWith: bindWith,
         mapRight: mapRight,
         isObject: isObject,
@@ -192,6 +201,7 @@ var garbage, factories = {},
         toFunction: toFunction,
         roundFloat: roundFloat,
         isFunction: isFunction,
+        difference: difference,
         withinRange: withinRange,
         isUndefined: isUndefined,
         superExtend: superExtend,
@@ -201,6 +211,7 @@ var garbage, factories = {},
         performance: performance,
         unwrapBlock: unwrapBlock,
         BIG_INTEGER: BIG_INTEGER,
+        differenceBy: differenceBy,
         smartIndexOf: smartIndexOf,
         consolemaker: consolemaker,
         // forEachRight: forEachRight,
@@ -221,6 +232,7 @@ var garbage, factories = {},
         intendedIteration: intendedIteration,
         constructorWrapper: constructorWrapper,
         NEGATIVE_BIG_INTEGER: NEGATIVE_BIG_INTEGER,
+        euclideanOriginDistance: euclideanOriginDistance,
         createPredicateIndexFinder: createPredicateIndexFinder,
         math: merge(wrap(toArray('E,LN2,LN10,LOG2E,LOG10E,PI,SQRT1_2,SQRT2,abs,acos,acosh,asin,asinh,atan,atan2,atanh,cbrt,ceil,clz32,cos,cosh,exp,expm1,floor,fround,hypot,imul,log,log1p,log2,log10,pow,random,round,sign,sin,sinh,sqrt,tan,tanh,trunc'), function (key) {
             return Math[key];
@@ -310,6 +322,10 @@ function indexOf(array, value, fromIndex, toIndex, fromRight) {
     return -1;
 }
 
+function contains(list, item) {
+    return indexOf(list, item) !== -1;
+}
+
 function isValue(item) {
     return notNaN(item) && !isNull(item) && !isUndefined(item);
 }
@@ -372,6 +388,26 @@ function toBoolean(item) {
     return !!item;
 }
 
+function matches(obj1) {
+    return function (obj2) {
+        return isMatch(obj2, obj1);
+    };
+}
+
+function matchesProperty(pair) {
+    var key = pair[0],
+        value = pair[1];
+    return function (item) {
+        return item[key] === value;
+    };
+}
+
+function matchesBinary(assertment, lookingFor) {
+    var boolAssertment = !assertment;
+    var boolLookingFor = !lookingFor;
+    return boolAssertment === boolLookingFor;
+}
+
 function stringify(obj) {
     return (isObject(obj) ? JSON.stringify(obj) : isFunction(obj) ? obj.toString() : obj) + EMPTY_STRING;
 }
@@ -405,12 +441,8 @@ function sortBy(list, arg1, handler_, reversed, context) {
     }, reversed, context);
 }
 
-function has(obj, prop, useArrayCheck) {
-    var val = BOOLEAN_FALSE;
-    if (useArrayCheck) {
-        return indexOf(obj, prop) !== -1;
-    }
-    return obj && isFunction(obj.hasOwnProperty) ? obj.hasOwnProperty(prop) : val;
+function has(obj, prop) {
+    return obj && isFunction(obj.hasOwnProperty) ? obj.hasOwnProperty(prop) : BOOLEAN_FALSE;
 }
 
 function previousConstructor(instance) {
@@ -429,6 +461,14 @@ function itemIs(list, item, index) {
     return list[index || 0] === item;
 }
 
+function isFalsey(item) {
+    return !item;
+}
+
+function isTruthy(item) {
+    return !!item;
+}
+
 function isWrap(type, fn_) {
     var fn = fn_ || function () {
         return BOOLEAN_TRUE;
@@ -439,15 +479,23 @@ function isWrap(type, fn_) {
 }
 
 function _isNaN(thing) {
-    return thing !== thing;
+    return !isStrictlyEqual(thing, thing);
 }
 
 function notNaN(thing) {
     return !_isNaN(thing);
 }
 
+function isStrictlyEqual(a, b) {
+    return a === b;
+}
+
+function isOf(instance, constructor) {
+    return constructor ? instance instanceof constructor : BOOLEAN_FALSE;
+}
+
 function isBoolean(argument) {
-    return argument === BOOLEAN_TRUE || argument === BOOLEAN_FALSE;
+    return isStrictlyEqual(argument, BOOLEAN_TRUE) || isStrictlyEqual(argument, BOOLEAN_FALSE);
 }
 
 function isInt(num) {
@@ -455,11 +503,15 @@ function isInt(num) {
 }
 
 function isNull(thing) {
-    return thing === NULL;
+    return isStrictlyEqual(thing, NULL);
 }
 
 function isUndefined(thing) {
-    return thing === UNDEFINED;
+    return isStrictlyEqual(thing, UNDEFINED);
+}
+
+function isDefined(thing) {
+    return !isUndefined(thing);
 }
 
 function negate(fn) {
@@ -473,7 +525,7 @@ function _isFinite(thing) {
 }
 
 function isWindow(obj) {
-    return !!(obj && obj === obj[WINDOW]);
+    return !!(obj && isStrictlyEqual(obj, obj[WINDOW]));
 }
 
 function isEmpty(obj) {
@@ -497,7 +549,9 @@ function collectNonEnumProps(obj, keys) {
     var proto = (isFunction(constructor) && constructor[PROTOTYPE]) || ObjProto;
     // Constructor is a special case.
     var prop = CONSTRUCTOR;
-    if (has(obj, prop) && !contains(keys, prop)) keys.push(prop);
+    if (has(obj, prop) && !contains(keys, prop)) {
+        keys.push(prop);
+    }
     while (nonEnumIdx--) {
         prop = nonEnumerableProps[nonEnumIdx];
         if (prop in obj && obj[prop] !== proto[prop] && !contains(keys, prop)) {
@@ -506,13 +560,13 @@ function collectNonEnumProps(obj, keys) {
     }
 }
 
-function extend(args, deep) {
+function extend(args, deep, stack) {
     var length = args && args[LENGTH],
         index = 1,
         first = 0,
         base = args[0] || {};
     for (; index < length; index++) {
-        merge(base, args[index], deep);
+        merge(base, args[index], deep, stack);
     }
     return base;
 }
@@ -531,47 +585,166 @@ function superExtend(key, handler) {
 }
 // merge_count = 0,
 function merge(obj1, obj2, deep) {
-    var key, obj1Val, obj2Val, i = 0,
-        instanceKeys = keys(obj2),
+    var customizer = isBoolean[deep] ? (deep ? deepMergeWithCustomizer : shallowMergeWithCustomizer) : deep ? deep : shallowMergeWithCustomizer;
+    return mergeWith(obj1, obj2, customizer);
+}
+
+function shallowMergeWithCustomizer(o1Val, o2Val, key, o1, o2, stack) {
+    return o2Val;
+}
+
+function deepMergeWithCustomizer(o1Val, o2Val, key, o1, o2, stack) {
+    var result, garbage;
+    if (isObject(o2Val)) {
+        if (contains(stack, o2Val)) {
+            return o2Val;
+        }
+        stack.push(o2Val);
+        if (!isObject(o1Val)) {
+            o1Val = returnBaseType(o2Val);
+        }
+        result = mergeWith(o1Val, o2Val, deepMergeWithCustomizer, stack);
+        garbage = stack.pop();
+        return result;
+    } else {
+        return o2Val;
+    }
+}
+
+function mergeWith(o1, o2, customizer, _stack) {
+    var key, o1Val, o2Val, i = 0,
+        instanceKeys = keys(o2),
+        stack = _stack || [],
         l = instanceKeys[LENGTH];
-    // merge_count++;
     for (; i < l; i++) {
         key = instanceKeys[i];
+        o1Val = o1[key];
+        o2Val = o2[key];
         // ignore undefined
-        if (obj2[key] !== UNDEFINED) {
-            obj2Val = obj2[key];
-            if (deep) {
-                obj1Val = obj1[key];
-                if (obj1Val !== obj2Val) {
-                    if (isObject(obj2Val)) {
-                        if (!isObject(obj1Val)) {
-                            obj1Val = obj1[key] = returnBaseType(obj2Val);
-                        }
-                        merge(obj1Val, obj2Val, deep);
-                    } else {
-                        obj1[key] = obj2Val;
-                    }
-                }
-            } else {
-                obj1[key] = obj2Val;
-            }
+        if (o2[key] !== UNDEFINED && o1Val !== o2Val) {
+            o1[key] = customizer(o1Val, o2Val, key, o1, o2, stack);
         }
     }
-    return obj1;
+    return o1;
+}
+
+function whilst(filter, continuation, _memo) {
+    var memo = _memo;
+    while (filter(memo)) {
+        memo = continuation(memo);
+    }
+    return memo;
+}
+
+function chunk(array, size) {
+    var length, nu = [];
+    if (!array || !(length = array.length)) {
+        return nu;
+    }
+    var final = whilst(function (count) {
+        return length > count;
+    }, function (count) {
+        var upperLimit = clamp(count + size, 0, length);
+        nu.push(array.slice(count, upperLimit));
+        return upperLimit;
+    }, 0);
+    return nu;
+}
+
+function compact(list) {
+    return filter(list, isTruthy);
+}
+
+function differentiator(list, comparison, modder, differ) {
+    var diffs = [],
+        modifier = modder || mod;
+    if (!comparison || !(comparisonLength = comparison.length)) {
+        return list ? list.slice(0) : diffs;
+    }
+    forEach(list, function (item, index) {
+        if (!differ(modifier(item), modifier(comparison[index]))) {
+            diffs.push(item);
+        }
+    });
+    return diffs;
+}
+
+function difference(list, comparison) {
+    return differentiator(list, comparison, returnsFirstArgument, isEqual);
+}
+
+function differenceBy(list, comparison, by) {
+    return differentiator(list, comparison, by, isEqual);
+}
+
+function differenceWith(list, comparison, comparator) {
+    return differentiator(list, comparison, returnsFirstArgument, comparator);
+}
+
+function definedAndCall(item, caller) {
+    return isUndefined(item) ? item : toFunction(caller)(item);
+}
+
+function definedOrCall(item, caller) {
+    return isUndefined(item) ? toFunction(caller)(item) : item;
+}
+
+function definedOr(item, def) {
+    return isUndefined(item) ? item : def;
+}
+
+function definedThenCall(item, bool, caller) {
+    return matchesBinary(isUndefined(item), bool) ? toFunction(caller)(item) : item;
+}
+
+function undefineAndCall(item, caller) {
+    return isUndefined(item) ? item : toFunction(caller)(item);
+}
+
+function undefinedOrCall(item, caller) {
+    return isUndefined(item) ? toFunction(caller)(item) : item;
+}
+
+function undefinedOr(item, def) {
+    return isUndefined(item) ? def : item;
+}
+
+function defaultTo1(n) {
+    return undefinedOr(n, 1);
+}
+
+function possibleArrayIndex(n) {
+    return clamp(n, 0, MAX_ARRAY_INDEX);
+}
+
+function slice(array, start, end) {
+    return toArray(array, possibleArrayIndex(start), possibleArrayIndex(end));
+}
+
+function drop(array, _n) {
+    return slice(array, defaultTo1(_n));
+}
+
+function dropRight(array, _n) {
+    return slice(array, 0, defaultTo1(_n));
+}
+
+function dropsWhile(filter) {
+    return function (array, iteratee) {
+        return filter(array, isFunction(iteratee) ? iteratee : (isArray(iteratee) ? matchesProperty : (isObject(iteratee) ? matches : property)));
+    };
 }
 
 function zip(lists) {
-    var aggregator = [];
-    forEach(lists, function (list, listCount) {
-        forEach(list, function (item, index) {
-            var destination = aggregator[index];
-            if (!aggregator[index]) {
-                destination = aggregator[index] = [];
+    return reduce(lists, function (memo, list, listCount) {
+        return forEach(memo, function (item, index) {
+            var destination;
+            if (!(destination = memo[index])) {
+                destination = memo[index] = [];
             }
             destination[listCount] = item;
         });
-    });
-    return aggregator;
+    }, []);
 }
 
 function object(keys, values) {
@@ -596,12 +769,14 @@ function isArrayLike(collection) {
     return isArray(collection) || (isWindow(collection) ? BOOLEAN_FALSE : (isNumber(length) && !isString(collection) && length >= 0 && length <= MAX_ARRAY_INDEX && !isFunction(collection)));
 }
 
-function iterates(keys, obj, iterator, context) {
-    var list = keys(obj),
-        iteratee = bindTo(iterator, context);
-    return {
-        keys: list,
-        handler: function (key, idx, list) {
+function iterates(keys) {
+    return function (obj, iterator, context) {
+        var list = keys(obj),
+            iteratee = bindTo(iterator, context);
+        handler.keys = keys(obj);
+        return handler;
+
+        function handler(key, idx, list) {
             // gives you the key, use that to get the value
             return iteratee(obj[key], key, obj);
         }
@@ -609,9 +784,10 @@ function iterates(keys, obj, iterator, context) {
 }
 
 function eachProxy(fn, getkeys) {
+    var itrts = iterates(getkeys);
     return function (obj_, iteratee_, context_, direction_) {
-        var ret, obj = obj_,
-            list = obj,
+        var iteratable, obj = obj_,
+            keys = obj,
             iteratee = iteratee_,
             iterator = iteratee,
             context = context_,
@@ -620,13 +796,10 @@ function eachProxy(fn, getkeys) {
             return obj;
         }
         if (!isArrayLike(obj)) {
-            ret = iterates(getkeys, list, iteratee, context);
-            iterator = ret.handler;
-            list = ret.keys;
-            // prevent forEach from binding again
-            context = NULL;
+            iterator = itrts(obj, iterator, context);
+            obj = iterator.keys;
         }
-        return fn(list, iterator, context, direction);
+        return fn(obj, iterator, context, direction);
     };
 }
 
@@ -646,7 +819,6 @@ function createPredicateIndexFinder(dir) {
                 return key;
             }
         }
-        return;
     };
 }
 
@@ -662,16 +834,9 @@ function findAccessor(fn) {
 function validKey(key) {
     // -1 for arrays
     // any other data type ensures string
-    return key !== -1 && key === key && key !== UNDEFINED && key !== NULL && key !== BOOLEAN_FALSE && key !== BOOLEAN_TRUE;
+    return !isStrictlyEqual(key, -1) && isValue(key) && !isBoolean(key);
 }
-// finder = function (findHelper) {
-//     return function (obj, predicate, context, startpoint) {
-//         return findHelper(obj, predicate, context, startpoint);
-//         // if (validKey(key)) {
-//         //     return obj[key];
-//         // }
-//     };
-// },
+
 function bind(func, context) {
     return arguments[LENGTH] < 3 ? bindTo(func, context) : bindWith(func, toArray(arguments).slice(1));
 }
@@ -1085,28 +1250,6 @@ function isMatch(object, attrs) {
     });
 }
 
-function matches(obj1) {
-    return function (obj2) {
-        return isMatch(obj2, obj1);
-    };
-}
-
-function matchesBinary(assertment, lookingFor) {
-    var boolAssertment = !assertment;
-    var boolLookingFor = !lookingFor;
-    return boolAssertment === boolLookingFor;
-}
-
-function filterCommon(thing, iteratee, context, negated, passed, memo) {
-    var negative = !negated;
-    var bound = bindTo(iteratee, context);
-    return reduce(thing, function (memo, item, index, list) {
-        if (matchesBinary(bound(item, index, list), negative)) {
-            passed(memo, item, index);
-        }
-    }, memo);
-}
-
 function arrayAdd(array, item) {
     array.push(item);
 }
@@ -1115,25 +1258,37 @@ function objectSet(object, item, key) {
     object[key] = item;
 }
 
-function filterArray(array, iteratee, context, negated) {
-    return filterCommon(array, iteratee, context, negated, arrayAdd, []);
+function stringConcat(base, string) {
+    return base.concat(string);
 }
 
-function filterObject(object, iteratee, context, negated) {
-    return filterCommon(object, iteratee, context, negated, objectSet, {});
+function split(string, delimiter) {
+    return toString(string).split(delimiter, undefinedOr(delimiter, ''));
 }
 
-function filter(thing, iteratee, context, negated) {
-    return isArrayLike(thing) ? filterArray(thing, iteratee, context, negated) : filterObject(thing, iteratee, context, negated);
+function filterCommon(memo, passed) {
+    return function (thing, iteratee, context, negated, reduction) {
+        var negative = !negated;
+        var bound = bindTo(iteratee, context);
+        return reduction(thing, function (memo, item, index, list) {
+            if (matchesBinary(bound(item, index, list), negative)) {
+                passed(memo, item, index);
+            }
+        }, memo());
+    };
 }
 
-function filterNegative(obj, iteratee, context, negated) {
-    return filter(obj, iteratee, context, !negated);
+function negatableFilter(array, object, string) {
+    return function (reduction, negation) {
+        return function (thing, iteratee, context) {
+            return (isArrayLike(thing) ? array : (isObject(thing) ? object : string))(thing, iteratee, context, negation, reduction);
+        };
+    };
 }
 
 function unique(list) {
     return filter(list, function (memo, item) {
-        if (indexOf(memo, item) === -1) {
+        if (!contains(memo, item)) {
             memo.push(item);
         }
     }, []);
@@ -1272,10 +1427,6 @@ function objectToArray(obj) {
     }, []);
 }
 
-function toN(item) {
-    return isArrayLike(object) ? item : [item];
-}
-
 function toArray(object, delimiter) {
     return isArrayLike(object) ? (isArray(object) ? object.slice(0) : arrayLikeToArray(object)) : (isString(object) ? object.split(isString(delimiter) ? delimiter : COMMA) : [object]);
 }
@@ -1355,11 +1506,9 @@ function toInteger(number, notSafe) {
 function under1(number) {
     return number > 1 ? 1 / number : number;
 }
-
-function isLength(number) {
-    return isNumber(number) && isValidInteger(number);
-}
-
+// function isLength(number) {
+//     return isNumber(number) && isValidInteger(number);
+// }
 function toLength(number) {
     return number ? clamp(toInteger(number, BOOLEAN_TRUE), 0, MAX_ARRAY_LENGTH) : 0;
 }
@@ -1762,6 +1911,4 @@ function flows(fromHere, toHere) {
  * @class Extendable
  * @private
  */
-function Extendable(attributes, options) {
-    return this;
-}
+function Extendable() {}

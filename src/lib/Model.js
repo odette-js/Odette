@@ -613,7 +613,7 @@ var CHILDREN = capitalize(CHILD + 'ren'),
         function changeCheckHandle(key, fn, context) {
             var bound = bindTo(fn, context);
             return function (e) {
-                return _.has(e.data(), key) ? bound(e) : UNDEFINED;
+                return has(e.data(), key) ? bound(e) : UNDEFINED;
             };
         }
         // children should actually extend from collection.

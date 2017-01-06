@@ -28,13 +28,13 @@ var WeakMap = factories.WeakMap = app.block(function (app) {
                     var item, typeGroup = this.getType(obj),
                         hash = typeGroup.hash,
                         list = typeGroup.list;
-                    return id ? (_.has(hash, id) && hash[id]) : typeGroup.data[indexOf(typeGroup.list, obj)];
+                    return id ? (has(hash, id) && hash[id]) : typeGroup.data[indexOf(typeGroup.list, obj)];
                 },
                 has: function (obj, id, typeGroup_) {
                     var item, typeGroup = typeGroup_ || this.getType(obj),
                         hash = typeGroup.hash,
                         list = typeGroup.list;
-                    return !!(id ? _.has(hash, id) : (1 + indexOf(typeGroup.list, obj)));
+                    return !!(id ? has(hash, id) : (1 + indexOf(typeGroup.list, obj)));
                 },
                 set: function (obj, datum, id) {
                     var item, idx, typeGroup = this.getType(obj),
@@ -51,7 +51,7 @@ var WeakMap = factories.WeakMap = app.block(function (app) {
                 delete: function (obj, id) {
                     var idx, typeGroup = this.getType(obj);
                     if (id) {
-                        return _.has(typeGroup.hash, id);
+                        return has(typeGroup.hash, id);
                     } else {
                         idx = indexOf(typeGroup.list, obj);
                         if (idx === -1) {

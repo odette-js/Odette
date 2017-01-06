@@ -12,6 +12,7 @@ var ATTACHED = 'attached',
     CUSTOM = 'custom',
     REMOVING = 'removing',
     ACCESSABLE = 'accessable',
+    CURRENT_TARGET = 'currentTarget',
     CUSTOM_LISTENER = CUSTOM + 'Listener',
     UPPER_CHILD = 'Child',
     APPEND_CHILD = 'append' + UPPER_CHILD,
@@ -2345,7 +2346,7 @@ app.scope(function (app) {
                 return !element.classList.contains.apply(element.classList, list);
             }, function (element, current, list) {
                 return find(list, function (item) {
-                    return !has(current, item, BOOLEAN_TRUE);
+                    return !contains(current, item);
                 });
             }),
             /**
@@ -3103,7 +3104,7 @@ app.scope(function (app) {
                 // Support: Cordova 2.5 (WebKit) (#13255)
                 // All events should have a target; Cordova deviceready doesn't
                 // ie also does not have a target... so use current target
-                target = evnt.target || (evnt.view ? evnt.view.event.currentTarget : event && event.currentTarget) || evnt.delegateTarget.element();
+                target = evnt.target || (evnt.view ? evnt.view.event[CURRENT_TARGET] : event && event[CURRENT_TARGET]) || evnt.delegateTarget.element();
                 if (!target) {
                     target = evnt.target = doc;
                 }
@@ -3136,7 +3137,7 @@ app.scope(function (app) {
                 if (evnt.view) {
                     evnt.view = origin.owner.returnsManager(evnt.view);
                 }
-                evnt.remark('trusted', _.has(originalEvent, IS_TRUSTED) ? originalEvent[IS_TRUSTED] : !DO_NOT_TRUST);
+                evnt.remark('trusted', has(originalEvent, IS_TRUSTED) ? originalEvent[IS_TRUSTED] : !DO_NOT_TRUST);
                 (fixHook.reaction || noop)(evnt, originalEvent);
             }
         },
@@ -3149,7 +3150,8 @@ app.scope(function (app) {
                     return evnt;
                 }
                 e.originalEvent = evnt;
-                if (!has(evnt.target) || !has(evnt.currentTarget)) {
+                // check this
+                if (!has(evnt, TARGET) || !has(evnt, CURRENT_TARGET)) {
                     e.delegateTarget = opts.origin;
                 } else {
                     e.delegateTarget = opts.origin.owner.returnsManager(opts.target);
@@ -3296,17 +3298,17 @@ app.scope(function (app) {
                 });
             },
             queue: function (stack, handler, evnt) {
-                if (evnt[PROPAGATION_STOPPED] && evnt.currentTarget !== handler.temporaryTarget) {
+                if (evnt[PROPAGATION_STOPPED] && evnt[CURRENT_TARGET] !== handler.temporaryTarget) {
                     evnt[PROPAGATION_HALTED] = BOOLEAN_TRUE;
                     return BOOLEAN_FALSE;
                 }
-                evnt.currentTarget = handler.temporaryTarget;
+                evnt[CURRENT_TARGET] = handler.temporaryTarget;
                 handler.mainHandler.currentEvent = evnt;
                 stack.push(handler);
                 return BOOLEAN_TRUE;
             },
             unQueue: function (stack, handler, evnt) {
-                evnt.currentTarget = handler.currentTarget = NULL;
+                evnt[CURRENT_TARGET] = handler[CURRENT_TARGET] = NULL;
                 handler.mainHandler.currentEvent = NULL;
                 stack.pop();
                 return this;
