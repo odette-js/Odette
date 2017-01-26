@@ -84,7 +84,7 @@ var REGION_MANAGER = 'RegionManager',
                     },
                     constructor: function (secondary) {
                         var model = this;
-                        model.super.call(model, secondary);
+                        Parent.constructor.call(model, secondary);
                         verifyOwner$(model);
                         model.directive(CHILDREN);
                         model.setElement();
@@ -338,7 +338,7 @@ var REGION_MANAGER = 'RegionManager',
                     view.id = app.counter();
                     view.bindModel(secondary.model);
                     delete secondary.model;
-                    Model[CONSTRUCTOR].call(view, {}, secondary);
+                    Model[CONSTRUCTOR].call(view, NULL, secondary);
                     view.directive(CAPITAL_ELEMENT).ensure();
                     return view;
                 },
@@ -360,7 +360,7 @@ var REGION_MANAGER = 'RegionManager',
                     //     el.destroy(handler);
                     // }
                     view.directiveDestruction(CAPITAL_ELEMENT);
-                    Parent[CONSTRUCTOR][PROTOTYPE].destroy.call(view);
+                    Model[CONSTRUCTOR].fn.destroy.call(view);
                     if (view.parent) {
                         view.parent.remove(view);
                     }
