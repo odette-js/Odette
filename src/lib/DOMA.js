@@ -738,7 +738,7 @@ var ATTACHED = 'attached',
                     // do not do children
                     if (bChildrenLength <= i) {
                         dontCreate = BOOLEAN_TRUE;
-                        diffs.removing.push.apply(diffs.removing, toArray(aChildren).slice(i));
+                        arrayPush.apply(diffs.removing, toArray(aChildren).slice(i));
                         return diffs;
                     } else {
                         result = nodeComparison(aChildren[i], bChildren[i], hash, stopper, layer_level, i, diffs, context, a);
@@ -4332,7 +4332,7 @@ app.scope(function (app) {
                     var filter, resultant, manager = this,
                         children = collectChildren(manager.element());
                     if (eq == NULL) {
-                        return memo ? ((children = map(children, manager.owner.returnsManager, manager.owner)) && result(memo, CUSTOM_KEY, FRAGMENT) ? memo.append(children) : (memo.push.apply(memo, children) ? memo : memo)) : manager.wrap(children);
+                        return memo ? ((children = map(children, manager.owner.returnsManager, manager.owner)) && result(memo, CUSTOM_KEY, FRAGMENT) ? memo.append(children) : (arrayPush.apply(memo, children) ? memo : memo)) : manager.wrap(children);
                     } else {
                         filter = createDomFilter(eq, manager.owner);
                         resultant = reduce(children, function (memo, child, idx, children) {
@@ -4885,17 +4885,17 @@ app.scope(function (app) {
             },
             push: function () {
                 var owner = this.context.owner;
-                this.items.push.apply(this.items, reduce(arguments, function (memo, el) {
+                arrayPush.apply(this.items, reduce(arguments, function (memo, el) {
                     if (!el) {
                         return memo;
                     }
                     if (isWindow(el)) {
                         memo.push(el);
                     } else {
-                        memo = memo.concat(!isWindow(el) && isFunction(el.unwrap) ? el.toArray() : owner.returnsManager(el));
+                        return memo.concat(!isWindow(el) && isFunction(el.toArray) ? el.toArray() : owner.returnsManager(el));
                     }
                     return memo;
-                }, [], owner));
+                }, []));
                 return this;
             },
             elements: function () {

@@ -140,12 +140,12 @@ var Deferred = app.block(function (app) {
         },
         collect = function (deferred, list) {
             var collection = deferred.directive(COLLECTION);
-            flatten(list, function (pro) {
+            forEach(flattenDeep(list), function (pro) {
                 if (deferred.isChildType(pro)) {
                     collection.add(pro);
                     collection.keep('cid', pro.cid, pro);
                 }
-            }, BOOLEAN_TRUE);
+            });
         },
         listen = function (deferred, unbound) {
             var bound = bind(unbound, deferred),
@@ -241,7 +241,7 @@ var Deferred = app.block(function (app) {
                     // cannot have been resolved in any way yet
                     // attach some convenience handlers to the
                     // instance so we can call crazy custom methods
-                    intendedObject(extend([{}, baseStates, result(deferred, 'associativeStates')]), NULL, addMethod, deferred);
+                    intendedObject(extend([{}, baseStates, result(deferred, 'associativeStates')]), NULL, bindTo(addMethod, deferred));
                     return deferred;
                 },
                 /**
@@ -456,7 +456,7 @@ var Deferred = app.block(function (app) {
                         stashedHandlers = getHandlers(deferred);
                     // do the hard work now, so later you can
                     // iterate through the stack quickly
-                    flatten(isFunction(list) ? [list] : list, function (fn) {
+                    forEach(flattenDeep(isFunction(list) ? [list] : list), function (fn) {
                         if (!isFunction(fn)) {
                             return;
                         }
@@ -465,7 +465,7 @@ var Deferred = app.block(function (app) {
                             fn: bind(fn, deferred),
                             handler: fn
                         });
-                    }, BOOLEAN_TRUE);
+                    });
                 }),
                 /**
                  * When the handle method is called, the callback will first be stashed in a queue against that state, then the deferred will check to see if it is resolved, and if it is, then it will empty it's resolved state's queue.

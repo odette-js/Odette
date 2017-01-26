@@ -35,6 +35,11 @@ var content = ['browserify', 'distribute'],
     specModules = ['setup'].concat(specs, auto_app, ['teardown']),
     extraModules = 'Socket Router LocalStorage NoSock'.split(' '),
     framedModules = 'index'.split(' '),
+    routeToFile = function (folder) {
+        return function (name) {
+            return path.join(__dirname, folder, name + '.js');
+        };
+    },
     makeSpecPath = function (name) {
         return path.join('./src/spec/', name + '.js');
     },
@@ -66,6 +71,7 @@ var content = ['browserify', 'distribute'],
         serverIndex: './index.js',
         ignoreFiles: ['.git/', 'node_modules/', './gulp', 'gulpfile.js', './dist', './results']
     }), {
+        jsOdetteNode: routeToFile('./src/node/')('index'),
         gulpdir: __dirname,
         src: './src/**/*',
         // jsAllLib: './src/lib/**/*.js',
@@ -82,6 +88,7 @@ var content = ['browserify', 'distribute'],
         jsOdetteDistribute: 'odette.js',
         jsApplicationDistribute: 'application.js',
         jsLibraryDistribute: 'library.js',
+        jsNodeDistribute: 'index.js',
         jsDistributes: './dist/build/',
         jsFull: _.map(auto_app.concat(library, ['../wrappers/auto_setup']), libPath),
         jsFullOutput: 'odette-full.js'

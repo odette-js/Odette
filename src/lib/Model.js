@@ -3,6 +3,7 @@ var CHILDREN = capitalize(CHILD + 'ren'),
     CHILD_EVENTS = CHILD + EVENT_STRING,
     DATA_MANAGER = 'DataManager',
     MODEL = 'Model',
+    PARENT_STRING = 'Parent',
     Model = app.block(function (app) {
         var SORT = 'sort',
             ADDED = 'added',
@@ -176,7 +177,7 @@ var CHILDREN = capitalize(CHILD + 'ren'),
              * @class Parent
              * @augments {Events}
              */
-            Parent = factories.Parent = factories.Events.extend('Parent',
+            Parent = factories.Parent = factories.Events.extend(PARENT_STRING,
                 /**
                  * @lends Parent.prototype
                  */
@@ -436,7 +437,7 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                     constructor: function (attributes, secondary) {
                         var model = this;
                         model.reset(attributes);
-                        this[CONSTRUCTOR + COLON + EVENT_STRING](secondary);
+                        this[CONSTRUCTOR + COLON + PARENT_STRING](secondary);
                         return model;
                     },
                     idValue: function (key, attributes) {
@@ -478,7 +479,7 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                      */
                     destroy: function () {
                         // just a wrapper around the parent
-                        this[CONSTRUCTOR + COLON + 'Parent'].fn.destroy.call(this);
+                        this[CONSTRUCTOR + COLON + PARENT_STRING].fn.destroy.call(this);
                         delete this.id;
                         return this;
                     },
@@ -492,7 +493,7 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                         }
                         changes = model.directive(DATA_MANAGER).changes();
                         return model.digest(list, function (name) {
-                            this[DISPATCH_EVENT](CHANGE_COLON + name, {
+                            model[DISPATCH_EVENT](CHANGE_COLON + name, {
                                 key: name,
                                 value: changes[name]
                             });
@@ -514,7 +515,7 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                                 handler();
                             }
                         } else {
-                            forEach(handler, fn, model);
+                            forEach(handler, fn);
                         }
                         dataDirective.decrement();
                         // this event should only ever exist here

@@ -229,7 +229,7 @@ var REGION_MANAGER = 'RegionManager',
                         if ((children = region[CHILDREN])) {
                             if (preventChain(region)) {
                                 // stop rendering child views, just buffer them
-                                children.forEach(region.buffer, region);
+                                children.each(bindTo(region.buffer, region));
                             } else {
                                 children.forEachCall(RENDER, preventChain);
                             }
@@ -286,7 +286,7 @@ var REGION_MANAGER = 'RegionManager',
              * @augments Parent
              * @classDesc Objects that have one or more element associated with them, such as a template that needs constant updating from the data
              */
-            View = factories.View = Parent.extend('View', {
+            View = factories.View = Model.extend('View', {
                 Model: Model,
                 modifiers: noop,
                 getRegion: getRegion,
@@ -338,7 +338,7 @@ var REGION_MANAGER = 'RegionManager',
                     view.id = app.counter();
                     view.bindModel(secondary.model);
                     delete secondary.model;
-                    Parent[CONSTRUCTOR].call(view, secondary);
+                    Model[CONSTRUCTOR].call(view, {}, secondary);
                     view.directive(CAPITAL_ELEMENT).ensure();
                     return view;
                 },
@@ -842,7 +842,7 @@ var REGION_MANAGER = 'RegionManager',
                 bindUI: function () {
                     var directive = this,
                         uiBindings = directive.uiBindings;
-                    directive.ui = directive.view.ui = uiBindings ? mapValues(uiBindings, directive.el.$, directive.el) : {};
+                    directive.ui = directive.view.ui = uiBindings ? mapValues(uiBindings, bindTo(directive.el.$, directive.el)) : {};
                     return directive;
                 }
             });

@@ -51,21 +51,21 @@ var DependencyManager = Collection.extend(DEPENDENCY_MANAGER, {
     then: PromiseProxy('then'),
     catch: PromiseProxy('catch'),
     failed: function () {
-        if (this.done) {
-            return;
+        if (!this.done) {
+            this.done = BOOLEAN_TRUE;
+            this.erred = BOOLEAN_TRUE;
+            this.reset();
+            this.target.dispatchEvent('dependencies:failed');
         }
-        this.done = BOOLEAN_TRUE;
-        this.erred = BOOLEAN_TRUE;
-        this.reset();
-        this.target.dispatchEvent('dependencies:failed');
+        return this;
     },
     finished: function () {
-        if (this.done) {
-            return;
+        if (!this.done) {
+            this.done = BOOLEAN_TRUE;
+            this.reset();
+            this.target.dispatchEvent('dependencies:finished');
         }
-        this.done = BOOLEAN_TRUE;
-        this.reset();
-        this.target.dispatchEvent('dependencies:finished');
+        return this;
     },
     depend: function (promises) {
         var deps = this,

@@ -290,11 +290,11 @@ application.scope().run(window, function (module, app, _, factories, $) {
                 test.expect(count).toEqual(10);
             }, 3);
             test.it('_.toBoolean', function () {
-                test.expect(_.toBoolean('truth')).toEqual('truth');
+                test.expect(_.toBoolean('truth')).toEqual(true);
                 test.expect(_.toBoolean('true')).toEqual(true);
-                test.expect(_.toBoolean('falsey')).toEqual('falsey');
+                test.expect(_.toBoolean('falsey')).toEqual(true);
                 test.expect(_.toBoolean('false')).toEqual(false);
-                test.expect(_.toBoolean({})).toEqual({});
+                test.expect(_.toBoolean({})).toEqual(true);
             }, 5);
             test.it('_.once', function () {
                 var count = 0,
@@ -418,10 +418,10 @@ application.scope().run(window, function (module, app, _, factories, $) {
                     }
                 })).toEqual('//google.com?some=where&und=efined&blank=undefined&under=statement&one=1&has=false&nully=null&even=%7B%22moar%22%3A%22things%22%7D');
             }, 1);
-            test.it('_.protoProp', function () {
+            test.it('_.protoProperty', function () {
                 var box = factories.Model();
                 box.idAttribute = _.returns('something');
-                test.expect(_.protoProp(box, 'idAttribute')).toEqual(factories.Model.constructor.prototype.idAttribute);
+                test.expect(_.protoProperty(box, 'idAttribute')).toEqual(factories.Model.constructor.prototype.idAttribute);
             }, 1);
             test.it('_.roundFloat', function () {
                 test.expect(_.roundFloat(1.5489909, 3)).toEqual(1.548);

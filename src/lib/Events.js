@@ -376,7 +376,7 @@ var EVENT_STRING = 'Events',
                      */
                     dispatchEvents: function (names) {
                         var eventer = this;
-                        return forEach(toArray(names, SPACE), eventer.dispatchStack, eventer) && eventer;
+                        return forEach(toArray(names, SPACE), bindTo(eventer.dispatchStack, eventer)) && eventer;
                     },
                     /**
                      * Proxy for dispatch event, as a filter during an iteration of a bunch of event names.

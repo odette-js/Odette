@@ -5,13 +5,15 @@
  */
 (function (root, KEY, factory) {
     if (typeof define === 'function' && define.amd) {
-        define([], factory);
+        define([], function () {
+            return factory(root);
+        });
     } else if (typeof exports === 'object') {
-        module.exports = factory();
+        module.exports = factory(root, KEY);
     } else {
-        root.Odette = factory();
+        root[KEY] = factory(root, KEY);
     }
-}(this, 'Odette', function (context) {
+}(this, 'Odette', function (context, KEY) {
     'use strict';
     /**
      * Odette Object
@@ -27,7 +29,7 @@
         HAS_ACCESS = 'hasAccess',
         LOCATION = 'location',
         PERIOD = '.',
-        global_ = this || window,
+        global_ = this || context,
         doc = global_.document,
         BOOLEAN_TRUE = !0,
         BOOLEAN_FALSE = !1,
@@ -451,7 +453,7 @@
                 return {
                     Application: Application,
                     Odette: Odette,
-                    LOADED_CONTEXT: window,
+                    LOADED_CONTEXT: context,
                     EXECUTED_AT: executionTime,
                     WHERE: WHERE,
                     VERSION: odette_version,
@@ -546,7 +548,7 @@
                     },
                     hoist: function (windo, toHere) {
                         var application = this,
-                            target = (toHere || window);
+                            target = (toHere || context);
                         if (!windo) {
                             return BOOLEAN_FALSE;
                         }
@@ -631,7 +633,9 @@
             app = application.get(version);
             if (!app) {
                 app = application.registerVersion(version);
-                fn.apply(global_, [application, app]);
+                if (fn) {
+                    fn.apply(global_, [application, app]);
+                }
             }
             if (alt) {
                 alt.apply(global_, [application, app]);

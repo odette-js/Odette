@@ -1,64 +1,83 @@
-var garbage, factories = {},
+var garbage, FOR = 'for',
+    FIND = 'find',
+    REG_EXP = 'RegExp',
+    factories = {},
     builtCallers = {},
+    OBJECT_PROTOTYPE = OBJECT_CONSTRUCTOR[PROTOTYPE],
     nativeKeys = OBJECT_CONSTRUCTOR.keys,
-    objectToString = OBJECT_CONSTRUCTOR[PROTOTYPE].toString,
-    hasEnumBug = !{
+    objectToString = OBJECT_PROTOTYPE.toString,
+    ENUM_BUG = !{
         toString: NULL
     }.propertyIsEnumerable(TO_STRING),
     isFinite_ = win.isFinite,
-    arrayConcat = [].concat,
+    symbolTag = createToStringResult(SYMBOL),
+    isSymbolWrap = isTypeWrap(SYMBOL),
+    pathByStringRegExp = /\]\.|\.|\[|\]/igm,
+    arrayConcat = ARRAY.concat,
+    arrayPush = ARRAY.push,
     MAX_ARRAY_INDEX = Math.pow(2, 53) - 1,
     isArray = ARRAY_CONSTRUCTOR.isArray,
-    isFunction = isWrap(FUNCTION),
-    isString = isWrap(STRING),
-    isNumber = isWrap(NUMBER, notNaN),
-    nonEnumerableProps = toArray('valueOf,isPrototypeOf,' + TO_STRING + ',propertyIsEnumerable,hasOwnProperty,toLocaleString'),
-    isObject = isWrap(OBJECT, function (thing) {
-        return !!thing;
-    }),
+    isFunction = isTypeWrap(FUNCTION),
+    isString = isTypeWrap(STRING),
+    isNumber = isTypeWrap(NUMBER, notNaN),
+    isObject = isTypeWrap(OBJECT, castBoolean),
+    isRegExp = isToStringWrap(REG_EXP),
+    nonEnumerableProps = toArray('valueOf,isPrototypeOf,propertyIsEnumerable,hasOwnProperty,toLocaleString,' + TO_STRING),
     // Returns the first index on an array-like that passes a predicate test
     returnsEmptyString = returns(''),
-    iteratesOwn = iterates(keys),
     iteratesIn = iterates(allKeys),
+    iteratesOwn = iterates(keys),
     findIndex = createPredicateIndexFinder(1),
     findIndexRight = createPredicateIndexFinder(-1),
     find = findAccessor(findIndex),
     findRight = findAccessor(findIndexRight),
     now_offset = dateNow(),
-    forIn = eachProxy(forEach, allKeys),
-    forOwn = eachProxy(forEach, keys),
+    filterable = negatableFilter(filterCommon(returnsArray, arrayAdd), filterCommon(returnsObject, objectSet), filterCommon(returnsEmptyString, stringConcat)),
+    forIn = baseEach(iteratesIn, forEach),
+    forOwn = baseEach(iteratesOwn, forEach),
     each = forOwn,
     map = maps(forEach, mapValuesIteratee, returnsArray),
-    mapValues = maps(forOwn, mapValuesIteratee, returnBaseType),
     mapKeys = maps(forOwn, mapKeysIteratee, returnBaseType),
+    mapValues = maps(forOwn, mapValuesIteratee, returnBaseType),
     reduce = createReduce(1),
     dropWhile = dropsWhile(filter),
-    forEachRight = tackRight(forEach),
-    forOwnRight = tackRight(forOwn),
-    forInRight = tackRight(forIn),
-    eachRight = forOwnRight,
-    mapRight = maps(forEachRight, mapValuesIteratee, returnsArray),
-    mapValuesRight = maps(forOwnRight, mapValuesIteratee, returnBaseType),
-    mapKeysRight = maps(eachRight, mapKeysIteratee, returnBaseType),
-    reduceRight = createReduce(-1),
-    dropRightWhile = dropsWhile(filterRight),
-    filterable = negatableFilter(filterCommon(returnsArray, arrayAdd), filterCommon(returnsObject, objectSet), filterCommon(returnsEmptyString, stringConcat)),
     filter = filterable(reduce),
     filterNegative = filterable(reduce, BOOLEAN_TRUE),
+    forInRight = baseEach(iteratesIn, forEachRight),
+    forOwnRight = baseEach(iteratesOwn, forEachRight),
+    eachRight = forOwnRight,
+    mapRight = maps(forEachRight, mapValuesIteratee, returnsArray),
+    mapKeysRight = maps(eachRight, mapKeysIteratee, returnBaseType),
+    mapValuesRight = maps(forOwnRight, mapValuesIteratee, returnBaseType),
+    reduceRight = createReduce(-1),
+    dropWhileRight = dropsWhile(filterRight),
     filterRight = filterable(reduceRight),
     filterNegativeRight = filterable(reduceRight, BOOLEAN_TRUE),
-    garbage = buildCallers('forEach', forEach, forEachRight);
-garbage = buildCallers('forOwn', forOwn, forOwnRight);
-garbage = buildCallers('forIn', forIn, forInRight);
-garbage = buildCallers('each', each, eachRight);
-garbage = buildCallers('map', map, mapRight);
-garbage = buildCallers('mapValues', mapValues, mapValuesRight);
-garbage = buildCallers('mapKeys', mapKeys, mapKeysRight);
-garbage = buildCallers('find', find, findRight);
-garbage = buildCallers('findIndex', findIndex, findIndexRight);
-garbage = buildCallers('reduce', reduce, reduceRight);
-garbage = buildCallers('filter', filter, filterRight);
-garbage = buildCallers('filterNegative', filterNegative, filterNegativeRight);
+    where = wheres(filter),
+    whereRight = wheres(filterRight),
+    whereNot = wheres(filterNegative),
+    whereNotRight = wheres(filterNegativeRight),
+    findWhere = wheres(find),
+    findWhereRight = wheres(findRight),
+    findIndexWhere = wheres(findIndex),
+    findIndexWhereRight = wheres(findIndexRight);
+buildCallers(FOR + 'Each', forEach, forEachRight, builtCallers);
+buildCallers(FOR + 'Own', forOwn, forOwnRight, builtCallers);
+buildCallers(FOR + 'In', forIn, forInRight, builtCallers);
+buildCallers('each', each, eachRight, builtCallers);
+buildCallers('map', map, mapRight, builtCallers);
+buildCallers('mapValues', mapValues, mapValuesRight, builtCallers);
+buildCallers('mapKeys', mapKeys, mapKeysRight, builtCallers);
+buildCallers('where', where, whereRight, builtCallers);
+buildCallers('whereNot', whereNot, whereNotRight, builtCallers);
+buildCallers(FIND, find, findRight, builtCallers);
+buildCallers(FIND + 'Index', findIndex, findIndexRight, builtCallers);
+buildCallers(FIND + 'Where', findWhere, findWhereRight, builtCallers);
+buildCallers(FIND + 'IndexWhere', findIndexWhere, findIndexWhereRight, builtCallers);
+buildCallers('reduce', reduce, reduceRight, builtCallers);
+buildCallers('filter', filter, filterRight, builtCallers);
+buildCallers('filterNegative', filterNegative, filterNegativeRight, builtCallers);
+buildCallers('dropWhile', dropWhile, dropWhileRight, builtCallers);
 var _performance = window.performance,
     uuidHash = {},
     maths = Math,
@@ -66,7 +85,8 @@ var _performance = window.performance,
         now: now_shim
     },
     passes = {
-        first: passesFirstArgument
+        first: passesFirstArgument,
+        second: passesSecondArgument
     },
     baseDataTypes = {
         true: BOOLEAN_TRUE,
@@ -94,12 +114,15 @@ var _performance = window.performance,
         'function': isFunction,
         boolean: isBoolean,
         'null': isNull,
-        // length: isLength,
+        nil: isNil,
+        value: isValue,
         validInteger: isValidInteger,
         arrayLike: isArrayLike,
         instance: isInstance,
-        truthy: isTruthy,
-        falsey: isFalsey
+        truthy: castBoolean,
+        falsey: negate(castBoolean),
+        false: isFalse,
+        true: isTrue
     }),
     to = {
         array: toArray,
@@ -147,7 +170,6 @@ var _performance = window.performance,
         passes: passes,
         values: values,
         gather: gather,
-        object: object,
         toggle: toggle,
         sortBy: sortBy,
         negate: negate,
@@ -168,6 +190,7 @@ var _performance = window.performance,
         returns: returns,
         allKeys: allKeys,
         console: console,
+        ENUM_BUG: ENUM_BUG,
         whereNot: whereNot,
         evaluate: evaluate,
         validKey: validKey,
@@ -175,13 +198,13 @@ var _performance = window.performance,
         throttle: throttle,
         debounce: debounce,
         iterates: iterates,
-        iteratesOwn: iteratesOwn,
-        iteratesIn: iteratesIn,
         bindWith: bindWith,
         mapRight: mapRight,
         isObject: isObject,
         isNumber: isNumber,
         isString: isString,
+        baseEach: baseEach,
+        toLength: toLength,
         isFinite: _isFinite,
         isBoolean: isBoolean,
         factories: factories,
@@ -189,24 +212,23 @@ var _performance = window.performance,
         toBoolean: toBoolean,
         stringify: stringify,
         shiftSelf: shiftSelf,
-        eachProxy: eachProxy,
         toInteger: toInteger,
         publicize: publicize,
-        // eachRight: eachRight,
-        // findIndex: findIndex,
         startsWith: startsWith,
         isInstance: isInstance,
-        hasEnumBug: hasEnumBug,
         indexOfNaN: indexOfNaN,
         toFunction: toFunction,
         roundFloat: roundFloat,
         isFunction: isFunction,
         difference: difference,
+        iteratesIn: iteratesIn,
+        lastIndexOf: lastIndexOf,
+        iteratesOwn: iteratesOwn,
         withinRange: withinRange,
+        castBoolean: castBoolean,
         isUndefined: isUndefined,
         superExtend: superExtend,
         intendedApi: intendedApi,
-        protoProp: protoProperty,
         isArrayLike: isArrayLike,
         performance: performance,
         unwrapBlock: unwrapBlock,
@@ -214,19 +236,18 @@ var _performance = window.performance,
         differenceBy: differenceBy,
         smartIndexOf: smartIndexOf,
         consolemaker: consolemaker,
-        // forEachRight: forEachRight,
         blockWrapper: blockWrapper,
         isEmptyArray: isEmptyArray,
         parseDecimal: parseDecimal,
         keyGenerator: keyGenerator,
-        // findIndexRight: findIndexRight,
         protoProperty: protoProperty,
         reverseParams: reverseParams,
-        objectToArray: objectToArray,
+        // objectToArray: objectToArray,
         sortedIndexOf: sortedIndexOf,
-        // filterNegative: filterNegative,
         stringifyQuery: stringifyQuery,
         intendedObject: intendedObject,
+        differenceWith: differenceWith,
+        lastIndexOfNaN: lastIndexOfNaN,
         arrayLikeToArray: arrayLikeToArray,
         euclideanDistance: euclideanDistance,
         intendedIteration: intendedIteration,
@@ -281,6 +302,21 @@ function returnsSecondArgument(nil, value) {
     return value;
 }
 
+function createToStringResult(string) {
+    return BRACKET_OBJECT_SPACE + string + ']';
+}
+
+function callObjectToString(item) {
+    return objectToString.call(item);
+}
+
+function isToStringWrap(string_) {
+    var string = createToStringResult(string_);
+    return function (item) {
+        return isStrictlyEqual(callObjectToString(item), string);
+    };
+}
+
 function indexOfNaN(array, fromIndex, toIndex, fromRight) {
     if (!array) {
         return -1;
@@ -322,17 +358,29 @@ function indexOf(array, value, fromIndex, toIndex, fromRight) {
     return -1;
 }
 
+function lastIndexOf(a, b, c, d) {
+    return indexOf(a, b, c, d, BOOLEAN_TRUE);
+}
+
+function lastIndexOfNaN(a, b, c) {
+    return indexOfNaN(a, b, c, BOOLEAN_TRUE);
+}
+
 function contains(list, item) {
     return indexOf(list, item) !== -1;
 }
 
+function isNil(item) {
+    return isNull(item) || isUndefined(item);
+}
+
 function isValue(item) {
-    return notNaN(item) && !isNull(item) && !isUndefined(item);
+    return notNaN(item) && !isNil(item);
 }
 
 function sortedIndexOf(list, item, minIndex_, maxIndex_, fromRight) {
     var guess, min = minIndex_ || 0,
-        max = maxIndex_ || list[LENGTH] - 1,
+        max = maxIndex_ || lastIndex(list),
         bitwise = (max <= TWO_TO_THE_31) ? BOOLEAN_TRUE : BOOLEAN_FALSE;
     if (item !== item) {
         // bitwise does not work for NaN
@@ -384,7 +432,7 @@ function toFunction(argument) {
     return isFunction(argument) ? argument : returns(argument);
 }
 
-function toBoolean(item) {
+function castBoolean(item) {
     return !!item;
 }
 
@@ -412,10 +460,10 @@ function stringify(obj) {
     return (isObject(obj) ? JSON.stringify(obj) : isFunction(obj) ? obj.toString() : obj) + EMPTY_STRING;
 }
 
-function sort(obj, fn_, reversed, context) {
+function sort(obj, fn_, reversed) {
     var fn = bindTo(fn_ || function (a, b) {
         return a > b;
-    }, context || obj);
+    }, obj);
     // normalize sort function handling for safari
     return obj.sort(function (a, b) {
         var result = fn(a, b);
@@ -432,13 +480,13 @@ function sort(obj, fn_, reversed, context) {
     });
 }
 // arg1 is usually a string or number
-function sortBy(list, arg1, handler_, reversed, context) {
+function sortBy(list, arg1, handler_, reversed) {
     var handler = handler_ || function (obj, arg1) {
         return obj[arg1];
     };
     return sort(list, function (a, b) {
         return handler(a, arg1) > handler(b, arg1);
-    }, reversed, context);
+    }, reversed);
 }
 
 function has(obj, prop) {
@@ -454,22 +502,27 @@ function isInstance(instance, constructor_) {
     if (has(constructor, CONSTRUCTOR)) {
         constructor = constructor[CONSTRUCTOR];
     }
-    return instance instanceof constructor;
+    return isOf(instance, constructor);
 }
 
 function itemIs(list, item, index) {
     return list[index || 0] === item;
 }
 
-function isFalsey(item) {
-    return !item;
+function isFalse(item) {
+    return isStrictlyEqual(item, BOOLEAN_FALSE);
 }
 
-function isTruthy(item) {
-    return !!item;
+function isTrue(item) {
+    return isStrictlyEqual(item, BOOLEAN_TRUE);
 }
 
-function isWrap(type, fn_) {
+function lowerCaseString(item) {
+    return item.toLowerCase();
+}
+
+function isTypeWrap(type_, fn_) {
+    var type = lowerCaseString(type_);
     var fn = fn_ || function () {
         return BOOLEAN_TRUE;
     };
@@ -515,8 +568,8 @@ function isDefined(thing) {
 }
 
 function negate(fn) {
-    return function () {
-        return !fn.apply(this, arguments);
+    return function (a1, a2, a3, a4, a5, a6) {
+        return !fn(a1, a2, a3, a4, a5, a6);
     };
 }
 
@@ -525,7 +578,7 @@ function _isFinite(thing) {
 }
 
 function isWindow(obj) {
-    return !!(obj && isStrictlyEqual(obj, obj[WINDOW]));
+    return castBoolean(obj && isStrictlyEqual(obj, obj[WINDOW]));
 }
 
 function isEmpty(obj) {
@@ -635,7 +688,17 @@ function whilst(filter, continuation, _memo) {
     }
     return memo;
 }
-
+// function countUp(limit, fn) {
+//     var start = 0;
+//     while (limit > start) {
+//         fn(start++);
+//     }
+// }
+// function countDown(number, fn) {
+//     while (number >= 0) {
+//         fn(--number);
+//     }
+// }
 function chunk(array, size) {
     var length, nu = [];
     if (!array || !(length = array.length)) {
@@ -652,7 +715,7 @@ function chunk(array, size) {
 }
 
 function compact(list) {
-    return filter(list, isTruthy);
+    return filter(list, castBoolean);
 }
 
 function differentiator(list, comparison, modder, differ) {
@@ -729,9 +792,13 @@ function dropRight(array, _n) {
     return slice(array, 0, defaultTo1(_n));
 }
 
+function toIterable(iteratee) {
+    return isFunction(iteratee) ? iteratee : (isArray(iteratee) ? matchesProperty(iteratee) : (isObject(iteratee) ? matches(iteratee) : property(iteratee)));
+}
+
 function dropsWhile(filter) {
     return function (array, iteratee) {
-        return filter(array, isFunction(iteratee) ? iteratee : (isArray(iteratee) ? matchesProperty : (isObject(iteratee) ? matches : property)));
+        return filter(array, toIterable(iteratee));
     };
 }
 
@@ -747,67 +814,129 @@ function zip(lists) {
     }, []);
 }
 
-function object(keys, values) {
+function fromPairs(keys) {
     var obj = {};
-    if (values) {
-        forEach(keys, function (key, index) {
-            obj[key] = values[index];
-        });
-    } else {
-        forEach(keys, function (key, index) {
-            obj[key[0]] = key[1];
-        });
-    }
+    forEach(keys, function (key, index) {
+        obj[key[0]] = key[1];
+    });
     return obj;
 }
-// Helper for collection methods to determine whether a collection
-// should be iterated as an array or as an object
-// Related: http://people.mozilla.org/~jorendorff/es6-draft.html#sec-tolength
-// Avoids a very nasty iOS 8 JIT bug on ARM-64. #2094
+
+function iterateOverPath(path, fn, object) {
+    var list = path;
+    if (!isArray(path)) {
+        list = path.exec(pathByStringRegExp);
+        list = lastIs(path, ']') ? dropRight(list) : list;
+    }
+    return find(list, fn, object);
+}
+
+function tunnelPath(object, path, step, destination) {
+    return iterateOverPath(path, function (memo, key, index, subset) {
+        if (index - 1 === subset[LENGTH]) {
+            return !destination(memo, key);
+        } else {
+            return !step(memo, key);
+        }
+    }, object);
+}
+
+function baseSet(path, value, object) {
+    iterateOverPath(path, function (memo, key, index) {
+        if (index - 1 === subsetLength) {
+            memo[key] = value;
+            return;
+        }
+        if (isObject(present = memo[key])) {
+            return present;
+        }
+        return (memo[key] = notNaN(toNumber(key)) ? [] : {});
+    }, object);
+    return object;
+}
+
+function set(path, value, object_) {
+    return baseSet(path, value, object_ || {});
+}
+
+function access(object, key) {
+    return object && object[key];
+}
+
+function nth(array, index) {
+    var idx;
+    return (idx = +index) === -1 ? UNDEFINED : access(array, idx);
+}
+
+function lastIndex(array) {
+    return access(array, LENGTH) - 1;
+}
+
+function first(array) {
+    return nth(array, 0);
+}
+
+function last(array) {
+    return nth(array, lastIndex(array));
+}
+
+function nthIs(array, final, index) {
+    return isStrictlyEqual(nth(array, index || 0), final);
+}
+
+function firstIs(array, final) {
+    return nthIs(nthIs, final, 0);
+}
+
+function lastIs(array, final) {
+    return nthIs(nthIs, final, lastIndex(array));
+}
+
+function head(array, n) {
+    return slice(array, n);
+}
+
+function initial(array) {
+    return array ? dropRight(array, lastIndex(array)) : [];
+}
+
 function isArrayLike(collection) {
-    var length = !!collection && collection[LENGTH];
+    var length = castBoolean(collection) && collection[LENGTH];
     return isArray(collection) || (isWindow(collection) ? BOOLEAN_FALSE : (isNumber(length) && !isString(collection) && length >= 0 && length <= MAX_ARRAY_INDEX && !isFunction(collection)));
 }
 
 function iterates(keys) {
-    return function (obj, iterator, context) {
-        var list = keys(obj),
-            iteratee = bindTo(iterator, context);
+    return function (obj, iterator) {
         handler.keys = keys(obj);
         return handler;
 
         function handler(key, idx, list) {
             // gives you the key, use that to get the value
-            return iteratee(obj[key], key, obj);
+            return iterator(obj[key], key, obj);
         }
     };
 }
 
-function eachProxy(fn, getkeys) {
-    var itrts = iterates(getkeys);
-    return function (obj_, iteratee_, context_, direction_) {
-        var iteratable, obj = obj_,
+function baseEach(iterates, forEach) {
+    return function (obj_, iteratee_) {
+        var obj = obj_,
             keys = obj,
-            iteratee = iteratee_,
-            iterator = iteratee,
-            context = context_,
-            direction = direction_;
+            iteratee = iteratee_;
         if (!obj) {
             return obj;
         }
         if (!isArrayLike(obj)) {
-            iterator = itrts(obj, iterator, context);
-            obj = iterator.keys;
+            iteratee = iterates(obj, iteratee);
+            obj = iteratee.keys;
         }
-        return fn(obj, iterator, context, direction);
+        return forEach(obj, iteratee);
     };
 }
 
 function createPredicateIndexFinder(dir) {
-    return function (obj, predicate, context, index_) {
+    return function (obj, callback, index_) {
         var key, value, array = isArrayLike(obj) ? obj : keys(obj),
             length = array[LENGTH],
-            callback = bindTo(predicate, context),
             index = index_ || (dir > 0 ? 0 : length - 1);
         for (; index >= 0 && index < length; index += dir) {
             key = index;
@@ -823,8 +952,8 @@ function createPredicateIndexFinder(dir) {
 }
 
 function findAccessor(fn) {
-    return function (obj, predicate, context, index) {
-        var foundAt = fn(obj, predicate, context, index);
+    return function (obj, predicate, index) {
+        var foundAt = fn(obj, predicate, index);
         if (foundAt !== UNDEFINED) {
             return obj[foundAt];
         }
@@ -849,77 +978,70 @@ function bindWith(func, args) {
     return func.bind.apply(func, args);
 }
 
-function forEach(values, runner_, context, direction_) {
-    var direction, runner, iterations, val, i, leftover, deltaFn;
-    if (!values || !runner_) {
-        return;
+function baseFromTo(values, runner, _start, _end, step) {
+    if (!step) {
+        return [];
     }
-    i = 0;
-    val = values[LENGTH];
-    leftover = val % 8;
-    iterations = parseInt(val / 8, 10);
-    if (direction_ < 0) {
-        i = val - 1;
-    }
-    direction = direction_ || 1;
-    runner = bindTo(runner_, context);
+    var goingDown = step < 0,
+        end = _end,
+        start = _start,
+        index = start,
+        distance = (goingDown ? start - end : end - start) + 1,
+        leftover = distance % 8,
+        iterations = parseInt(distance / 8, 10);
     if (leftover > 0) {
         do {
-            runner(values[i], i, values);
-            i += direction;
+            runner(values[index], index, values);
+            index += step;
         } while (--leftover > 0);
     }
     if (iterations) {
         do {
-            runner(values[i], i, values);
-            i += direction;
-            runner(values[i], i, values);
-            i += direction;
-            runner(values[i], i, values);
-            i += direction;
-            runner(values[i], i, values);
-            i += direction;
-            runner(values[i], i, values);
-            i += direction;
-            runner(values[i], i, values);
-            i += direction;
-            runner(values[i], i, values);
-            i += direction;
-            runner(values[i], i, values);
-            i += direction;
+            runner(values[index], index, values);
+            index += step;
+            runner(values[index], index, values);
+            index += step;
+            runner(values[index], index, values);
+            index += step;
+            runner(values[index], index, values);
+            index += step;
+            runner(values[index], index, values);
+            index += step;
+            runner(values[index], index, values);
+            index += step;
+            runner(values[index], index, values);
+            index += step;
+            runner(values[index], index, values);
+            index += step;
         } while (--iterations > 0);
     }
     return values;
 }
 
-function tackRight(fn) {
-    return function (list, iterator, context) {
-        return fn(list, iterator, arguments[LENGTH] < 3 ? NULL : context, -1);
-    };
+function baseForEach(list, iterator, step) {
+    var greaterThanZero, last;
+    return (!list || !iterator) ? [] : (last = lastIndex(list)) >= 0 ? baseFromTo(list, iterator, (greaterThanZero = step > 0) ? 0 : last, greaterThanZero ? last : 0, step) : [];
+}
+
+function forEach(list, iterator) {
+    return baseForEach(list, iterator, 1);
+}
+
+function forEachRight(list, iterator) {
+    return baseForEach(list, iterator, -1);
 }
 
 function values(object) {
     var collected = [];
-    forOwn(object, function (value) {
-        collected.push(value);
-    });
-    return collected;
+    return forOwn(object, passesFirstArgument(bindTo(arrayPush, collected))) && collected;
 }
 
 function toBoolean(thing) {
-    var ret, thingMod = thing + EMPTY_STRING;
-    thingMod = thingMod.trim();
-    if (thingMod === BOOLEAN_FALSE + EMPTY_STRING) {
-        ret = BOOLEAN_FALSE;
+    var converted = (thing + EMPTY_STRING).trim();
+    if (isBoolean[converted] && has(baseDataTypes, converted)) {
+        return baseDataTypes[converted];
     }
-    if (thingMod === BOOLEAN_TRUE + EMPTY_STRING) {
-        ret = BOOLEAN_TRUE;
-    }
-    // if failed to convert, revert
-    if (ret === UNDEFINED) {
-        ret = thing;
-    }
-    return ret;
+    return castBoolean(thing);
 }
 
 function parseDecimal(num) {
@@ -936,7 +1058,7 @@ function allKeys(obj) {
         keys.push(key);
     }
     // Ahem, IE < 9.
-    if (hasEnumBug) {
+    if (ENUM_BUG) {
         collectNonEnumProps(obj, keys);
     }
     return keys;
@@ -956,7 +1078,7 @@ function keys(obj) {
         }
     }
     // Ahem, IE < 9.
-    if (hasEnumBug) {
+    if (ENUM_BUG) {
         collectNonEnumProps(obj, keys);
     }
     return keys;
@@ -1021,7 +1143,7 @@ function factory(name, func_) {
 
 function constructorWrapper(Constructor, parent) {
     var __ = function (one, two, three, four, five, six) {
-        return one != NULL && one instanceof Constructor ? one : new Constructor(one, two, three, four, five, six);
+        return isValue(one) && isOf(one, Constructor) ? one : new Constructor(one, two, three, four, five, six);
     };
     __.isInstance = Constructor.isInstance = function (instance) {
         return isInstance(instance, Constructor);
@@ -1067,13 +1189,13 @@ function eq(a, b, aStack, bStack) {
     }
     switch (className) {
         // Strings, numbers, regular expressions, dates, and booleans are compared by value.
-    case BRACKET_OBJECT_SPACE + 'RegExp]':
+    case createToStringResult(REG_EXP):
         // RegExps are coerced to strings for comparison (Note: EMPTY_STRING + /a/i === '/a/i')
-    case BRACKET_OBJECT_SPACE + 'String]':
+    case createToStringResult(STRING):
         // Primitives and their corresponding object wrappers are equivalent; thus, `"5"` is
         // equivalent to `new String("5")`.
         return EMPTY_STRING + a === EMPTY_STRING + b;
-    case BRACKET_OBJECT_SPACE + 'Number]':
+    case createToStringResult(NUMBER):
         // `NaN`s are equivalent, but non-reflexive.
         // Object(NaN) is equivalent to NaN
         aNumber = toNumber(a);
@@ -1150,24 +1272,7 @@ function eq(a, b, aStack, bStack) {
     bStack.pop();
     return BOOLEAN_TRUE;
 }
-/**
- * Perform a deep comparison to check if two objects are equal.
- * @name _#isEqual
- * @method
- * @param {*} a object or value to deep compare against b.
- * @param {*} b object or value to deep compare against a.
- * @returns {Boolean} result of the comparison. True is returned if the objects' values are identical. False will be returned if ther are any differences.
- * @example <caption>The isEqual method can compare values as well as pointers since pointers will be iterated through, looking for differences. The following calls will both result in true.</caption>
- * _.isEqual(true, true);
- * _.isEqual({}, {});
- * @example <caption>The isEqual method finds differences if they exist. The following calls will return false</caption>
- * _.isEqual(true, false);
- * _.isEqual({
- *     diff: 1
- * }, {
- *     diff: true
- * });
- */
+
 function isEqual(a, b) {
     return eq(a, b, [], []);
 }
@@ -1210,18 +1315,23 @@ function passesFirstArgument(fn) {
     };
 }
 
+function passesSecondArgument(fn) {
+    return function (nil, second) {
+        return fn(second);
+    };
+}
+
 function concat(list) {
     return arrayConcat.apply([], map(list, passesFirstArgument(toArray)));
 }
 
 function concatUnique(list) {
     return reduce(list, function (memo, argument) {
-        forEach(argument, function (item) {
+        return reduce(argument, function (memo, item) {
             if (indexOf(memo, item) === -1) {
                 memo.push(item);
             }
-        });
-        return memo;
+        }, memo);
     }, []);
 }
 
@@ -1237,7 +1347,7 @@ function uncycle(array, num_) {
     var length = array[LENGTH],
         num = num_ % length,
         piece = array.splice(0, length - num);
-    array.push.apply(array, piece);
+    arrayPush.apply(array, piece);
     return array;
 }
 
@@ -1245,8 +1355,8 @@ function isMatch(object, attrs) {
     var key, i = 0,
         keysResult = keys(attrs),
         obj = toObject(object);
-    return !find(keysResult, function (val) {
-        return (attrs[val] !== obj[val] || !(val in obj));
+    return !find(keysResult, function (key) {
+        return !isStrictlyEqual(attrs[key], obj[key]);
     });
 }
 
@@ -1262,14 +1372,17 @@ function stringConcat(base, string) {
     return base.concat(string);
 }
 
+function join(array, delimiter) {
+    return toArray(array).join(undefinedOr(delimiter, COMMA));
+}
+
 function split(string, delimiter) {
-    return toString(string).split(delimiter, undefinedOr(delimiter, ''));
+    return toString(string).split(undefinedOr(delimiter, EMPTY_STRING));
 }
 
 function filterCommon(memo, passed) {
-    return function (thing, iteratee, context, negated, reduction) {
+    return function (thing, bound, negated, reduction) {
         var negative = !negated;
-        var bound = bindTo(iteratee, context);
         return reduction(thing, function (memo, item, index, list) {
             if (matchesBinary(bound(item, index, list), negative)) {
                 passed(memo, item, index);
@@ -1280,8 +1393,8 @@ function filterCommon(memo, passed) {
 
 function negatableFilter(array, object, string) {
     return function (reduction, negation) {
-        return function (thing, iteratee, context) {
-            return (isArrayLike(thing) ? array : (isObject(thing) ? object : string))(thing, iteratee, context, negation, reduction);
+        return function (thing, iteratee) {
+            return (isArrayLike(thing) ? array : (isObject(thing) ? object : string))(thing, iteratee, negation, reduction);
         };
     };
 }
@@ -1294,28 +1407,16 @@ function unique(list) {
     }, []);
 }
 
-function where(obj, attrs) {
-    return filter(obj, matches(attrs));
+function wheres(iterator) {
+    return function (obj, attrs) {
+        return iterator(obj, toIterable(attrs));
+    };
 }
 
-function whereNot(obj, attrs) {
-    return filterNegative(obj, matches(attrs));
-}
-
-function findWhere(obj, attrs) {
-    return find(obj, matches(attrs));
-}
-
-function findWhereRight(obj, attrs) {
-    return findRight(obj, matches(attrs));
-}
-
-function findIndexWhere(obj, attrs) {
-    return findIndex(obj, matches(attrs));
-}
-
-function findIndexWhereRight(obj, attrs) {
-    return findIndexRight(obj, matches(attrs));
+function couldBeJSON(string) {
+    var firstVal = first(string);
+    var lastVal = last(string);
+    return (isStrictlyEqual(firstVal, '{') && isStrictlyEqual(lastVal, '}')) || (isStrictlyEqual(firstVal, '[') && isStrictlyEqual(lastVal, ']'));
 }
 
 function parse(val_) {
@@ -1329,7 +1430,7 @@ function parse(val_) {
     if (!valLength) {
         return val;
     }
-    if ((val[0] === '{' && val[valLength - 1] === '}') || (val[0] === '[' && val[valLength - 1] === ']')) {
+    if (couldBeJSON(val)) {
         if ((val = wraptry(function () {
                 return JSON.parse(val);
             }, function () {
@@ -1358,7 +1459,7 @@ function unwrapBlock(string_) {
         fTrimmed = first && first.trim();
     if (fTrimmed.slice(0, 8) === 'function') {
         string = split.shift();
-        return (string = split.join('{')).slice(0, string[LENGTH] - 1);
+        return (string = split.join('{')).slice(0, lastIndex(string));
     }
     return split.join('{');
 }
@@ -1394,12 +1495,11 @@ function mapValuesIteratee(collection, bound, empty) {
 }
 
 function maps(iterator, iterable, returnBaseType) {
-    return function (objs, iteratee, context) {
+    return function (objs, iteratee) {
         var collection = returnBaseType(objs),
-            iterates = isString(iteratee) ? whenString(iteratee) : iteratee,
-            bound = bindTo(iterates, context);
+            iterates = isString(iteratee) ? whenString(iteratee) : iteratee;
         if (objs) {
-            iterator(objs, iterable(collection, bound, isEmptyArray(collection)));
+            iterator(objs, iterable(collection, iterates, isEmptyArray(collection)));
         }
         return collection;
     };
@@ -1420,40 +1520,52 @@ function mapKeysIteratee(collection, bound) {
 function arrayLikeToArray(arrayLike) {
     return arrayLike[LENGTH] === 1 ? [arrayLike[0]] : ARRAY_CONSTRUCTOR.apply(NULL, arrayLike);
 }
-
-function objectToArray(obj) {
-    return !obj ? [] : reduce(obj, function (memo, item) {
-        memo.push(item);
-    }, []);
-}
-
+// function objectToArray(obj) {
+//     return !obj ? [] : reduce(obj, function (memo, item) {
+//         memo.push(item);
+//     }, []);
+// }
 function toArray(object, delimiter) {
-    return isArrayLike(object) ? (isArray(object) ? object.slice(0) : arrayLikeToArray(object)) : (isString(object) ? object.split(isString(delimiter) ? delimiter : COMMA) : [object]);
+    return isArrayLike(object) ? (isArray(object) ? object : arrayLikeToArray(object)) : (isString(object) ? object.split(isString(delimiter) ? delimiter : COMMA) : [object]);
 }
 
 function toString(argument) {
     return argument ? argument.toString() : ('' + argument);
 }
 
-function flattenArray(list, handle, deep) {
-    var items = reduce(list, function (memo, item_) {
-        var item;
-        if (isArrayLike(item_)) {
-            item = deep ? flattenArray(item_, BOOLEAN_FALSE, deep) : item_;
-            return memo.concat(item);
+function flattens(list, next) {
+    return reduce(list, function (memo, item) {
+        if (isArrayLike(item)) {
+            return memo.concat(next(item));
         } else {
-            memo.push(item_);
+            memo.push(item);
             return memo;
         }
     }, []);
-    if (handle) {
-        forEach(items, handle);
-    }
-    return items;
 }
 
-function flatten(list, handler_, deep_) {
-    return flattenArray(isArrayLike(list) ? list : objectToArray(list), handler_, !!deep_);
+function flatten(list) {
+    return flattens(list, returnsFirstArgument);
+}
+
+function flattenDeep(list) {
+    return flattens(list, flattens);
+}
+
+function flattenSelectively(list, next) {
+    return flattens(list, toFunction(next));
+}
+
+function flattenDepth(list, depth_) {
+    var depth = defaultTo1(depth_);
+    return flatten(list, function (item) {
+        var result;
+        if (--depth) {
+            result = flattenDepth(item, depth);
+        }
+        ++depth;
+        return result;
+    });
 }
 
 function gather(list, handler) {
@@ -1506,9 +1618,7 @@ function toInteger(number, notSafe) {
 function under1(number) {
     return number > 1 ? 1 / number : number;
 }
-// function isLength(number) {
-//     return isNumber(number) && isValidInteger(number);
-// }
+
 function toLength(number) {
     return number ? clamp(toInteger(number, BOOLEAN_TRUE), 0, MAX_ARRAY_LENGTH) : 0;
 }
@@ -1570,10 +1680,10 @@ function throttle(fn, threshold, scope) {
     };
 }
 
-function defer(fn, time, ctx) {
+function defer(fn, time, context) {
     var id;
     return function () {
-        var context = ctx || this,
+        var context = context || this,
             args = toArray(arguments);
         clearTimeout(id);
         id = setTimeout(function () {
@@ -1646,15 +1756,13 @@ function uuid() {
 
 function intendedApi(fn) {
     return function (one, two) {
-        var context = this;
-        intendedObject(one, two, fn, context);
-        return context;
+        intendedObject(one, two, bindTo(fn, this));
+        return this;
     };
 }
 
-function intendedIteration(key, value, iterator_, context) {
-    var keysResult, isObjectResult = isObject(key),
-        iterator = bind(iterator_, context);
+function intendedIteration(key, value, iterator) {
+    var keysResult, isObjectResult = isObject(key);
     if (isObjectResult) {
         keysResult = keys(key);
     }
@@ -1669,8 +1777,8 @@ function intendedIteration(key, value, iterator_, context) {
     };
 }
 
-function intendedObject(key, value, fn_, ctx) {
-    var obj, fn = ctx ? bind(fn_, ctx) : fn_;
+function intendedObject(key, value, fn) {
+    var obj;
     if (isArray(key)) {
         forEach(key, function (first) {
             fn(first, value);
@@ -1715,8 +1823,8 @@ function doTry(fn, catcher, finallyer) {
     };
 }
 
-function buildCallers(prefix, handler, second) {
-    var memo = {},
+function buildCallers(prefix, handler, second, memo_) {
+    var memo = memo_ || {},
         CALL = 'Call',
         BOUND = 'Bound',
         TRY = 'Try';
@@ -1813,9 +1921,8 @@ function keyGenerator(object, dir, cap, incrementor) {
     return isArrayLike(object) ? arrayKeyGenerator(object, dir, cap, incrementor) : (isObject(object) ? objectKeyGenerator(object, dir, cap, incrementor) : noop);
 }
 
-function reduction(accessor, iteratee, memo_, context, dir, startsAt1) {
+function reduction(accessor, iteratee, memo_, dir, startsAt1) {
     var value, nextMemo, next, memo = memo_,
-        bound = bindTo(iteratee, context),
         generated = keyGenerator(accessor, dir);
     if (startsAt1) {
         if (isUndefined(next = generated())) {
@@ -1825,7 +1932,7 @@ function reduction(accessor, iteratee, memo_, context, dir, startsAt1) {
         }
     }
     while (!isUndefined(next = generated())) {
-        if (!isUndefined(nextMemo = bound(memo, accessor[next], next, accessor))) {
+        if (!isUndefined(nextMemo = iteratee(memo, accessor[next], next, accessor))) {
             memo = nextMemo;
         }
     }
@@ -1833,8 +1940,8 @@ function reduction(accessor, iteratee, memo_, context, dir, startsAt1) {
 }
 
 function createReduce(dir_) {
-    return function (obj, iteratee, memo, context, dir, startsAt1) {
-        return reduction(obj, iteratee, memo, context, dir || dir_, startsAt1 || arguments[LENGTH] < 3);
+    return function (obj, iteratee, memo) {
+        return reduction(obj, iteratee, memo, dir_, arguments[LENGTH] < 3);
     };
 }
 
@@ -1877,10 +1984,10 @@ function wraptry(trythis, errthat, finalfunction) {
 }
 // directed toggle
 function toggle(current, which) {
-    if (which === UNDEFINED) {
+    if (isUndefined(which)) {
         return !current;
     } else {
-        return !!which;
+        return castBoolean(which);
     }
 }
 

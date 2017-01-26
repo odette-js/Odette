@@ -9,15 +9,9 @@ var COLLECTION = 'Collection',
     Collection = app.block(function (app) {
         var isNullMessage = 'object must not be null or ' + UNDEFINED,
             validIdMessage = 'objects in sorted collections must have either a number or string for their valueOf result',
-            // cannotModifyMessage = 'list cannot be modified while it is being iterated over',
             recreatingSelfCollection = toArray('eq,where,whereNot,results,cycle,uncycle,flatten,gather,unique').concat(associatedBuilderKeys('map'), associatedBuilderKeys('filter'), associatedBuilderKeys('filterNegative')),
-            forOwnHandlers = {
-                forEach: forEach,
-                forOwn: forEach,
-                forEachRight: forEachRight,
-                forOwnRight: forEachRight
-            },
-            eachHandlerKeys = keys(forOwnHandlers).concat(keys(buildCallers('forEach')), keys(buildCallers('forOwn')), keys(buildCallers('each')), keys(buildCallers('eachRight'))),
+            eachIterators = wrap(toArray('forEach,forOwn,forIn,forEachRight,forOwnRight,forInRight'), BOOLEAN_TRUE),
+            eachHandlerKeys = keys(buildCallers('forEach')).concat(keys(buildCallers('forOwn')), keys(buildCallers('each')), keys(buildCallers('eachRight'))),
             abstractedCanModify = toArray('add'),
             abstractedCannotModify = toArray('insertAt,remove,removeAt,removeWhere,findRemoveWhere'),
             nativeCannotModify = toArray('pop,shift,splice'),
@@ -58,23 +52,23 @@ var COLLECTION = 'Collection',
                 eq: equalize
             }),
             wrappedCollectionMethods = extend([{
-                seeker: function (handler, context) {
-                    var list = this,
+                seeker: function (handler) {
+                    var context = this,
                         bound = bindTo(handler, context);
-                    return forEachRight(list.toArray(), function (one, two, three) {
+                    return forEachRight(context.toArray(), function (one, two, three) {
                         if (!bound(one, two, three)) {
                             return;
                         }
-                        list.removeAt(two);
+                        context.removeAt(two);
                     });
                 },
                 slice: function (one, two) {
                     return this.wrap(this.toArray().slice(one, two));
                 },
                 merge: function (newish, merger, stack) {
-                    var list = this;
-                    merge(list.toArray(), newish, merger, stack);
-                    return list;
+                    var context = this;
+                    merge(context.toArray(), newish, merger, stack);
+                    return context;
                 }
             }, wrap(joinHandlers, function (name) {
                 return function (arg) {
@@ -101,31 +95,32 @@ var COLLECTION = 'Collection',
                 };
             }), wrap(reverseCollection, function (name) {
                 return function () {
-                    var list = this;
-                    list.remark(REVERSED, !list.is(REVERSED));
-                    list.toArray()[name]();
-                    return list;
+                    var context = this;
+                    context.remark(REVERSED, !context.is(REVERSED));
+                    context.toArray()[name]();
+                    return context;
                 };
-            }), wrap(eachHandlerKeys, function (fn_) {
-                var fn = forOwnHandlers[fn_] || _[fn_];
-                return function (handler, context) {
-                    var list = this,
-                        args0 = list.toArray(),
-                        args1 = handler,
-                        args2 = arguments[LENGTH] > 1 ? context : list;
-                    fn(args0, args1, args2);
-                    return list;
+            }), wrap(eachHandlerKeys, function (key) {
+                var fn = _[key];
+                return function (method, argument) {
+                    return fn(this.toArray(), method, argument);
+                };
+            }), wrap(eachIterators, function (bool, key) {
+                var fn = _[key];
+                return function (handler, argument) {
+                    fn(this.toArray(), bindTo(handler, this));
+                    return this;
                 };
             }), wrap(countingCollection, function (name) {
                 return function (runner, fromHere, toThere) {
-                    var list = this;
-                    _[name](list.toArray(), runner, list, fromHere, toThere);
-                    return list;
+                    var context = this;
+                    _[name](context.toArray(), bindTo(runner, context), fromHere, toThere);
+                    return context;
                 };
             }), wrap(recreatingSelfCollection, function (name) {
                 return function (one, two, three) {
-                    var list = this;
-                    return new Collection[CONSTRUCTOR](_[name](list.toArray(), one, two, three));
+                    var context = this;
+                    return new Collection[CONSTRUCTOR](_[name](context.toArray(), one, two, three));
                 };
             }), wrap(foldFindIteration, function (name) {
                 var fn = _[name];
@@ -180,8 +175,8 @@ var COLLECTION = 'Collection',
                     this.reset(items);
                     return this;
                 },
-                obliteration: function (handler, context) {
-                    forEachRight(this.toArray(), handler, context === UNDEFINED ? this : context);
+                obliteration: function (handler) {
+                    forEachRight(this.toArray(), bindTo(handler, this));
                     return this;
                 },
                 empty: function () {
@@ -191,16 +186,16 @@ var COLLECTION = 'Collection',
                 },
                 reset: function (items) {
                     // can be array like
-                    var list = this,
-                        old = list.toArray() || [];
-                    list.items = items == NULL ? [] : (Collection.isInstance(items) ? items.toArray().slice(0) : toArray(items));
-                    list.unmark(REVERSED);
-                    return list;
+                    var context = this,
+                        old = context.toArray() || [];
+                    context.items = items == NULL ? [] : (Collection.isInstance(items) ? items.toArray().slice(0) : toArray(items));
+                    context.unmark(REVERSED);
+                    return context;
                 },
                 toArray: unwrapper,
                 unwrap: unwrapper,
-                wrap: function (list) {
-                    return Collection(list);
+                wrap: function (context) {
+                    return Collection(context);
                 },
                 length: function () {
                     return this.toArray()[LENGTH];
@@ -220,15 +215,15 @@ var COLLECTION = 'Collection',
                 },
                 sort: function (fn_) {
                     // normalization sort function for cross browsers
-                    var list = this;
-                    sort(list.toArray(), fn_ || this.comparator, list.is(REVERSED), list);
-                    return list;
+                    var context = this;
+                    sort(context.toArray(), fn_ || this.comparator, context.is(REVERSED), context);
+                    return context;
                 },
                 sortBy: function (key, fn_) {
                     // normalization sort function for cross browsers
-                    var list = this;
-                    sortBy(list.toArray(), key, fn_, list.is(REVERSED), list);
-                    return list;
+                    var context = this;
+                    sortBy(context.toArray(), key, fn_, context.is(REVERSED), context);
+                    return context;
                 },
                 toString: function () {
                     return stringify(this.toArray());
@@ -256,11 +251,11 @@ var COLLECTION = 'Collection',
                 return Collection();
             }),
             SortedCollection = factories.SortedCollection = Collection.extend(SORTED_COLLECTION, {
-                constructor: function (list_, skip) {
+                constructor: function (context_, skip) {
                     var sorted = this;
                     sorted[CONSTRUCTOR + COLON + COLLECTION]();
-                    if (list_ && !skip) {
-                        sorted.load(isArrayLike(list_) ? list_ : [list_]);
+                    if (context_ && !skip) {
+                        sorted.load(isArrayLike(context_) ? context_ : [context_]);
                     }
                     return sorted;
                 },
@@ -274,8 +269,8 @@ var COLLECTION = 'Collection',
                     return closestIndex(this.toArray(), value);
                 },
                 closest: function (value) {
-                    var index, list = this.toArray();
-                    return (index = closestIndex(list, value)) === -1 ? UNDEFINED : list[index];
+                    var index, context = this.toArray();
+                    return (index = closestIndex(context, value)) === -1 ? UNDEFINED : context[index];
                 },
                 validIDType: function (id) {
                     return isNumber(id) || isString(id);
@@ -286,7 +281,7 @@ var COLLECTION = 'Collection',
                 load: function (values) {
                     var sm = this;
                     if (isArray(values)) {
-                        forEach(values, sm.add, sm);
+                        forEach(values, bindTo(sm.add, sm));
                     } else {
                         sm.add(values);
                     }
@@ -361,7 +356,7 @@ var COLLECTION = 'Collection',
                         return value;
                     }
                     if (!string.isValid()) {
-                        // canibalize the list as you join
+                        // canibalize the context as you join
                         parent.drop(ID, value);
                         parent.removeAt(parent.indexer);
                         return EMPTY_STRING;
@@ -610,13 +605,11 @@ function range(start, stop, step, inclusive) {
     return range;
 }
 
-function count(list, runner_, ctx_, start, end) {
-    var runner, obj, idx, ctx;
+function count(list, runner, start, end) {
+    var obj, idx;
     if (start >= end || !isNumber(start) || !isNumber(end) || !isFinite(start) || !isFinite(end)) {
         return list;
     }
-    ctx = ctx_ || this;
-    runner = bindTo(runner_, ctx);
     end = Math.abs(end);
     idx = start;
     while (idx < end) {
@@ -630,12 +623,12 @@ function count(list, runner_, ctx_, start, end) {
     return list;
 }
 
-function countTo(list, runner, ctx, num) {
-    return count(list, runner, ctx, 0, clamp(num, 0));
+function countTo(list, runner, num) {
+    return count(list, runner, 0, clamp(num, 0));
 }
 
-function countFrom(list, runner, ctx, num) {
-    return count(list, runner, ctx, clamp(num, 0) || 0, list[LENGTH]);
+function countFrom(list, runner, num) {
+    return count(list, runner, clamp(num, 0) || 0, list[LENGTH]);
 }
 
 function closestIndex(array, searchElement, minIndex_, maxIndex_) {
@@ -658,9 +651,9 @@ function closestIndex(array, searchElement, minIndex_, maxIndex_) {
     return found;
 }
 
-function recreateSelf(fn, ctx) {
+function recreateSelf(fn, context) {
     return function () {
-        return this.wrap(fn.apply(ctx || this, arguments));
+        return this.wrap(fn.apply(context || this, arguments));
     };
 }
 
