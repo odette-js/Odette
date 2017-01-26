@@ -2018,4 +2018,6 @@ function flows(fromHere, toHere) {
  * @class Extendable
  * @private
  */
-function Extendable() {}
+function Extendable() {
+    return this;
+}
