@@ -10,8 +10,8 @@ var COLLECTION = 'Collection',
         var isNullMessage = 'object must not be null or ' + UNDEFINED,
             validIdMessage = 'objects in sorted collections must have either a number or string for their valueOf result',
             recreatingSelfCollection = toArray('eq,where,whereNot,results,cycle,uncycle,flatten,gather,unique').concat(associatedBuilderKeys('map'), associatedBuilderKeys('filter'), associatedBuilderKeys('filterNegative')),
-            eachIterators = wrap(toArray('forEach,forOwn,forIn,forEachRight,forOwnRight,forInRight'), BOOLEAN_TRUE),
-            eachHandlerKeys = keys(buildCallers('forEach', forEachRight)).concat(keys(buildCallers('forOwn', forOwnRight)), keys(buildCallers('each', eachRight))),
+            eachIteratorsFunctionRequired = wrap(toArray('forEach,forOwn,forIn,forEachRight,forOwnRight,forInRight'), BOOLEAN_TRUE),
+            eachHandlerKeys = buildCallerKeys('forEach').concat(buildCallerKeys('forOwn'), buildCallerKeys('each', eachRight)),
             abstractedCanModify = toArray('add'),
             abstractedCannotModify = toArray('insertAt,remove,removeAt,removeWhere,findRemoveWhere'),
             nativeCannotModify = toArray('pop,shift,splice'),
@@ -102,12 +102,12 @@ var COLLECTION = 'Collection',
                 };
             }), wrap(eachHandlerKeys, function (key) {
                 var fn = _[key];
-                return function (method, argument) {
+                return function (method, argument, third) {
                     // pass through
-                    fn(this.toArray(), method, argument);
+                    fn(this.toArray(), method, argument, third);
                     return this;
                 };
-            }), wrap(eachIterators, function (bool, key) {
+            }), wrap(eachIteratorsFunctionRequired, function (bool, key) {
                 var fn = _[key];
                 return function (iterator, argument) {
                     // must be a function

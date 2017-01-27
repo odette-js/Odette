@@ -1823,6 +1823,10 @@ function doTry(fn, catcher, finallyer) {
     };
 }
 
+function buildCallerKeys(prefix) {
+    return keys(buildCallers(prefix, noop, noop));
+}
+
 function buildCallers(prefix, handler, second, memo_) {
     var memo = memo_ || {},
         CALL = 'Call',
