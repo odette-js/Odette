@@ -4813,7 +4813,9 @@ app.scope(function (app) {
                     }
                 } else {
                     if (!isValid) {
-                        if (!str) {} else if (isString(str)) {
+                        if (!str) {
+                            els = [];
+                        } else if (isString(str)) {
                             if (str[0] === '<') {
                                 els = makeTree(str, owner);
                             } else {
