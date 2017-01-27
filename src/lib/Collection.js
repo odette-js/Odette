@@ -133,7 +133,9 @@ var COLLECTION = 'Collection',
             },
             Collection = factories[COLLECTION] = factories.Directive.extend(COLLECTION, extend([{
                 get: parody(REGISTRY, 'get'),
-                // keep: parody(REGISTRY, 'keep'),
+                getById: function (id) {
+                    return this.get(ID, id);
+                },
                 keep: function (category, id, object, index) {
                     var item, collection = this,
                         registry = collection.directive(REGISTRY);
