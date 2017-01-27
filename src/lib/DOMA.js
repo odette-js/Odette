@@ -1017,11 +1017,11 @@ var ATTACHED = 'attached',
 app.scope(function (app) {
     var noMatch = /(.)^/,
         ensure = function (el, owner) {
-            var data, id, manager, el_id, associator, attach_id = BOOLEAN_TRUE;
+            var data, id, manager, associator, attach_id = BOOLEAN_TRUE;
             if (owner === BOOLEAN_TRUE) {
-                el_id = el[__ELID__];
-                attach_id = !el_id;
-                data = globalAssociator.get(el, el_id);
+                id = el[__ELID__];
+                attach_id = !id;
+                data = globalAssociator.get(el, id);
                 associator = globalAssociator;
             } else {
                 associator = globalAssociator;
