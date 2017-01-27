@@ -1,5 +1,6 @@
 var garbage, FOR = 'for',
     FIND = 'find',
+    FIND_INDEX = FIND + 'Index',
     REG_EXP = 'RegExp',
     factories = {},
     builtCallers = {},
@@ -27,10 +28,18 @@ var garbage, FOR = 'for',
     returnsEmptyString = returns(''),
     iteratesIn = iterates(allKeys),
     iteratesOwn = iterates(keys),
-    findIndex = createPredicateIndexFinder(1),
-    findIndexRight = createPredicateIndexFinder(-1),
-    find = findAccessor(findIndex),
-    findRight = findAccessor(findIndexRight),
+    findIndex = baseFindIndex,
+    findIndexIn = baseFind(iteratesIn, findIndex),
+    findIndexOwn = baseFind(iteratesOwn, findIndex),
+    findIndexRight = baseFindIndexRight,
+    findIndexInRight = baseFind(iteratesIn, findIndexRight),
+    findIndexOwnRight = baseFind(iteratesOwn, findIndexRight),
+    find = findAccessor(baseFindIndex),
+    findIn = baseFind(iteratesIn, find),
+    findOwn = baseFind(iteratesOwn, find),
+    findRight = findAccessor(baseFindIndexRight),
+    findInRight = baseFind(iteratesIn, findRight),
+    findOwnRight = baseFind(iteratesOwn, findRight),
     now_offset = dateNow(),
     filterable = negatableFilter(filterCommon(returnsArray, arrayAdd), filterCommon(returnsObject, objectSet), filterCommon(returnsEmptyString, stringConcat)),
     forIn = baseEach(iteratesIn, forEach),
@@ -53,14 +62,15 @@ var garbage, FOR = 'for',
     dropWhileRight = dropsWhile(filterRight),
     filterRight = filterable(reduceRight),
     filterNegativeRight = filterable(reduceRight, BOOLEAN_TRUE),
-    where = wheres(filter),
-    whereRight = wheres(filterRight),
-    whereNot = wheres(filterNegative),
-    whereNotRight = wheres(filterNegativeRight),
-    findWhere = wheres(find),
-    findWhereRight = wheres(findRight),
-    findIndexWhere = wheres(findIndex),
-    findIndexWhereRight = wheres(findIndexRight);
+    where = convertSecondToIterable(filter),
+    whereRight = convertSecondToIterable(filterRight),
+    whereNot = convertSecondToIterable(filterNegative),
+    whereNotRight = convertSecondToIterable(filterNegativeRight),
+    findWhere = convertSecondToIterable(find),
+    findWhereRight = convertSecondToIterable(findRight),
+    findIndexWhere = convertSecondToIterable(findIndex),
+    findIndexWhereRight = convertSecondToIterable(findIndexRight),
+    uniqueBy = convertSecondToIterable(uniqueWith);
 buildCallers(FOR + 'Each', forEach, forEachRight, builtCallers);
 buildCallers(FOR + 'Own', forOwn, forOwnRight, builtCallers);
 buildCallers(FOR + 'In', forIn, forInRight, builtCallers);
@@ -71,7 +81,11 @@ buildCallers('mapKeys', mapKeys, mapKeysRight, builtCallers);
 buildCallers('where', where, whereRight, builtCallers);
 buildCallers('whereNot', whereNot, whereNotRight, builtCallers);
 buildCallers(FIND, find, findRight, builtCallers);
-buildCallers(FIND + 'Index', findIndex, findIndexRight, builtCallers);
+buildCallers(FIND + 'Own', findOwn, findOwnRight, builtCallers);
+buildCallers(FIND + 'In', findOwn, findOwnRight, builtCallers);
+buildCallers(FIND_INDEX, findIndex, findIndexRight, builtCallers);
+buildCallers(FIND_INDEX + 'Own', findIndexOwn, findIndexOwnRight, builtCallers);
+buildCallers(FIND_INDEX + 'In', findIndexIn, findIndexInRight, builtCallers);
 buildCallers(FIND + 'Where', findWhere, findWhereRight, builtCallers);
 buildCallers(FIND + 'IndexWhere', findIndexWhere, findIndexWhereRight, builtCallers);
 buildCallers('reduce', reduce, reduceRight, builtCallers);
@@ -116,6 +130,7 @@ var _performance = window.performance,
         'null': isNull,
         nil: isNil,
         value: isValue,
+        isKey: isKey,
         validInteger: isValidInteger,
         arrayLike: isArrayLike,
         instance: isInstance,
@@ -190,6 +205,7 @@ var _performance = window.performance,
         returns: returns,
         allKeys: allKeys,
         console: console,
+        uniqueBy: uniqueBy,
         ENUM_BUG: ENUM_BUG,
         whereNot: whereNot,
         evaluate: evaluate,
@@ -218,6 +234,7 @@ var _performance = window.performance,
         isInstance: isInstance,
         indexOfNaN: indexOfNaN,
         toFunction: toFunction,
+        uniqueWith: uniqueWith,
         roundFloat: roundFloat,
         isFunction: isFunction,
         difference: difference,
@@ -254,7 +271,7 @@ var _performance = window.performance,
         constructorWrapper: constructorWrapper,
         NEGATIVE_BIG_INTEGER: NEGATIVE_BIG_INTEGER,
         euclideanOriginDistance: euclideanOriginDistance,
-        createPredicateIndexFinder: createPredicateIndexFinder,
+        // createPredicateIndexFinder: createPredicateIndexFinder,
         math: merge(wrap(toArray('E,LN2,LN10,LOG2E,LOG10E,PI,SQRT1_2,SQRT2,abs,acos,acosh,asin,asinh,atan,atan2,atanh,cbrt,ceil,clz32,cos,cosh,exp,expm1,floor,fround,hypot,imul,log,log1p,log2,log10,pow,random,round,sign,sin,sinh,sqrt,tan,tanh,trunc'), function (key) {
             return Math[key];
         }), {
@@ -366,12 +383,16 @@ function lastIndexOfNaN(a, b, c) {
     return indexOfNaN(a, b, c, BOOLEAN_TRUE);
 }
 
-function contains(list, item) {
-    return indexOf(list, item) !== -1;
+function contains(list, item, start, end) {
+    return indexOf(list, item, start, end) !== -1;
 }
 
 function isNil(item) {
     return isNull(item) || isUndefined(item);
+}
+
+function isKey(item) {
+    return isNumber(item) || isString(item);
 }
 
 function isValue(item) {
@@ -905,6 +926,12 @@ function isArrayLike(collection) {
     return isArray(collection) || (isWindow(collection) ? BOOLEAN_FALSE : (isNumber(length) && !isString(collection) && length >= 0 && length <= MAX_ARRAY_INDEX && !isFunction(collection)));
 }
 
+function convertSecondToIterable(fn) {
+    return function (a, b, c, d, e, f) {
+        return fn(a, toIterable(b), c, d, e, f);
+    };
+}
+
 function iterates(keys) {
     return function (obj, iterator) {
         handler.keys = keys(obj);
@@ -920,7 +947,6 @@ function iterates(keys) {
 function baseEach(iterates, forEach) {
     return function (obj_, iteratee_) {
         var obj = obj_,
-            keys = obj,
             iteratee = iteratee_;
         if (!obj) {
             return obj;
@@ -933,27 +959,67 @@ function baseEach(iterates, forEach) {
     };
 }
 
-function createPredicateIndexFinder(dir) {
-    return function (obj, callback, index_) {
-        var key, value, array = isArrayLike(obj) ? obj : keys(obj),
-            length = array[LENGTH],
-            index = index_ || (dir > 0 ? 0 : length - 1);
-        for (; index >= 0 && index < length; index += dir) {
-            key = index;
-            if (obj !== array) {
-                key = array[index];
-            }
-            value = obj[key];
-            if (callback(value, key, obj)) {
-                return key;
-            }
+function baseForEach(list, iterator, step) {
+    var greaterThanZero, last;
+    return (!list || !iterator) ? [] : (last = lastIndex(list)) >= 0 ? baseFromTo(list, iterator, (greaterThanZero = step > 0) ? 0 : last, greaterThanZero ? last : 0, step) : [];
+}
+
+function baseForEachEnd(list, iterator, start, stop, step) {
+    var greaterThanZero, last;
+    return (!list || !iterator) ? [] : (last = lastIndex(list) < 0 ? [] : baseFromToEnd(list, iterator, start === UNDEFINED ? 0 : start, stop === UNDEFINED ? lastIndex(list) : stop, step));
+}
+
+function baseFindIndex(values, callback, start, end) {
+    return baseForEachEnd(values, callback, start, end, 1);
+}
+
+function baseFindIndexRight(values, callback, start, end) {
+    return baseForEachEnd(values, callback, start === UNDEFINED ? lastIndex(values) : start, end === UNDEFINED ? 0 : end, -1);
+}
+
+function findAccessor(fn) {
+    return function (value, callback, index) {
+        var foundAt;
+        if ((foundAt = fn(obj, predicate, index)) !== UNDEFINED) {
+            return obj[foundAt];
         }
     };
 }
 
+function baseFind(iterates, forEachEnd) {
+    return function (obj_, iteratee_) {
+        var obj = obj_,
+            iteratee = iteratee_;
+        if (!obj) {
+            return;
+        }
+        if (!isArrayLike(obj)) {
+            iteratee = iterates(obj, iteratee);
+            obj = iteratee.keys;
+        }
+        return forEachEnd(obj, iteratee);
+    };
+}
+
+function baseFromToEnd(values, callback, _start, _end, _step) {
+    var counter, value, step = _step || 1,
+        end = _end,
+        start = _start,
+        goingDown = start > end,
+        index = start,
+        limit = ((goingDown ? start - end : end - start) + 1) / Math.abs(step || 1);
+    step = goingDown ? (step > 0 ? -step : step) : (step < 0 ? -step : step);
+    for (counter = 0; index >= 0 && counter < limit; counter++) {
+        if (callback(values[index], index, values)) {
+            return index;
+        }
+        index += step;
+    }
+}
+
 function findAccessor(fn) {
-    return function (obj, predicate, index) {
-        var foundAt = fn(obj, predicate, index);
+    return function (obj, predicate, a, b, c) {
+        var foundAt = fn(obj, predicate, a, b, c);
         if (foundAt !== UNDEFINED) {
             return obj[foundAt];
         }
@@ -1016,11 +1082,6 @@ function baseFromTo(values, runner, _start, _end, step) {
         } while (--iterations > 0);
     }
     return values;
-}
-
-function baseForEach(list, iterator, step) {
-    var greaterThanZero, last;
-    return (!list || !iterator) ? [] : (last = lastIndex(list)) >= 0 ? baseFromTo(list, iterator, (greaterThanZero = step > 0) ? 0 : last, greaterThanZero ? last : 0, step) : [];
 }
 
 function forEach(list, iterator) {
@@ -1399,18 +1460,23 @@ function negatableFilter(array, object, string) {
     };
 }
 
-function unique(list) {
-    return filter(list, function (memo, item) {
-        if (!contains(memo, item)) {
-            memo.push(item);
+function uniqueWith(list, comparator) {
+    if (!isArrayLike(list)) {
+        // can't do something that is not an array like
+        return list;
+    }
+    return filter(list, function (a, index, list) {
+        if (list[LENGTH] - 1 === index) {
+            return BOOLEAN_TRUE;
         }
-    }, []);
+        return findIndex(list, function (b) {
+            return comparator(a, b);
+        }, index + 1) === UNDEFINED;
+    });
 }
 
-function wheres(iterator) {
-    return function (obj, attrs) {
-        return iterator(obj, toIterable(attrs));
-    };
+function unique(list) {
+    return uniqueWith(list, isEqual);
 }
 
 function couldBeJSON(string) {
