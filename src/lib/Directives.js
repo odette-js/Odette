@@ -120,8 +120,10 @@ var STATUS = 'Status',
              * Method for creating and setting directives on the context of the
              * @method
              */
+            call: parody('Messenger', 'call'),
+            answer: parody('Messenger', 'answer'),
             request: parody('Messenger', 'request'),
-            reply: parody('Messenger', 'reply'),
+            respond: parody('Messenger', 'respond'),
             directive: contextDirective,
             directiveDestruction: function (name) {
                 var directive;
@@ -191,33 +193,45 @@ var STATUS = 'Status',
                 return this[STATUSES];
             }
         }),
-    Messenger = factories[MESSENGER] = Directive.factory(MESSENGER, function () {
-        var messenger = this,
-            hash = {};
-        messenger.request = function (key, arg) {
-            return hash && hash[key] && hash[key].call(this, arg);
-        };
-        messenger.reply = intendedApi(function (key, handler) {
-            return hash && (hash[key] = bind(isFunction(handler) ? handler : returns(handler), NULL));
-        });
-        messenger.destroy = function () {
-            hash = UNDEFINED;
-            this.mark(DESTROYED);
-        };
-    }),
-    Iterator = factories[ITERATOR] = Extendable.factory(ITERATOR, function (array) {
-        var iterator = this;
-        iterator.counter = 0;
-        iterator.next = function () {
-            return iterator.get(++iterator.counter);
-        };
-        iterator.done = function () {
-            return iterator.counter >= array[LENGTH];
-        };
-        iterator.get = function (idx) {
-            return array[idx];
-        };
-    }),
+    Messenger = factories[MESSENGER] = Directive.factory(MESSENGER, //
+        function () {
+            var messenger = this,
+                responders = {},
+                callers = {};
+            messenger.call = function (key, arg) {
+                return callers && callers[key] && callers[key](arg);
+            };
+            messenger.answer = intendedApi(function (key, handler) {
+                return callers && (callers[key] = bind(isFunction(handler) ? handler : returns(handler), NULL));
+            });
+            messenger.request = function (key, arg) {
+                return (responders && responders[key]) ? responders[key](arg) : Promise.reject();
+            };
+            messenger.respond = intendedApi(function (key, handler) {
+                return responders && (responders[key] = function (arg) {
+                    var result;
+                    return isPromise(result = handler()) ? result : Promise.resolve(result);
+                });
+            });
+            messenger.destroy = function () {
+                callers = responders = UNDEFINED;
+                this.mark(DESTROYED);
+            };
+        }),
+    Iterator = factories[ITERATOR] = Extendable.factory(ITERATOR, //
+        function (array) {
+            var iterator = this;
+            iterator.counter = 0;
+            iterator.next = function () {
+                return iterator.get(++iterator.counter);
+            };
+            iterator.done = function () {
+                return iterator.counter >= array[LENGTH];
+            };
+            iterator.get = function (idx) {
+                return array[idx];
+            };
+        }),
     Generator = Directive.extend(GENERATOR, {
         constructor: function (starts, next, continues) {
             var generator = this;
