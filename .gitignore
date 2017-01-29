@@ -3,4 +3,5 @@ node_modules
 public
 results
 dist
+!dist/build
 settings/index.json
