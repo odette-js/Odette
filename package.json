@@ -2,7 +2,7 @@
     "name": "odette",
     "version": "1.0.0",
     "description": "a comprehensive library for completing mundane tasks with ease and grace.",
-    "main": "index.js",
+    "main": "dist/build/index.js",
     "dependencies": {
         "body-parser": "^1.15.0",
         "express": "^4.13.4",
