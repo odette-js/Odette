@@ -379,6 +379,8 @@
                                 definitionOptions.handler.apply(app, [app, globl, opts]);
                                 app.defining = BOOLEAN_FALSE;
                                 app.defined = BOOLEAN_TRUE;
+                            }, function (e) {
+                                console.log(e);
                             });
                         });
                     }

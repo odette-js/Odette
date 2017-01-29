@@ -1,6 +1,9 @@
-var ResizeObserver = factories.ResizeObserver = app.block(function (app, window, options) {
+var ResizeObserver = factories.ResizeObserver = app.block(function (app) {
+    var doc = window.document;
+    if (!doc) {
+        return noop;
+    }
     var rect = function (el) {
-            var doc;
             return {
                 client: _.box(el, el.ownerDocument.defaultView),
                 parent: !!el.parentNode
@@ -17,7 +20,7 @@ var ResizeObserver = factories.ResizeObserver = app.block(function (app, window,
         getFromMap = function (observer) {
             return observerMap[observer.id];
         },
-        doc = document,
+        doc = window.document,
         body = doc.body,
         key = body.previousElemenetSibling ? 'previousElemenetSibling' : 'previousSibling',
         elementEventDispatcher = _.elementEventDispatcher,
@@ -34,9 +37,6 @@ var ResizeObserver = factories.ResizeObserver = app.block(function (app, window,
                     }
                     var resized = hash.resized = queue.reduce(function (memo, watcher) {
                         var el = watcher.target;
-                        // if (watcher.isEl && !el.parentNode) {
-                        //     return;
-                        // }
                         var client = rect(el);
                         if (watcher.isActive() || !diff(watcher.previous, client.client, client.parent)) {
                             return;

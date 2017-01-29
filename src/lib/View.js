@@ -864,8 +864,11 @@ var REGION_MANAGER = 'RegionManager',
             forEachCall(ui, 'destroy');
         });
         app.undefine(function (app, windo, opts) {
-            var doc = windo[DOCUMENT],
-                documentManager = app.directive(DOCUMENT_MANAGER),
+            var doc = windo[DOCUMENT];
+            if (!doc) {
+                return;
+            }
+            var documentManager = app.directive(DOCUMENT_MANAGER),
                 documents = documentManager.documents,
                 documentView = documents.get(ID, doc[__ELID__]);
             if (documentView) {

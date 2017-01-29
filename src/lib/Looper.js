@@ -115,7 +115,8 @@ app.scope(function (app) {
             }
             wraptry(function () {
                 obj.fn(lastrun);
-            }, function () {
+            }, function (e) {
+                console.log(e);
                 // takes queued object off of the queue
                 tween.dequeue(obj.id);
             });

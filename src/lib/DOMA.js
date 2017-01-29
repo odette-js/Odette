@@ -18,7 +18,6 @@ var ATTACHED = 'attached',
     APPEND_CHILD = 'append' + UPPER_CHILD,
     REMOVE = 'remove',
     REMOVE_CHILD = REMOVE + UPPER_CHILD,
-    // HTML = 'html',
     INNER_HTML = 'innerHTML',
     TEXT = 'text',
     INNER_TEXT = 'innerText',
@@ -68,7 +67,7 @@ var ATTACHED = 'attached',
         var ret = getClosestWindow(ctx).getComputedStyle(el);
         return ret ? ret : getClosestWindow(el).getComputedStyle(el) || clone(el[STYLE]) || {};
     },
-    allStyles = getComputed(doc[BODY], win),
+    allStyles,
     createAttributeFromTag = function (tag) {
         return '[' + CUSTOM_KEY + '="' + tag + '"]';
     },
@@ -128,58 +127,6 @@ var ATTACHED = 'attached',
         }
         return kebabed;
     }),
-    prefixedStyles = (function () {
-        var i, j, n, found, prefixIndex, __prefix, styleName, currentCheck, deprefixed, currentLen,
-            validCssNames = [],
-            prefixed = {},
-            len = 0,
-            addPrefix = function (list, prefix) {
-                if (indexOf(list, __prefix) === -1) {
-                    list.push(__prefix);
-                }
-            };
-        for (i = 0; i < knownPrefixes[LENGTH]; i++) {
-            currentLen = knownPrefixes[i][LENGTH];
-            if (len < currentLen) {
-                len = currentLen;
-            }
-        }
-        for (n in allStyles) {
-            found = 0;
-            currentCheck = EMPTY_STRING;
-            __prefix = EMPTY_STRING;
-            if (isNumber(+n)) {
-                styleName = allStyles[n];
-            } else {
-                styleName = kebabCase(n);
-            }
-            kebabCase(styleName);
-            camelCase(styleName);
-            deprefixed = styleName;
-            for (j = 0; j < len && styleName[j] && !found; j++) {
-                currentCheck += styleName[j];
-                prefixIndex = indexOf(knownPrefixes, currentCheck);
-                if (prefixIndex !== -1) {
-                    __prefix = knownPrefixes[prefixIndex];
-                    deprefixed = styleName.split(__prefix).join(EMPTY_STRING);
-                    found = 1;
-                }
-                prefixIndex = indexOf(knownPrefixes, HYPHEN + currentCheck);
-                if (prefixIndex !== -1) {
-                    __prefix = knownPrefixes[prefixIndex];
-                    deprefixed = styleName.split(currentCheck).join(EMPTY_STRING);
-                    found = 1;
-                }
-            }
-            deprefixed = camelCase(deprefixed);
-            validCssNames.push(deprefixed);
-            if (!prefixed[deprefixed]) {
-                prefixed[deprefixed] = [];
-            }
-            addPrefix(prefixed[deprefixed], __prefix);
-        }
-        return prefixed;
-    }()),
     allowsPassiveEvents = function () {
         return !!wraptry(function () {
             var supportsPassive = BOOLEAN_FALSE;
@@ -218,45 +165,6 @@ var ATTACHED = 'attached',
             }
             return memo;
         }, []).join('; ')) ? newStyles + ';' : newStyles;
-    },
-    updateStyle = function (element, key_, value_) {
-        var changed, key = key_,
-            value = value_ !== '' ? convertStyleValue(key, value_) : value_;
-        forEach(prefixedStyles[camelCase(key)], function (prefix) {
-            var styleKey = prefix + kebabCase(key),
-                styleVal = element[STYLE][styleKey];
-            if (styleVal !== value) {
-                element[STYLE][styleKey] = value;
-                changed = BOOLEAN_TRUE;
-            }
-        });
-        return changed;
-    },
-    applyStyle = function (element, key_, value_, important_) {
-        var newStyles, found, cached, changed, updatedStyle,
-            key = key_,
-            value = value_,
-            important = important_;
-        if (!isElement(element)) {
-            return BOOLEAN_FALSE;
-        }
-        cached = attributeApi.read(element, STYLE);
-        if (isObject(key_)) {
-            important = value_;
-            value = NULL;
-        }
-        if (important) {
-            // write with importance
-            intendedObject(key, value, function (key, value) {
-                updatedStyle = updateStyleWithImportant(element, key, value);
-            });
-            return updateStyle !== cached;
-        } else {
-            intendedObject(key, value, function (key_, value_) {
-                changed = updateStyle(element, key_, value_) ? BOOLEAN_TRUE : changed;
-            });
-        }
-        return changed;
     },
     writeAttribute = function (el, key, val_) {
         var val = val_;
@@ -944,53 +852,6 @@ var ATTACHED = 'attached',
             total.push(' }\n');
         });
     },
-    buildCss = function (json, selector_, memo_, beforeAnyMore) {
-        var result, baseSelector = selector_ || [],
-            memo = memo_ || [],
-            opensBlock = noop,
-            closesBlock = noop;
-        if (memo_) {
-            opensBlock = openBlock(baseSelector, memo);
-        }
-        if (beforeAnyMore) {
-            beforeAnyMore();
-        }
-        result = reduce(json, function (memo, block, key) {
-            var cameled, trimmed = key.trim();
-            // var media = trimmed[0] === '@';
-            // if (media) {
-            // return total_.concat(medium[trimmed.split(' ').shift()](json, trimmed, total));
-            // handle one way... possible with an extendable handler?
-            // } else {
-            if (isObject(block)) {
-                forEach(toArray(trimmed, COMMA), function (trimmd_) {
-                    trimmed = trimmd_.trim();
-                    if (baseSelector[LENGTH]) {
-                        if (trimmed[0] !== '&') {
-                            trimmed = ' ' + trimmed;
-                        } else {
-                            trimmed = trimmed.slice(1);
-                        }
-                    }
-                    opensBlock = openBlock(baseSelector, memo);
-                    baseSelector.push(trimmed);
-                    buildCss(block, baseSelector, memo, closesBlock);
-                    baseSelector.pop();
-                });
-            } else {
-                opensBlock();
-                closesBlock = closeBlock(memo);
-                // always on the same line
-                // console.log(prefixedStyles);
-                cameled = camelCase(trimmed);
-                forEach(prefixedStyles[cameled] || [''], function (prefix) {
-                    memo.push('\n\t' + prefix + kebabCase(cameled) + ': ' + convertStyleValue(trimmed, block) + ';');
-                });
-            }
-        }, memo);
-        closesBlock(memo);
-        return result.join('');
-    },
     WeakMapRemap = function (instance, list) {
         forEach(list, function (name) {
             var method = instance.get.bind(instance);
@@ -1015,6 +876,10 @@ var ATTACHED = 'attached',
     }),
     globalAssociator = ElementalWeakMap();
 app.scope(function (app) {
+    if (!window.document) {
+        options.$ = {};
+        return;
+    }
     var noMatch = /(.)^/,
         ensure = function (el, owner) {
             var data, id, manager, associator, attach_id = BOOLEAN_TRUE;
@@ -5068,13 +4933,155 @@ app.scope(function (app) {
             }
         }, wrap(allEachMethods, applyToEach), wrap(firstMethods, applyToFirst), wrap(readMethods, applyToTarget)])),
         allSetups = [],
-        plugins = [];
+        plugins = [],
+        allStyles = getComputed(doc.createElement(DIV), win),
+        prefixedStyles = (function () {
+            var i, j, n, found, prefixIndex, __prefix, styleName, currentCheck, deprefixed, currentLen,
+                validCssNames = [],
+                prefixed = {},
+                len = 0,
+                addPrefix = function (list, prefix) {
+                    if (indexOf(list, __prefix) === -1) {
+                        list.push(__prefix);
+                    }
+                };
+            for (i = 0; i < knownPrefixes[LENGTH]; i++) {
+                currentLen = knownPrefixes[i][LENGTH];
+                if (len < currentLen) {
+                    len = currentLen;
+                }
+            }
+            for (n in allStyles) {
+                found = 0;
+                currentCheck = EMPTY_STRING;
+                __prefix = EMPTY_STRING;
+                if (isNumber(+n)) {
+                    styleName = allStyles[n];
+                } else {
+                    styleName = kebabCase(n);
+                }
+                kebabCase(styleName);
+                camelCase(styleName);
+                deprefixed = styleName;
+                for (j = 0; j < len && styleName[j] && !found; j++) {
+                    currentCheck += styleName[j];
+                    prefixIndex = indexOf(knownPrefixes, currentCheck);
+                    if (prefixIndex !== -1) {
+                        __prefix = knownPrefixes[prefixIndex];
+                        deprefixed = styleName.split(__prefix).join(EMPTY_STRING);
+                        found = 1;
+                    }
+                    prefixIndex = indexOf(knownPrefixes, HYPHEN + currentCheck);
+                    if (prefixIndex !== -1) {
+                        __prefix = knownPrefixes[prefixIndex];
+                        deprefixed = styleName.split(currentCheck).join(EMPTY_STRING);
+                        found = 1;
+                    }
+                }
+                deprefixed = camelCase(deprefixed);
+                validCssNames.push(deprefixed);
+                if (!prefixed[deprefixed]) {
+                    prefixed[deprefixed] = [];
+                }
+                addPrefix(prefixed[deprefixed], __prefix);
+            }
+            return prefixed;
+        }());
 
     function managerForEach(fn, context) {
         var manager = this,
             wrapped = [manager],
             result = context ? fn.call(context, manager, 0, wrapped) : fn(manager, 0, wrapped);
         return wrapped;
+    }
+
+    function updateStyle(element, key_, value_) {
+        var changed, key = key_,
+            value = value_ !== '' ? convertStyleValue(key, value_) : value_;
+        forEach(prefixedStyles[camelCase(key)], function (prefix) {
+            var styleKey = prefix + kebabCase(key),
+                styleVal = element[STYLE][styleKey];
+            if (styleVal !== value) {
+                element[STYLE][styleKey] = value;
+                changed = BOOLEAN_TRUE;
+            }
+        });
+        return changed;
+    }
+
+    function buildCss(json, selector_, memo_, beforeAnyMore) {
+        var result, baseSelector = selector_ || [],
+            memo = memo_ || [],
+            opensBlock = noop,
+            closesBlock = noop;
+        if (memo_) {
+            opensBlock = openBlock(baseSelector, memo);
+        }
+        if (beforeAnyMore) {
+            beforeAnyMore();
+        }
+        result = reduce(json, function (memo, block, key) {
+            var cameled, trimmed = key.trim();
+            // var media = trimmed[0] === '@';
+            // if (media) {
+            // return total_.concat(medium[trimmed.split(' ').shift()](json, trimmed, total));
+            // handle one way... possible with an extendable handler?
+            // } else {
+            if (isObject(block)) {
+                forEach(toArray(trimmed, COMMA), function (trimmd_) {
+                    trimmed = trimmd_.trim();
+                    if (baseSelector[LENGTH]) {
+                        if (trimmed[0] !== '&') {
+                            trimmed = ' ' + trimmed;
+                        } else {
+                            trimmed = trimmed.slice(1);
+                        }
+                    }
+                    opensBlock = openBlock(baseSelector, memo);
+                    baseSelector.push(trimmed);
+                    buildCss(block, baseSelector, memo, closesBlock);
+                    baseSelector.pop();
+                });
+            } else {
+                opensBlock();
+                closesBlock = closeBlock(memo);
+                // always on the same line
+                // console.log(prefixedStyles);
+                cameled = camelCase(trimmed);
+                forEach(prefixedStyles[cameled] || [''], function (prefix) {
+                    memo.push('\n\t' + prefix + kebabCase(cameled) + ': ' + convertStyleValue(trimmed, block) + ';');
+                });
+            }
+        }, memo);
+        closesBlock(memo);
+        return result.join('');
+    }
+
+    function applyStyle(element, key_, value_, important_) {
+        var newStyles, found, cached, changed, updatedStyle,
+            key = key_,
+            value = value_,
+            important = important_;
+        if (!isElement(element)) {
+            return BOOLEAN_FALSE;
+        }
+        cached = attributeApi.read(element, STYLE);
+        if (isObject(key_)) {
+            important = value_;
+            value = NULL;
+        }
+        if (important) {
+            // write with importance
+            intendedObject(key, value, function (key, value) {
+                updatedStyle = updateStyleWithImportant(element, key, value);
+            });
+            return updateStyle !== cached;
+        } else {
+            intendedObject(key, value, function (key_, value_) {
+                changed = updateStyle(element, key_, value_) ? BOOLEAN_TRUE : changed;
+            });
+        }
+        return changed;
     }
     app.undefine(function (app, windo, passed) {
         var setup = DOMA_SETUP(windo);

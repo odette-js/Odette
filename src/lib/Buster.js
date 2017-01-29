@@ -29,6 +29,10 @@ var busterGroupHash = {},
 // tie it to the app so we can check it and see if it is void
 receivePostMessage.app = app;
 app.scope(function (app) {
+    var doc = win[DOCUMENT];
+    if (!doc) {
+        return;
+    }
     var ENCODED_BRACKET = '%7B',
         IS_LATE = 'isLate',
         DOCUMENT_READY = 'documentReady',
