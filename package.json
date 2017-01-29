@@ -3,7 +3,8 @@
     "version": "1.0.0",
     "description": "a comprehensive library for completing mundane tasks with ease and grace.",
     "main": "dist/build/index.js",
-    "dependencies": {
+    "dependencies": {},
+    "devDependencies": {
         "body-parser": "^1.15.0",
         "express": "^4.13.4",
         "express-ws": "^1.0.0",
@@ -25,9 +26,7 @@
         "q": "^1.4.1",
         "run-sequence": "^1.2.2",
         "serve-favicon": "^2.3.0",
-        "underscore": "^1.8.3"
-    },
-    "devDependencies": {
+        "underscore": "^1.8.3",
         "browserstack": "^1.5.0",
         "browserstack-webdriver": "^2.41.1"
     },
