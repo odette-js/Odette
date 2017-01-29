@@ -2,6 +2,7 @@
 node_modules
 public
 results
-dist/*
-!dist/build
+!dist/build/odette.js
+!dist/build/library.js
+dist/**
 settings/index.json
