@@ -1,5 +1,4 @@
-#!/usr/bin/env node
-
+// #!/usr/bin/env node
 var server = require('./server');
 module.exports = function (port) {
     return server({
