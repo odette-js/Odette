@@ -221,7 +221,7 @@ var COLLECTION = 'Collection',
                 sort: function (fn_) {
                     // normalization sort function for cross browsers
                     var context = this;
-                    sort(context.toArray(), fn_ || this.comparator, context.is(REVERSED), context);
+                    sort(context.toArray(), bindTo(fn_ || this.comparator || _.defaultSort, context), context.is(REVERSED));
                     return context;
                 },
                 sortBy: function (key, fn_) {

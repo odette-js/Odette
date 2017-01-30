@@ -2437,6 +2437,7 @@ app.scope(function (app) {
                         });
                         results = isString(children) ? (node.innerHTML = children) : forEach(children, function (child) {
                             appendChild(node, deltas.create(child, node, hash));
+                            // deltas.create(child, node, hash);
                         });
                         return node;
                     },
@@ -2448,11 +2449,12 @@ app.scope(function (app) {
                         }
                         created = doc.createElement(virtual[0]);
                         data = virtual[3];
-                        if (data && data.key) {
-                            if (hash[data.key]) {
-                                exception('can\'t have a non unique key at ' + data.key);
+                        if (data && (key = data.key)) {
+                            if (hash[key]) {
+                                created = hash[key];
+                                // exception('can\'t have a non unique key at ' + key);
                             }
-                            hash[data.key] = created;
+                            hash[key] = created;
                         }
                         parent.appendChild(deltas.update(created, virtual[1], virtual[2], hash));
                         return created;

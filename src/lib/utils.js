@@ -158,6 +158,7 @@ var _performance = window.performance,
         zip: zip,
         has: has,
         now: now,
+        defaultSort: defaultSort,
         // map: map,
         noop: noop,
         bind: bind,
@@ -480,10 +481,12 @@ function stringify(obj) {
     return (isObject(obj) ? JSON.stringify(obj) : isFunction(obj) ? obj.toString() : obj) + EMPTY_STRING;
 }
 
+function defaultSort(a, b) {
+    return a > b;
+}
+
 function sort(obj, fn_, reversed) {
-    var fn = bindTo(fn_ || function (a, b) {
-        return a > b;
-    }, obj);
+    var fn = bindTo(fn_ || defaultSort, obj);
     // normalize sort function handling for safari
     return obj.sort(function (a, b) {
         var result = fn(a, b);
