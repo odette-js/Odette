@@ -11,6 +11,10 @@ application.scope().run(window, function (module, app, _, factories, $) {
             };
         }
     });
+    var PersonInfo = $.View.extend({
+        template: $.compile('profile-extended'),
+        tagName: _.returns('div'),
+    });
     var PersonView = $.View.extend({
         Model: Person,
         template: $.compile('profile-summary'),
@@ -26,6 +30,9 @@ application.scope().run(window, function (module, app, _, factories, $) {
             model.set({
                 clicks: model.get('clicks') + 1
             });
+        },
+        region: {
+            info: '.info-container'
         }
     });
     var ViewContainer = $.View.extend({

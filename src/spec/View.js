@@ -2,7 +2,8 @@ application.scope().run(window, function (module, app, _, factories, $) {
     test.describe('View', function () {
         var view, complexView, count, ComplexView = $.View.extend({
             ui: {
-                there: '.here'
+                there: '.here',
+                r: '.region-here'
             },
             events: {
                 'sometrigger': 'dosomething'
@@ -13,7 +14,12 @@ application.scope().run(window, function (module, app, _, factories, $) {
             elementTriggers: {
                 'click': 'sometrigger'
             },
-            dosomething: function () {},
+            regions: {
+                reg: 'r'
+            },
+            dosomething: function () {
+                count++;
+            },
             doThis: function () {
                 count++;
             },
@@ -24,11 +30,20 @@ application.scope().run(window, function (module, app, _, factories, $) {
                             class: 'here'
                         },
                         null
-                    ]
+                    ],
+                    ['div', {
+                        class: 'region-here'
+                    }, false, {
+                        key: 'r'
+                    }]
                 ];
             }
         });
         $.documentView.addRegion('main', '.test-div');
+
+        function insert() {
+            $.documentView.addChildView('main', complexView);
+        }
         test.beforeEach(function () {
             count = 0;
             view = $.View();
@@ -83,41 +98,41 @@ application.scope().run(window, function (module, app, _, factories, $) {
             $.documentView.directive('RegionManager').get('main').add(complexView);
             test.expect(count).toEqual(0);
             complexView.ui.there.click();
-            test.expect(count).toEqual(1);
-            complexView.render();
-            test.expect(count).toEqual(1);
-            complexView.ui.there.click();
             test.expect(count).toEqual(2);
+            complexView.render();
+            test.expect(count).toEqual(2);
+            complexView.ui.there.click();
+            test.expect(count).toEqual(4);
         }, 5);
         test.it('views can be detached', function () {
             $.documentView.directive('RegionManager').get('main').add(complexView);
             test.expect(count).toEqual(0);
             complexView.ui.there.click();
-            test.expect(count).toEqual(1);
+            test.expect(count).toEqual(2);
             complexView.remove();
-            test.expect(count).toEqual(1);
+            test.expect(count).toEqual(2);
         }, 3);
         test.it('and still keep their elements and events intact', function () {
             $.documentView.directive('RegionManager').get('main').add(complexView);
             test.expect(count).toEqual(0);
             complexView.ui.there.click();
-            test.expect(count).toEqual(1);
-            complexView.remove();
-            test.expect(count).toEqual(1);
-            complexView.ui.there.click();
             test.expect(count).toEqual(2);
+            complexView.remove();
+            test.expect(count).toEqual(2);
+            complexView.ui.there.click();
+            test.expect(count).toEqual(4);
         }, 4);
         test.it('they can even be reattached', function () {
             $.documentView.directive('RegionManager').get('main').add(complexView);
             test.expect(count).toEqual(0);
             complexView.ui.there.click();
-            test.expect(count).toEqual(1);
-            complexView.remove();
-            test.expect(count).toEqual(1);
-            $.documentView.directive('RegionManager').get('main').add(complexView);
-            test.expect(count).toEqual(1);
-            complexView.ui.there.click();
             test.expect(count).toEqual(2);
+            complexView.remove();
+            test.expect(count).toEqual(2);
+            $.documentView.directive('RegionManager').get('main').add(complexView);
+            test.expect(count).toEqual(2);
+            complexView.ui.there.click();
+            test.expect(count).toEqual(4);
         }, 5);
         test.it('when they are destroyed however, their events are detached from the element and the view is automatically removed', function () {
             $.documentView.directive('RegionManager').get('main').add(complexView);
@@ -125,11 +140,11 @@ application.scope().run(window, function (module, app, _, factories, $) {
             // cache it so we can access it after the view has been destroyed
             var there = complexView.ui.there;
             there.click();
-            test.expect(count).toEqual(1);
+            test.expect(count).toEqual(2);
             complexView.destroy();
-            test.expect(count).toEqual(1);
+            test.expect(count).toEqual(2);
             there.click();
-            test.expect(count).toEqual(1);
+            test.expect(count).toEqual(2);
         }, 4);
         test.it('when rendering a view, if a false is passed, then it will leave the children alone', function () {
             var LeftAloneView = $.View.extend({
@@ -155,18 +170,20 @@ application.scope().run(window, function (module, app, _, factories, $) {
         }, 1);
         test.it('also allows for triggers to be connected and piped through from element to view', function () {
             $.documentView.directive('RegionManager').get('main').add(complexView);
-            complexView.on('sometrigger', function () {
-                count++;
-            });
             var el = complexView.el;
             el.click();
-            test.expect(count).toEqual(2);
+            test.expect(count).toEqual(1);
             complexView.dispatchEvent('sometrigger');
-            test.expect(count).toEqual(3);
+            test.expect(count).toEqual(2);
             complexView.destroy();
-            test.expect(count).toEqual(3);
+            test.expect(count).toEqual(2);
             el.click();
-            test.expect(count).toEqual(3);
+            test.expect(count).toEqual(2);
         }, 4);
+        test.it('can define regions to be created on the view', function () {
+            insert();
+            console.log(complexView);
+            test.expect(1).toBe(1);
+        }, 1);
     });
 });

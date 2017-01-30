@@ -3234,10 +3234,10 @@ app.scope(function (app) {
                 // only take the target so we don't try to make managers for everyone
                 target = evnt.target.element();
                 // there are no delegated events, so just return everything after capture
-                if (!delegateCount || target === el) {
-                    return list_.slice(captureCount);
-                }
                 sumCount = captureCount + delegateCount;
+                if (!delegateCount || target === el) {
+                    return list_.slice(sumCount);
+                }
                 i = captureCount;
                 afterwards = list_.slice(sumCount);
                 ordersEventsByHierarchy = manager.ordersEventsByHierarchy();
