@@ -690,7 +690,7 @@ var ATTACHED = 'attached',
         function parseTo(here) {
             var part, char = total[i];
             if (char === '#') {
-                id = total.slice(i + 1, here);
+                attrs.id = total.slice(i + 1, here);
             } else if (char === '.') {
                 classes.push(total.slice(i + 1, here))
             } else if (char === '[') {
