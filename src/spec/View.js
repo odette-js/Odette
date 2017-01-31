@@ -9,7 +9,7 @@ application.scope().run(window, function (module, app, _, factories, $) {
                 'sometrigger': 'dosomething'
             },
             elementEvents: {
-                'click @ui.there': 'doThis'
+                'click @there': 'doThis'
             },
             elementTriggers: {
                 'click': 'sometrigger'
@@ -26,16 +26,10 @@ application.scope().run(window, function (module, app, _, factories, $) {
             template: function () {
                 return [
                     ['span'],
-                    ['div', {
-                            class: 'here'
-                        },
-                        null
-                    ],
-                    ['div', {
-                        class: 'region-here'
-                    }, false, {
+                    ['div.here'],
+                    ['div.region-here', {
                         key: 'r'
-                    }]
+                    }, false]
                 ];
             }
         });
@@ -180,10 +174,9 @@ application.scope().run(window, function (module, app, _, factories, $) {
             el.click();
             test.expect(count).toEqual(2);
         }, 4);
-        test.it('can define regions to be created on the view', function () {
-            insert();
-            console.log(complexView);
-            test.expect(1).toBe(1);
-        }, 1);
+        // test.it('can define regions to be created on the view', function () {
+        //     insert();
+        //     test.expect(1).toBe(1);
+        // }, 1);
     });
 });

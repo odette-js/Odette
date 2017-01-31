@@ -294,7 +294,7 @@ var REGION_MANAGER = 'RegionManager',
                 removeRegion: removeRegion,
                 addChildView: addChildView,
                 removeChildView: removeChildView,
-                tagName: returns('div'),
+                selector: returns('div'),
                 template: returns(BOOLEAN_FALSE),
                 canRenderAsync: returns(BOOLEAN_FALSE),
                 getChildViews: function (key) {
@@ -597,8 +597,9 @@ var REGION_MANAGER = 'RegionManager',
                 };
             },
             normalizeUIString = function (uiString, ui) {
-                return uiString.replace(/@ui\.[a-zA-Z_$0-9]*/g, function (r) {
-                    return ui[r.slice(4)];
+                return uiString.replace(/@[a-zA-Z_$0-9]*/g, function (r) {
+                    var sliced = r.slice(1);
+                    return ui[sliced] || sliced;
                 });
             },
             // allows for the use of the @ui. syntax within
@@ -631,7 +632,12 @@ var REGION_MANAGER = 'RegionManager',
                     } else {
                         // defauts back to wrapping the element
                         // creates internal element
-                        el = element.create(view.tagName());
+                        if (element.el) {
+                            el = element.el;
+                        } else {
+                            selector = parseSelector(view.selector());
+                            el = element.create(selector.tag, selector.attrs);
+                        }
                         // subclassed to expand the attributes that can be used
                     }
                     element.set(el);
@@ -656,16 +662,16 @@ var REGION_MANAGER = 'RegionManager',
                         model = view.model,
                         json = (model && model.toJSON()) || {},
                         // try to generate template
-                        virtual = element.virtual = [view.tagName(), element.attributes(), view.template(json, result(view, 'helpers') || {})],
+                        virtual = element.virtual = [view.selector(), element.attributes(), view.template(json, result(view, 'helpers') || {})],
                         comparison = view.owner$.nodeComparison(el, virtual, element.hashed, bindTo(element.comparisonFilter, element)),
-                        keys = element.hashed = comparison.keys,
-                        mutations = element.mutations = comparison.mutations,
+                        keys = element.hashed = merge(element.hashed || {}, comparison.keys),
+                        mutate = element.mutate = comparison.mutate,
                         modifiers = element.modifiers = merge({
-                            remove: noop,
+                            // remove: noop,
                             update: noop,
-                            insert: noop
+                            swap: noop
                         }, isFunction(modifiers = view.modifiers()) ? {
-                            insert: modifiers
+                            swap: modifiers
                         } : modifiers);
                 },
                 comparisonFilter: function (node) {
@@ -680,21 +686,19 @@ var REGION_MANAGER = 'RegionManager',
                 delta: function () {
                     var result, element = this,
                         view = element.view,
-                        mutations = element.mutations,
+                        mutate = element.mutate,
                         modifiers = element.modifiers,
                         memo = BOOLEAN_FALSE;
-                    if (!element.mutations) {
-                        return memo;
+                    if (element.mutate) {
+                        delete element.mutate;
+                        delete element.modifiers;
+                        // if it's a function, then do it last
+                        result = mutate.swap() || memo;
+                        result = modifiers.swap() || result;
+                        result = mutate.update() || result;
+                        result = modifiers.update() || result;
                     }
-                    delete element.mutations;
-                    delete element.modifiers;
-                    // if it's a function, then do it last
-                    result = mutations.remove() || memo;
-                    result = modifiers.remove() || result;
-                    result = mutations.update() || result;
-                    result = modifiers.update() || result;
-                    result = mutations.insert() || result;
-                    return modifiers.insert() || result;
+                    return result;
                 },
                 renderEl: function () {
                     var replacing, elementsSwapped, element = this,
@@ -723,10 +727,11 @@ var REGION_MANAGER = 'RegionManager',
                     view.unmark('asyncRendering');
                     // prevent future from triggering
                     view.owner$.documentView.chunk(view.cid, noop);
-                    if ((elementsSwapped = element.delta())) {
-                        // ui objects changed. need to update groups
-                        element.bindUI();
-                    }
+                    // if ((elementsSwapped = element.delta())) {
+                    // ui objects changed. need to update groups
+                    element.delta();
+                    element.bindUI();
+                    // }
                     view.unmark(RENDERING);
                     view.mark(RENDERED);
                     regions = result(view, 'regions');

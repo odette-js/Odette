@@ -15,7 +15,7 @@ var userzone,
             zone: 0
         };
     },
-    parseDatetime = copyCacheable(function (userzone) {
+    parseDatetime = copyCategoricallyCacheable(function (userzone) {
         return function (value_) {
             var value = value_;
             if (!isString(value)) {

@@ -409,83 +409,6 @@ var ATTACHED = 'attached',
     checkNeedForCustom = function (el) {
         return el[__ELID__] && attributeApi.read(el, CUSTOM_KEY) !== BOOLEAN_FALSE;
     },
-    diffAttributes = function (a, b, diffs, context) {
-        var bKeys, aAttributes = a.attributes,
-            aLength = aAttributes.length,
-            bLength = (bKeys = keys(b[1])).length,
-            attrs = reduce({
-                length: Math.max(aLength, bLength)
-            }, function (memo, voided, index) {
-                var key;
-                if (memo.aLength > index) {
-                    collectAttr(memo, aAttributes[index]);
-                }
-                if (memo.bLength > index) {
-                    key = bKeys[index];
-                    collectAttr(memo, {
-                        localName: kebabCase(key),
-                        value: b[1][key]
-                    }, BOOLEAN_TRUE);
-                }
-            }, {
-                list: [],
-                hash: {},
-                attrsA: {},
-                accessA: {},
-                attrsB: {},
-                accessB: {},
-                aLength: aLength,
-                bLength: bLength
-            }),
-            anElId = a[__ELID__],
-            updates,
-            accessA = attrs.accessA,
-            accessB = attrs.accessB;
-        forEach(attrs.list, function (key) {
-            if (key === CUSTOM_KEY) {
-                return;
-            }
-            var accessAValue = accessA[key];
-            var accessBValue = accessB[key];
-            if (accessAValue !== accessBValue) {
-                if (accessAValue === UNDEFINED && accessBValue === BOOLEAN_FALSE) {
-                    return;
-                }
-                updates = updates || {};
-                updates[key] = accessBValue === UNDEFINED ? NULL : accessBValue;
-            }
-        });
-        if (!updates) {
-            return;
-        }
-        diffs.updating.push(function () {
-            var manager, props;
-            forOwn(updates, function (value, key) {
-                if (!propsHash[key]) {
-                    return;
-                }
-                delete updates[key];
-                props = props || {};
-                props[key] = value;
-            });
-            if (checkNeedForCustom(a)) {
-                manager = context.returnsManager(a);
-                if (keys(updates)[LENGTH]) {
-                    manager.attr(updates);
-                }
-                if (props) {
-                    manager.prop(props);
-                }
-            } else {
-                forOwn(updates, function (value, key) {
-                    attributeApi.write(a, kebabCase(key), value);
-                });
-                forOwn(props, function (value, key) {
-                    propertyApi.write(a, kebabCase(key), value);
-                });
-            }
-        });
-    },
     collectVirtualKeys = function (virtualized, diff, previous_hash, level_, index_) {
         var groups, children = virtualized[2];
         var uniques = virtualized[3];
@@ -506,31 +429,6 @@ var ATTACHED = 'attached',
         forEach(children, function (child, index) {
             collectVirtualKeys(child, diff, previous_hash, level + 1, index);
         });
-    },
-    computeStringDifference = function (a, b, context, diffs) {
-        if (isString(b[2])) {
-            if (a.innerHTML !== b[2]) {
-                diffs.updating.push(function () {
-                    if (checkNeedForCustom(a)) {
-                        context.returnsManager(a).html(b[2]);
-                    } else {
-                        a.innerHTML = b[2];
-                    }
-                });
-            }
-            return BOOLEAN_TRUE;
-        }
-    },
-    insertMapper = function (els, parent, context, i, hash) {
-        var frag = doc.createDocumentFragment();
-        forEach(els, function (el) {
-            context.deltas.create(el, frag, hash);
-        });
-        return {
-            parent: parent,
-            el: frag,
-            index: i
-        };
     },
     filtersAlreadyInserted = function (els, hash) {
         return _.filter(els, function (el) {
@@ -618,178 +516,497 @@ var ATTACHED = 'attached',
             }
         });
     },
-    diffChildren = function (a, b, hash, stopper, layer_level, diffs, context) {
-        var aChildren = a.childNodes;
-        var bChildren = b[2];
-        var mutations = diffs.mutations;
-        var keys = diffs.keys;
-        // it was a string, so there's nothing more to compute in regards to children
-        if (computeStringDifference(a, b, context, diffs)) {
-            return diffs;
+    // newDiff = function (context) {
+    //     var diffs = {
+    //         removing: [],
+    //         updating: [],
+    //         inserting: [],
+    //         preventRemove: {},
+    //         mutate: {
+    //             remove: function () {
+    //                 if (!diffs.removing[LENGTH]) {
+    //                     return;
+    //                 }
+    //                 // maintains attach state on dommanager
+    //                 context.$(diffs.removing).remove();
+    //                 return BOOLEAN_TRUE;
+    //             },
+    //             update: function () {
+    //                 // attributes and content
+    //                 forEach(diffs.updating, function (fn) {
+    //                     fn();
+    //                 });
+    //             },
+    //             insert: function () {
+    //                 if (!diffs.inserting[LENGTH]) {
+    //                     return;
+    //                 }
+    //                 diffs.inserting.sort(function (a, b) {
+    //                     return a.index > b.index ? 1 : -1;
+    //                 });
+    //                 var target, index, currentFragment, actuallyInserting = [],
+    //                     inserting = diffs.inserting.slice(0);
+    //                 // group sections into document fragments
+    //                 while (inserting[LENGTH]) {
+    //                     // shift off of the inserting list
+    //                     target = inserting.shift();
+    //                     // if no index is defined
+    //                     if (index === UNDEFINED) {
+    //                         // define an index
+    //                         index = target.index;
+    //                         // set a current fragment
+    //                         currentFragment = {
+    //                             index: target.index,
+    //                             el: context.createDocumentFragment(),
+    //                             parent: target.parent
+    //                         };
+    //                         // push it to the final insert list
+    //                         actuallyInserting.push(currentFragment);
+    //                         // append the target element to the fragment
+    //                         appendChild(currentFragment.el, target.el);
+    //                     } else {
+    //                         if (target.parent === currentFragment.parent && index + 1 === target.index) {
+    //                             // append to current fragment
+    //                             appendChild(currentFragment.el, target.el);
+    //                             // update index
+    //                             index = target.index;
+    //                         } else {
+    //                             // unshift target
+    //                             inserting.unshift(target);
+    //                             // reset index to undefined to start new document fragment
+    //                             index = UNDEFINED;
+    //                         }
+    //                     }
+    //                 }
+    //                 forEach(actuallyInserting, function (list, idx, lists) {
+    //                     // maintains attach state on dom manager
+    //                     context.returnsManager(list.parent).insertAt(list.el, list.index);
+    //                 });
+    //                 return BOOLEAN_TRUE;
+    //             }
+    //         },
+    //         keys: {},
+    //         ids: {},
+    //         group: {},
+    //         futureTree: {},
+    //         futureHash: {}
+    //     };
+    //     return diffs;
+    // },
+    // cannot start with a text node
+    createDiffer = function (context) {
+        var hash, updating, swaps;
+
+        function resolveLater(key) {
+            return isString(key) ? function () {
+                return hash[key]
+            } : returns(key)
         }
-        var aChildrenLength = aChildren && aChildren[LENGTH];
-        var bChildrenLength = bChildren && bChildren[LENGTH];
-        var maxLength = Math.max(aChildrenLength, bChildrenLength);
-        var j, finished, bChild, removing, result, dontCreate, offset = 0,
-            i = 0,
-            focus = 0;
-        if (!bChildren || isNumber(bChildren)) {
-            return diffs;
-        }
-        for (; i < maxLength && !finished; i++) {
-            if (aChildrenLength <= i) {
-                // rethink this. it's a little weird
-                diffs.inserting.push(insertMapper(filtersAlreadyInserted(toArray(bChildren).slice(i), hash), a, context, i, diffs.keys));
-                return diffs;
+
+        function swapNodes(h) {
+            var $remove, add, remove,
+                add = h.add(),
+                remove = h.remove();
+            if (add && remove) {
+                $remove = context.returnsManager(remove);
+                $remove.insertBefore(add);
+                $remove.remove();
+            } else if (remove) {
+                context.$(remove).remove();
             } else {
-                if (b[2] && stopper(b)) {
-                    // do not do children
-                    if (bChildrenLength <= i) {
-                        dontCreate = BOOLEAN_TRUE;
-                        arrayPush.apply(diffs.removing, toArray(aChildren).slice(i));
-                        return diffs;
-                    } else {
-                        result = nodeComparison(aChildren[i], bChildren[i], hash, stopper, layer_level, i, diffs, context, a);
-                        if (result === BOOLEAN_FALSE) {
-                            diffs.removing.push(a);
-                            diffs.inserting.push(insertMapper([b], a, context, i + offset, diffs.keys));
-                        }
-                    }
-                }
+                context.returnsManager(h.parent).insertAfter(add, h.index);
             }
         }
-        return diffs;
-    },
-    newDiff = function (context) {
-        var diffs = {
-            removing: [],
-            updating: [],
-            inserting: [],
-            mutations: {
-                remove: function () {
-                    if (!diffs.removing[LENGTH]) {
-                        return;
-                    }
-                    // maintains attach state on dommanager
-                    context.$(diffs.removing).remove();
-                    return BOOLEAN_TRUE;
+        return {
+            context: context,
+            swaps: (swaps = []),
+            keys: (hash = {}),
+            updating: (updating = []),
+            queue: {
+                add: function (node, index, parent) {
+                    return this.swap(NULL, node, index, parent);
+                },
+                remove: function (node, parent) {
+                    return this.swap(node, NULL, NULL, parent);
+                },
+                html: function (node, content) {},
+                swap: function (first, last, index, parent) {
+                    swaps.push({
+                        parent: parent,
+                        index: index,
+                        remove: resolveLater(first),
+                        add: resolveLater(last)
+                    });
+                },
+                update: function (node, updates, fn) {
+                    updating.push({
+                        node: node,
+                        updates: updates,
+                        fn: fn
+                    });
+                }
+            },
+            mutate: {
+                swap: function () {
+                    forEach(swaps, swapNodes);
                 },
                 update: function () {
                     // attributes and content
-                    forEach(diffs.updating, function (fn) {
-                        fn();
+                    forEach(updating, function (item) {
+                        item.fn(item.node, item.updates);
                     });
                 },
-                insert: function () {
-                    if (!diffs.inserting[LENGTH]) {
+            }
+        };
+    },
+    /*
+    if the tag name, and key are the same
+        then it can be updated
+    else
+        the node should be swapped out with another node
+    we are now working with the node that will be inserted / is inserted into the dom
+        update it's attributes / properties
+    diff the children
+        if the dom node has no children
+            then create new children from the virtual node
+        if the dom node has children and the virtual node has none,
+            then remove all of the dom node's children
+
+     */
+    canDiffAccepts = {
+        string: BOOLEAN_TRUE,
+        number: BOOLEAN_TRUE
+    },
+    cantDiffAttrs = {
+        is: BOOLEAN_TRUE,
+        style: BOOLEAN_TRUE
+    },
+    parseSelector = copyCacheable(function (total) {
+        var t, i = 0,
+            length = total[LENGTH],
+            classes = [],
+            attrs = {};
+
+        function parseTo(here) {
+            var part, char = total[i];
+            if (char === '#') {
+                id = total.slice(i + 1, here);
+            } else if (char === '.') {
+                classes.push(total.slice(i + 1, here))
+            } else if (char === '[') {
+                part = total.slice(i + 1, here - 1);
+                part = part.split(/\=/);
+                attrs[camelCase(split[0])] = split[1];
+            } else if (!t && i === 0) {
+                t = total.slice(i, here);
+            }
+        }
+        total.replace(/[#|\.|\[]|\]/igm, function (char, index) {
+            if (!t) {
+                if (index === 0) {
+                    t = 'div';
+                } else {
+                    t = total.slice(0, index);
+                }
+            } else {
+                parseTo(index);
+            }
+            i = index;
+            return '';
+        });
+        parseTo(length);
+        if (classes.length) {
+            attrs.class = classes.join(' ');
+        }
+        return {
+            tag: t,
+            attrs: attrs,
+            class: classes
+        };
+    }),
+    nodeComparison = function (_a, _b, _hash, _stopper, context) {
+        var returns, mutate, removing, updating, inserting, keysHash, resultant, current, inserting, identifyingKey, identified,
+            a = _a,
+            b = cloneJSON(_b),
+            layer_level = 0,
+            // check kids
+            stopper = _stopper || returnsTrue,
+            diffs = createDiffer(context),
+            keysHash = diffs.keys;
+        updateElement(a, b);
+        return diffs;
+
+        function updateNode(a, hash) {
+            var manager, props, attrs = hash.attrs,
+                style = hash.style;
+            forOwn(attrs, function (value, key) {
+                if (!propsHash[key]) {
+                    return;
+                }
+                delete attrs[key];
+                props = props || {};
+                props[key] = value;
+            });
+            if (checkNeedForCustom(a)) {
+                manager = context.returnsManager(a);
+                if (keys(attrs)[LENGTH]) {
+                    manager.attr(attrs);
+                }
+                if (props) {
+                    manager.prop(props);
+                }
+                if (style) {
+                    manager.css(style);
+                }
+            } else {
+                forOwn(attrs, function (value, key) {
+                    attributeApi.write(a, kebabCase(key), value);
+                });
+                forOwn(props, function (value, key) {
+                    propertyApi.write(a, kebabCase(key), value);
+                });
+                if (style) {
+                    applyStyle(a, style);
+                }
+            }
+        }
+
+        function diffAttributes(a, bAttrs, style) {
+            var bKeys, aAttributes = a.attributes,
+                aLength = aAttributes.length,
+                bLength = (bKeys = keys(bAttrs)).length,
+                attrs = reduce({
+                    length: Math.max(aLength, bLength)
+                }, function (memo, voided, index) {
+                    var key;
+                    if (memo.aLength > index) {
+                        collectAttr(memo, aAttributes[index]);
+                    }
+                    if (memo.bLength > index) {
+                        key = bKeys[index];
+                        collectAttr(memo, {
+                            localName: kebabCase(key),
+                            value: bAttrs[key]
+                        }, BOOLEAN_TRUE);
+                    }
+                }, {
+                    list: [],
+                    hash: {},
+                    attrsA: {},
+                    accessA: {},
+                    attrsB: {},
+                    accessB: {},
+                    aLength: aLength,
+                    bLength: bLength
+                }),
+                anElId = a[__ELID__],
+                updates,
+                accessA = attrs.accessA,
+                accessB = attrs.accessB;
+            forEach(attrs.list, function (key) {
+                if (cantDiffAttrs[key]) {
+                    return;
+                }
+                var accessAValue = accessA[key];
+                var accessBValue = accessB[key];
+                if (accessAValue !== accessBValue) {
+                    if (accessAValue === UNDEFINED && accessBValue === BOOLEAN_FALSE) {
                         return;
                     }
-                    diffs.inserting.sort(function (a, b) {
-                        return a.index > b.index ? 1 : -1;
-                    });
-                    var target, index, currentFragment, actuallyInserting = [],
-                        inserting = diffs.inserting.slice(0);
-                    // group sections into document fragments
-                    while (inserting[LENGTH]) {
-                        // shift off of the inserting list
-                        target = inserting.shift();
-                        // if no index is defined
-                        if (index === UNDEFINED) {
-                            // define an index
-                            index = target.index;
-                            // set a current fragment
-                            currentFragment = {
-                                index: target.index,
-                                el: context.createDocumentFragment(),
-                                parent: target.parent
-                            };
-                            // push it to the final insert list
-                            actuallyInserting.push(currentFragment);
-                            // append the target element to the fragment
-                            appendChild(currentFragment.el, target.el);
-                        } else {
-                            if (target.parent === currentFragment.parent && index + 1 === target.index) {
-                                // append to current fragment
-                                appendChild(currentFragment.el, target.el);
-                                // update index
-                                index = target.index;
-                            } else {
-                                // unshift target
-                                inserting.unshift(target);
-                                // reset index to undefined to start new document fragment
-                                index = UNDEFINED;
-                            }
-                        }
-                    }
-                    forEach(actuallyInserting, function (list, idx, lists) {
-                        // maintains attach state on dom manager
-                        context.returnsManager(list.parent).insertAt(list.el, list.index);
-                    });
-                    return BOOLEAN_TRUE;
+                    updates = updates || {};
+                    updates[key] = accessBValue === UNDEFINED ? NULL : accessBValue;
                 }
-            },
-            keys: {},
-            ids: {},
-            group: {},
-            futureTree: {},
-            futureHash: {}
-        };
-        return diffs;
-    },
-    // cannot start with a text node
-    nodeComparison = function (a_, b_, hash_, stopper_, layer_level_, index_, diffs_, context, future_parent_) {
-        var returns, resultant, current, inserting, identifyingKey, identified, first = !diffs_,
-            a = a_,
-            b = b_,
-            index = index_ || 0,
-            future_parent = future_parent_,
-            diffs = diffs_ || newDiff(context),
-            stopper = stopper_ || returnsTrue,
-            keys = diffs.keys,
-            mutations = diffs.mutations,
-            layer_level = layer_level_ || 0,
-            hash = hash_ || {},
-            layerLength = b[LENGTH],
-            identifiers = b[3],
-            tagA = tag(a);
-        if (first) {
-            collectVirtualKeys(b, diffs, hash);
+            });
+            if (updates) {
+                diffs.queue.update(a, {
+                    attrs: updates,
+                    style: style
+                }, updateNode);
+            }
         }
-        if (tagA === b[0] && a.nodeType === returnsJSONNodeType(b[0])) {
-            if (identifiers && (identifyingKey = identifiers.key)) {
-                current = hash[identifyingKey];
-                identified = diffs.ids[identifyingKey];
-                if (current) {
-                    if (current === a) {
-                        diffs.keys[identifyingKey] = current;
+
+        function resolveIncompatability(node, virtual) {
+            var t, key = accessKey(virtual),
+                registered = keysHash[key];
+            if ((t = tag(node)) && t === tagName(virtual)) {
+                // the node did not move and
+                // did not change it's tag name
+                return {
+                    node: registered || node
+                };
+            }
+            var frag = context.createDocumentFragment();
+            var newEl = createFromVirtual(virtual, frag, keysHash);
+            return {
+                node: newEl,
+                frag: frag
+            };
+        }
+
+        function buildAttrs(virtual) {
+            return merge(parseSelector(virtual[0]).attrs, accessAttrs(virtual));
+        }
+
+        function accessStyle(virtual) {
+            return (virtual[1] || {}).style;
+        }
+
+        function updateElement(_node, virtual) {
+            var hash = resolveIncompatability(_node, virtual);
+            var frag = hash.frag;
+            var node = hash.node;
+            diffChildren(node, virtual);
+            diffAttributes(node, buildAttrs(virtual), accessStyle(virtual));
+            setKey(node, virtual);
+            // should anything tae it's place
+            return frag || node;
+            // assume that you have a json object
+            // and you have a node
+        }
+
+        function createStringSet(a, b) {
+            if (checkNeedForCustom(a)) {
+                context.returnsManager(a).html(b);
+            } else {
+                a.innerHTML = b;
+            }
+        }
+
+        function computeStringDifference(a, bChildren) {
+            if (notNaN(bChildren) && canDiffAccepts[type(bChildren)]) {
+                if (a.innerHTML != bChildren) {
+                    diffs.queue.update(a, bChildren, createStringSet);
+                }
+                return BOOLEAN_TRUE;
+            }
+        }
+
+        function setKey(node, virtual) {
+            var key;
+            if ((key = accessKey(virtual))) {
+                if (keysHash[key]) {
+                    if (keysHash[key] !== node) {
+                        return console.log('problem diffing');
+                    }
+                }
+                keysHash[key] = node;
+            }
+        }
+
+        function diffChildren(_a, _b) {
+            var a = _a;
+            var b = _b || [];
+            var aChildren = toArray(a.childNodes || []);
+            var bChildren = b[2];
+            // var mutate = diffs.mutate;
+            // var keys = diffs.keys;
+            // it was a string, so there's nothing more
+            // to compute in regards to children
+            // strings just wipe out the previous els
+            if ((!bChildren && bChildren !== EMPTY_STRING) || !stopper(b) || computeStringDifference(a, bChildren)) {
+                return;
+            }
+            var bChildrenLength = bChildren[LENGTH];
+            var aChildrenLength = aChildren[LENGTH];
+            var maxLength = Math.max(aChildrenLength, bChildrenLength);
+            var fragment, aChild, virtual, infos, originalChild, j, finished, bChild, removing, result, dontCreate, offset = 0,
+                i = 0,
+                focus = 0,
+                key = accessKey(b);
+            // do nothing (false, null, NUMBER, or stopper failed)
+            if (!bChildrenLength) {
+                return diffs.queue.remove(aChildren, a);
+            }
+            if (!aChildrenLength) {
+                infos = insertMapper(bChildren.slice(0), a, 0);
+                return diffs.queue.add(infos.el, infos.index, infos.parent);
+            }
+            for (; i < maxLength; i++) {
+                originalChild = aChildren[i];
+                virtual = bChildren[i];
+                if (virtual) {
+                    if (originalChild) {
+                        aChild = updateElement(originalChild, virtual, a);
+                        // setKey(firstChild(aChild), virtual);
                     } else {
-                        if (identified.virtual[0] === tagA) {
-                            // has the effect of removing it at the same time as inserting it
-                            diffs.removing.push(a);
-                            identified.parent = future_parent;
-                            diffs.inserting.push(identified);
-                            a = diffs.keys[identifyingKey] = current;
-                        } else {
-                            diffs.removing.push(a);
-                            diffs.inserting.push(insertMapper([b], future_parent, context, index, diffs.keys));
-                            diffs.keys[identifyingKey] = a;
-                            return diffs;
-                        }
+                        aChild = context.createDocumentFragment();
+                        setKey(createFromVirtual(virtual, aChild, keysHash), virtual);
+                    }
+                    if (aChild !== originalChild) {
+                        diffs.queue.swap(originalChild, aChild, i, a);
                     }
                 } else {
-                    diffs.inserting.push(insertMapper([b], future_parent, context, index, diffs.keys));
-                    return diffs;
+                    diffs.queue.remove(aChildren.slice(i), a);
+                    i = maxLength;
+                    // aChild = context.createDocumentFragment();
+                    // setKey(createFromVirtual(virtual, aChild, keysHash), virtual);
                 }
             }
-            // what is different.
-            diffAttributes(a, b, diffs, context);
-            return diffChildren(a, b, hash, stopper, layer_level + 1, diffs, context);
-        } else {
-            // instant fail
-            if (first) {
-                exception('at least the first node must match tagName and nodeType');
+            // didn't make it to the end
+            // if (i < bChildrenLength) {
+            //     makeOrGet(a, bChildren.slice(i));
+            //     finished = BOOLEAN_TRUE;
+            // }
+        }
+
+        function accessKey(virtual) {
+            return (virtual && virtual[1] || {}).key;
+        }
+
+        function makeOrGet(a, list) {}
+
+        function updateFromVirtual(node, children, parent) {
+            var results;
+            // forOwn(attrs, function (value, key) {
+            //     if (propsHash[key]) {
+            //         propertyApi.write(node, kebabCase(key), value);
+            //     } else {
+            //         attributeApi.write(node, kebabCase(key), value);
+            //     }
+            // });
+            if (isString(children)) {
+                node.innerHTML = children;
+            } else {
+                forEach(children, function (child) {
+                    appendChild(node, createFromVirtual(child, node));
+                });
             }
-            return BOOLEAN_FALSE;
+            if (parent) {
+                parent.appendChild(node);
+            }
+            return node;
+        }
+
+        function accessAttrs(virtual) {
+            return (virtual[1] || {}).attrs;
+        }
+
+        function tagName(virtual) {
+            return parseSelector(virtual[0]).tag;
+        }
+
+        function createFromVirtual(virtual, parent) {
+            var key, data, created;
+            if (virtual[0] === 'text') {
+                parent.innerHTML += virtual[1];
+                return;
+            }
+            var parsed = parseSelector(virtual[0]);
+            created = context.createElement(parsed.tag, buildAttrs(virtual)).element();
+            setKey(created, virtual);
+            return updateFromVirtual(created, virtual[2], parent);
+        }
+
+        function insertMapper(els, parent, i) {
+            var frag = doc.createDocumentFragment();
+            forEach(els, function (el) {
+                createFromVirtual(el, frag, keysHash);
+            });
+            return {
+                parent: parent,
+                el: frag,
+                index: i
+            };
         }
     },
     nodeToJSON = function (node, shouldStop_, includeComments) {
@@ -2424,84 +2641,85 @@ app.scope(function (app) {
                             value: value
                         };
                     }, {});
-                },
-                deltas = {
-                    update: function (node, attrs, children, hash) {
-                        var results;
-                        forOwn(attrs, function (value, key) {
-                            if (propsHash[key]) {
-                                propertyApi.write(node, kebabCase(key), value);
-                            } else {
-                                attributeApi.write(node, kebabCase(key), value);
-                            }
-                        });
-                        results = isString(children) ? (node.innerHTML = children) : forEach(children, function (child) {
-                            appendChild(node, deltas.create(child, node, hash));
-                            // deltas.create(child, node, hash);
-                        });
-                        return node;
-                    },
-                    create: function (virtual, parent, hash) {
-                        var key, data, created;
-                        if (virtual[0] === 'text') {
-                            parent.innerHTML += virtual[1];
-                            return;
-                        }
-                        created = doc.createElement(virtual[0]);
-                        data = virtual[3];
-                        if (data && (key = data.key)) {
-                            if (hash[key]) {
-                                created = hash[key];
-                                // exception('can\'t have a non unique key at ' + key);
-                            }
-                            hash[key] = created;
-                        }
-                        parent.appendChild(deltas.update(created, virtual[1], virtual[2], hash));
-                        return created;
-                    },
-                    resetHtml: function (target, newhtml, context) {
-                        return function () {
-                            context.owner.returnsManager(target).html(newhtml);
-                        };
-                    },
-                    removeNodes: function (els, diffs) {
-                        return function () {
-                            var removableEls = _.filter(els, function (el) {
-                                return !_.find(diffs.keys, function (element, key) {
-                                    return element === el;
-                                });
-                            });
-                            return removableEls[LENGTH] ? forEach(removableEls, passesFirstArgument(removeChild)) : BOOLEAN_FALSE;
-                        };
-                    },
-                    addNodes: function (parent, els, context, hash) {
-                        var frag = doc.createDocumentFragment();
-                        forEach(els, function (el) {
-                            deltas.create(el, frag, hash);
-                        });
-                        return function () {
-                            parent.appendChild(frag);
-                            return BOOLEAN_TRUE;
-                        };
-                    },
-                    updateAttribute: function (element, key, value) {
-                        return function () {
-                            attributeApi.write(element, key, value);
-                        };
-                    },
-                    replaceNode: function (a, b, index, hash, diffs, frag_) {
-                        var frag = frag_,
-                            parent = a[PARENT_NODE];
-                        if (!frag) {
-                            frag = doc.createDocumentFragment();
-                            deltas.create(b, frag, hash);
-                        }
-                        return function () {
-                            insertBefore(parent, frag, a);
-                            var result = a[__ELID__] ? $(a).remove() : removeChild(a);
-                        };
-                    }
                 };
+            // ,
+            // deltas = {
+            //     update: function (node, attrs, children, hash) {
+            //         var results;
+            //         forOwn(attrs, function (value, key) {
+            //             if (propsHash[key]) {
+            //                 propertyApi.write(node, kebabCase(key), value);
+            //             } else {
+            //                 attributeApi.write(node, kebabCase(key), value);
+            //             }
+            //         });
+            //         results = isString(children) ? (node.innerHTML = children) : forEach(children, function (child) {
+            //             appendChild(node, deltas.create(child, node, hash));
+            //             // deltas.create(child, node, hash);
+            //         });
+            //         return node;
+            //     },
+            //     create: function (virtual, parent, hash) {
+            //         var key, data, created;
+            //         if (virtual[0] === 'text') {
+            //             parent.innerHTML += virtual[1];
+            //             return;
+            //         }
+            //         created = doc.createElement(virtual[0]);
+            //         data = virtual[3];
+            //         if (data && (key = data.key)) {
+            //             if (hash[key]) {
+            //                 created = hash[key];
+            //                 // exception('can\'t have a non unique key at ' + key);
+            //             }
+            //             hash[key] = created;
+            //         }
+            //         parent.appendChild(deltas.update(created, virtual[1], virtual[2], hash));
+            //         return created;
+            //     },
+            //     resetHtml: function (target, newhtml, context) {
+            //         return function () {
+            //             context.owner.returnsManager(target).html(newhtml);
+            //         };
+            //     },
+            //     removeNodes: function (els, diffs) {
+            //         return function () {
+            //             var removableEls = _.filter(els, function (el) {
+            //                 return !_.find(diffs.keys, function (element, key) {
+            //                     return element === el;
+            //                 });
+            //             });
+            //             return removableEls[LENGTH] ? forEach(removableEls, passesFirstArgument(removeChild)) : BOOLEAN_FALSE;
+            //         };
+            //     },
+            //     addNodes: function (parent, els, context, hash) {
+            //         var frag = doc.createDocumentFragment();
+            //         forEach(els, function (el) {
+            //             deltas.create(el, frag, hash);
+            //         });
+            //         return function () {
+            //             parent.appendChild(frag);
+            //             return BOOLEAN_TRUE;
+            //         };
+            //     },
+            //     updateAttribute: function (element, key, value) {
+            //         return function () {
+            //             attributeApi.write(element, key, value);
+            //         };
+            //     },
+            //     replaceNode: function (a, b, index, hash, diffs, frag_) {
+            //         var frag = frag_,
+            //             parent = a[PARENT_NODE];
+            //         if (!frag) {
+            //             frag = doc.createDocumentFragment();
+            //             deltas.create(b, frag, hash);
+            //         }
+            //         return function () {
+            //             insertBefore(parent, frag, a);
+            //             var result = a[__ELID__] ? $(a).remove() : removeChild(a);
+            //         };
+            //     }
+            // };
             if (manager.is('constructed')) {
                 return manager.$;
             }
@@ -2542,10 +2760,10 @@ app.scope(function (app) {
                 HTML: HTML(),
                 buildCss: buildCss,
                 nodeComparison: function (a, b, hash_, stopper) {
-                    return nodeComparison(a, b, hash_, stopper, NULL, NULL, NULL, manager);
+                    return nodeComparison(a, b, hash_, stopper, manager);
                 },
                 supports: {},
-                deltas: deltas,
+                // deltas: deltas,
                 registeredDomConstructors: registeredDomConstructors,
                 registeredConstructors: registeredConstructors,
                 registeredElementOptions: registeredElementOptions,
@@ -2882,11 +3100,11 @@ app.scope(function (app) {
             }
             var objects = parse(string);
             var contextDocument = context.element();
-            forOwn(toArray(objects), function (object) {
+            forEach(toArray(objects), function (object) {
                 var element = contextDocument.createElement(object.tagName);
                 var frag = reconstruct(object.children, context);
                 element.appendChild(frag);
-                forOwn(object.attributes, function (value, key) {
+                forEach(object.attributes, function (value, key) {
                     attributeApi.write(element, kebabCase(key), value);
                 });
                 fragment.appendChild(element);
@@ -3420,12 +3638,10 @@ app.scope(function (app) {
                 render: function (els) {
                     var result, el = this.element();
                     var diff = this.owner.nodeComparison(el, [el.localName, this.attributes(), els]);
-                    var mutations = diff.mutations;
-                    var memo = BOOLEAN_FALSE;
+                    var mutate = diff.mutate;
                     // if it's a function, then do it last
-                    result = mutations.remove() || memo;
-                    result = mutations.update() || result;
-                    result = mutations.insert() || result;
+                    result = mutate.swap() || BOOLEAN_FALSE;
+                    result = mutate.update() || result;
                     diff.changed = result;
                     this[DISPATCH_EVENT](RENDER, diff);
                     return diff;

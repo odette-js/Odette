@@ -909,7 +909,21 @@ function categoricallyCacheable(fn, baseCategory) {
     };
 }
 
-function copyCacheable(fn, baseCategory) {
+function copyCacheable(fn) {
+    var cache = {};
+    return function (string) {
+        var result, cached;
+        if (!(cached = cache[string])) {
+            result = fn(string);
+            cached = cache[string] = JSON.stringify(result);
+            return result;
+        } else {
+            return JSON.parse(cached);
+        }
+    };
+}
+
+function copyCategoricallyCacheable(fn, baseCategory) {
     var handler = categoricallyCacheable(fn, baseCategory);
     return function (string, cat) {
         return cloneJSON(handler(string, cat));

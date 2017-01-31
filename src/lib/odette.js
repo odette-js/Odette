@@ -43,9 +43,12 @@
             ']': 2
         },
         noop = function () {},
+        type = function (thing) {
+            return typeof thing;
+        },
         typeConstructor = function (str) {
             return function (thing) {
-                return typeof thing === str;
+                return type(thing) === str;
             };
         },
         now = function () {

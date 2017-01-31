@@ -544,13 +544,17 @@ function lowerCaseString(item) {
     return item.toLowerCase();
 }
 
+function type(object) {
+    return typeof object;
+}
+
 function isTypeWrap(type_, fn_) {
-    var type = lowerCaseString(type_);
+    var ty = lowerCaseString(type_);
     var fn = fn_ || function () {
         return BOOLEAN_TRUE;
     };
     return function (thing) {
-        return typeof thing === type && fn(thing);
+        return type(thing) === ty && fn(thing);
     };
 }
 
