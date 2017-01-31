@@ -2214,7 +2214,7 @@ app.scope(function (app) {
                 kebabCased = api.preventUnCamel ? attribute : domHappy(attribute),
                 withClass = kebabCased === CLASSNAME || kebabCased === CLASS__NAME,
                 trigger = (withClass ? (api = propertyApi) && (kebabCased = CLASSNAME) && CLASSNAME : passedTrigger_) || kebabCased;
-            api = propsHash[camelCase(trigger)] ? propertyApi : attributeApi;
+            // api = propsHash[camelCase(trigger)] ? propertyApi : attributeApi;
             return function (manager, idx) {
                 var converted, generated, el = manager.element(),
                     read = api.read(el, kebabCased),

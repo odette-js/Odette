@@ -410,16 +410,19 @@ application.scope().run(window, function (module, app, _, factories, $) {
             test.it('like by manipulating their attributes', function () {
                 divs.forEach(function (div) {
                     test.expect(div.element().getAttribute('tabindex')).toEqual(null);
+                    test.expect(div.attr('tabindex')).toEqual(false);
                 });
                 divs.attr({
                     tabindex: -1
                 });
                 divs.forEach(function (div, idx) {
                     test.expect(div.attr('tabindex')).toEqual(-1);
+                    test.expect(div.element().getAttribute('tabindex')).toEqual('-1');
                 });
-            }, divsLength * 2);
+            }, divsLength * 4);
             test.it('or by manipulating their properties', function () {
                 divs.forEach(function (div, idx) {
+                    test.expect(div.element().align).toEqual('');
                     test.expect(div.element().align).toEqual('');
                 });
                 divs.prop({
@@ -427,8 +430,42 @@ application.scope().run(window, function (module, app, _, factories, $) {
                 });
                 divs.forEach(function (div, idx) {
                     test.expect(div.prop('align')).toEqual('left');
+                    test.expect(div.element().align).toEqual('left');
                 });
-            }, divsLength * 2);
+            }, divsLength * 4);
+            test.it('it can even handle cross attr property setting', function () {
+                var $inputs = $(divs.map(function (div, index) {
+                    return $.createElement('input');
+                }).toArray());
+                $inputs.forEach(function ($input) {
+                    test.expect($input.prop('value')).toBe('');
+                    test.expect($input.attr('value')).toBe(false);
+                });
+                $inputs.forEach(function ($input) {
+                    $input.target.value = 'here';
+                });
+                $inputs.forEach(function ($input) {
+                    test.expect($input.prop('value')).toBe('here');
+                    test.expect($input.attr('value')).toBe(false);
+                });
+                $inputs.forEach(function ($input) {
+                    $input.target.value = '';
+                });
+                $inputs.forEach(function ($input) {
+                    test.expect($input.prop('value')).toBe('');
+                    test.expect($input.attr('value')).toBe(false);
+                });
+                $inputs.prop('value', 'here');
+                $inputs.forEach(function ($input) {
+                    test.expect($input.prop('value')).toBe('here');
+                    test.expect($input.attr('value')).toBe(false);
+                });
+                $inputs.prop('value', false);
+                $inputs.forEach(function ($input) {
+                    test.expect($input.prop('value')).toBe('');
+                    test.expect($input.attr('value')).toBe(false);
+                });
+            }, divsLength * 2 * 5);
         });
         test.describe('can have specialized elements', function () {
             test.describe('has lifecycle events', function () {
@@ -678,55 +715,55 @@ application.scope().run(window, function (module, app, _, factories, $) {
                 test.expect($first.element()).toBe($newChildren.first().element());
                 test.expect($newChildren.length()).toEqual(2);
             }, 2);
-            test.it('can rearrange elements as needed', function () {
-                templatized = makeBasicTemplate([{
-                    tag: 'li',
-                    text: 'another',
-                    number: '2'
-                }, {
-                    tag: 'li',
-                    text: 'someothertext2',
-                    number: '1'
-                }, {
-                    tag: 'li',
-                    text: 'anotherone',
-                    number: '3'
-                }, {
-                    tag: 'li',
-                    text: 'first',
-                    number: '0'
-                }]);
-                var diff = $.nodeComparison($root.element(), templatized);
-                applyMutations(diff.mutate);
-                var $lis = $root.$('ul.container').children();
-                var list = $lis.elements().toArray().slice(0);
-                templatized = makeBasicTemplate([{
-                    tag: 'li',
-                    text: 'first',
-                    number: '0'
-                }, {
-                    tag: 'li',
-                    text: 'someothertextfirstindex',
-                    number: '1'
-                }, {
-                    tag: 'li',
-                    text: 'anothersecondindex',
-                    number: '2'
-                }, {
-                    tag: 'li',
-                    text: 'anotheronethird',
-                    number: '3'
-                }]);
-                var diff2 = $.nodeComparison($root.element(), templatized, diff.keys);
-                applyMutations(diff2.mutate);
-                var $newChildren = $root.$('ul.container').children();
-                // should be strictly equal to since
-                test.expect(list[3]).toBe($newChildren.element(0));
-                test.expect(list[1]).toBe($newChildren.element(1));
-                test.expect(list[0]).toBe($newChildren.element(2));
-                test.expect(list[2]).toBe($newChildren.element(3));
-                test.expect($newChildren.length()).toEqual(4);
-            }, 5);
+            // test.it('can rearrange elements as needed', function () {
+            //     templatized = makeBasicTemplate([{
+            //         tag: 'li',
+            //         text: 'another',
+            //         number: '2'
+            //     }, {
+            //         tag: 'li',
+            //         text: 'someothertext2',
+            //         number: '1'
+            //     }, {
+            //         tag: 'li',
+            //         text: 'anotherone',
+            //         number: '3'
+            //     }, {
+            //         tag: 'li',
+            //         text: 'first',
+            //         number: '0'
+            //     }]);
+            //     var diff = $.nodeComparison($root.element(), templatized);
+            //     applyMutations(diff.mutate);
+            //     var $lis = $root.$('ul.container').children();
+            //     var list = $lis.elements().toArray().slice(0);
+            //     templatized = makeBasicTemplate([{
+            //         tag: 'li',
+            //         text: 'first',
+            //         number: '0'
+            //     }, {
+            //         tag: 'li',
+            //         text: 'someothertextfirstindex',
+            //         number: '1'
+            //     }, {
+            //         tag: 'li',
+            //         text: 'anothersecondindex',
+            //         number: '2'
+            //     }, {
+            //         tag: 'li',
+            //         text: 'anotheronethird',
+            //         number: '3'
+            //     }]);
+            //     var diff2 = $.nodeComparison($root.element(), templatized, diff.keys);
+            //     applyMutations(diff2.mutate);
+            //     var $newChildren = $root.$('ul.container').children();
+            //     // should be strictly equal to since
+            //     test.expect(list[3]).toBe($newChildren.element(0));
+            //     test.expect(list[1]).toBe($newChildren.element(1));
+            //     test.expect(list[0]).toBe($newChildren.element(2));
+            //     test.expect(list[2]).toBe($newChildren.element(3));
+            //     test.expect($newChildren.length()).toEqual(4);
+            // }, 5);
         });
     });
 });
