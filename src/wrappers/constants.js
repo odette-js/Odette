@@ -1,4 +1,5 @@
-var UNDEFINED, win = window,
+var UNDEFINED, win = windo,
+    window = win,
     doc = win.document,
     EMPTY_STRING = '',
     SPACE = ' ',
