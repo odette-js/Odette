@@ -8,6 +8,6 @@
         } else {
             factory(root, KEY);
         }
-    }(window, 'Odette', function (window, ODETTE) {
+    }(this, 'Odette', function (window, ODETTE) {
             'use strict';
             Odette.definition(this, function (app, windo, options) {
