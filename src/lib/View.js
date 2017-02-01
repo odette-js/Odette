@@ -273,7 +273,7 @@ var REGION_MANAGER = 'RegionManager',
                 establishRegions(view);
                 var result = (region = regionManager.get(regionKey)) ? (added = region.add(views)) : exception(noRegionMessage);
                 if (added && added.length()) {
-                    view[DISPATCH_EVENT](regionKey + ':children:added', {
+                    view[DISPATCH_EVENT](regionKey + ':children:added', null, {
                         children: added
                     });
                 }
@@ -284,7 +284,7 @@ var REGION_MANAGER = 'RegionManager',
                     regionManager = view.directive(REGION_MANAGER);
                 var result = regionManager.is(ESTABLISHED) && ((region = regionManager.get(regionKey)) ? (removed = region.remove(views)) : exception(noRegionMessage));
                 if (removed && removed.length()) {
-                    view[DISPATCH_EVENT](regionKey + ':children:removed', {
+                    view[DISPATCH_EVENT](regionKey + ':children:removed', null, {
                         children: removed
                     });
                 }
