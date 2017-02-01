@@ -268,14 +268,27 @@ var REGION_MANAGER = 'RegionManager',
                 return view;
             },
             addChildView = intendedApi(function (regionKey, views) {
-                var region, view = this,
+                var added, region, view = this,
                     regionManager = view.directive(REGION_MANAGER);
                 establishRegions(view);
-                return (region = regionManager.get(regionKey)) ? region.add(views) : exception(noRegionMessage);
+                var result = (region = regionManager.get(regionKey)) ? (added = region.add(views)) : exception(noRegionMessage);
+                if (added && added.length()) {
+                    view[DISPATCH_EVENT](regionKey + ':children:added', {
+                        children: added
+                    });
+                }
+                return result;
             }),
             removeChildView = intendedApi(function (regionKey, views) {
-                var region, regionManager = this.directive(REGION_MANAGER);
-                return regionManager.is(ESTABLISHED) && ((region = regionManager.get(regionKey)) ? region.remove(views) : exception(noRegionMessage));
+                var removed, region, view = this,
+                    regionManager = view.directive(REGION_MANAGER);
+                var result = regionManager.is(ESTABLISHED) && ((region = regionManager.get(regionKey)) ? (removed = region.remove(views)) : exception(noRegionMessage));
+                if (removed && removed.length()) {
+                    view[DISPATCH_EVENT](regionKey + ':children:removed', {
+                        children: removed
+                    });
+                }
+                return result;
             }),
             addRegion = parody(REGION_MANAGER, 'add'),
             getRegion = parody(REGION_MANAGER, 'get'),
@@ -460,10 +473,10 @@ var REGION_MANAGER = 'RegionManager',
                 }),
                 destroy: function () {},
                 remove: function (region_) {
-                    // var regionManager = this;
-                    // var region = isString(region_) ? regionManager.get(region_) : region_;
-                    // regionManager.remove(region);
-                    // regionManager.drop(region.id, region);
+                    var regionManager = this;
+                    var region = isString(region_) ? regionManager.get(region_) : region_;
+                    regionManager.remove(region);
+                    regionManager.drop(region.id, region);
                 },
                 add: intendedApi(function (key, selector) {
                     var regionManagerDirective = this;
