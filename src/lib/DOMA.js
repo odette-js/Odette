@@ -847,6 +847,13 @@ var ATTACHED = 'attached',
             return merge(parseSelector(virtual[0]).attrs, accessAttrs(virtual));
         }
 
+        function buildAllAttrs(virtual) {
+            var style;
+            return merge(buildAttrs(virtual), (style = accessStyle(virtual)) ? {
+                style: style
+            } : null);
+        }
+
         function accessStyle(virtual) {
             return (virtual[1] || {}).style;
         }
@@ -992,7 +999,7 @@ var ATTACHED = 'attached',
                 return;
             }
             var parsed = parseSelector(virtual[0]);
-            created = context.createElement(parsed.tag, buildAttrs(virtual)).element();
+            created = context.createElement(parsed.tag, buildAllAttrs(virtual)).element();
             setKey(created, virtual);
             return updateFromVirtual(created, virtual[2], parent);
         }
@@ -1571,7 +1578,7 @@ app.scope(function (app) {
         //     '8': BOOLEAN_TRUE
         // },
         createElement = function (tag_, manager, attributes_, children_) {
-            var confirmedObject, foundElement, elementName, newElement, newManager, documnt = manager && manager.element(),
+            var confirmedObject, style, foundElement, elementName, newElement, newManager, documnt = manager && manager.element(),
                 registeredElements = manager && manager.registeredElements,
                 attributes = attributes_,
                 children = children_,
@@ -1594,6 +1601,10 @@ app.scope(function (app) {
                 exception('custom tag names must be registered before they can be used');
             }
             newElement = documnt.createElement(tag);
+            if (attributes && (style = attributes.style) && isObject(style)) {
+                applyStyle(newElement, style);
+                delete attributes.style;
+            }
             if (foundElement && foundElement !== BOOLEAN_TRUE) {
                 attributeApi.write(newElement, CUSTOM_KEY, tag);
             }
