@@ -972,7 +972,7 @@ function baseForEach(list, iterator, step) {
 
 function baseForEachEnd(list, iterator, start, stop, step) {
     var greaterThanZero, last;
-    return baseFromToEnd(list, iterator, start === UNDEFINED ? 0 : start, stop === UNDEFINED ? lastIndex(list) : stop, step || 1);
+    return baseFromToEnd(list, iterator, start === UNDEFINED ? 0 : start, stop === UNDEFINED ? clamp(lastIndex(list), 0) : stop, step || 1);
 }
 
 function baseForEachEndRight(values, callback, start, end) {

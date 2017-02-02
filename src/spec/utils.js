@@ -442,6 +442,42 @@ application.scope().run(window, function (module, app, _, factories, $) {
                 };
                 test.expect(_.unique([a, b, a, b, a, b, a])).toEqual([a]);
             }, 4);
+            test.it('_.find', function () {
+                var arr = [1, 2, 3, 4, 5, 6];
+                test.expect(_.find(arr, function (a) {
+                    return (a - 1) % 2;
+                })).toBe(2);
+                test.expect(_.find([], function (a) {
+                    return (a - 1) % 2;
+                })).toBe(undefined);
+            }, 2);
+            test.it('_.findIndex', function () {
+                var arr = [1, 2, 3, 4, 5, 6];
+                test.expect(_.findIndex(arr, function (a) {
+                    return (a - 1) % 2;
+                })).toBe(1);
+                test.expect(_.findIndex([], function (a) {
+                    return (a - 1) % 2;
+                })).toBe(undefined);
+            }, 2);
+            test.it('_.findRight', function () {
+                var arr = [1, 2, 3, 4, 5, 6];
+                test.expect(_.findRight(arr, function (a) {
+                    return (a - 1) % 2;
+                })).toBe(6);
+                test.expect(_.findRight([], function (a) {
+                    return (a - 1) % 2;
+                })).toBe(undefined);
+            }, 2);
+            test.it('_.findIndexRight', function () {
+                var arr = [1, 2, 3, 4, 5, 6];
+                test.expect(_.findIndexRight(arr, function (a) {
+                    return (a - 1) % 2;
+                })).toBe(5);
+                test.expect(_.findIndexRight([], function (a) {
+                    return (a - 1) % 2;
+                })).toBe(undefined);
+            }, 2);
         });
     });
 });
