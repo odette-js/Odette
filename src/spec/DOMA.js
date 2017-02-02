@@ -765,5 +765,21 @@ application.scope().run(window, function (module, app, _, factories, $) {
             //     test.expect($newChildren.length()).toEqual(4);
             // }, 5);
         });
+        test.describe('can create elements directly from css selectors', function () {
+            test.it('such as tag selectors', function () {
+                var div = $.createElement('div');
+                test.expect(div.tagName).toBe('div');
+                var li = $.createElement('li');
+                test.expect(li.tagName).toBe('li');
+                var ul = $.createElement('ul');
+                test.expect(ul.tagName).toBe('ul');
+            }, 3);
+            test.it('tag with ids', function () {
+                var div = $.createElement('div#one');
+                test.expect(div.tagName).toBe('div');
+                test.expect(div.attr('id')).toBe('one');
+                console.log(div);
+            }, 2);
+        });
     });
 });

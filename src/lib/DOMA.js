@@ -998,8 +998,8 @@ var ATTACHED = 'attached',
                 parent.innerHTML += virtual[1];
                 return;
             }
-            var parsed = parseSelector(virtual[0]);
-            created = context.createElement(parsed.tag, buildAllAttrs(virtual)).element();
+            // var parsed = parseSelector(virtual[0]);
+            created = context.createElement(virtual[0], buildAttrs(virtual)).element();
             setKey(created, virtual);
             return updateFromVirtual(created, virtual[2], parent);
         }
@@ -1577,24 +1577,28 @@ app.scope(function (app) {
         //     '3': BOOLEAN_TRUE,
         //     '8': BOOLEAN_TRUE
         // },
-        createElement = function (tag_, manager, attributes_, children_) {
-            var confirmedObject, style, foundElement, elementName, newElement, newManager, documnt = manager && manager.element(),
+        createElement = function (selector_, manager, attributes_, children_) {
+            var confirmedObject, parsed, style, foundElement, elementName, newElement, newManager, documnt = manager && manager.element(),
                 registeredElements = manager && manager.registeredElements,
                 attributes = attributes_,
                 children = children_,
-                tag = tag_;
-            if (isObject(tag)) {
-                children = tag.children;
-                attributes = tag.attributes;
+                tag,
+                selector = selector_;
+            if (isObject(selector)) {
+                children = selector.children;
+                attributes = selector.attributes;
                 confirmedObject = BOOLEAN_TRUE;
-                tag = tag.tagName;
-                if (tag_.text) {
-                    return makeText(tag_.content, manager);
+                selector = selector.tagName;
+                if (selector_.text) {
+                    return makeText(selector_.content, manager);
                 }
-                if (tag_.comment) {
-                    return makeComment(tag_.content, manager);
+                if (selector_.comment) {
+                    return makeComment(selector_.content, manager);
                 }
             }
+            parsed = parseSelector(selector);
+            tag = parsed.tag;
+            attributes = merge(parsed.attrs, attributes);
             foundElement = registeredElements && registeredElements[tag];
             // native create
             if (!tag) {
