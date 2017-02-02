@@ -28,16 +28,16 @@ var garbage, FOR = 'for',
     returnsEmptyString = returns(''),
     iteratesIn = iterates(allKeys),
     iteratesOwn = iterates(keys),
-    findIndex = baseFindIndex,
+    findIndex = baseForEachEnd,
     findIndexIn = baseFind(iteratesIn, findIndex),
     findIndexOwn = baseFind(iteratesOwn, findIndex),
-    findIndexRight = baseFindIndexRight,
+    findIndexRight = baseForEachEndRight,
     findIndexInRight = baseFind(iteratesIn, findIndexRight),
     findIndexOwnRight = baseFind(iteratesOwn, findIndexRight),
-    find = findAccessor(baseFindIndex),
+    find = findAccessor(baseForEachEnd),
     findIn = baseFind(iteratesIn, find),
     findOwn = baseFind(iteratesOwn, find),
-    findRight = findAccessor(baseFindIndexRight),
+    findRight = findAccessor(findIndexRight),
     findInRight = baseFind(iteratesIn, findRight),
     findOwnRight = baseFind(iteratesOwn, findRight),
     now_offset = dateNow(),
@@ -975,11 +975,7 @@ function baseForEachEnd(list, iterator, start, stop, step) {
     return baseFromToEnd(list, iterator, start === UNDEFINED ? 0 : start, stop === UNDEFINED ? lastIndex(list) : stop, step || 1);
 }
 
-function baseFindIndex(values, callback, start, end) {
-    return baseForEachEnd(values, callback, start, end);
-}
-
-function baseFindIndexRight(values, callback, start, end) {
+function baseForEachEndRight(values, callback, start, end) {
     return baseForEachEnd(values, callback, start === UNDEFINED ? lastIndex(values) : start, end === UNDEFINED ? 0 : end, -1);
 }
 
