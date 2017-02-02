@@ -976,7 +976,7 @@ function baseForEachEnd(list, iterator, start, stop, step) {
 }
 
 function baseForEachEndRight(values, callback, start, end) {
-    return baseForEachEnd(values, callback, start === UNDEFINED ? lastIndex(values) : start, end === UNDEFINED ? 0 : end, -1);
+    return baseForEachEnd(values, callback, start === UNDEFINED ? clamp(lastIndex(values), 0) : start, end === UNDEFINED ? 0 : end, -1);
 }
 
 function findAccessor(fn) {

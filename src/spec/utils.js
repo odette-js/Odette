@@ -475,7 +475,7 @@ application.scope().run(window, function (module, app, _, factories, $) {
                     return (a - 1) % 2;
                 })).toBe(5);
                 test.expect(_.findIndexRight([], function (a) {
-                    return (a - 1) % 2;
+                    return a.b;
                 })).toBe(undefined);
             }, 2);
         });
