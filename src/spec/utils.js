@@ -444,40 +444,48 @@ application.scope().run(window, function (module, app, _, factories, $) {
             }, 4);
             test.it('_.find', function () {
                 var arr = [1, 2, 3, 4, 5, 6];
-                test.expect(_.find(arr, function (a) {
-                    return (a - 1) % 2;
-                })).toBe(2);
-                test.expect(_.find([], function (a) {
-                    return (a - 1) % 2;
-                })).toBe(undefined);
-            }, 2);
+                test.expect(_.find(arr, is5)).toBe(5);
+                test.expect(_.find(arr, accessB)).toBe(undefined);
+                test.expect(_.find(arr, _.returns.true)).toBe(1);
+                test.expect(_.find([], is5)).toBe(undefined);
+                test.expect(_.find([], accessB)).toBe(undefined);
+                test.expect(_.find([], _.returns.true)).toBe(undefined);
+            }, 6);
             test.it('_.findIndex', function () {
                 var arr = [1, 2, 3, 4, 5, 6];
-                test.expect(_.findIndex(arr, function (a) {
-                    return (a - 1) % 2;
-                })).toBe(1);
-                test.expect(_.findIndex([], function (a) {
-                    return (a - 1) % 2;
-                })).toBe(undefined);
-            }, 2);
+                test.expect(_.findIndex(arr, is5)).toBe(4);
+                test.expect(_.findIndex(arr, accessB)).toBe(undefined);
+                test.expect(_.findIndex(arr, _.returns.true)).toBe(0);
+                test.expect(_.findIndex([], is5)).toBe(undefined);
+                test.expect(_.findIndex([], accessB)).toBe(undefined);
+                test.expect(_.findIndex([], _.returns.true)).toBe(undefined);
+            }, 6);
             test.it('_.findRight', function () {
                 var arr = [1, 2, 3, 4, 5, 6];
-                test.expect(_.findRight(arr, function (a) {
-                    return (a - 1) % 2;
-                })).toBe(6);
-                test.expect(_.findRight([], function (a) {
-                    return (a - 1) % 2;
-                })).toBe(undefined);
-            }, 2);
+                test.expect(_.findRight(arr, is5)).toBe(5);
+                test.expect(_.findRight(arr, accessB)).toBe(undefined);
+                test.expect(_.findRight(arr, _.returns.true)).toBe(6);
+                test.expect(_.findRight([], is5)).toBe(undefined);
+                test.expect(_.findRight([], accessB)).toBe(undefined);
+                test.expect(_.findRight([], _.returns.true)).toBe(undefined);
+            }, 6);
             test.it('_.findIndexRight', function () {
                 var arr = [1, 2, 3, 4, 5, 6];
-                test.expect(_.findIndexRight(arr, function (a) {
-                    return (a - 1) % 2;
-                })).toBe(5);
-                test.expect(_.findIndexRight([], function (a) {
-                    return a.b;
-                })).toBe(undefined);
-            }, 2);
+                test.expect(_.findIndexRight(arr, is5)).toBe(4);
+                test.expect(_.findIndexRight(arr, accessB)).toBe(undefined);
+                test.expect(_.findIndexRight(arr, _.returns.true)).toBe(5);
+                test.expect(_.findIndexRight([], is5)).toBe(undefined);
+                test.expect(_.findIndexRight([], accessB)).toBe(undefined);
+                test.expect(_.findIndexRight([], _.returns.true)).toBe(undefined);
+            }, 6);
+
+            function accessB(a) {
+                return a.b;
+            }
+
+            function is5(a) {
+                return a === 5;
+            }
         });
     });
 });

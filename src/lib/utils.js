@@ -972,11 +972,11 @@ function baseForEach(list, iterator, step) {
 
 function baseForEachEnd(list, iterator, start, stop, step) {
     var greaterThanZero, last;
-    return baseFromToEnd(list, iterator, start === UNDEFINED ? 0 : start, stop === UNDEFINED ? list[LENGTH] : stop, step || 1);
+    return baseFromToEnd(list, iterator, start === UNDEFINED ? 0 : start, stop === UNDEFINED ? lastIndex(list) : stop, step || 1);
 }
 
 function baseForEachEndRight(list, callback, start, end) {
-    return baseForEachEnd(list, callback, start === UNDEFINED ? list[LENGTH] : start, end === UNDEFINED ? 0 : end, -1);
+    return baseForEachEnd(list, callback, start === UNDEFINED ? lastIndex(list) : start, end === UNDEFINED ? 0 : end, -1);
 }
 
 function findAccessor(fn) {
@@ -1004,13 +1004,15 @@ function baseFind(iterates, forEachEnd) {
 }
 
 function baseFromToEnd(values, callback, _start, _end, _step) {
-    var counter, value, step = _step || 1,
+    var limit, counter, value, step = _step || 1,
         end = _end,
         start = _start,
-        goingDown = start > end,
-        index = start,
-        limit = ((goingDown ? start - end : end - start)) / Math.abs(step || 1) - 1;
-    step = goingDown ? (step > 0 ? -step : step) : (step < 0 ? -step : step);
+        goingDown = step < 0,
+        index = start;
+    if (goingDown ? start < end : start > end) {
+        return;
+    }
+    limit = ((goingDown ? start - end : end - start)) / Math.abs(step || 1);
     for (counter = 0; index >= 0 && counter <= limit; counter++) {
         if (callback(values[index], index, values)) {
             return index;
