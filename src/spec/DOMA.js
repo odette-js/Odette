@@ -778,8 +778,42 @@ application.scope().run(window, function (module, app, _, factories, $) {
                 var div = $.createElement('div#one');
                 test.expect(div.tagName).toBe('div');
                 test.expect(div.attr('id')).toBe('one');
-                console.log(div);
             }, 2);
+            test.it('tag with a class', function () {
+                var div = $.createElement('div.one');
+                test.expect(div.tagName).toBe('div');
+                test.expect(div.attr('class')).toBe('one');
+            }, 2);
+            test.it('tag with classes', function () {
+                var div = $.createElement('div.one.two');
+                test.expect(div.tagName).toBe('div');
+                test.expect(div.attr('class')).toBe('one two');
+            }, 2);
+            test.it('tag with an attribute', function () {
+                var div = $.createElement('div[value="three"]');
+                test.expect(div.tagName).toBe('div');
+                test.expect(div.attr('value')).toBe('three');
+            }, 2);
+            test.it('tag with attributes', function () {
+                var div = $.createElement('div[value="three"][data-key="action"]');
+                test.expect(div.tagName).toBe('div');
+                test.expect(div.attr('value')).toBe('three');
+                test.expect(div.data('key')).toBe('action');
+            }, 3);
+            test.it('just attrs', function () {
+                var div = $.createElement('[value="three"][data-key="action"]');
+                test.expect(div.tagName).toBe('div');
+                test.expect(div.attr('value')).toBe('three');
+                test.expect(div.data('key')).toBe('action');
+            }, 3);
+            test.it('complex attrs', function () {
+                var div = $.createElement('[value="5"].class-here[data-key="action"]#id-there.class-there');
+                test.expect(div.tagName).toBe('div');
+                test.expect(div.attr('class')).toBe('class-here class-there');
+                test.expect(div.attr('id')).toBe('id-there');
+                test.expect(div.attr('value')).toBe(5);
+                test.expect(div.data('key')).toBe('action');
+            }, 5);
         });
     });
 });

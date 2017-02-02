@@ -695,8 +695,8 @@ var ATTACHED = 'attached',
                 classes.push(total.slice(i + 1, here))
             } else if (char === '[') {
                 part = total.slice(i + 1, here - 1);
-                part = part.split(/\=/);
-                attrs[camelCase(split[0])] = split[1];
+                part = part.split(/\=[\'|\"]/);
+                attrs[camelCase(part[0])] = part[1];
             } else if (!t && i === 0) {
                 t = total.slice(i, here);
             }
