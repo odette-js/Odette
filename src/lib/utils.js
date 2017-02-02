@@ -972,11 +972,11 @@ function baseForEach(list, iterator, step) {
 
 function baseForEachEnd(list, iterator, start, stop, step) {
     var greaterThanZero, last;
-    return (!list || !iterator) ? [] : (last = lastIndex(list) < 0 ? [] : baseFromToEnd(list, iterator, start === UNDEFINED ? 0 : start, stop === UNDEFINED ? lastIndex(list) : stop, step));
+    return baseFromToEnd(list, iterator, start === UNDEFINED ? 0 : start, stop === UNDEFINED ? lastIndex(list) : stop, step || 1);
 }
 
 function baseFindIndex(values, callback, start, end) {
-    return baseForEachEnd(values, callback, start, end, 1);
+    return baseForEachEnd(values, callback, start, end);
 }
 
 function baseFindIndexRight(values, callback, start, end) {
@@ -1471,14 +1471,14 @@ function uniqueWith(list, comparator) {
         // can't do something that is not an array like
         return list;
     }
-    return filter(list, function (a, index, list) {
-        if (list[LENGTH] - 1 === index) {
-            return BOOLEAN_TRUE;
+    return reduce(list, function (memo, a, index, list) {
+        // var length = memo[LENGTH];
+        // var result = findIndex(memo, bindWith(comparator, [NULL, a]));
+        if (isUndefined(findIndex(memo, bindWith(comparator, [NULL, a])))) {
+            memo.push(a);
         }
-        return findIndex(list, function (b) {
-            return comparator(a, b);
-        }, index + 1) === UNDEFINED;
-    });
+        return memo;
+    }, []);
 }
 
 function unique(list) {

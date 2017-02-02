@@ -426,6 +426,22 @@ application.scope().run(window, function (module, app, _, factories, $) {
             test.it('_.roundFloat', function () {
                 test.expect(_.roundFloat(1.5489909, 3)).toEqual(1.548);
             }, 1);
+            test.it('_.unique', function () {
+                test.expect(_.unique([1, 1, 1, 1, 1, 1])).toEqual([1]);
+                var a = {};
+                var b = {};
+                test.expect(_.unique([a, b, a, b, a, b])).toEqual([a]);
+                var a = {};
+                var b = [];
+                test.expect(_.unique([a, b, a, b, a, b, a])).toEqual([a, b]);
+                var a = {
+                    one: 1
+                };
+                var b = {
+                    one: 1
+                };
+                test.expect(_.unique([a, b, a, b, a, b, a])).toEqual([a]);
+            }, 4);
         });
     });
 });
