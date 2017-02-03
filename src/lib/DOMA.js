@@ -828,6 +828,24 @@ var ATTACHED = 'attached',
         function resolveIncompatability(node, virtual) {
             var t, key = accessKey(virtual),
                 registered = keysHash[key];
+            //     t = tag(node),
+            //     tg = accessTag(virtual);
+            // if (!t) {
+            //     // check this later
+            //     // probably text
+            //     if (tg === 'text') {
+            //         return {
+            //             node: node
+            //         };
+            //     }
+            // }
+            // if (t && t === tagName(virtual)) {
+            //     // the node did not move and
+            //     // did not change it's tag name
+            //     return {
+            //         node: registered || node
+            //     };
+            // }
             if ((t = tag(node)) && t === tagName(virtual)) {
                 // the node did not move and
                 // did not change it's tag name
