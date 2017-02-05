@@ -32,9 +32,6 @@ var ATTACHED = 'attached',
     FONT_SIZE = 'fontSize',
     DEFAULT_VIEW = 'defaultView',
     DIV = 'div',
-    makeDataAttr = function (key, value) {
-        return '[' + (value == NULL ? key : (key + '="' + value + '"')) + ']';
-    },
     CUSTOM_ATTRIBUTE = makeDataAttr(CUSTOM_KEY),
     devicePixelRatio = (win.devicePixelRatio || 1),
     propsList = toArray('type,href,className,height,width,id,tabIndex,title,alt,innerHTML,outerHTML,textContent'),
@@ -59,26 +56,7 @@ var ATTACHED = 'attached',
     validTagsNamesHash = wrap(validTagNames, BOOLEAN_TRUE),
     ALL_EVENTS_HASH = wrap(AllEvents, BOOLEAN_TRUE),
     knownPrefixesHash = wrap(knownPrefixes, BOOLEAN_TRUE),
-    getClosestWindow = function (windo_) {
-        var windo = windo_ || win;
-        return isWindow(windo) ? windo : (windo && windo[DEFAULT_VIEW] ? windo[DEFAULT_VIEW] : (windo.ownerGlobal ? windo.ownerGlobal : DOMA(windo).parent(WINDOW)[ITEM](0) || win));
-    },
-    getComputed = function (el, ctx) {
-        var ret = getClosestWindow(ctx).getComputedStyle(el);
-        return ret ? ret : getClosestWindow(el).getComputedStyle(el) || clone(el[STYLE]) || {};
-    },
     allStyles,
-    createAttributeFromTag = function (tag) {
-        return '[' + CUSTOM_KEY + '="' + tag + '"]';
-    },
-    tag = function (el, str) {
-        var tag;
-        if (!el || !isElement(el)) {
-            return BOOLEAN_FALSE;
-        }
-        tag = el[LOCAL_NAME].toLowerCase();
-        return str ? tag === str.toLowerCase() : tag;
-    },
     numberBasedCss = {
         columnCount: BOOLEAN_TRUE,
         columns: BOOLEAN_TRUE,
@@ -127,99 +105,6 @@ var ATTACHED = 'attached',
         }
         return kebabed;
     }),
-    allowsPassiveEvents = function () {
-        return !!wraptry(function () {
-            var supportsPassive = BOOLEAN_FALSE;
-            var opts = Object.defineProperty({}, 'passive', {
-                get: function () {
-                    supportsPassive = BOOLEAN_TRUE;
-                }
-            });
-            window.addEventListener('test', NULL, opts);
-            return supportsPassive;
-        });
-    },
-    convertStyleValue = function (key, value) {
-        return +value !== +value ? value : (timeBasedCss[key] ? value + 'ms' : (!numberBasedCss[key] ? value + PIXELS : value));
-    },
-    updateStyleWithImportant = function (string, key_, value) {
-        var newStyles, found, key = kebabCase(key_);
-        return (newStyles = reduce(string.split(';'), function (memo, item_, index, items) {
-            var item = item_.trim(),
-                itemSplit = item.split(COLON),
-                property = itemSplit[0].trim(),
-                shifted = itemSplit.shift(),
-                setValue = itemSplit.join(COLON).trim();
-            if (property === key) {
-                found = BOOLEAN_TRUE;
-                setValue = value + ' !important';
-            }
-            if (key === property) {
-                memo.push(property + ': ' + setValue);
-            } else {
-                if ((!item_ && !index) || (index === items[LENGTH] - 1 && !found)) {
-                    memo.push(key + ': ' + value + ' !important');
-                } else {
-                    //
-                }
-            }
-            return memo;
-        }, []).join('; ')) ? newStyles + ';' : newStyles;
-    },
-    writeAttribute = function (el, key, val_) {
-        var val = val_;
-        if (val === BOOLEAN_FALSE || val == NULL) {
-            removeAttribute(el, key);
-        } else {
-            if (isObject(val_)) {
-                if (key === STYLE) {
-                    if (!el[STYLE]) {
-                        return;
-                    }
-                    applyStyle(el, val);
-                    return;
-                } else {
-                    val = reduce(val_, function (memo, value, key) {
-                        if (value) {
-                            memo.push(key);
-                        }
-                    }).join(SPACE);
-                }
-            }
-            if (val !== BOOLEAN_FALSE && val != NULL) {
-                el.setAttribute(key, (val === BOOLEAN_TRUE ? EMPTY_STRING : val) + EMPTY_STRING);
-            }
-        }
-    },
-    registeredElementName = function (name, manager) {
-        return capitalize(ELEMENT) + HYPHEN + manager[__ELID__] + HYPHEN + name;
-    },
-    iframeContent = function (head, body) {
-        return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="user-scalable=no,width=device-width,initial-scale=1"><meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">' + head + '</head><body>' + body + '</body></html>';
-    },
-    filtersParentNotMe = function (parent) {
-        return function (element) {
-            return element[PARENT_NODE] === parent;
-        };
-    },
-    returnsSelector = function (string, owner) {
-        var registeredElements = owner.registeredElements;
-        return registeredElements[string] === BOOLEAN_TRUE ? string : createAttributeFromTag(string);
-    },
-    convertSelector = function (str, owner) {
-        // removes custom tag names and replaces them with [is="tag"]
-        // if anyone knows some regexp that would be better than this, then take a stab at it
-        return map(toArray(str, SPACE), function (level) {
-            return level.replace(/^(\S*?)([\.|\#|\[])/i, function (match_) {
-                var match = match_;
-                var last = match[LENGTH] - 1;
-                return last ? (returnsSelector(match.slice(0, last), owner) + match.slice(last)) : match;
-            });
-        }).join(SPACE);
-    },
-    directSuperAccessor = function (context, key) {
-        return context[key];
-    },
     superElementsHash = {
         body: directSuperAccessor,
         head: directSuperAccessor,
@@ -230,104 +115,11 @@ var ATTACHED = 'attached',
             return context.defaultView;
         }
     },
-    dataReconstructor = function (list, fn) {
-        return reduce(list, function (memo, arg1, arg2, arg3) {
-            if (fn(arg1, arg2, arg3)) {
-                memo.push(arg1);
-            }
-            return memo;
-        }, []);
-    },
-    // takes string to query for, subset of tree to query for and manager so it can always get to the document
-    query = function (str_, ctx, manager) {
-        var superElement, directSelector, elements, str = (str_ || EMPTY_STRING).trim(),
-            context = ctx,
-            returnsArray = returns.first,
-            owner = manager.owner;
-        if (!str) {
-            return [];
-        }
-        if (manager && manager === owner) {
-            if ((superElement = superElementsHash[str])) {
-                // assume context is window since (manager === owner)
-                return [superElement(context, str)];
-            }
-        }
-        if (manager && str[0] === '>') {
-            directSelector = BOOLEAN_TRUE;
-            str = manager.queryString() + str;
-        }
-        str = convertSelector(str, owner);
-        elements = context.querySelectorAll(str);
-        if (directSelector) {
-            return dataReconstructor(elements, filtersParentNotMe(context));
-        } else {
-            return toArray(elements);
-        }
-    },
-    matchesSelector = function (element, selector, owner) {
-        var match, parent, matchesSelector;
-        if (!selector || !element || element[NODE_TYPE] !== 1) {
-            return BOOLEAN_FALSE;
-        }
-        matchesSelector = element.webkitMatchesSelector || element.mozMatchesSelector || element.oMatchesSelector || element.matchesSelector;
-        if (matchesSelector) {
-            return matchesSelector.call(element, selector);
-        }
-        // fall back to performing a selector:
-        parent = element[PARENT_NODE];
-        if (!parent) {
-            parent = createElement(DIV, ensure(element.ownerDocument, BOOLEAN_TRUE));
-            parent[APPEND_CHILD](element);
-        }
-        return indexOf(query(selector, parent, owner), element) !== -1;
-    },
-    readAttribute = function (el, key) {
-        var coerced, val = el.getAttribute(key);
-        return convertAttributeValue(val);
-    },
-    cautiousConvertValue = function (generated) {
-        var converted = +generated;
-        return generated[LENGTH] && converted === converted && converted + EMPTY_STRING === generated ? converted : generated;
-    },
-    convertAttributeValue = function (val_) {
-        var val = val_;
-        if (val === EMPTY_STRING) {
-            return BOOLEAN_TRUE;
-        } else {
-            return val == NULL ? BOOLEAN_FALSE : cautiousConvertValue(val);
-        }
-    },
-    /**
-     * @private
-     * @func
-     */
-    removeAttribute = function (el, key) {
-        el.removeAttribute(key);
-    },
     attributeApi = {
         preventUnCamel: BOOLEAN_FALSE,
         read: readAttribute,
         write: writeAttribute,
         remove: removeAttribute
-    },
-    appendChild = function (parent, target) {
-        return target && parent.appendChild && parent.appendChild(target);
-    },
-    removeChild = function (el, target) {
-        var result = el && (target ? appendChild(target, el) : el.parentNode && el.parentNode.removeChild(el));
-    },
-    readProperty = function (el, property) {
-        return el[property];
-    },
-    writeProperty = function (el, property, value) {
-        if (value == NULL) {
-            return removeProperty(el, property);
-        }
-        el[property] = value;
-    },
-    removeProperty = function (el, property) {
-        el[property] = NULL;
     },
     propertyApi = {
         preventUnCamel: BOOLEAN_TRUE,
@@ -335,330 +127,8 @@ var ATTACHED = 'attached',
         write: writeProperty,
         remove: removeProperty
     },
-    baseNodeToJSON = function (node) {
-        var obj = {
-            tagName: tag(node),
-            comment: BOOLEAN_FALSE,
-            text: BOOLEAN_FALSE
-        };
-        forEach(node.attributes, function (attr) {
-            var attributes = obj.attributes = obj.attributes || {};
-            attributes[camelCase(attr[LOCAL_NAME])] = attr.value;
-        });
-        return obj;
-    },
-    commentJSON = function (text) {
-        return {
-            tag: BOOLEAN_FALSE,
-            comment: BOOLEAN_TRUE,
-            text: BOOLEAN_FALSE,
-            content: text
-        };
-    },
-    textJSON = function (text) {
-        return {
-            tag: BOOLEAN_FALSE,
-            comment: BOOLEAN_FALSE,
-            text: BOOLEAN_TRUE,
-            content: text
-        };
-    },
-    finalInsertBefore = function (parent, el1, el2) {
-        return el1 && parent.insertBefore && parent.insertBefore(el1, el2);
-    },
-    insertBefore = function (parent, inserting, target) {
-        var children;
-        if (isObject(target)) {
-            finalInsertBefore(parent, inserting, target);
-        } else {
-            if (isNumber(target)) {
-                children = parent[CHILD_NODES];
-                target = children[LENGTH] > target ? children[target] : BOOLEAN_FALSE;
-                if (target) {
-                    finalInsertBefore(parent, inserting, target);
-                } else {
-                    appendChild(parent, inserting);
-                }
-            } else {
-                if (target) {
-                    // handle query string
-                } else {
-                    appendChild(parent, inserting);
-                }
-            }
-        }
-    },
-    collectAttr = function (memo, attribute, future) {
-        var attributeKey = attribute[LOCAL_NAME];
-        if (future) {
-            memo.attrsA[attributeKey] = BOOLEAN_TRUE;
-            memo.accessB[attributeKey] = attribute.value;
-        } else {
-            memo.attrsA[attributeKey] = BOOLEAN_TRUE;
-            memo.accessA[attributeKey] = attribute.value;
-        }
-        if (memo.hash[attributeKey]) {
-            return;
-        }
-        memo.hash[attributeKey] = BOOLEAN_TRUE;
-        memo.list.push(attributeKey);
-    },
-    returnsJSONNodeType = function (tagName) {
-        return tagName === 'text' ? 3 : 1;
-    },
-    checkNeedForCustom = function (el) {
-        return el[__ELID__] && attributeApi.read(el, CUSTOM_KEY) !== BOOLEAN_FALSE;
-    },
-    collectVirtualKeys = function (virtualized, diff, previous_hash, level_, index_) {
-        var groups, children = virtualized[2];
-        var uniques = virtualized[3];
-        var level = level_ || 0;
-        var index = index_ || 0;
-        if (uniques) {
-            groups = toArray(uniques.group);
-            if (uniques.key) {
-                diff.ids[uniques.key] = {
-                    virtual: virtualized,
-                    level: level,
-                    index: index,
-                    group: groups[LENGTH] ? groups : NULL,
-                    el: previous_hash[uniques.key]
-                };
-            }
-        }
-        forEach(children, function (child, index) {
-            collectVirtualKeys(child, diff, previous_hash, level + 1, index);
-        });
-    },
-    filtersAlreadyInserted = function (els, hash) {
-        return _.filter(els, function (el) {
-            var identifiers = el[3];
-            if (identifiers && identifiers.key) {
-                return !hash[identifiers.key];
-            }
-            return BOOLEAN_TRUE;
-        });
-    },
     HTMLConstantsArray = toArray('area,base,br,col,colgroup,command,embed,hr,img,input,keygen,link,meta,param,source,track,wbr'),
     HTMLConstantsObject = wrap(HTMLConstantsArray, BOOLEAN_TRUE),
-    HTMLAttribute = function (attr, value) {
-        return value ? (' ' + attr + '="' + value + '"') : '';
-    },
-    HTMLAttributes = function (attrs) {
-        var HTML = this;
-        return reduce(attrs, function (memo, value, key) {
-            return value ? memo + HTML.attribute(kebabCase(key), value) : memo;
-        }, EMPTY_STRING);
-    },
-    HTMLOpenTag = function (tag, attrs_) {
-        var base, prefixer, HTML = this,
-            attrs = (base = HTML.attributesBase[tag]) ? base(attrs_) : attrs_,
-            tagOpenPrefixes = HTML.tagOpenPrefixes;
-        return (tagOpenPrefixes[tag] || tagOpenPrefixes.defaults)(attrs) + tag + HTML.attributes(attrs);
-    },
-    basicAttributeCondensation = function (key, value, next) {
-        var nxt = next || returns.first;
-        return function (attrs_) {
-            var attrs = attrs_ || {};
-            if (!attrs[key]) {
-                attrs[key] = value;
-            }
-            return nxt(attrs);
-        };
-    },
-    HTMLTagEmpty = function (tag, attrs) {
-        return this.tagOpen(tag, attrs) + '/>';
-    },
-    HTMLTagContent = function (tag, attrs, content) {
-        return this.tagOpen(tag, attrs) + '>' + content + '</' + tag + '>';
-    },
-    HTMLTagBuild = function (tag, attrs, content) {
-        var special, HTML = this;
-        return (special = HTML.tagSpecial[tag]) ? special(attrs, content) : (HTML.tagsEmpty[tag] ? HTML.tagEmpty(tag, attrs) : HTML.tagContent(tag, attrs, content));
-    },
-    HTMLBuild = function (template) {
-        var HTML = this;
-        return isString(template) ? template : reduce(template, function (memo, child) {
-            // can be used recurisvely
-            return memo + (isString(child) ? child : HTML.tagBuild(child[0], child[1], HTML.build(child[2])));
-        }, EMPTY_STRING);
-    },
-    HTML = function () {
-        var HTML, addTextCssAttribute = basicAttributeCondensation('type', 'text/css'),
-            basicStyleAttributes = basicAttributeCondensation('rel', 'stylesheet', addTextCssAttribute),
-            attributesBase = {
-                link: basicStyleAttributes,
-                style: basicStyleAttributes,
-                script: basicAttributeCondensation('type', 'text/javascript'),
-                button: basicAttributeCondensation('type', 'submit'),
-                input: basicAttributeCondensation('type', 'input'),
-                form: basicAttributeCondensation('method', 'get')
-            },
-            tagOpenPrefixes = {
-                defaults: returns('<'),
-                html: returns('<!DOCTYPE html><')
-            };
-        return (HTML = {
-            build: HTMLBuild,
-            tagOpen: HTMLOpenTag,
-            tagEmpty: HTMLTagEmpty,
-            tagBuild: HTMLTagBuild,
-            tagContent: HTMLTagContent,
-            tagOpenPrefixes: tagOpenPrefixes,
-            attributesBase: attributesBase,
-            attributes: HTMLAttributes,
-            attribute: HTMLAttribute,
-            tagsEmpty: merge({}, HTMLConstantsObject),
-            tagSpecial: {
-                stylesheet: function (attrs, content) {
-                    return attrs.href ? HTML.tagEmpty('link', attrs) : HTML.tagContent('style', attrs, content);
-                }
-            }
-        });
-    },
-    // newDiff = function (context) {
-    //     var diffs = {
-    //         removing: [],
-    //         updating: [],
-    //         inserting: [],
-    //         preventRemove: {},
-    //         mutate: {
-    //             remove: function () {
-    //                 if (!diffs.removing[LENGTH]) {
-    //                     return;
-    //                 }
-    //                 // maintains attach state on dommanager
-    //                 context.$(diffs.removing).remove();
-    //                 return BOOLEAN_TRUE;
-    //             },
-    //             update: function () {
-    //                 // attributes and content
-    //                 forEach(diffs.updating, function (fn) {
-    //                     fn();
-    //                 });
-    //             },
-    //             insert: function () {
-    //                 if (!diffs.inserting[LENGTH]) {
-    //                     return;
-    //                 }
-    //                 diffs.inserting.sort(function (a, b) {
-    //                     return a.index > b.index ? 1 : -1;
-    //                 });
-    //                 var target, index, currentFragment, actuallyInserting = [],
-    //                     inserting = diffs.inserting.slice(0);
-    //                 // group sections into document fragments
-    //                 while (inserting[LENGTH]) {
-    //                     // shift off of the inserting list
-    //                     target = inserting.shift();
-    //                     // if no index is defined
-    //                     if (index === UNDEFINED) {
-    //                         // define an index
-    //                         index = target.index;
-    //                         // set a current fragment
-    //                         currentFragment = {
-    //                             index: target.index,
-    //                             el: context.createDocumentFragment(),
-    //                             parent: target.parent
-    //                         };
-    //                         // push it to the final insert list
-    //                         actuallyInserting.push(currentFragment);
-    //                         // append the target element to the fragment
-    //                         appendChild(currentFragment.el, target.el);
-    //                     } else {
-    //                         if (target.parent === currentFragment.parent && index + 1 === target.index) {
-    //                             // append to current fragment
-    //                             appendChild(currentFragment.el, target.el);
-    //                             // update index
-    //                             index = target.index;
-    //                         } else {
-    //                             // unshift target
-    //                             inserting.unshift(target);
-    //                             // reset index to undefined to start new document fragment
-    //                             index = UNDEFINED;
-    //                         }
-    //                     }
-    //                 }
-    //                 forEach(actuallyInserting, function (list, idx, lists) {
-    //                     // maintains attach state on dom manager
-    //                     context.returnsManager(list.parent).insertAt(list.el, list.index);
-    //                 });
-    //                 return BOOLEAN_TRUE;
-    //             }
-    //         },
-    //         keys: {},
-    //         ids: {},
-    //         group: {},
-    //         futureTree: {},
-    //         futureHash: {}
-    //     };
-    //     return diffs;
-    // },
-    // cannot start with a text node
-    createDiffer = function (context) {
-        var hash, updating, swaps;
-
-        function resolveLater(key) {
-            return isString(key) ? function () {
-                return hash[key]
-            } : returns(key)
-        }
-
-        function swapNodes(h) {
-            var $remove, add, remove,
-                add = h.add(),
-                remove = h.remove();
-            if (add && remove) {
-                $remove = context.returnsManager(remove);
-                $remove.insertBefore(add);
-                $remove.remove();
-            } else if (remove) {
-                context.$(remove).remove();
-            } else {
-                context.returnsManager(h.parent).insertAfter(add, h.index);
-            }
-        }
-        return {
-            context: context,
-            swaps: (swaps = []),
-            keys: (hash = {}),
-            updating: (updating = []),
-            queue: {
-                add: function (node, index, parent) {
-                    return this.swap(NULL, node, index, parent);
-                },
-                remove: function (node, parent) {
-                    return this.swap(node, NULL, NULL, parent);
-                },
-                html: function (node, content) {},
-                swap: function (first, last, index, parent) {
-                    swaps.push({
-                        parent: parent,
-                        index: index,
-                        remove: resolveLater(first),
-                        add: resolveLater(last)
-                    });
-                },
-                update: function (node, updates, fn) {
-                    updating.push({
-                        node: node,
-                        updates: updates,
-                        fn: fn
-                    });
-                }
-            },
-            mutate: {
-                swap: function () {
-                    forEach(swaps, swapNodes);
-                },
-                update: function () {
-                    // attributes and content
-                    forEach(updating, function (item) {
-                        item.fn(item.node, item.updates);
-                    });
-                },
-            }
-        };
-    },
     /*
     if the tag name, and key are the same
         then it can be updated
@@ -682,15 +152,38 @@ var ATTACHED = 'attached',
         style: BOOLEAN_TRUE
     },
     parseSelector = copyCacheable(function (total) {
-        var t, i = 0,
+        var t, id, i = 0,
             length = total[LENGTH],
             classes = [],
             attrs = {};
+        total.replace(/[#|\.|\[]|\]/igm, function (char, index) {
+            if (!t) {
+                if (index === 0) {
+                    t = 'div';
+                } else {
+                    t = total.slice(0, index);
+                }
+            } else {
+                parseTo(i, index);
+            }
+            i = index;
+            return '';
+        });
+        parseTo(i, length);
+        if (classes.length) {
+            attrs.class = classes.join(' ');
+        }
+        return {
+            tag: t,
+            id: id,
+            attrs: attrs,
+            class: classes
+        };
 
-        function parseTo(here) {
+        function parseTo(i, here) {
             var part, char = total[i];
             if (char === '#') {
-                attrs.id = total.slice(i + 1, here);
+                id = attrs.id = total.slice(i + 1, here);
             } else if (char === '.') {
                 classes.push(total.slice(i + 1, here))
             } else if (char === '[') {
@@ -701,407 +194,7 @@ var ATTACHED = 'attached',
                 t = total.slice(i, here);
             }
         }
-        total.replace(/[#|\.|\[]|\]/igm, function (char, index) {
-            if (!t) {
-                if (index === 0) {
-                    t = 'div';
-                } else {
-                    t = total.slice(0, index);
-                }
-            } else {
-                parseTo(index);
-            }
-            i = index;
-            return '';
-        });
-        parseTo(length);
-        if (classes.length) {
-            attrs.class = classes.join(' ');
-        }
-        return {
-            tag: t,
-            attrs: attrs,
-            class: classes
-        };
     }),
-    nodeComparison = function (_a, _b, _hash, _stopper, context) {
-        var returns, mutate, removing, updating, inserting, keysHash, resultant, current, inserting, identifyingKey, identified,
-            a = _a,
-            b = cloneJSON(_b),
-            layer_level = 0,
-            // check kids
-            stopper = _stopper || returnsTrue,
-            diffs = createDiffer(context),
-            keysHash = diffs.keys;
-        updateElement(a, b);
-        return diffs;
-
-        function updateNode(a, hash) {
-            var manager, props, attrs = hash.attrs,
-                style = hash.style;
-            forOwn(attrs, function (value, key) {
-                if (!propsHash[key]) {
-                    return;
-                }
-                delete attrs[key];
-                props = props || {};
-                props[key] = value;
-            });
-            if (checkNeedForCustom(a)) {
-                manager = context.returnsManager(a);
-                if (keys(attrs)[LENGTH]) {
-                    manager.attr(attrs);
-                }
-                if (props) {
-                    manager.prop(props);
-                }
-                if (style) {
-                    manager.css(style);
-                }
-            } else {
-                forOwn(attrs, function (value, key) {
-                    attributeApi.write(a, kebabCase(key), value);
-                });
-                forOwn(props, function (value, key) {
-                    propertyApi.write(a, kebabCase(key), value);
-                });
-                if (style) {
-                    applyStyle(a, style);
-                }
-            }
-        }
-
-        function diffAttributes(a, bAttrs, style) {
-            var bKeys, aAttributes = a.attributes,
-                aLength = aAttributes.length,
-                bLength = (bKeys = keys(bAttrs)).length,
-                attrs = reduce({
-                    length: Math.max(aLength, bLength)
-                }, function (memo, voided, index) {
-                    var key;
-                    if (memo.aLength > index) {
-                        collectAttr(memo, aAttributes[index]);
-                    }
-                    if (memo.bLength > index) {
-                        key = bKeys[index];
-                        collectAttr(memo, {
-                            localName: kebabCase(key),
-                            value: bAttrs[key]
-                        }, BOOLEAN_TRUE);
-                    }
-                }, {
-                    list: [],
-                    hash: {},
-                    attrsA: {},
-                    accessA: {},
-                    attrsB: {},
-                    accessB: {},
-                    aLength: aLength,
-                    bLength: bLength
-                }),
-                anElId = a[__ELID__],
-                updates,
-                accessA = attrs.accessA,
-                accessB = attrs.accessB;
-            forEach(attrs.list, function (key) {
-                if (cantDiffAttrs[key]) {
-                    return;
-                }
-                var accessAValue = accessA[key];
-                var accessBValue = accessB[key];
-                if (accessAValue !== accessBValue) {
-                    if (accessAValue === UNDEFINED && accessBValue === BOOLEAN_FALSE) {
-                        return;
-                    }
-                    updates = updates || {};
-                    updates[key] = accessBValue === UNDEFINED ? NULL : accessBValue;
-                }
-            });
-            if (updates) {
-                diffs.queue.update(a, {
-                    attrs: updates,
-                    style: style
-                }, updateNode);
-            }
-        }
-
-        function resolveIncompatability(node, virtual) {
-            var t, key = accessKey(virtual),
-                registered = keysHash[key];
-            //     t = tag(node),
-            //     tg = accessTag(virtual);
-            // if (!t) {
-            //     // check this later
-            //     // probably text
-            //     if (tg === 'text') {
-            //         return {
-            //             node: node
-            //         };
-            //     }
-            // }
-            // if (t && t === tagName(virtual)) {
-            //     // the node did not move and
-            //     // did not change it's tag name
-            //     return {
-            //         node: registered || node
-            //     };
-            // }
-            if ((t = tag(node)) && t === tagName(virtual)) {
-                // the node did not move and
-                // did not change it's tag name
-                return {
-                    node: registered || node
-                };
-            }
-            var frag = context.createDocumentFragment();
-            var newEl = createFromVirtual(virtual, frag, keysHash);
-            return {
-                node: newEl,
-                frag: frag
-            };
-        }
-
-        function buildAttrs(virtual) {
-            return merge(parseSelector(virtual[0]).attrs, accessAttrs(virtual));
-        }
-
-        function buildAllAttrs(virtual) {
-            var style;
-            return merge(buildAttrs(virtual), (style = accessStyle(virtual)) ? {
-                style: style
-            } : null);
-        }
-
-        function accessStyle(virtual) {
-            return (virtual[1] || {}).style;
-        }
-
-        function updateElement(_node, virtual) {
-            var hash = resolveIncompatability(_node, virtual);
-            var frag = hash.frag;
-            var node = hash.node;
-            diffChildren(node, virtual);
-            diffAttributes(node, buildAttrs(virtual), accessStyle(virtual));
-            setKey(node, virtual);
-            // should anything tae it's place
-            return frag || node;
-            // assume that you have a json object
-            // and you have a node
-        }
-
-        function createStringSet(a, b) {
-            if (checkNeedForCustom(a)) {
-                context.returnsManager(a).html(b);
-            } else {
-                a.innerHTML = b;
-            }
-        }
-
-        function computeStringDifference(a, bChildren) {
-            if (notNaN(bChildren) && canDiffAccepts[type(bChildren)]) {
-                if (a.innerHTML != bChildren) {
-                    diffs.queue.update(a, bChildren, createStringSet);
-                }
-                return BOOLEAN_TRUE;
-            }
-        }
-
-        function setKey(node, virtual) {
-            var key;
-            if ((key = accessKey(virtual))) {
-                if (keysHash[key]) {
-                    if (keysHash[key] !== node) {
-                        return console.log('problem diffing');
-                    }
-                }
-                keysHash[key] = node;
-            }
-        }
-
-        function diffChildren(_a, _b) {
-            var a = _a;
-            var b = _b || [];
-            var aChildren = toArray(a.childNodes || []);
-            var bChildren = b[2];
-            // var mutate = diffs.mutate;
-            // var keys = diffs.keys;
-            // it was a string, so there's nothing more
-            // to compute in regards to children
-            // strings just wipe out the previous els
-            if ((!bChildren && bChildren !== EMPTY_STRING) || !stopper(b) || computeStringDifference(a, bChildren)) {
-                return;
-            }
-            var bChildrenLength = bChildren[LENGTH];
-            var aChildrenLength = aChildren[LENGTH];
-            var maxLength = Math.max(aChildrenLength, bChildrenLength);
-            var fragment, aChild, virtual, infos, originalChild, j, finished, bChild, removing, result, dontCreate, offset = 0,
-                i = 0,
-                focus = 0,
-                key = accessKey(b);
-            // do nothing (false, null, NUMBER, or stopper failed)
-            if (!bChildrenLength) {
-                return diffs.queue.remove(aChildren, a);
-            }
-            if (!aChildrenLength) {
-                infos = insertMapper(bChildren.slice(0), a, 0);
-                return diffs.queue.add(infos.el, infos.index, infos.parent);
-            }
-            for (; i < maxLength; i++) {
-                originalChild = aChildren[i];
-                virtual = bChildren[i];
-                if (virtual) {
-                    if (originalChild) {
-                        aChild = updateElement(originalChild, virtual, a);
-                        // setKey(firstChild(aChild), virtual);
-                    } else {
-                        aChild = context.createDocumentFragment();
-                        setKey(createFromVirtual(virtual, aChild, keysHash), virtual);
-                    }
-                    if (aChild !== originalChild) {
-                        diffs.queue.swap(originalChild, aChild, i, a);
-                    }
-                } else {
-                    diffs.queue.remove(aChildren.slice(i), a);
-                    i = maxLength;
-                    // aChild = context.createDocumentFragment();
-                    // setKey(createFromVirtual(virtual, aChild, keysHash), virtual);
-                }
-            }
-            // didn't make it to the end
-            // if (i < bChildrenLength) {
-            //     makeOrGet(a, bChildren.slice(i));
-            //     finished = BOOLEAN_TRUE;
-            // }
-        }
-
-        function accessKey(virtual) {
-            return (virtual && virtual[1] || {}).key;
-        }
-
-        function makeOrGet(a, list) {}
-
-        function updateFromVirtual(node, children, parent) {
-            var results;
-            // forOwn(attrs, function (value, key) {
-            //     if (propsHash[key]) {
-            //         propertyApi.write(node, kebabCase(key), value);
-            //     } else {
-            //         attributeApi.write(node, kebabCase(key), value);
-            //     }
-            // });
-            if (isString(children)) {
-                node.innerHTML = children;
-            } else {
-                forEach(children, function (child) {
-                    appendChild(node, createFromVirtual(child, node));
-                });
-            }
-            if (parent) {
-                parent.appendChild(node);
-            }
-            return node;
-        }
-
-        function accessAttrs(virtual) {
-            return (virtual[1] || {}).attrs;
-        }
-
-        function tagName(virtual) {
-            return parseSelector(virtual[0]).tag;
-        }
-
-        function createFromVirtual(virtual, parent) {
-            var key, data, created;
-            if (virtual[0] === 'text') {
-                parent.innerHTML += virtual[1];
-                return;
-            }
-            // var parsed = parseSelector(virtual[0]);
-            created = context.createElement(virtual[0], buildAttrs(virtual)).element();
-            setKey(created, virtual);
-            return updateFromVirtual(created, virtual[2], parent);
-        }
-
-        function insertMapper(els, parent, i) {
-            var frag = doc.createDocumentFragment();
-            forEach(els, function (el) {
-                createFromVirtual(el, frag, keysHash);
-            });
-            return {
-                parent: parent,
-                el: frag,
-                index: i
-            };
-        }
-    },
-    nodeToJSON = function (node, shouldStop_, includeComments) {
-        var obj, children, childrenLength, shouldStop = shouldStop_ || noop;
-        obj = baseNodeToJSON(node);
-        if (obj.attributes && obj.attributes.is && obj.attributes.dataRenderer) {
-            return {
-                selfSufficient: BOOLEAN_TRUE
-            };
-        }
-        if (!shouldStop(node, obj)) {
-            return obj;
-        }
-        children = node.childNodes;
-        if (!(childrenLength = children[LENGTH])) {
-            return obj;
-        }
-        obj.children = reduce(children, function (memo, child) {
-            if (isElement(child)) {
-                memo.push(nodeToJSON(child, shouldStop, includeComments));
-            } else if (child.nodeType === 3) {
-                memo.push(textJSON(child.textContent));
-            } else if (includeComments) {
-                if (child.nodeType === 8) {
-                    memo.push(commentJSON(child.textContent));
-                } else {
-                    memo.push({
-                        err: BOOLEAN_TRUE
-                    });
-                }
-            }
-        }, []);
-        return obj;
-    },
-    createDocumentFragment = function (nulled, context) {
-        return context.is(DOCUMENT) && context.element().createDocumentFragment();
-    },
-    isElement = function (object) {
-        return !!(object && isNumber(object[NODE_TYPE]) && object[NODE_TYPE] === object.ELEMENT_NODE);
-    },
-    isDocument = function (obj) {
-        return obj && isNumber(obj[NODE_TYPE]) && obj[NODE_TYPE] === obj.DOCUMENT_NODE;
-    },
-    isFragment = function (frag) {
-        return frag && frag[NODE_TYPE] === doc.DOCUMENT_FRAGMENT_NODE;
-    },
-    canBeProcessed = function (item) {
-        return isWindow(item) || isElement(item) || isDocument(item) || isFragment(item);
-    },
-    collectChildren = function (element) {
-        return toArray(element.children || element.childNodes);
-    },
-    openBlock = function (selector, total) {
-        return once(function () {
-            total.push(selector.join('') + ' {');
-        });
-    },
-    closeBlock = function (total) {
-        return once(function () {
-            total.push(' }\n');
-        });
-    },
-    WeakMapRemap = function (instance, list) {
-        forEach(list, function (name) {
-            var method = instance.get.bind(instance);
-            instance[name] = function (element, identifier) {
-                return method(element, identifier || this.identifier(element));
-            };
-        });
-    },
     ElementalWeakMap = WeakMap.extend({
         constructor: function () {
             var map = this;
@@ -1117,6 +210,889 @@ var ATTACHED = 'attached',
         }
     }),
     globalAssociator = ElementalWeakMap();
+
+function makeDataAttr(key, value) {
+    return '[' + (value == NULL ? key : (key + '="' + value + '"')) + ']';
+}
+
+function getClosestWindow(windo_) {
+    var windo = windo_ || win;
+    return isWindow(windo) ? windo : (windo && windo[DEFAULT_VIEW] ? windo[DEFAULT_VIEW] : (windo.ownerGlobal ? windo.ownerGlobal : DOMA(windo).parent(WINDOW)[ITEM](0) || win));
+}
+
+function getComputed(el, ctx) {
+    var ret = getClosestWindow(ctx).getComputedStyle(el);
+    return ret ? ret : getClosestWindow(el).getComputedStyle(el) || clone(el[STYLE]) || {};
+}
+
+function createAttributeFromTag(tag) {
+    return '[' + CUSTOM_KEY + '="' + tag + '"]';
+}
+
+function tag(el, str) {
+    var tag;
+    if (!el || !isElement(el)) {
+        return BOOLEAN_FALSE;
+    }
+    tag = el[LOCAL_NAME].toLowerCase();
+    return str ? tag === str.toLowerCase() : tag;
+}
+
+function allowsPassiveEvents() {
+    return !!wraptry(function () {
+        var supportsPassive = BOOLEAN_FALSE;
+        var opts = Object.defineProperty({}, 'passive', {
+            get: function () {
+                supportsPassive = BOOLEAN_TRUE;
+            }
+        });
+        window.addEventListener('test', NULL, opts);
+        return supportsPassive;
+    });
+}
+
+function convertStyleValue(key, value) {
+    return +value !== +value ? value : (timeBasedCss[key] ? value + 'ms' : (!numberBasedCss[key] ? value + PIXELS : value));
+}
+
+function updateStyleWithImportant(string, key_, value) {
+    var newStyles, found, key = kebabCase(key_);
+    return (newStyles = reduce(string.split(';'), function (memo, item_, index, items) {
+        var item = item_.trim(),
+            itemSplit = item.split(COLON),
+            property = itemSplit[0].trim(),
+            shifted = itemSplit.shift(),
+            setValue = itemSplit.join(COLON).trim();
+        if (property === key) {
+            found = BOOLEAN_TRUE;
+            setValue = value + ' !important';
+        }
+        if (key === property) {
+            memo.push(property + ': ' + setValue);
+        } else {
+            if ((!item_ && !index) || (index === items[LENGTH] - 1 && !found)) {
+                memo.push(key + ': ' + value + ' !important');
+            } else {
+                //
+            }
+        }
+        return memo;
+    }, []).join('; ')) ? newStyles + ';' : newStyles;
+}
+
+function writeAttribute(el, key, val_) {
+    var val = val_;
+    if (val === BOOLEAN_FALSE || val == NULL) {
+        removeAttribute(el, key);
+    } else {
+        if (isObject(val_)) {
+            if (key === STYLE) {
+                if (!el[STYLE]) {
+                    return;
+                }
+                applyStyle(el, val);
+                return;
+            } else {
+                val = reduce(val_, function (memo, value, key) {
+                    if (value) {
+                        memo.push(key);
+                    }
+                }).join(SPACE);
+            }
+        }
+        if (val !== BOOLEAN_FALSE && val != NULL) {
+            el.setAttribute(key, (val === BOOLEAN_TRUE ? EMPTY_STRING : val) + EMPTY_STRING);
+        }
+    }
+}
+
+function registeredElementName(name, manager) {
+    return capitalize(ELEMENT) + HYPHEN + manager[__ELID__] + HYPHEN + name;
+}
+
+function iframeContent(head, body) {
+    return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="user-scalable=no,width=device-width,initial-scale=1"><meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">' + head + '</head><body>' + body + '</body></html>';
+}
+
+function filtersParentNotMe(parent) {
+    return function (element) {
+        return element[PARENT_NODE] === parent;
+    };
+}
+
+function returnsSelector(string, owner) {
+    var registeredElements = owner.registeredElements;
+    return registeredElements[string] === BOOLEAN_TRUE ? string : createAttributeFromTag(string);
+}
+
+function convertSelector(str, owner) {
+    // removes custom tag names and replaces them with [is="tag"]
+    // if anyone knows some regexp that would be better than this, then take a stab at it
+    return map(toArray(str, SPACE), function (level) {
+        return level.replace(/^(\S*?)([\.|\#|\[])/i, function (match_) {
+            var match = match_;
+            var last = match[LENGTH] - 1;
+            return last ? (returnsSelector(match.slice(0, last), owner) + match.slice(last)) : match;
+        });
+    }).join(SPACE);
+}
+
+function directSuperAccessor(context, key) {
+    return context[key];
+}
+
+function dataReconstructor(list, fn) {
+    return reduce(list, function (memo, arg1, arg2, arg3) {
+        if (fn(arg1, arg2, arg3)) {
+            memo.push(arg1);
+        }
+        return memo;
+    }, []);
+}
+// takes string to query for, subset of tree to query for and manager so it can always get to the document
+function query(str_, ctx, manager) {
+    var superElement, directSelector, elements, str = (str_ || EMPTY_STRING).trim(),
+        context = ctx,
+        returnsArray = returns.first,
+        owner = manager.owner;
+    if (!str) {
+        return [];
+    }
+    if (manager && manager === owner) {
+        if ((superElement = superElementsHash[str])) {
+            // assume context is window since (manager === owner)
+            return [superElement(context, str)];
+        }
+    }
+    if (manager && str[0] === '>') {
+        directSelector = BOOLEAN_TRUE;
+        str = manager.queryString() + str;
+    }
+    str = convertSelector(str, owner);
+    elements = context.querySelectorAll(str);
+    if (directSelector) {
+        return dataReconstructor(elements, filtersParentNotMe(context));
+    } else {
+        return toArray(elements);
+    }
+}
+
+function matchesSelector(element, selector, owner) {
+    var match, parent, matchesSelector;
+    if (!selector || !element || element[NODE_TYPE] !== 1) {
+        return BOOLEAN_FALSE;
+    }
+    matchesSelector = element.webkitMatchesSelector || element.mozMatchesSelector || element.oMatchesSelector || element.matchesSelector;
+    if (matchesSelector) {
+        return matchesSelector.call(element, selector);
+    }
+    // fall back to performing a selector:
+    parent = element[PARENT_NODE];
+    if (!parent) {
+        parent = createElement(DIV, ensure(element.ownerDocument, BOOLEAN_TRUE));
+        parent[APPEND_CHILD](element);
+    }
+    return indexOf(query(selector, parent, owner), element) !== -1;
+}
+
+function readAttribute(el, key) {
+    var coerced, val = el.getAttribute(key);
+    return convertAttributeValue(val);
+}
+
+function cautiousConvertValue(generated) {
+    var converted = +generated;
+    return generated[LENGTH] && converted === converted && converted + EMPTY_STRING === generated ? converted : generated;
+}
+
+function convertAttributeValue(val_) {
+    var val = val_;
+    if (val === EMPTY_STRING) {
+        return BOOLEAN_TRUE;
+    } else {
+        return val == NULL ? BOOLEAN_FALSE : cautiousConvertValue(val);
+    }
+}
+
+function removeAttribute(el, key) {
+    el.removeAttribute(key);
+}
+
+function appendChild(parent, target) {
+    return target && parent.appendChild && parent.appendChild(target);
+}
+
+function removeChild(el, target) {
+    var result = el && (target ? appendChild(target, el) : el.parentNode && el.parentNode.removeChild(el));
+}
+
+function readProperty(el, property) {
+    return el[property];
+}
+
+function writeProperty(el, property, value) {
+    if (value == NULL) {
+        return removeProperty(el, property);
+    }
+    el[property] = value;
+}
+
+function removeProperty(el, property) {
+    el[property] = NULL;
+}
+
+function HTMLAttribute(attr, value) {
+    return value ? (' ' + attr + '="' + value + '"') : '';
+}
+
+function HTMLAttributes(attrs) {
+    var HTML = this;
+    return reduce(attrs, function (memo, value, key) {
+        return value ? memo + HTML.attribute(kebabCase(key), value) : memo;
+    }, EMPTY_STRING);
+}
+
+function HTMLOpenTag(tag, attrs_) {
+    var base, prefixer, HTML = this,
+        attrs = (base = HTML.attributesBase[tag]) ? base(attrs_) : attrs_,
+        tagOpenPrefixes = HTML.tagOpenPrefixes;
+    return (tagOpenPrefixes[tag] || tagOpenPrefixes.defaults)(attrs) + tag + HTML.attributes(attrs);
+}
+
+function basicAttributeCondensation(key, value, next) {
+    var nxt = next || returns.first;
+    return function (attrs_) {
+        var attrs = attrs_ || {};
+        if (!attrs[key]) {
+            attrs[key] = value;
+        }
+        return nxt(attrs);
+    };
+}
+
+function HTMLTagEmpty(tag, attrs) {
+    return this.tagOpen(tag, attrs) + '/>';
+}
+
+function HTMLTagContent(tag, attrs, content) {
+    return this.tagOpen(tag, attrs) + '>' + content + '</' + tag + '>';
+}
+
+function HTMLTagBuild(tag, attrs, content) {
+    var special, HTML = this;
+    return (special = HTML.tagSpecial[tag]) ? special(attrs, content) : (HTML.tagsEmpty[tag] ? HTML.tagEmpty(tag, attrs) : HTML.tagContent(tag, attrs, content));
+}
+
+function HTMLBuild(template) {
+    var HTML = this;
+    return isString(template) ? template : reduce(template, function (memo, child) {
+        // can be used recurisvely
+        return memo + (isString(child) ? child : HTML.tagBuild(child[0], child[1], HTML.build(child[2])));
+    }, EMPTY_STRING);
+}
+
+function baseNodeToJSON(node) {
+    var obj = {
+        tagName: tag(node),
+        comment: BOOLEAN_FALSE,
+        text: BOOLEAN_FALSE
+    };
+    forEach(node.attributes, function (attr) {
+        var attributes = obj.attributes = obj.attributes || {};
+        attributes[camelCase(attr[LOCAL_NAME])] = attr.value;
+    });
+    return obj;
+}
+
+function commentJSON(text) {
+    return {
+        tag: BOOLEAN_FALSE,
+        comment: BOOLEAN_TRUE,
+        text: BOOLEAN_FALSE,
+        content: text
+    };
+}
+
+function textJSON(text) {
+    return {
+        tag: BOOLEAN_FALSE,
+        comment: BOOLEAN_FALSE,
+        text: BOOLEAN_TRUE,
+        content: text
+    };
+}
+
+function finalInsertBefore(parent, el1, el2) {
+    return el1 && parent.insertBefore && parent.insertBefore(el1, el2);
+}
+
+function insertBefore(parent, inserting, target) {
+    var children;
+    if (isObject(target)) {
+        finalInsertBefore(parent, inserting, target);
+    } else {
+        if (isNumber(target)) {
+            children = parent[CHILD_NODES];
+            target = children[LENGTH] > target ? children[target] : BOOLEAN_FALSE;
+            if (target) {
+                finalInsertBefore(parent, inserting, target);
+            } else {
+                appendChild(parent, inserting);
+            }
+        } else {
+            if (target) {
+                // handle query string
+            } else {
+                appendChild(parent, inserting);
+            }
+        }
+    }
+}
+
+function collectAttr(memo, attribute, future) {
+    var attributeKey = attribute[LOCAL_NAME];
+    if (future) {
+        memo.attrsA[attributeKey] = BOOLEAN_TRUE;
+        memo.accessB[attributeKey] = attribute.value;
+    } else {
+        memo.attrsA[attributeKey] = BOOLEAN_TRUE;
+        memo.accessA[attributeKey] = attribute.value;
+    }
+    if (memo.hash[attributeKey]) {
+        return;
+    }
+    memo.hash[attributeKey] = BOOLEAN_TRUE;
+    memo.list.push(attributeKey);
+}
+
+function returnsJSONNodeType(tagName) {
+    return tagName === 'text' ? 3 : 1;
+}
+
+function checkNeedForCustom(el) {
+    return el[__ELID__] && attributeApi.read(el, CUSTOM_KEY) !== BOOLEAN_FALSE;
+}
+
+function HTML() {
+    var HTML, addTextCssAttribute = basicAttributeCondensation('type', 'text/css'),
+        basicStyleAttributes = basicAttributeCondensation('rel', 'stylesheet', addTextCssAttribute),
+        attributesBase = {
+            link: basicStyleAttributes,
+            style: basicStyleAttributes,
+            script: basicAttributeCondensation('type', 'text/javascript'),
+            button: basicAttributeCondensation('type', 'submit'),
+            input: basicAttributeCondensation('type', 'input'),
+            form: basicAttributeCondensation('method', 'get')
+        },
+        tagOpenPrefixes = {
+            defaults: returns('<'),
+            html: returns('<!DOCTYPE html><')
+        };
+    return (HTML = {
+        build: HTMLBuild,
+        tagOpen: HTMLOpenTag,
+        tagEmpty: HTMLTagEmpty,
+        tagBuild: HTMLTagBuild,
+        tagContent: HTMLTagContent,
+        tagOpenPrefixes: tagOpenPrefixes,
+        attributesBase: attributesBase,
+        attributes: HTMLAttributes,
+        attribute: HTMLAttribute,
+        tagsEmpty: merge({}, HTMLConstantsObject),
+        tagSpecial: {
+            stylesheet: function (attrs, content) {
+                return attrs.href ? HTML.tagEmpty('link', attrs) : HTML.tagContent('style', attrs, content);
+            }
+        }
+    });
+}
+
+function nodeToJSON(node, shouldStop_, includeComments) {
+    var obj, children, childrenLength, shouldStop = shouldStop_ || noop;
+    obj = baseNodeToJSON(node);
+    if (obj.attributes && obj.attributes.is && obj.attributes.dataRenderer) {
+        return {
+            selfSufficient: BOOLEAN_TRUE
+        };
+    }
+    if (!shouldStop(node, obj)) {
+        return obj;
+    }
+    children = node.childNodes;
+    if (!(childrenLength = children[LENGTH])) {
+        return obj;
+    }
+    obj.children = reduce(children, function (memo, child) {
+        if (isElement(child)) {
+            memo.push(nodeToJSON(child, shouldStop, includeComments));
+        } else if (child.nodeType === 3) {
+            memo.push(textJSON(child.textContent));
+        } else if (includeComments) {
+            if (child.nodeType === 8) {
+                memo.push(commentJSON(child.textContent));
+            } else {
+                memo.push({
+                    err: BOOLEAN_TRUE
+                });
+            }
+        }
+    }, []);
+    return obj;
+}
+// cannot start with a text node
+function createDiffer(context) {
+    var hash, updating, swaps;
+
+    function resolveLater(key) {
+        return isString(key) ? function () {
+            return hash[key]
+        } : returns(key)
+    }
+
+    function swapNodes(h) {
+        var $remove, add, remove,
+            add = h.add(),
+            remove = h.remove();
+        if (add && remove) {
+            $remove = context.returnsManager(remove);
+            $remove.insertBefore(add);
+            $remove.remove();
+        } else if (remove) {
+            context.$(remove).remove();
+        } else {
+            context.returnsManager(h.parent).insertAfter(add, h.index);
+        }
+    }
+    return {
+        context: context,
+        swaps: (swaps = []),
+        keys: (hash = {}),
+        updating: (updating = []),
+        queue: {
+            add: function (node, index, parent) {
+                return this.swap(NULL, node, index, parent);
+            },
+            remove: function (node, parent) {
+                return this.swap(node, NULL, NULL, parent);
+            },
+            html: function (node, content) {},
+            swap: function (first, last, index, parent) {
+                swaps.push({
+                    parent: parent,
+                    index: index,
+                    remove: resolveLater(first),
+                    add: resolveLater(last)
+                });
+            },
+            update: function (node, updates, fn) {
+                updating.push({
+                    node: node,
+                    updates: updates,
+                    fn: fn
+                });
+            }
+        },
+        mutate: {
+            swap: function () {
+                forEach(swaps, swapNodes);
+            },
+            update: function () {
+                // attributes and content
+                forEach(updating, function (item) {
+                    item.fn(item.node, item.updates);
+                });
+            },
+        }
+    };
+}
+
+function createDocumentFragment(nulled, context) {
+    return context.is(DOCUMENT) && context.element().createDocumentFragment();
+}
+
+function isElement(object) {
+    return !!(object && isNumber(object[NODE_TYPE]) && object[NODE_TYPE] === object.ELEMENT_NODE);
+}
+
+function isDocument(obj) {
+    return obj && isNumber(obj[NODE_TYPE]) && obj[NODE_TYPE] === obj.DOCUMENT_NODE;
+}
+
+function isFragment(frag) {
+    return frag && frag[NODE_TYPE] === doc.DOCUMENT_FRAGMENT_NODE;
+}
+
+function canBeProcessed(item) {
+    return isWindow(item) || isElement(item) || isDocument(item) || isFragment(item);
+}
+
+function collectChildren(element) {
+    return toArray(element.children || element.childNodes);
+}
+
+function openBlock(selector, total) {
+    return once(function () {
+        total.push(selector.join('') + ' {');
+    });
+}
+
+function closeBlock(total) {
+    return once(function () {
+        total.push(' }\n');
+    });
+}
+
+function WeakMapRemap(instance, list) {
+    forEach(list, function (name) {
+        var method = instance.get.bind(instance);
+        instance[name] = function (element, identifier) {
+            return method(element, identifier || this.identifier(element));
+        };
+    });
+}
+
+function nodeComparison(_a, _b, _hash, _stopper, context) {
+    var returns, mutate, removing, updating, inserting, keysHash, resultant, current, inserting, identifyingKey, identified,
+        a = _a,
+        b = cloneJSON(_b),
+        layer_level = 0,
+        // check kids
+        stopper = _stopper || returnsTrue,
+        diffs = createDiffer(context),
+        keysHash = diffs.keys;
+    updateElement(a, b);
+    return diffs;
+
+    function updateNode(a, hash) {
+        var manager, props, attrs = hash.attrs,
+            style = hash.style;
+        forOwn(attrs, function (value, key) {
+            if (!propsHash[key]) {
+                return;
+            }
+            delete attrs[key];
+            props = props || {};
+            props[key] = value;
+        });
+        if (checkNeedForCustom(a)) {
+            manager = context.returnsManager(a);
+            if (keys(attrs)[LENGTH]) {
+                manager.attr(attrs);
+            }
+            if (props) {
+                manager.prop(props);
+            }
+            if (style) {
+                manager.css(style);
+            }
+        } else {
+            forOwn(attrs, function (value, key) {
+                attributeApi.write(a, kebabCase(key), value);
+            });
+            forOwn(props, function (value, key) {
+                propertyApi.write(a, kebabCase(key), value);
+            });
+            if (style) {
+                applyStyle(a, style);
+            }
+        }
+    }
+
+    function diffAttributes(a, bAttrs, style) {
+        var bKeys, aAttributes = a.attributes,
+            aLength = aAttributes.length,
+            bLength = (bKeys = keys(bAttrs)).length,
+            attrs = reduce({
+                length: Math.max(aLength, bLength)
+            }, function (memo, voided, index) {
+                var key;
+                if (memo.aLength > index) {
+                    collectAttr(memo, aAttributes[index]);
+                }
+                if (memo.bLength > index) {
+                    key = bKeys[index];
+                    collectAttr(memo, {
+                        localName: kebabCase(key),
+                        value: bAttrs[key]
+                    }, BOOLEAN_TRUE);
+                }
+            }, {
+                list: [],
+                hash: {},
+                attrsA: {},
+                accessA: {},
+                attrsB: {},
+                accessB: {},
+                aLength: aLength,
+                bLength: bLength
+            }),
+            anElId = a[__ELID__],
+            updates,
+            accessA = attrs.accessA,
+            accessB = attrs.accessB;
+        forEach(attrs.list, function (key) {
+            if (cantDiffAttrs[key]) {
+                return;
+            }
+            var accessAValue = accessA[key];
+            var accessBValue = accessB[key];
+            if (accessAValue !== accessBValue) {
+                if (accessAValue === UNDEFINED && accessBValue === BOOLEAN_FALSE) {
+                    return;
+                }
+                updates = updates || {};
+                updates[key] = accessBValue === UNDEFINED ? NULL : accessBValue;
+            }
+        });
+        if (updates) {
+            diffs.queue.update(a, {
+                attrs: updates,
+                style: style
+            }, updateNode);
+        }
+    }
+
+    function accessStyle(virtual) {
+        return (virtual[1] || {}).style;
+    }
+
+    function accessChildren(virtual) {
+        return (virtual && virtual[2]);
+    }
+
+    function resolveIncompatability(node, virtual) {
+        var t, key = accessKey(virtual),
+            registered = keysHash[key];
+        //     t = tag(node),
+        //     tg = accessTag(virtual);
+        // if (!t) {
+        //     // check this later
+        //     // probably text
+        //     if (tg === 'text') {
+        //         return {
+        //             node: node
+        //         };
+        //     }
+        // }
+        // if (t && t === tagName(virtual)) {
+        //     // the node did not move and
+        //     // did not change it's tag name
+        //     return {
+        //         node: registered || node
+        //     };
+        // }
+        if ((t = tag(node)) && t === tagName(virtual)) {
+            // the node did not move and
+            // did not change it's tag name
+            return {
+                node: registered || node
+            };
+        }
+        var frag = context.createDocumentFragment();
+        var newEl = createFromVirtual(virtual, frag, keysHash);
+        return {
+            node: newEl,
+            frag: frag
+        };
+    }
+
+    function buildAttrs(virtual) {
+        return merge(parseSelector(virtual[0]).attrs, accessAttrs(virtual));
+    }
+
+    function buildAllAttrs(virtual) {
+        var style;
+        return merge(buildAttrs(virtual), (style = accessStyle(virtual)) ? {
+            style: style
+        } : null);
+    }
+
+    function fillVirtual(virtual) {
+        if (!virtual) {
+            return false;
+        }
+        var first = accessTag(virtual);
+        if (!first) {
+            return virtual;
+        }
+        var attrs = accessMeta(virtual);
+        var children = accessChildren(virtual);
+        return [first, attrs, children];
+    }
+
+    function updateElement(_node, _virtual) {
+        var virtual = fillVirtual(_virtual);
+        var hash = resolveIncompatability(_node, virtual);
+        var frag = hash.frag;
+        var node = hash.node;
+        diffChildren(node, virtual);
+        diffAttributes(node, buildAttrs(virtual), accessStyle(virtual));
+        setKey(node, virtual);
+        // should anything take it's place
+        return frag || node;
+        // assume that you have a json object
+        // and you have a node
+    }
+
+    function createStringSet(a, b) {
+        if (checkNeedForCustom(a)) {
+            context.returnsManager(a).html(b);
+        } else {
+            a.innerHTML = b;
+        }
+    }
+
+    function computeStringDifference(a, bChildren) {
+        if (notNaN(bChildren) && canDiffAccepts[type(bChildren)]) {
+            if (a.innerHTML != bChildren) {
+                diffs.queue.update(a, bChildren, createStringSet);
+            }
+            return BOOLEAN_TRUE;
+        }
+    }
+
+    function setKey(node, virtual) {
+        var key;
+        if ((key = accessKey(virtual))) {
+            if (keysHash[key]) {
+                if (keysHash[key] !== node) {
+                    return console.log('problem diffing');
+                }
+            }
+            keysHash[key] = node;
+        }
+    }
+
+    function rewrapChildren(_children) {
+        var first, children = _children;
+        // take care of children, null, false, and string case
+        // where the children are simply going to be overwritten
+        if (!children || isString(children)) {
+            return children;
+        }
+        if (isArray(children) && (first = children[0]) && isString(first)) {
+            children = [children];
+        }
+        return children;
+    }
+
+    function diffChildren(_a, _b) {
+        var a = _a;
+        var b = _b || [];
+        var aChildren = toArray(a.childNodes || []);
+        var bChildren = b[2] = rewrapChildren(b[2]);
+        // var mutate = diffs.mutate;
+        // var keys = diffs.keys;
+        // it was a string, so there's nothing more
+        // to compute in regards to children
+        // strings just wipe out the previous els
+        if ((!bChildren && bChildren !== EMPTY_STRING) || !stopper(b) || computeStringDifference(a, bChildren)) {
+            return;
+        }
+        var bChildrenLength = bChildren[LENGTH];
+        var aChildrenLength = aChildren[LENGTH];
+        var maxLength = Math.max(aChildrenLength, bChildrenLength);
+        var fragment, aChild, virtual, infos, originalChild, j, finished, bChild, removing, result, dontCreate, offset = 0,
+            i = 0,
+            focus = 0,
+            key = accessKey(b);
+        // do nothing (false, null, NUMBER, or stopper failed)
+        if (!bChildrenLength) {
+            return diffs.queue.remove(aChildren, a);
+        }
+        if (!aChildrenLength) {
+            infos = insertMapper(bChildren.slice(0), a, 0);
+            return diffs.queue.add(infos.el, infos.index, infos.parent);
+        }
+        for (; i < maxLength; i++) {
+            originalChild = aChildren[i];
+            virtual = bChildren[i];
+            if (virtual) {
+                if (originalChild) {
+                    aChild = updateElement(originalChild, virtual, a);
+                    // setKey(firstChild(aChild), virtual);
+                } else {
+                    aChild = context.createDocumentFragment();
+                    setKey(createFromVirtual(virtual, aChild, keysHash), virtual);
+                }
+                if (aChild !== originalChild) {
+                    diffs.queue.swap(originalChild, aChild, i, a);
+                }
+            } else {
+                diffs.queue.remove(aChildren.slice(i), a);
+                i = maxLength;
+                // aChild = context.createDocumentFragment();
+                // setKey(createFromVirtual(virtual, aChild, keysHash), virtual);
+            }
+        }
+    }
+
+    function updateFromVirtual(node, children, parent) {
+        var results;
+        // forOwn(attrs, function (value, key) {
+        //     if (propsHash[key]) {
+        //         propertyApi.write(node, kebabCase(key), value);
+        //     } else {
+        //         attributeApi.write(node, kebabCase(key), value);
+        //     }
+        // });
+        if (isString(children)) {
+            node.innerHTML = children;
+        } else {
+            forEach(children, function (child) {
+                appendChild(node, createFromVirtual(child, node));
+            });
+        }
+        if (parent) {
+            parent.appendChild(node);
+        }
+        return node;
+    }
+
+    function accessTag(virtual) {
+        return virtual && virtual[0];
+    }
+
+    function accessMeta(virtual) {
+        return virtual && virtual[1] || {};
+    }
+
+    function accessAttrs(virtual) {
+        return accessMeta(virtual).attrs;
+    }
+
+    function accessKey(virtual) {
+        return (virtual && virtual[1] || {}).key;
+    }
+
+    function tagName(virtual) {
+        return parseSelector(accessTag(virtual)).tag;
+    }
+
+    function createFromVirtual(virtual, parent) {
+        var key, data, created;
+        if (virtual[0] === 'text') {
+            parent.innerHTML += virtual[1];
+            return;
+        }
+        // var parsed = parseSelector(virtual[0]);
+        created = context.createElement(virtual[0], buildAttrs(virtual)).element();
+        setKey(created, virtual);
+        return updateFromVirtual(created, virtual[2], parent);
+    }
+
+    function insertMapper(els, parent, i) {
+        var frag = doc.createDocumentFragment();
+        forEach(els, function (el) {
+            createFromVirtual(el, frag, keysHash);
+        });
+        return {
+            parent: parent,
+            el: frag,
+            index: i
+        };
+    }
+}
 app.scope(function (app) {
     if (!window.document) {
         options.$ = {};
