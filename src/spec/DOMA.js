@@ -715,6 +715,28 @@ application.scope().run(window, function (module, app, _, factories, $) {
                 test.expect($first.element()).toBe($newChildren.first().element());
                 test.expect($newChildren.length()).toEqual(2);
             }, 2);
+            test.it('does not have to have all arguments present to understand what the node should look like', function () {
+                var diff = $.nodeComparison($root.element(), ['div.tree', [
+                    ['span.name', 'here']
+                ]]);
+                applyMutations(diff.mutate);
+                test.expect($root.attr('class')).toBe('tree');
+                var $children = $root.children();
+                var $span = $children.first();
+                test.expect($span.attr('class')).toBe('name');
+                var $span = $children.first();
+                test.expect($span.html()).toBe('here');
+            }, 3);
+            test.it('does not have to have all arguments present to understand what the node should look like', function () {
+                var diff = $.nodeComparison($root.element(), ['div.tree', ['span.name', ['text', 'here']]]);
+                applyMutations(diff.mutate);
+                test.expect($root.attr('class')).toBe('tree');
+                var $children = $root.children();
+                var $span = $children.first();
+                test.expect($span.attr('class')).toBe('name');
+                var $span = $children.first();
+                test.expect($span.html()).toBe('here');
+            }, 3);
             // test.it('can rearrange elements as needed', function () {
             //     templatized = makeBasicTemplate([{
             //         tag: 'li',

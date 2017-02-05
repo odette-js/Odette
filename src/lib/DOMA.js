@@ -917,7 +917,7 @@ function nodeComparison(_a, _b, _hash, _stopper, context) {
         }
         var attrs = accessMeta(virtual);
         var children = accessChildren(virtual);
-        return [first, attrs, children];
+        return (isString(attrs) || isArray(attrs)) ? [first, NULL, rewrapChildren(attrs)] : [first, attrs, rewrapChildren(children)];
     }
 
     function updateElement(_node, _virtual) {
@@ -1029,13 +1029,6 @@ function nodeComparison(_a, _b, _hash, _stopper, context) {
 
     function updateFromVirtual(node, children, parent) {
         var results;
-        // forOwn(attrs, function (value, key) {
-        //     if (propsHash[key]) {
-        //         propertyApi.write(node, kebabCase(key), value);
-        //     } else {
-        //         attributeApi.write(node, kebabCase(key), value);
-        //     }
-        // });
         if (isString(children)) {
             node.innerHTML = children;
         } else {
@@ -1069,10 +1062,11 @@ function nodeComparison(_a, _b, _hash, _stopper, context) {
         return parseSelector(accessTag(virtual)).tag;
     }
 
-    function createFromVirtual(virtual, parent) {
-        var key, data, created;
+    function createFromVirtual(_virtual, parent) {
+        var key, data, created,
+            virtual = fillVirtual(_virtual);
         if (virtual[0] === 'text') {
-            parent.innerHTML += virtual[1];
+            parent.innerHTML = virtual[2];
             return;
         }
         // var parsed = parseSelector(virtual[0]);
