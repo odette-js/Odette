@@ -604,16 +604,16 @@ var REGION_MANAGER = 'RegionManager',
                     indexOfAt = indexOf(key, '@'),
                     hasAt = indexOfAt !== -1;
                 return {
-                    selector: hasAt ? normalizeUIString(key.slice(indexOfAt), bindings) : EMPTY_STRING,
+                    selector: hasAt ? normalizeUIString(key.slice(indexOfAt + 1), bindings) : EMPTY_STRING,
                     group: viewNamespace,
                     events: hasAt ? key.slice(0, indexOfAt).trim() : key
                 };
             },
             normalizeUIString = function (uiString, ui) {
-                return uiString.replace(/@[a-zA-Z_$0-9]*/g, function (r) {
-                    var sliced = r.slice(1);
-                    return ui[sliced] || sliced;
-                });
+                return _.map(uiString.split(','), function (_split) {
+                    var split = _split.trim();
+                    return ui[split] || split;
+                }).join(',');
             },
             // allows for the use of the @ui. syntax within
             // a given key for triggers and events
