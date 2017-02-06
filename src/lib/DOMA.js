@@ -1887,6 +1887,9 @@ app.scope(function (app) {
             if (!selector) {
                 return returnsTrue;
             }
+            if (isFunction(selector)) {
+                return selector;
+            }
             selectingLater.string = selector;
             return selectingLater;
 
