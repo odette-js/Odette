@@ -1883,9 +1883,22 @@ app.scope(function (app) {
                 return manager.owner;
             }
         },
+        resolveSelector = function (selector) {
+            if (!selector) {
+                return returnsTrue;
+            }
+            selectingLater.string = selector;
+            return selectingLater;
+
+            function selectingLater(target, $document) {
+                return matchesSelector(target, selector, $document);
+            }
+        },
         _addEventListener = function (manager_, eventNames, group, selector_, handler, capture) {
-            var events, selector = selector_,
-                manager = elementSwapper[selector] ? ((selector = '') || elementSwapper[selector_](manager_)) : manager_,
+            var events, _selector = selector_,
+                manager = elementSwapper[_selector] ? ((_selector = '') || elementSwapper[selector_](manager_)) : manager_,
+                // selector = _selector,
+                selector = resolveSelector(_selector),
                 wasCustom = manager.is(CUSTOM),
                 spaceList = toArray(eventNames, SPACE),
                 handlesExpansion = function (name, passedName, nameStack) {
@@ -3351,7 +3364,7 @@ app.scope(function (app) {
                     list.insertAt(evnt, mainHandler[CAPTURE_COUNT]);
                     ++mainHandler[CAPTURE_COUNT];
                 } else {
-                    if (evnt.selector) {
+                    if (evnt.selector.string) {
                         delegateCount = mainHandler[DELEGATE_COUNT];
                         ++mainHandler[DELEGATE_COUNT];
                         if (delegateCount) {
@@ -3472,11 +3485,12 @@ app.scope(function (app) {
                     parent = target;
                     while (!found && parent && isElement(parent) && parent !== el) {
                         ++counter;
-                        if (matchesSelector(parent, selector, manager.owner)) {
+                        if (selector(parent, manager.owner)) {
                             found = parent;
                             // hold on to the temporary target
                             first.temporaryTarget = found;
-                            // how far up did you have to go before you got to the top
+                            // how far up did you have to go
+                            // before you got to the top
                             first.parentNodeNumber = counter;
                             if (ordersEventsByHierarchy) {
                                 if (!(j = list[LENGTH])) {
