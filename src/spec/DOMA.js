@@ -281,14 +281,23 @@ application.scope().run(window, function (module, app, _, factories, $) {
                 divs.dispatchEvent('click');
                 test.expect(count).toEqual(5);
             }, 3);
-            test.it('be careful with the once function because they can be added multiple times to the queue, since they use a proxy function, like the one available at _.once', function () {
-                divs.once('click', handler);
-                test.expect(count).toEqual(0);
+            test.it('events can also be taken off', function () {
+                divs.on('click', handler);
+                test.expect(count).toBe(0);
                 divs.dispatchEvent('click');
-                test.expect(count).toEqual(5);
+                test.expect(count).toBe(5);
+                divs.off('click', handler);
                 divs.dispatchEvent('click');
-                test.expect(count).toEqual(5);
+                test.expect(count).toBe(5);
             }, 3);
+            // test.it('be careful with the once function because they can be added multiple times to the queue, since they use a proxy function, like the one available at _.once', function () {
+            //     divs.once('click', handler);
+            //     test.expect(count).toEqual(0);
+            //     divs.dispatchEvent('click');
+            //     test.expect(count).toEqual(5);
+            //     divs.dispatchEvent('click');
+            //     test.expect(count).toEqual(5);
+            // }, 3);
         });
         test.describe('the each function is special because', function () {
             test.it('it wraps each element in a DOMA object before passing it through your iterator', function () {

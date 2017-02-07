@@ -1756,49 +1756,15 @@ app.scope(function (app) {
         closer = function (center, current, challenger) {
             return distance(center, current) < distance(center, challenger);
         },
-        createSelector = function (doma, args, fn) {
-            var fun, selector, capturing, group, name = args.shift();
-            if (isString(args[0]) || args[0] == NULL) {
-                selector = args.shift();
-            }
-            if (isString(args[0])) {
-                args[0] = doma[args[0]];
-            }
-            if (!isFunction(args[0])) {
-                return this;
-            }
-            fun = args.shift();
-            capturing = args.shift();
-            if (isString(capturing)) {
-                group = capturing;
-                capturing = BOOLEAN_FALSE;
-            } else {
-                capturing = !!capturing;
-            }
-            // that's all folks
-            group = args.shift();
-            fn(doma, name, selector, fun, capturing, group);
-            return doma;
-        },
-        expandEventListenerArguments = function (fn) {
-            return function () {
-                var selector, doma = this,
-                    args = toArray(arguments),
-                    nameOrObject = args.shift();
-                if (isObject(nameOrObject)) {
-                    if (isString(args[0])) {
-                        selector = args.shift();
-                    }
-                    forOwn(nameOrObject, function (handler, key) {
-                        createSelector(doma, [key, selector, handler].concat(args), fn);
-                    });
-                    return doma;
-                } else {
-                    args.unshift(nameOrObject);
-                    return createSelector(doma, args, fn);
-                }
-            };
-        },
+        // expandEventListenerArguments = function (fn) {
+        //     return function (events, handler, options) {
+        //         var doma = this;
+        //         forEach(toArray(events), function (evnt) {
+        //             fn(doma, evnt, handler, options);
+        //         });
+        //         return doma;
+        //     };
+        // },
         validateEvent = function (evnt, el, name_) {
             return evnt && isObject(evnt) && !isWindow(evnt) && isNumber(evnt.AT_TARGET) ? evnt : {
                 data: stringify(evnt),
@@ -1841,39 +1807,50 @@ app.scope(function (app) {
             });
             return memo;
         }, {}),
-        eventExpander = function (expanders, fn, stack_) {
-            var stack = stack_ || [];
-            return function (nme) {
-                var name = nme,
-                    hadInList = indexOf(stack, name) !== -1;
-                // prevents circular
-                if (!hadInList) {
-                    stack.push(name);
-                }
-                if (expanders[name] && !hadInList) {
-                    forEach(expanders[name], eventExpander(expanders, fn, stack.slice(0)));
-                    stack.pop();
-                    return BOOLEAN_TRUE;
-                } else {
-                    fn(name, stack[0], stack.slice(0));
-                }
-                if (!hadInList) {
-                    stack.pop();
-                }
+        // eventExpander = function (expanders, fn, stack_) {
+        //     var stack = stack_ || [];
+        //     return function (nme) {
+        //         var name = nme,
+        //             hadInList = indexOf(stack, name) !== -1;
+        //         // prevents circular
+        //         if (!hadInList) {
+        //             stack.push(name);
+        //         }
+        //         if (expanders[name] && !hadInList) {
+        //             forEach(expanders[name], eventExpander(expanders, fn, stack.slice(0)));
+        //             stack.pop();
+        //             return BOOLEAN_TRUE;
+        //         } else {
+        //             fn(name, stack[0], stack.slice(0));
+        //         }
+        //         if (!hadInList) {
+        //             stack.pop();
+        //         }
+        //     };
+        // },
+        eventObjectExpansion = function (fn) {
+            return function (a, b_, c_) {
+                var managers = this;
+                intendedObject(a, b_, function (a, b, c) {
+                    managers.forEach(function (manager) {
+                        fn(manager, a, b, (c ? b_ : c_) || {});
+                    });
+                });
+                return managers;
             };
         },
-        addEventListener = expandEventListenerArguments(function (manager, name, selector, callback, capture, group) {
-            return isFunction(callback) ? _addEventListener(manager, name, group, selector, callback, capture) : manager;
+        addEventListener = eventObjectExpansion(function (manager, events, handler, options) {
+            return isFunction(handler) ? _addEventListener(manager, events, handler, options) : manager;
         }),
-        addEventListenerOnce = expandEventListenerArguments(function (manager, types, selector, callback, capture, group) {
-            var _callback;
-            return isFunction(callback) && _addEventListener(manager, types, group, selector, (_callback = once(function () {
-                _removeEventListener(manager, types, group, selector, _callback, capture);
-                return callback.apply(this, arguments);
-            })), capture);
+        addEventListenerOnce = eventObjectExpansion(function (manager, events, handler, options) {
+            var _handler;
+            return isFunction(handler) && _addEventListener(manager, events, (_handler = once(function () {
+                _removeEventListener(manager, events, _handler, options);
+                return handler.apply(this, arguments);
+            })), options);
         }),
-        removeEventListener = expandEventListenerArguments(function (manager, name, selector, handler, capture, group) {
-            return isFunction(handler) ? _removeEventListener(manager, name, group, selector, handler, capture) : manager;
+        removeEventListener = eventObjectExpansion(function (manager, events, handler, options) {
+            return isFunction(handler) ? _removeEventListener(manager, events, handler, options) : manager;
         }),
         elementSwapper = {
             window: function (manager) {
@@ -1885,48 +1862,72 @@ app.scope(function (app) {
         },
         resolveSelector = function (selector) {
             if (!selector) {
-                return returnsTrue;
+                return;
             }
-            if (isFunction(selector)) {
-                return selector;
+            if (isObject(selector)) {
+                return merge({
+                    selector: BOOLEAN_TRUE,
+                    filter: returns.true,
+                    matches: strictMatch
+                }, selector);
+            } else if (isFunction(selector)) {
+                return {
+                    selector: BOOLEAN_TRUE,
+                    filter: selector,
+                    matches: strictMatch
+                };
+            } else {
+                return {
+                    selector: BOOLEAN_TRUE,
+                    filter: selectingLater,
+                    matches: strictMatch
+                };
             }
-            selectingLater.string = selector;
-            return selectingLater;
+
+            function strictMatch(comparator) {
+                return comparator === selector;
+            }
 
             function selectingLater(target, $document) {
                 return matchesSelector(target, selector, $document);
             }
         },
-        _addEventListener = function (manager_, eventNames, group, selector_, handler, capture) {
-            var events, _selector = selector_,
-                manager = elementSwapper[_selector] ? ((_selector = '') || elementSwapper[selector_](manager_)) : manager_,
-                // selector = _selector,
-                selector = resolveSelector(_selector),
+        // _addEventListener = function (manager_, eventNames, group, selector_, handler, capture) {
+        _addEventListener = function (manager_, events, handler, options) {
+            var eventManager, selector = options.selector,
+                // use as string if possible
+                manager = elementSwapper[selector] ? ((selector = '') || elementSwapper[selector](manager_)) : manager_,
+                // turns into an object
+                selector = resolveSelector(selector),
                 wasCustom = manager.is(CUSTOM),
-                spaceList = toArray(eventNames, SPACE),
+                spaceList = toArray(events, SPACE),
+                passive = options.passive,
+                // passiveIsUndefined = isUndefined(passive),
                 handlesExpansion = function (name, passedName, nameStack) {
-                    events = events || manager.directive(EVENT_MANAGER);
+                    eventManager = eventManager || manager.directive(EVENT_MANAGER);
                     if (!ALL_EVENTS_HASH[name]) {
                         manager.mark(CUSTOM_LISTENER);
                     }
-                    events.attach(name, {
-                        capturing: !!capture,
+                    eventManager.attach(name, {
+                        capturing: !!options.capture,
+                        passive: passive,
                         origin: manager,
                         handler: handler,
-                        group: group,
+                        group: options.group,
                         selector: selector,
                         passedName: passedName,
                         domName: name,
                         domTarget: manager,
-                        nameStack: nameStack
+                        nameStack: nameStack.slice(0)
                     });
-                },
-                expansion = eventExpander(manager.owner.events.expanders, handlesExpansion);
-            forEach(spaceList, function (evnt) {
-                if (expansion(evnt)) {
-                    handlesExpansion(evnt, evnt, [evnt]);
-                }
-            });
+                }; //,
+            // expansion = expandEvents(manager.owner.events.expanders, handlesExpansion);
+            manager.expandEvents(spaceList, handlesExpansion);
+            // forEach(spaceList, function (evnt) {
+            //     if (expansion(evnt)) {
+            //         handlesExpansion(evnt, evnt, [evnt]);
+            //     }
+            // });
             if (!wasCustom && manager.is(CUSTOM_LISTENER)) {
                 markCustom(manager, BOOLEAN_TRUE);
                 manager.remark(ATTACHED, isAttached(manager.element(), manager.owner));
@@ -3327,7 +3328,7 @@ app.scope(function (app) {
                 }
             },
             add: function (list, evnt) {
-                var foundDuplicate, delegateCount, obj, eventHandler, hadMainHandler, domTarget, events = this,
+                var foundDuplicate, delegateCount, obj, eventHandler, hadMainHandler, domTarget, selector, events = this,
                     el = evnt.element,
                     i = 0,
                     // needs an extra hash to care for the actual event hanlders that get attached to dom
@@ -3367,14 +3368,14 @@ app.scope(function (app) {
                     list.insertAt(evnt, mainHandler[CAPTURE_COUNT]);
                     ++mainHandler[CAPTURE_COUNT];
                 } else {
-                    if (evnt.selector.string) {
+                    if (selector = evnt.selector) {
                         delegateCount = mainHandler[DELEGATE_COUNT];
                         ++mainHandler[DELEGATE_COUNT];
-                        if (delegateCount) {
-                            list.insertAt(evnt, mainHandler[CAPTURE_COUNT] + delegateCount);
-                        } else {
-                            list.insertAt(evnt, mainHandler[CAPTURE_COUNT]);
-                        }
+                        // if (delegateCount) {
+                        list.insertAt(evnt, mainHandler[CAPTURE_COUNT] + delegateCount);
+                        // } else {
+                        //     list.insertAt(evnt, mainHandler[CAPTURE_COUNT]);
+                        // }
                     } else {
                         list.toArray().push(evnt);
                     }
@@ -3488,7 +3489,7 @@ app.scope(function (app) {
                     parent = target;
                     while (!found && parent && isElement(parent) && parent !== el) {
                         ++counter;
-                        if (selector(parent, manager.owner)) {
+                        if (selector && selector.filter(parent, manager.owner)) {
                             found = parent;
                             // hold on to the temporary target
                             first.temporaryTarget = found;
@@ -3618,6 +3619,38 @@ app.scope(function (app) {
                  * @type {Boolean}
                  */
                 isValidDomManager: BOOLEAN_TRUE,
+                expandEvents: function (list, fn, _stack) {
+                    var manager = this;
+                    forEach(list, function (name) {
+                        manager.expandEvent(name, fn, _stack);
+                    });
+                    return manager;
+                },
+                expandEvent: function (name, fn, _stack) {
+                    var manager = this,
+                        owner = manager.owner,
+                        events = owner.events,
+                        expanders = events.expanders,
+                        stack = _stack || [],
+                        hadInList = indexOf(stack, name) !== -1,
+                        copy = stack.slice(0);
+                    // prevents circular
+                    if (!hadInList) {
+                        copy.push(name);
+                    }
+                    if (expanders[name] && !hadInList) {
+                        manager.expandEvents(expanders[name], fn, copy);
+                    } else {
+                        // name === current
+                        // stack[0] === origin
+                        // copy === stack
+                        fn(name, stack[0] || name, copy);
+                    }
+                    if (!hadInList) {
+                        copy.pop();
+                    }
+                    return manager;
+                },
                 /**
                  * The query symbol ($) is used to query elements inside of the current context. When this function is called, the target is queried using querySelectorAll and the query string is passed in. When the elements are returned, they are wrapped in a {@link DOMA} object.
                  * @method
@@ -4780,21 +4813,23 @@ app.scope(function (app) {
                 };
             })
         ])),
-        _removeEventListener = function (manager_, name, group, selector_, handler, capture_) {
-            var selector = selector_,
+        _removeEventListener = function (manager_, name, handler, options) {
+            var selector = options.selector,
                 manager = elementSwapper[selector] ? ((selector = '') || elementSwapper[selector_](manager_)) : manager_,
-                capture = !!capture_,
+                capture = !!options.capture_,
+                group = options.group,
                 directive = manager.directive(EVENT_MANAGER),
                 removeFromList = function (list, name) {
                     return list.obliteration(function (obj) {
-                        if ((!name || name === obj.passedName) && (!handler || obj.handler === handler) && (!group || obj.group === group) && (!selector || obj.selector === selector)) {
+                        var selected;
+                        if ((!name || name === obj.passedName) && (!handler || obj.handler === handler) && (!group || obj.group === group) && (isNil(selector) ? BOOLEAN_TRUE : ((selected = obj.selector) && selected.matches(selector)))) {
                             directive.detach(obj);
                         }
                     });
                 };
-            return name ? forEach(toArray(name, SPACE), eventExpander(manager.owner.events.expanders, function (name, passedName) {
+            return name ? manager.expandEvents(toArray(name, SPACE), function (name, passedName) {
                 removeFromList(directive[HANDLERS][name], passedName);
-            })) : forOwn(directive[HANDLERS], passesFirstArgument(removeFromList));
+            }) : forOwn(directive[HANDLERS], passesFirstArgument(removeFromList));
         },
         /**
          * @class DOMA
@@ -4873,7 +4908,7 @@ app.scope(function (app) {
                 });
             };
         },
-        allEachMethods = toArray(DESTROY + ',show,hide,style,remove,on,off,once,addEventListener,removeEventListener,dispatchEvent').concat(allDirectMethods),
+        allEachMethods = toArray(DESTROY + ',show,hide,style,remove,dispatchEvent').concat(allDirectMethods), //,on,off,once,addEventListener,removeEventListener
         firstMethods = toArray('tag,element,client,box,flow'),
         applyToFirst = function (method) {
             var shouldBeContext = method !== 'tag';
@@ -4889,6 +4924,10 @@ app.scope(function (app) {
                 return element && element[property];
             };
         },
+        domaManagerSwappable = toArray('on,off,once,addEventListener,removeEventListener'),
+        stealFromPrototype = function (method) {
+            return DomManager.fn[method];
+        },
         /**
          * DOMA is the document object model abstraction. A wrapper for the dom objects available in the browser's window. Operates off of the assumption that all dom interactions should be normalized, and efficient as possible.
          * @class DOMA
@@ -4903,9 +4942,9 @@ app.scope(function (app) {
              */
             constructor: function (str, ctx, isValid, validContext, documentContext) {
                 var isArrayResult, els = str,
-                    dom = this,
-                    context = dom.context = validContext ? ctx.item(0) : documentContext,
-                    owner = dom.owner = documentContext,
+                    doma = this,
+                    context = doma.context = validContext ? ctx.item(0) : documentContext,
+                    owner = doma.owner = documentContext,
                     unwrapped = context.element();
                 if (str && !isWindow(str) && str.isValidDOMA) {
                     return str;
@@ -4940,9 +4979,9 @@ app.scope(function (app) {
                             }
                         }
                     }
-                    dom.reset(els);
+                    doma.reset(els);
                 }
-                return dom;
+                return doma;
             },
             /**
              * Sets value of an attribute on the DomManagers. Replaces all values in a space delineated list.
@@ -5169,7 +5208,7 @@ app.scope(function (app) {
             toString: function () {
                 return stringify(this);
             }
-        }, wrap(allEachMethods, applyToEach), wrap(firstMethods, applyToFirst), wrap(readMethods, applyToTarget)])),
+        }, wrap(allEachMethods, applyToEach), wrap(firstMethods, applyToFirst), wrap(readMethods, applyToTarget), wrap(domaManagerSwappable, stealFromPrototype)])),
         allSetups = [],
         plugins = [],
         allStyles = getComputed(doc.createElement(DIV), win),

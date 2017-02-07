@@ -801,7 +801,7 @@ var REGION_MANAGER = 'RegionManager',
                             object = makeDelegateEventKeys(view.cid, directive.uiBindings, key),
                             bound = object.fn = bindTo(isString(method) ? view[method] : method, view);
                         __events.push(object);
-                        el.on(object.events, object[SELECTOR] || NULL, bound, object.capture, object.group);
+                        bindElementEvents(el, bound, object);
                     });
                     directive.cachedElementBindings = __events;
                     return directive;
@@ -835,7 +835,7 @@ var REGION_MANAGER = 'RegionManager',
                     forOwn(elementTriggers, function (method, key) {
                         var object = makeDelegateEventKeys(view.cid, directive.uiBindings, key),
                             bound = object.fn = bindWith(basicViewTrigger, [view, method]);
-                        el.on(object.events, object[SELECTOR], bound, object.capture, object.group);
+                        bindElementEvents(el, bound, object);
                     });
                     directive.cachedElementTriggers = __events;
                     return directive;
@@ -864,6 +864,14 @@ var REGION_MANAGER = 'RegionManager',
                     return directive;
                 }
             });
+
+        function bindElementEvents(el, bound, object) {
+            el.on(object.events, bound, {
+                selector: object.selector,
+                capture: object.capture,
+                group: object.group
+            });
+        }
         app.defineDirective(DOCUMENT_MANAGER, DocumentManager);
         app.defineDirective(REGION_MANAGER, RegionManager, function (directive, target, name) {
             if (directive.is(DESTROYING)) {

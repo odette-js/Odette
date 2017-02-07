@@ -53,7 +53,13 @@ app.defineDirective('Tests', (function (app) {
                     tiedTo.expectations.push(expectation);
                 }
                 expectation.tiedTo = tiedTo;
-                return result;
+                return {
+                    otherwise: function (string) {
+                        if (!expectation.success) {
+                            console.error(string);
+                        }
+                    }
+                };
             };
         },
         testy = function () {
