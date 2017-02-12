@@ -279,7 +279,7 @@ application.scope().run(window, function (module, app, _, factories, $) {
                 divs.dispatchEvent('click');
                 test.expect(count).toEqual(5);
                 divs.dispatchEvent('click');
-                test.expect(count).toEqual(5);
+                test.expect(count).toEqual(5).otherwise('handler was not successfully removed from event queue when using .once()');
             }, 3);
             test.it('events can also be taken off', function () {
                 divs.on('click', handler);
@@ -288,8 +288,41 @@ application.scope().run(window, function (module, app, _, factories, $) {
                 test.expect(count).toBe(5);
                 divs.off('click', handler);
                 divs.dispatchEvent('click');
-                test.expect(count).toBe(5);
+                test.expect(count).toBe(5).otherwise('was not able to detach event handler with .off()');
             }, 3);
+            test.it('events can also be taken off from once', function () {
+                divs.once('click', handler);
+                test.expect(count).toBe(0);
+                divs.off('click', handler);
+                divs.dispatchEvent('click');
+                test.expect(count).toBe(0).otherwise('was not able to detach once event handler with .off()');
+            }, 2);
+            test.it('events can be delegated to children using the selector option', function () {
+                var $div = $.createElement('div');
+                var $span = $.createElement('span');
+                $div.append($span);
+                $div.on('click', function () {
+                    count = 100;
+                });
+                $div.on('click', function (e) {
+                    e.stopPropagation();
+                    count++;
+                }, {
+                    selector: 'span'
+                });
+                $('body').append($div);
+                test.expect(count).toBe(0);
+                $span.click();
+                test.expect(count).toBe(1).otherwise('dom node event delegation failed');
+                $div.destroy();
+                $span.destroy();
+            }, 2);
+            // test.it('events can be filtered by the children that the event goes through', function () {
+            //     var $div = $.createElement('div', null, [
+            //         ['span']
+            //     ]);
+            //     console.log($div);
+            // });
             // test.it('be careful with the once function because they can be added multiple times to the queue, since they use a proxy function, like the one available at _.once', function () {
             //     divs.once('click', handler);
             //     test.expect(count).toEqual(0);

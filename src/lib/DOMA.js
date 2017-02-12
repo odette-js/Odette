@@ -492,16 +492,10 @@ function HTMLBuild(template) {
 }
 
 function baseNodeToJSON(node) {
-    var obj = {
-        tagName: tag(node),
-        comment: BOOLEAN_FALSE,
-        text: BOOLEAN_FALSE
-    };
-    forEach(node.attributes, function (attr) {
-        var attributes = obj.attributes = obj.attributes || {};
+    var t = tag(node);
+    return [t, reduce(node.attributes, function (attributes, attr) {
         attributes[camelCase(attr[LOCAL_NAME])] = attr.value;
-    });
-    return obj;
+    }, {})];
 }
 
 function commentJSON(text) {
@@ -608,36 +602,37 @@ function HTML() {
 }
 
 function nodeToJSON(node, shouldStop_, includeComments) {
-    var obj, children, childrenLength, shouldStop = shouldStop_ || noop;
-    obj = baseNodeToJSON(node);
-    if (obj.attributes && obj.attributes.is && obj.attributes.dataRenderer) {
-        return {
-            selfSufficient: BOOLEAN_TRUE
-        };
-    }
-    if (!shouldStop(node, obj)) {
-        return obj;
-    }
-    children = node.childNodes;
-    if (!(childrenLength = children[LENGTH])) {
-        return obj;
-    }
-    obj.children = reduce(children, function (memo, child) {
-        if (isElement(child)) {
-            memo.push(nodeToJSON(child, shouldStop, includeComments));
-        } else if (child.nodeType === 3) {
-            memo.push(textJSON(child.textContent));
-        } else if (includeComments) {
-            if (child.nodeType === 8) {
-                memo.push(commentJSON(child.textContent));
-            } else {
-                memo.push({
-                    err: BOOLEAN_TRUE
-                });
-            }
-        }
-    }, []);
-    return obj;
+    return {};
+    // var obj, children, childrenLength, shouldStop = shouldStop_ || noop;
+    // obj = baseNodeToJSON(node);
+    // if (obj.attributes && obj.attributes.is && obj.attributes.dataRenderer) {
+    //     return {
+    //         selfSufficient: BOOLEAN_TRUE
+    //     };
+    // }
+    // if (!shouldStop(node, obj)) {
+    //     return obj;
+    // }
+    // children = node.childNodes;
+    // if (!(childrenLength = children[LENGTH])) {
+    //     return obj;
+    // }
+    // obj.children = reduce(children, function (memo, child) {
+    //     if (isElement(child)) {
+    //         memo.push(nodeToJSON(child, shouldStop, includeComments));
+    //     } else if (child.nodeType === 3) {
+    //         memo.push(textJSON(child.textContent));
+    //     } else if (includeComments) {
+    //         if (child.nodeType === 8) {
+    //             memo.push(commentJSON(child.textContent));
+    //         } else {
+    //             memo.push({
+    //                 err: BOOLEAN_TRUE
+    //             });
+    //         }
+    //     }
+    // }, []);
+    // return obj;
 }
 // cannot start with a text node
 function createDiffer(context) {
@@ -798,38 +793,62 @@ function nodeComparison(_a, _b, _hash, _stopper, context) {
         }
     }
 
-    function diffAttributes(a, bAttrs, style) {
-        var bKeys, aAttributes = a.attributes,
-            aLength = aAttributes.length,
-            bLength = (bKeys = keys(bAttrs)).length,
-            attrs = reduce({
-                length: Math.max(aLength, bLength)
-            }, function (memo, voided, index) {
-                var key;
-                if (memo.aLength > index) {
-                    collectAttr(memo, aAttributes[index]);
-                }
-                if (memo.bLength > index) {
-                    key = bKeys[index];
-                    collectAttr(memo, {
-                        localName: kebabCase(key),
-                        value: bAttrs[key]
-                    }, BOOLEAN_TRUE);
-                }
-            }, {
-                list: [],
-                hash: {},
-                attrsA: {},
-                accessA: {},
-                attrsB: {},
-                accessB: {},
-                aLength: aLength,
-                bLength: bLength
-            }),
+    function arrayLikeMax(aLength, bLength) {
+        return {
+            length: Math.max(aLength, bLength)
+        };
+    }
+
+    function diffNodeProperties(a, bAttrs, props, style_) {
+        var style, bKeys, aAttributes = a.attributes,
+            aLength = aAttributes[LENGTH],
+            bKeys = keys(bAttrs),
+            bLength = bKeys[LENGTH],
+            attrs = reduce(arrayLikeMax(aLength, bLength), //
+                function (memo, voided, index) {
+                    var key;
+                    if (memo.aLength > index) {
+                        collectAttr(memo, aAttributes[index]);
+                    }
+                    if (memo.bLength > index) {
+                        key = bKeys[index];
+                        collectAttr(memo, {
+                            localName: kebabCase(key),
+                            value: bAttrs[key]
+                        }, BOOLEAN_TRUE);
+                    }
+                }, {
+                    list: [],
+                    hash: {},
+                    attrsA: {},
+                    accessA: {},
+                    attrsB: {},
+                    accessB: {},
+                    aLength: aLength,
+                    bLength: bLength
+                }),
             anElId = a[__ELID__],
             updates,
             accessA = attrs.accessA,
             accessB = attrs.accessB;
+        // diffs styles
+        if (attrs.attrsA[STYLE]) {
+            aStyle = a[STYLE];
+            styl = style_ || {};
+            stylKeys = keys(styl);
+            styleIterator = arrayLikeMax(a.style[LENGTH], stylKeys[LENGTH]);
+            style = reduce(styleIterator, function (style, key) {
+                var valueA = aStyle[key];
+                var valueB = styl[key];
+                if (isUndefined(valueB)) {
+                    style[key] = '';
+                } else if (!isStrictlyEqual(valueA, (converted = convertStyleValue(key, valueB)))) {
+                    style[key] = converted;
+                }
+            }, {});
+        } else {
+            style = style_;
+        }
         forEach(attrs.list, function (key) {
             if (cantDiffAttrs[key]) {
                 return;
@@ -847,7 +866,8 @@ function nodeComparison(_a, _b, _hash, _stopper, context) {
         if (updates) {
             diffs.queue.update(a, {
                 attrs: updates,
-                style: style
+                style: style,
+                props: props
             }, updateNode);
         }
     }
@@ -897,14 +917,7 @@ function nodeComparison(_a, _b, _hash, _stopper, context) {
     }
 
     function buildAttrs(virtual) {
-        return merge(parseSelector(virtual[0]).attrs, accessAttrs(virtual));
-    }
-
-    function buildAllAttrs(virtual) {
-        var style;
-        return merge(buildAttrs(virtual), (style = accessStyle(virtual)) ? {
-            style: style
-        } : null);
+        return merge(parseSelector(accessTag(virtual)).attrs, accessAttrs(virtual));
     }
 
     function fillVirtual(virtual) {
@@ -920,13 +933,17 @@ function nodeComparison(_a, _b, _hash, _stopper, context) {
         return (isString(attrs) || isArray(attrs)) ? [first, NULL, rewrapChildren(attrs)] : [first, attrs, rewrapChildren(children)];
     }
 
+    function accessProps(virtual) {
+        return accessMeta(virtual).props;
+    }
+
     function updateElement(_node, _virtual) {
         var virtual = fillVirtual(_virtual);
         var hash = resolveIncompatability(_node, virtual);
         var frag = hash.frag;
         var node = hash.node;
         diffChildren(node, virtual);
-        diffAttributes(node, buildAttrs(virtual), accessStyle(virtual));
+        diffNodeProperties(node, buildAttrs(virtual), accessProps(virtual), accessStyle(virtual));
         setKey(node, virtual);
         // should anything take it's place
         return frag || node;
@@ -1568,22 +1585,25 @@ app.scope(function (app) {
         createElement = function (selector_, manager, attributes_, children_) {
             var confirmedObject, parsed, style, foundElement, elementName, newElement, newManager, documnt = manager && manager.element(),
                 registeredElements = manager && manager.registeredElements,
-                attributes = attributes_,
+                parsed = parseSelector(selector_),
+                tag = parsed.tag,
+                parsedAttrs = parsed.attrs,
+                passedAttrs = attributes_ && attributes_.attrs,
+                attributes = (passedAttrs || keys(parsedAttrs)[LENGTH]) ? merge(parsedAttrs, passedAttrs) : NULL,
                 children = children_,
-                tag,
                 selector = selector_;
-            if (isObject(selector)) {
-                children = selector.children;
-                attributes = selector.attributes;
-                confirmedObject = BOOLEAN_TRUE;
-                selector = selector.tagName;
-                if (selector_.text) {
-                    return makeText(selector_.content, manager);
-                }
-                if (selector_.comment) {
-                    return makeComment(selector_.content, manager);
-                }
-            }
+            // if (isObject(selector)) {
+            //     // children = selector.children;
+            //     // attributes = selector.attributes;
+            //     confirmedObject = BOOLEAN_TRUE;
+            //     // selector = selector.tagName;
+            //     if (selector_.text) {
+            //         return makeText(selector_.content, manager);
+            //     }
+            //     if (selector_.comment) {
+            //         return makeComment(selector_.content, manager);
+            //     }
+            // }
             parsed = parseSelector(selector);
             tag = parsed.tag;
             attributes = merge(parsed.attrs, attributes);
@@ -1607,13 +1627,8 @@ app.scope(function (app) {
             if (attributes) {
                 newManager.attr(attributes);
             }
-            if (!children) {
-                return newManager;
-            }
-            if (isString(children)) {
-                newManager.html(children);
-            } else {
-                newManager.append(reconstruct(children, manager));
+            if (children) {
+                updateFromVirtual(newElement, children);
             }
             return newManager;
         },
@@ -1844,6 +1859,7 @@ app.scope(function (app) {
         }),
         addEventListenerOnce = eventObjectExpansion(function (manager, events, handler, options) {
             var _handler;
+            options.matchHandler = handler;
             return isFunction(handler) && _addEventListener(manager, events, (_handler = once(function () {
                 _removeEventListener(manager, events, _handler, options);
                 return handler.apply(this, arguments);
@@ -1913,6 +1929,7 @@ app.scope(function (app) {
                         passive: passive,
                         origin: manager,
                         handler: handler,
+                        matchHandler: options.matchHandler,
                         group: options.group,
                         selector: selector,
                         passedName: passedName,
@@ -2970,11 +2987,9 @@ app.scope(function (app) {
                         } else {
                             wraptry(function () {
                                 script.html(innard);
-                                success(innard);
                                 $body.append(script);
-                            }, function () {
-                                failure(innard);
-                            });
+                                success(innard);
+                            }, failure);
                         }
                     });
                 },
@@ -3680,8 +3695,8 @@ app.scope(function (app) {
                  */
                 queryString: function () {
                     var clas, json = baseNodeToJSON(this.element()),
-                        string = json.tagName;
-                    return reduce(json.attributes, function (string, attr, key) {
+                        string = json[0];
+                    return reduce(json[1], function (string, attr, key) {
                         if (key === ID || key === CLASS) {
                             return string;
                         }
@@ -4813,8 +4828,9 @@ app.scope(function (app) {
                 };
             })
         ])),
-        _removeEventListener = function (manager_, name, handler, options) {
+        _removeEventListener = function (manager_, name, handler_, options) {
             var selector = options.selector,
+                handler = options.matchHandler || handler_,
                 manager = elementSwapper[selector] ? ((selector = '') || elementSwapper[selector_](manager_)) : manager_,
                 capture = !!options.capture_,
                 group = options.group,
@@ -4822,7 +4838,7 @@ app.scope(function (app) {
                 removeFromList = function (list, name) {
                     return list.obliteration(function (obj) {
                         var selected;
-                        if ((!name || name === obj.passedName) && (!handler || obj.handler === handler) && (!group || obj.group === group) && (isNil(selector) ? BOOLEAN_TRUE : ((selected = obj.selector) && selected.matches(selector)))) {
+                        if ((!name || name === obj.passedName) && (!handler || obj.handler === handler || handler === obj.matchHandler) && (!group || obj.group === group) && (isNil(selector) ? BOOLEAN_TRUE : ((selected = obj.selector) && selected.matches(selector)))) {
                             directive.detach(obj);
                         }
                     });
