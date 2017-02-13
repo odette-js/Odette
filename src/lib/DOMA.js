@@ -1595,18 +1595,6 @@ app.scope(function (app) {
                 attributes = (passedAttrs || keys(parsedAttrs)[LENGTH]) ? merge(parsedAttrs, passedAttrs) : NULL,
                 children = children_,
                 selector = selector_;
-            // if (isObject(selector)) {
-            //     // children = selector.children;
-            //     // attributes = selector.attributes;
-            //     confirmedObject = BOOLEAN_TRUE;
-            //     // selector = selector.tagName;
-            //     if (selector_.text) {
-            //         return makeText(selector_.content, manager);
-            //     }
-            //     if (selector_.comment) {
-            //         return makeComment(selector_.content, manager);
-            //     }
-            // }
             parsed = parseSelector(selector);
             tag = parsed.tag;
             attributes = merge(parsed.attrs, attributes);
@@ -1913,15 +1901,15 @@ app.scope(function (app) {
         },
         // _addEventListener = function (manager_, eventNames, group, selector_, handler, capture) {
         _addEventListener = function (manager_, events, handler, options) {
-            var eventManager, selector = options.selector,
+            var eventManager, selector_ = options.selector,
+                selector = selector_,
                 // use as string if possible
-                manager = elementSwapper[selector] ? elementSwapper[selector](manager_) : manager_,
+                manager = elementSwapper[selector] ? ((selector = EMPTY_STRING) || elementSwapper[selector](manager_)) : manager_,
                 // turns into an object
                 selector = resolveSelector(selector),
                 wasCustom = manager.is(CUSTOM),
                 spaceList = toArray(events, SPACE),
                 passive = options.passive,
-                // passiveIsUndefined = isUndefined(passive),
                 handlesExpansion = function (name, passedName, nameStack) {
                     eventManager = eventManager || manager.directive(EVENT_MANAGER);
                     if (!ALL_EVENTS_HASH[name]) {
