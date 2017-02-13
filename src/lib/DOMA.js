@@ -478,8 +478,11 @@ function HTMLTagContent(tag, attrs, content) {
     return this.tagOpen(tag, attrs) + '>' + content + '</' + tag + '>';
 }
 
-function HTMLTagBuild(tag, attrs, content) {
-    var special, HTML = this;
+function HTMLTagBuild(tag_, attrs_, content) {
+    var special, HTML = this,
+        parsed = parseSelector(tag_),
+        tag = parsed.tag,
+        attrs = merge(parsed.attrs, attrs_);
     return (special = HTML.tagSpecial[tag]) ? special(attrs, content) : (HTML.tagsEmpty[tag] ? HTML.tagEmpty(tag, attrs) : HTML.tagContent(tag, attrs, content));
 }
 
