@@ -6,7 +6,8 @@ var gulp = require('gulp'),
     concat = require('gulp-concat'),
     minName = function (filename) {
         var name = filename.split('.');
-        name.splice(name.length - 1, 0, 'min');
+        name[0] = name[0] + '-min';
+        // name.splice(name.length - 1, 0, '-min');
         return name.join('.');
     };
 module.exports = function (settings, paths) {
@@ -16,7 +17,8 @@ module.exports = function (settings, paths) {
             [paths.jsOdetteNode, paths.jsOdetteNodeDistribute],
             [paths.jsOdette, paths.jsOdetteDistribute],
             [paths.jsApplication, paths.jsApplicationDistribute],
-            [paths.jsLibraryList, paths.jsLibraryDistribute]
+            [paths.jsLibraryList, paths.jsLibraryDistribute],
+            [paths.jsFull, paths.jsFullOutputDistribute]
         ], function (set) {
             return new Promise(function (success, failure) {
                 gulp.src(set[0]).pipe(plumber()) //

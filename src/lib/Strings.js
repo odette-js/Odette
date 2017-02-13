@@ -468,7 +468,7 @@ var deburredLetters = {
         return memo;
     }, {}),
     weekdays = toArray('sunday,monday,tuesday,wednesday,thursday,friday,saturday'),
-    months = toArray('january,feburary,march,april,may,june,july,august,september,october,november,december'),
+    months = toArray('january,february,march,april,may,june,july,august,september,october,november,december'),
     monthsHash = wrap(months, BOOLEAN_TRUE),
     monthsIndex = wrap(months, function (key, index) {
         return index;

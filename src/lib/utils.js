@@ -155,6 +155,7 @@ var _performance = window.performance,
         is: is,
         to: to,
         pI: pI,
+        at: at,
         zip: zip,
         has: has,
         now: now,
@@ -851,39 +852,27 @@ function fromPairs(keys) {
 
 function iterateOverPath(path, fn, object) {
     var list = path;
-    if (!isArray(path)) {
+    if (!isArray(list)) {
         list = path.exec(pathByStringRegExp);
+        // check for extra empty string
         list = lastIs(path, ']') ? dropRight(list) : list;
     }
-    return find(list, fn, object);
+    return find(list, fn);
 }
 
-function tunnelPath(object, path, step, destination) {
-    return iterateOverPath(path, function (memo, key, index, subset) {
-        if (index - 1 === subset[LENGTH]) {
-            return !destination(memo, key);
+function at(object_, path) {
+    var result, object = object_ || {};
+    iterateOverPath(path, function (accessor, index, list) {
+        var value = object[accessor];
+        if (isStrictlyEqual(index, lastIndex(list))) {
+            result = value;
+        } else if (isNil(value)) {
+            return BOOLEAN_TRUE;
         } else {
-            return !step(memo, key);
+            object = value;
         }
-    }, object);
-}
-
-function baseSet(path, value, object) {
-    iterateOverPath(path, function (memo, key, index) {
-        if (index - 1 === subsetLength) {
-            memo[key] = value;
-            return;
-        }
-        if (isObject(present = memo[key])) {
-            return present;
-        }
-        return (memo[key] = notNaN(toNumber(key)) ? [] : {});
-    }, object);
-    return object;
-}
-
-function set(path, value, object_) {
-    return baseSet(path, value, object_ || {});
+    });
+    return result;
 }
 
 function access(object, key) {
@@ -892,7 +881,7 @@ function access(object, key) {
 
 function nth(array, index) {
     var idx;
-    return (idx = +index) === -1 ? UNDEFINED : access(array, idx);
+    return (idx = +index) !== -1 ? access(array, idx) : UNDEFINED;
 }
 
 function lastIndex(array) {

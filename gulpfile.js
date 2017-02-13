@@ -89,7 +89,8 @@ var content = ['browserify', 'distribute'],
         jsNodeDistribute: 'index.js',
         jsDistributes: './dist/build/',
         jsFull: _.map(auto_app.concat(library, ['../wrappers/auto_setup']), libPath),
-        jsFullOutput: 'odette-full.js'
+        jsFullOutput: 'odette-full.js',
+        jsFullOutputDistribute: 'odette-full.js'
     }),
     settings = require('./settings'),
     argv = require('optimist').argv;
