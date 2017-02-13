@@ -853,7 +853,7 @@ function fromPairs(keys) {
 function iterateOverPath(path, fn, object) {
     var list = path;
     if (!isArray(list)) {
-        list = path.exec(pathByStringRegExp);
+        list = path.split(pathByStringRegExp);
         // check for extra empty string
         list = lastIs(path, ']') ? dropRight(list) : list;
     }
