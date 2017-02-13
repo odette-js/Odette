@@ -1904,7 +1904,7 @@ app.scope(function (app) {
             var eventManager, selector_ = options.selector,
                 selector = selector_,
                 // use as string if possible
-                manager = elementSwapper[selector] ? ((selector = EMPTY_STRING) || elementSwapper[selector](manager_)) : manager_,
+                manager = elementSwapper[selector_] ? ((selector = EMPTY_STRING) || elementSwapper[selector_](manager_)) : manager_,
                 // turns into an object
                 selector = resolveSelector(selector),
                 wasCustom = manager.is(CUSTOM),
