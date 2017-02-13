@@ -1915,7 +1915,7 @@ app.scope(function (app) {
         _addEventListener = function (manager_, events, handler, options) {
             var eventManager, selector = options.selector,
                 // use as string if possible
-                manager = elementSwapper[selector] ? ((selector = '') || elementSwapper[selector](manager_)) : manager_,
+                manager = elementSwapper[selector] ? elementSwapper[selector](manager_) : manager_,
                 // turns into an object
                 selector = resolveSelector(selector),
                 wasCustom = manager.is(CUSTOM),
