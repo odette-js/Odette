@@ -1,14 +1,4 @@
-var REGION_MANAGER = 'RegionManager',
-    DOCUMENT_VIEW = 'DocumentView',
-    DOCUMENT_MANAGER = 'DocumentManager',
-    RENDER_LOOP = 'renderLoop',
-    RENDER = 'render',
-    RENDERED = RENDER + 'ed',
-    RENDERING = RENDER + 'ing',
-    OPTIONS = 'options',
-    MODEL_ID = 'modelId',
-    ESTABLISHED = 'established',
-    verifyOwner$ = function (instance) {
+var verifyOwner$ = function (instance) {
         if (instance.owner$) {
             return;
         }
