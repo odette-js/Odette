@@ -1,4 +1,3 @@
-var DEPENDENCY_MANAGER = 'DependencyManager';
 var PromiseProxy = function (key) {
     return function (fn) {
         var deps = this,
