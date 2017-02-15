@@ -369,6 +369,9 @@ var verifyOwner$ = function (instance) {
                     }
                     return view;
                 },
+                element: function (key) {
+                    return key ? this.directive(CAPITAL_ELEMENT).elementByKey(key) : this.$el.element();
+                },
                 render: function (preventChain) {
                     var newelementisDifferent, element, json, html, renderResult, bufferedDirective, template, settingElement, view = this;
                     // you might be able to do this a better way
@@ -618,6 +621,10 @@ var verifyOwner$ = function (instance) {
                 constructor: function (view) {
                     this.view = view;
                     return this;
+                },
+                elementByKey: function (key) {
+                    var hashed = this.hashed;
+                    return hashed && hashed[key];
                 },
                 ensure: function () {
                     var el, element = this,
