@@ -94,6 +94,9 @@ var verifyOwner$ = function (instance) {
                                     memo.push(adoption);
                                 }
                             }, []);
+                        if (unwrapped.length) {
+                            region.directive(CHILDREN).sort();
+                        }
                         if (region.el) {
                             region.render(renderer);
                         }
@@ -429,7 +432,6 @@ var verifyOwner$ = function (instance) {
                         key: region_,
                         parent: regionManagerDirective
                     }]));
-                    // regionManagerDirective.list.push(region);
                     regionManagerDirective.list.keep(ID, where, region);
                     return region;
                 },

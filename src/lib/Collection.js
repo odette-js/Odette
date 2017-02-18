@@ -1,4 +1,6 @@
-var COLLECTION = 'Collection',
+var isNullMessage = 'object must not be null or ' + UNDEFINED,
+    validIdMessage = 'objects in sorted collections must have either a number or string for their valueOf result',
+    COLLECTION = 'Collection',
     REVERSED = 'reversed',
     DELIMITED = 'delimited',
     STRING_MANAGER = 'StringManager',
@@ -7,9 +9,7 @@ var COLLECTION = 'Collection',
     removeAll = doToAll(remove),
     // now we start with some privacy
     Collection = app.block(function (app) {
-        var isNullMessage = 'object must not be null or ' + UNDEFINED,
-            validIdMessage = 'objects in sorted collections must have either a number or string for their valueOf result',
-            recreatingSelfCollection = toArray('eq,where,whereNot,results,cycle,uncycle,flatten,gather,unique').concat(associatedBuilderKeys('map'), associatedBuilderKeys('filter'), associatedBuilderKeys('filterNegative')),
+        var recreatingSelfCollection = toArray('eq,where,whereNot,results,cycle,uncycle,flatten,gather,unique').concat(associatedBuilderKeys('map'), associatedBuilderKeys('filter'), associatedBuilderKeys('filterNegative')),
             eachIteratorsFunctionRequired = wrap(toArray('forEach,forOwn,forIn,forEachRight,forOwnRight,forInRight'), BOOLEAN_TRUE),
             eachHandlerKeys = buildCallerKeys('forEach').concat(buildCallerKeys('forOwn'), buildCallerKeys('each', eachRight)),
             abstractedCanModify = toArray('add'),
@@ -136,6 +136,7 @@ var COLLECTION = 'Collection',
             },
             Collection = factories[COLLECTION] = factories.Directive.extend(COLLECTION, extend([{
                 get: parody(REGISTRY, 'get'),
+                getBy: parody(REGISTRY, 'get'),
                 getById: function (id) {
                     return this.get(ID, id);
                 },
@@ -292,19 +293,8 @@ var COLLECTION = 'Collection',
                     }
                     return sm;
                 },
-                add: function (object) {
-                    var registryDirective, sorted = this,
-                        isNotNull = object == NULL && exception(isNullMessage),
-                        valueOfResult = object && object.valueOf(),
-                        retrieved = (registryDirective = sorted[REGISTRY]) && sorted.get(ID, valueOfResult);
-                    if (retrieved) {
-                        return BOOLEAN_FALSE;
-                    }
-                    ret = !sorted.validIDType(valueOfResult) && exception(validIdMessage);
-                    sorted.insertAt(object, sorted.closestIndex(valueOfResult) + 1);
-                    (registryDirective || sorted.directive(REGISTRY)).keep(ID, valueOfResult, object);
-                    return BOOLEAN_TRUE;
-                },
+                add: sortedAdd,
+                // push: sortedAdd,
                 remove: function (object, index) {
                     var where, sorted = this,
                         isNotNull = object == NULL && exception(isNullMessage),
@@ -503,6 +493,20 @@ var COLLECTION = 'Collection',
             });
         return Collection;
     });
+
+function sortedAdd(object) {
+    var registryDirective, ret, sorted = this,
+        isNotNull = object == NULL && exception(isNullMessage),
+        valueOfResult = object && object.valueOf(),
+        retrieved = (registryDirective = sorted[REGISTRY]) && sorted.get(ID, valueOfResult);
+    if (retrieved) {
+        return BOOLEAN_FALSE;
+    }
+    ret = !sorted.validIDType(valueOfResult) && exception(validIdMessage);
+    sorted.insertAt(object, sorted.closestIndex(valueOfResult) + 1);
+    (registryDirective || sorted.directive(REGISTRY)).keep(ID, valueOfResult, object);
+    return BOOLEAN_TRUE;
+}
 
 function doToAll(handler) {
     return function (list, items, lookAfter, lookBefore, fromRight) {

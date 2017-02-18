@@ -102,6 +102,7 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                     // explicitly tie to parent
                     // attach events from parent
                     directive.addToHash(model);
+                    directive.keep(ID, model.id, model, insertPosition(directive, model));
                     // ties models together
                     delegateParentEvents(parent, model);
                     delegateChildEvents(parent, model);
@@ -140,7 +141,6 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                     // add to collection
                     // children.add(newModel);
                     // register with parent
-                    children.keep(ID, newModel.id, newModel);
                     children[REGISTRY].keep('cid', newModel.cid, newModel);
                 },
                 removeFromHash: function (child) {
@@ -610,6 +610,10 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                         return stringify(this.clone());
                     }
                 });
+
+        function insertPosition(children, newModel) {
+            // children.
+        }
 
         function changeCheckHandle(key, fn, context) {
             var bound = bindTo(fn, context);
