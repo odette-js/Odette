@@ -157,6 +157,7 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                 // comparator: function (a) {
                 //     return a.model.valueOf();
                 // },
+                //
                 /**
                  * @description resets the model's attributes to the object that is passed in
                  * @name Model#reset
