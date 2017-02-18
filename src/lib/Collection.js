@@ -176,7 +176,7 @@ var isNullMessage = 'object must not be null or ' + UNDEFINED,
                     }
                     return item;
                 },
-                comparator: function () {},
+                // comparator: function () {},
                 constructor: function (items) {
                     this.reset(items);
                     return this;
