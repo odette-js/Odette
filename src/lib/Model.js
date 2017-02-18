@@ -154,9 +154,9 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                     // unregister from the child hash keys
                     children[REGISTRY].drop('cid', child.cid);
                 },
-                comparator: function (a) {
-                    return a.model.valueOf();
-                },
+                // comparator: function (a) {
+                //     return a.model.valueOf();
+                // },
                 /**
                  * @description resets the model's attributes to the object that is passed in
                  * @name Model#reset
