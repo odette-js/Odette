@@ -555,7 +555,7 @@ function isTypeWrap(type_, fn_) {
         return BOOLEAN_TRUE;
     };
     return function (thing) {
-        return type(thing) === ty && fn(thing);
+        return isStrictlyEqual(type(thing), ty) && fn(thing);
     };
 }
 
