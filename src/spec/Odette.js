@@ -1,8 +1,8 @@
-application.scope().run(window, function (module, app, _, factories, documentView, scopedFactories, $) {
+application.scope().run(window, function (module, app, _, factories, $) {
     test.describe('Odette', function () {
         test.describe('creates version independent application objects', function () {
             test.it('wherever the "where" array says it has', function () {
-                _.each(Odette.where, function (key) {
+                _.forEach(Odette.where, function (key) {
                     test.expect(window[key]).not.toEqual(void 0);
                 });
             }, 1);
@@ -56,6 +56,10 @@ application.scope().run(window, function (module, app, _, factories, documentVie
                 testApp.registerVersion('0.0.0');
                 test.expect(testApp.scope(testApp.currentVersion).VERSION).toBe('0.0.0');
             }, 1);
+            // test.it('can handle when multiple apps have been created', //
+            //     function () {
+            //         // Odette(window, 'domatestapp', '0.0.0', function () {});
+            //     });
         });
     });
 });

@@ -1,7 +1,5 @@
 var Deferred = app.block(function (app) {
-    var _ = app._,
-        factories = _.factories,
-        UP_CATCH = capitalize(CATCH),
+    var UP_CATCH = capitalize(CATCH),
         ALL_STATES = 'allStates',
         STASHED_ARGUMENT = 'stashedArgument',
         STASHED_HANDLERS = 'stashedHandlers',
@@ -142,17 +140,17 @@ var Deferred = app.block(function (app) {
         },
         collect = function (deferred, list) {
             var collection = deferred.directive(COLLECTION);
-            flatten(list, function (pro) {
+            forEach(flattenDeep(list), function (pro) {
                 if (deferred.isChildType(pro)) {
                     collection.add(pro);
                     collection.keep('cid', pro.cid, pro);
                 }
-            }, BOOLEAN_TRUE);
+            });
         },
         listen = function (deferred, unbound) {
             var bound = bind(unbound, deferred),
                 collection = deferred.directive(COLLECTION);
-            collection.each(function (pro) {
+            collection.forEach(function (pro) {
                 if (collection.get(LISTENING, pro.cid)) {
                     return;
                 }
@@ -243,7 +241,7 @@ var Deferred = app.block(function (app) {
                     // cannot have been resolved in any way yet
                     // attach some convenience handlers to the
                     // instance so we can call crazy custom methods
-                    intendedObject(extend([{}, baseStates, result(deferred, 'associativeStates')]), NULL, addMethod, deferred);
+                    intendedObject(extend([{}, baseStates, result(deferred, 'associativeStates')]), NULL, bindTo(addMethod, deferred));
                     return deferred;
                 },
                 /**
@@ -276,7 +274,7 @@ var Deferred = app.block(function (app) {
                  * @description Note: In order to resolve the deferred to a non base state, (always, success, failure, error) you need to first add to the auxiliary states. Please see [Auxiliary States]{@link Deferred#auxiliaryStates}.
                  * @method
                  * @example <caption>If you have all of your auxiliary states setup, then you can simply resolve the deferred and the tree will be triggered. Below is an example which uses the same auxiliary states used in the <a href="/api/v0/ajax">Ajax</a> constructor, which is outlined in the [Auxiliary States]{@link Deferred#auxiliaryStates}.</caption>
-                 * _.HTTP().handle("status:200", function () {
+                 * $.HTTP().handle("status:200", function () {
                  *     // 200 (never hit)
                  * }).handle("status:204", function () {
                  *     // no content (hit)
@@ -458,7 +456,7 @@ var Deferred = app.block(function (app) {
                         stashedHandlers = getHandlers(deferred);
                     // do the hard work now, so later you can
                     // iterate through the stack quickly
-                    flatten(isFunction(list) ? [list] : list, function (fn) {
+                    forEach(flattenDeep(isFunction(list) ? [list] : list), function (fn) {
                         if (!isFunction(fn)) {
                             return;
                         }
@@ -467,7 +465,7 @@ var Deferred = app.block(function (app) {
                             fn: bind(fn, deferred),
                             handler: fn
                         });
-                    }, BOOLEAN_TRUE);
+                    });
                 }),
                 /**
                  * When the handle method is called, the callback will first be stashed in a queue against that state, then the deferred will check to see if it is resolved, and if it is, then it will empty it's resolved state's queue.
@@ -526,7 +524,7 @@ var Deferred = app.block(function (app) {
      * return Deferred.reject("19&3s*oi(s)ee0w");
      */
     // toArray('resolve,reject')
-    // each({
+    // forOwn({
     //     resolve: SUCCESS,
     //     reject: FAILURE
     // }, function (val, key) {
@@ -545,15 +543,12 @@ var Deferred = app.block(function (app) {
      *     // results => [1, 2, 3];
      * });
      */
-    duff(toArray('all,race'), function (key) {
+    forEach(toArray('all,race'), function (key) {
         Deferred[key] = function () {
             var deferred = Deferred();
             return deferred[key].apply(deferred, arguments);
         };
     });
-    // app.extend({
-    //     dependency: Deferred.all
-    // });
     _.publicize({
         isDeferred: isDeferred
     });

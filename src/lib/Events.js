@@ -9,15 +9,135 @@ var EVENT_STRING = 'Events',
     TALKER_PREFIX = 't',
     STATE = 'state',
     HANDLERS = 'handlers',
+    methodExchange = function (eventer, handler) {
+        var fn = isString(handler) ? eventer[handler] : handler,
+            valid = !isFunction(fn) && exception('handler must be a function or a string with a method on the originating object');
+        return fn;
+    },
+    curriedEquality = function (key, original) {
+        return function (e) {
+            return isEqual(original, e[ORIGIN].get(key));
+        };
+    },
+    makeHandler = function (directive, object) {
+        object.fn = function (e) {
+            if (e && object.comparator(e)) {
+                if (object.triggersOnce) {
+                    directive.detach(object);
+                }
+                object.runner(e);
+            }
+        };
+    },
+    retreiveListeningObject = function (listener, talker) {
+        var listening, listenerDirective = listener.directive(EVENT_MANAGER),
+            talkerDirective = talker.directive(EVENT_MANAGER),
+            talkerId = talkerDirective[TALKER_ID],
+            listeningTo = listenerDirective[LISTENING_TO];
+        if (talkerId && (listening = listeningTo[talkerId])) {
+            return listening;
+        }
+        // This talkerId is not listening to any other events on `talker` yet.
+        // Setup the necessary references to track the listening callbacks.
+        talkerId = talkerDirective[TALKER_ID] = talkerDirective[TALKER_ID] || app.counter(TALKER_PREFIX);
+        listening = listeningTo[talkerId] = {
+            talker: talker,
+            // look into not having this key
+            talkerId: talkerId,
+            listeningTo: listeningTo,
+            count: 0
+        };
+        return listening;
+    },
+    listenToHandler = function (eventer, directive, evnt, list, modifier) {
+        var target = list[0];
+        var targetDirective = listenToModifier(eventer, directive, evnt, target);
+        evnt.handler = methodExchange(eventer, evnt.handler);
+        attachEventObject(target, targetDirective, evnt, list.slice(1), modifier);
+    },
+    listenToOnceHandler = function (eventer, directive, obj, list) {
+        listenToHandler(eventer, directive, obj, list, onceModification);
+    },
+    setupWatcher = function (nameOrObjectIndex, triggersOnce) {
+        return function () {
+            var context, list, firstArg, handlersIndex, nameOrObject, eventerDirective, original_handler, targetDirective, eventer = this,
+                ret = {},
+                args = toArray(arguments);
+            if (!arguments[0]) {
+                return ret;
+            }
+            handlersIndex = nameOrObjectIndex;
+            list = args.slice(nameOrObjectIndex);
+            nameOrObject = list[0];
+            context = list[(isObject(nameOrObject) ? 2 : 3)] || eventer;
+            if (nameOrObjectIndex && !args[0]) {
+                return ret;
+            }
+            eventerDirective = eventer.directive(EVENT_MANAGER);
+            if (nameOrObjectIndex) {
+                targetDirective = args[0].directive(EVENT_MANAGER);
+            } else {
+                targetDirective = eventerDirective;
+            }
+            intendedObject(nameOrObject, list[1], function (key_, value_, isObject_) {
+                // only allow one to be watched
+                var key = key_.split(SPACE)[0],
+                    fun_things = original_handler || bind(list[isObject_ ? 1 : 2], context || eventer),
+                    value = isFunction(value_) ? value_ : curriedEquality(key, value_),
+                    name = CHANGE + COLON + key,
+                    origin = eventer,
+                    made = targetDirective.make(name, fun_things, eventer);
+                if (nameOrObjectIndex + 2 < args[LENGTH]) {
+                    args.push(context);
+                }
+                if (nameOrObjectIndex) {
+                    listenToModifier(eventer, eventerDirective, made, args[0]);
+                }
+                made.comparator = value;
+                made.triggersOnce = !!triggersOnce;
+                made.runner = fun_things;
+                attachEventObject(origin, targetDirective, made, [list[0], list[2], list[3]], makeHandler);
+                ret[key] = fun_things;
+            });
+            return ret;
+        };
+    },
+    listenToModifier = function (eventer, targetDirective, obj, target) {
+        var valid, listeningObject = retreiveListeningObject(eventer, target),
+            eventsDirective = target.directive(EVENT_MANAGER),
+            handlers = eventsDirective[HANDLERS] = eventsDirective[HANDLERS] || {};
+        listeningObject.count++;
+        obj.listening = listeningObject;
+        return eventsDirective;
+    },
+    onceModification = function (directive, obj) {
+        var fn = obj.fn || obj.handler;
+        obj.fn = once(function (e) {
+            // much faster than using off
+            directive.detach(obj);
+            // ok with using apply here since it is a one time deal per event
+            return fn.apply(this, arguments);
+        });
+    },
+    attachEventObject = function (eventer, directive, evnt, args, modifier) {
+        evnt.context = evnt.context || args[2];
+        evnt.handler = methodExchange(eventer, evnt.handler);
+        directive.attach(evnt.name, evnt, modifier);
+    },
+    onceHandler = function (eventer, directive, obj, args) {
+        attachEventObject(eventer, directive, obj, args, onceModification);
+    },
+    onFillerMaker = function (count) {
+        return function (eventer, args) {
+            if (args[LENGTH] === count) {
+                args.push(eventer);
+            }
+        };
+    },
     Events = app.block(function (app) {
-        var methodExchange = function (eventer, handler) {
-                var fn = isString(handler) ? eventer[handler] : handler,
-                    valid = !isFunction(fn) && exception('handler must be a function or a string with a method on the originating object');
-                return fn;
-            },
-            iterateOverList = function (eventer, directive, names, handler, args, iterator) {
+        var iterateOverList = function (eventer, directive, names, handler, args, iterator) {
                 // only accepts a string or a function
-                return duff(toArray(names, SPACE), function (eventName) {
+                return forEach(toArray(names, SPACE), function (eventName) {
                     iterator(eventer, directive, directive.make(eventName, handler, eventer), args);
                 });
             },
@@ -49,128 +169,8 @@ var EVENT_STRING = 'Events',
                     return eventer;
                 };
             },
-            curriedEquality = function (key, original) {
-                return function (e) {
-                    return isEqual(original, e[ORIGIN].get(key));
-                };
-            },
-            makeHandler = function (directive, object) {
-                object.fn = function (e) {
-                    if (e && object.comparator(e)) {
-                        if (object.triggersOnce) {
-                            directive.detach(object);
-                        }
-                        object.runner(e);
-                    }
-                };
-            },
-            setupWatcher = function (nameOrObjectIndex, triggersOnce) {
-                return function () {
-                    var context, list, firstArg, handlersIndex, nameOrObject, eventerDirective, original_handler, targetDirective, eventer = this,
-                        ret = {},
-                        args = toArray(arguments);
-                    if (!arguments[0]) {
-                        return ret;
-                    }
-                    handlersIndex = nameOrObjectIndex;
-                    list = args.slice(nameOrObjectIndex);
-                    nameOrObject = list[0];
-                    context = list[(isObject(nameOrObject) ? 2 : 3)] || eventer;
-                    if (nameOrObjectIndex && !args[0]) {
-                        return ret;
-                    }
-                    eventerDirective = eventer.directive(EVENT_MANAGER);
-                    if (nameOrObjectIndex) {
-                        targetDirective = args[0].directive(EVENT_MANAGER);
-                    } else {
-                        targetDirective = eventerDirective;
-                    }
-                    intendedObject(nameOrObject, list[1], function (key_, value_, isObject_) {
-                        // only allow one to be watched
-                        var key = key_.split(SPACE)[0],
-                            fun_things = original_handler || bind(list[isObject_ ? 1 : 2], context || eventer),
-                            value = isFunction(value_) ? value_ : curriedEquality(key, value_),
-                            name = CHANGE + COLON + key,
-                            origin = eventer,
-                            made = targetDirective.make(name, fun_things, eventer);
-                        if (nameOrObjectIndex + 2 < args[LENGTH]) {
-                            args.push(context);
-                        }
-                        if (nameOrObjectIndex) {
-                            listenToModifier(eventer, eventerDirective, made, args[0]);
-                        }
-                        made.comparator = value;
-                        made.triggersOnce = !!triggersOnce;
-                        made.runner = fun_things;
-                        attachEventObject(origin, targetDirective, made, [list[0], list[2], list[3]], makeHandler);
-                        ret[key] = fun_things;
-                    });
-                    return ret;
-                };
-            },
-            listenToModifier = function (eventer, targetDirective, obj, target) {
-                var valid, listeningObject = retreiveListeningObject(eventer, target),
-                    eventsDirective = target.directive(EVENT_MANAGER),
-                    handlers = eventsDirective[HANDLERS] = eventsDirective[HANDLERS] || {};
-                listeningObject.count++;
-                obj.listening = listeningObject;
-                return eventsDirective;
-            },
-            onceModification = function (directive, obj) {
-                var fn = obj.fn || obj.handler;
-                obj.fn = once(function (e) {
-                    // much faster than using off
-                    directive.detach(obj);
-                    // ok with using apply here since it is a one time deal per event
-                    return fn.apply(this, arguments);
-                });
-            },
-            attachEventObject = function (eventer, directive, evnt, args, modifier) {
-                evnt.context = evnt.context || args[2];
-                evnt.handler = methodExchange(eventer, evnt.handler);
-                directive.attach(evnt.name, evnt, modifier);
-            },
-            onceHandler = function (eventer, directive, obj, args) {
-                attachEventObject(eventer, directive, obj, args, onceModification);
-            },
-            onFillerMaker = function (count) {
-                return function (eventer, args) {
-                    if (args[LENGTH] === count) {
-                        args.push(eventer);
-                    }
-                };
-            },
             onFiller = onFillerMaker(2),
             listenToFiller = onFillerMaker(3),
-            retreiveListeningObject = function (listener, talker) {
-                var listening, listenerDirective = listener.directive(EVENT_MANAGER),
-                    talkerDirective = talker.directive(EVENT_MANAGER),
-                    talkerId = talkerDirective[TALKER_ID],
-                    listeningTo = listenerDirective[LISTENING_TO];
-                if (talkerId && (listening = listeningTo[talkerId])) {
-                    return listening;
-                }
-                // This talkerId is not listening to any other events on `talker` yet.
-                // Setup the necessary references to track the listening callbacks.
-                talkerId = talkerDirective[TALKER_ID] = talkerDirective[TALKER_ID] || app.counter(TALKER_PREFIX);
-                listening = listeningTo[talkerId] = {
-                    talker: talker,
-                    // look into not having this key
-                    talkerId: talkerId,
-                    listeningTo: listeningTo,
-                    count: 0
-                };
-                return listening;
-            },
-            listenToHandler = function (eventer, directive, evnt, list, modifier) {
-                var target = list[0];
-                var targetDirective = listenToModifier(eventer, directive, evnt, target);
-                evnt.handler = methodExchange(eventer, evnt.handler);
-                attachEventObject(target, targetDirective, evnt, list.slice(1), modifier);
-            },
-            listenToOnceHandler = function (eventer, directive, obj, list) {
-                listenToHandler(eventer, directive, obj, list, onceModification);
-            },
             uniqueKey = 'c',
             /**
              * Event driven base api for many other objects to base their class off of. Based off of the class originally introduced by backbone, with a modification to the way arguments are applied (only 1) and a proliforation of the variety of handler wrappers that are wrapped and applied in different ways to convenience the user.
@@ -265,59 +265,6 @@ var EVENT_STRING = 'Events',
                      */
                     listenToOnce: flattenMatrix(listenToOnceHandler, 1, 4, listenToFiller),
                     /**
-                     * Convenience function for triggering a handler based on a filter.
-                     * @method
-                     * @param {String|Array} list event names, either as a space delineated list, or as an actual Array.
-                     * @param {*} filter Pass any parameter to filter the corresponding value by equality using the [isEqual]{@link _#isEqual} method.
-                     * @param {Function} fn handler when the filter is met, and evaluates truthy.
-                     * @returns {Events}
-                     * @example <caption>below the watch method waits until the property key is set to the string value.</caption>
-                     * events.watch("key", "value", function (e) {
-                     *     events.get("key") === "value"; // true
-                     * });
-                     */
-                    watch: setupWatcher(0),
-                    /**
-                     * Convenience function for triggering a handler based on a filter. Handler will be taken off after first trigger.
-                     * @method
-                     * @param {String|Array} list event names, either as a space delineated list, or as an actual Array.
-                     * @param {*} filter Pass any parameter to filter the corresponding value by equality using the [isEqual]{@link _#isEqual} method.
-                     * @param {Function} fn handler when the filter is met, and evaluates truthy.
-                     * @returns {Events}
-                     * @example <caption>The watchOnce method waits until the property key is set to the string value. Handler is taken off after it is triggered for the first time.</caption>
-                     * events.watchOnce("key", "value", function (e) {
-                     *     events.get("key") === "value"; // true
-                     * });
-                     */
-                    watchOnce: setupWatcher(0, 1),
-                    /**
-                     * Parody for the [listenTo]{@link Events#listenTo} method mixed with [watch]{@link Events#watch}. Basically it allows you to listen to another object and set up the same logic available in [watch]{@link Events#watch}.
-                     * @method
-                     * @param {String|Array} list event names, either as a space delineated list, or as an actual Array.
-                     * @param {*} filter Pass any parameter to filter the corresponding value by equality using the [isEqual]{@link _#isEqual} method.
-                     * @param {Function} fn handler when the filter is met, and evaluates truthy.
-                     * @returns {Events}
-                     * @example <caption>The watchOther method waits until the property key is set on another model to the string value.</caption>
-                     * events.watchOther(otherEvents, "key", "value", function (e) {
-                     *     otherEvents.get("key") === "value"; // true
-                     * });
-                     */
-                    watchOther: setupWatcher(1),
-                    /**
-                     * Convenience function for triggering a handler based on a filter. Handler will be taken off after first trigger.
-                     * @method
-                     * @param {String|Array} list event names, either as a space delineated list, or as an actual Array.
-                     * @param {Events} eventer an object that can have events attached and detached from it via the {@link EventsManager} directive.
-                     * @param {*} filter Pass any parameter to filter the corresponding value by equality using the [isEqual]{@link _#isEqual} method.
-                     * @param {Function} fn handler when the filter is met, and evaluates truthy.
-                     * @returns {Events}
-                     * @example <caption>The watchOther method waits until the property key is set on another model to the string value. Handler is taken off after it is triggered for the first time.</caption>
-                     * events.watchOtherOnce(otherEvents, "key", "value", function (e) {
-                     *     otherEvents.get("key") === "value"; // true
-                     * });
-                     */
-                    watchOtherOnce: setupWatcher(1, 1),
-                    /**
                      * Directive parody for the Linguistics class to instantiated behind a LinguisticsManager (an extended Collection) and do manage events
                      * @method
                      * @param {String} event to base the event trigger off of.
@@ -341,16 +288,22 @@ var EVENT_STRING = 'Events',
                     off: function (name_, fn_, context_) {
                         var context, currentObj, eventer = this,
                             name = name_,
-                            events = eventer[EVENT_MANAGER];
-                        if (!events) {
-                            return;
-                        }
-                        context = isObject(name) ? fn_ : context_;
-                        if (arguments[LENGTH]) {
-                            if (!name) {
-                                each(events[HANDLERS], function (list, name) {
+                            events = eventer[EVENT_MANAGER],
+                            removeAllMatching = function () {
+                                forOwn(events[HANDLERS], function (list, name) {
                                     events.seekAndDestroy(list, fn_, context);
                                 });
+                            };
+                        if (!events) {
+                            return eventer;
+                        }
+                        context = isObject(name) ? fn_ : context_;
+                        if (name === BOOLEAN_TRUE) {
+                            removeAllMatching();
+                        }
+                        if (arguments[LENGTH]) {
+                            if (!name) {
+                                removeAllMatching();
                             } else {
                                 intendedObject(name, fn_, function (name, fn_) {
                                     iterateOverList(eventer, events, name, fn_, [], function (eventer, directive, obj) {
@@ -400,7 +353,7 @@ var EVENT_STRING = 'Events',
                             return origin;
                         }
                         ids = target ? [targetEventsManager[TALKER_ID]] : keys(listeningTo);
-                        duff(ids, function (id) {
+                        forEach(ids, function (id) {
                             var listening = listeningTo[id];
                             if (listening) {
                                 listening.talker.off(name, callback);
@@ -423,7 +376,7 @@ var EVENT_STRING = 'Events',
                      */
                     dispatchEvents: function (names) {
                         var eventer = this;
-                        return duff(toArray(names, SPACE), eventer.dispatchStack, eventer) && eventer;
+                        return forEach(toArray(names, SPACE), bindTo(eventer.dispatchStack, eventer)) && eventer;
                     },
                     /**
                      * Proxy for dispatch event, as a filter during an iteration of a bunch of event names.
@@ -460,5 +413,12 @@ var EVENT_STRING = 'Events',
                         return returnValue;
                     }
                 });
+        Events.createEventCheck = function (eventname) {
+            return function (key, fn) {
+                var handler = changeCheckHandle(key, fn, this);
+                this.on(eventname, handler);
+                return handler;
+            };
+        };
         return Events;
     });

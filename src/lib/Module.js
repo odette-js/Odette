@@ -56,7 +56,7 @@ var REQUIRE = 'require',
             },
             checks = function (app, list) {
                 var exporting = [];
-                duff(list, function (path) {
+                forEach(list, function (path) {
                     var module = app.module(path);
                     if (module.is(INITIALIZED)) {
                         exporting.push(module[EXPORTS]);
@@ -111,6 +111,7 @@ var REQUIRE = 'require',
                     this[EXPORTS][key] = value;
                 }),
                 run: _.directives.parody(MODULE_MANAGER, 'run'),
+                depends: _.directives.parody(DEPENDENCY_MANAGER, 'depend'),
                 require: _.directives.parody(MODULE_MANAGER, REQUIRE),
                 module: _.directives.parody(MODULE_MANAGER, MODULE),
                 createArguments: _.directives.parody(MODULE_MANAGER, 'createArguments'),
@@ -127,10 +128,10 @@ var REQUIRE = 'require',
                     return module;
                 },
                 topLevel: function () {
-                    return !this[APPLICATION] || this[APPLICATION] === this[PARENT];
+                    return !this[APPLICATION] || this[APPLICATION] === this[PARENT]();
                 },
                 load: function () {
-                    return this.directive(REGISTRY).get('promises', 'load', moduleLoadPromise);
+                    return this.directive(REGISTRY).get('promises', 'read', moduleLoadPromise);
                 }
             },
             newModuleMethods = extend([{}, startableMethods, moduleMethods]),
@@ -215,7 +216,7 @@ var REQUIRE = 'require',
                             app.global.definition(app.VERSION, windo);
                             return documentManagerDocuments.get(ID, docu[__ELID__]);
                         });
-                    return [manager.target, app, _, _ && _.factories, documentView, documentView.factories, documentView.$];
+                    return [manager.target, app, _, _ && _.factories, documentView.$];
                 },
                 require: function (modulename, handler) {
                     var promise, module, manager = this,

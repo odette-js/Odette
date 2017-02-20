@@ -1,4 +1,4 @@
-application.scope().run(window, function (module, app, _, factories, documentView, scopedFactories, $) {
+application.scope().run(window, function (module, app, _, factories, $) {
     test.describe('Collection', function () {
         var collection, numberCollection, complexCollection, evenNumberList, numberCollectionLength = 10;
         test.beforeEach(function () {
@@ -24,13 +24,13 @@ application.scope().run(window, function (module, app, _, factories, documentVie
             test.expect(collection.toArray()).toEqual(collection.items);
         }, 1);
         test.it('or one at a time', function () {
-            numberCollection.each(function (item, idx) {
+            numberCollection.forEach(function (item, idx) {
                 test.expect(numberCollection.item(idx)).toEqual(numberCollection.items[idx]);
             });
         }, numberCollectionLength);
         test.it('as well as in reverse order', function () {
             var list = [];
-            numberCollection.eachRight(function (item, idx) {
+            numberCollection.forEachRight(function (item, idx) {
                 test.expect(numberCollection.item(idx)).toEqual(numberCollection.items[idx]);
                 list.push(item);
             });
@@ -139,11 +139,11 @@ application.scope().run(window, function (module, app, _, factories, documentVie
                     return item === 7;
                 })).toEqual(7);
             }, 2);
-            test.it('findLast', function () {
-                test.expect(factories.Collection([12, 1, 2, 1, 104, 2, 1, 5, 55, 6, 2, 7]).findLast(function (item) {
+            test.it('findRight', function () {
+                test.expect(factories.Collection([12, 1, 2, 1, 104, 2, 1, 5, 55, 6, 2, 7]).findRight(function (item) {
                     return item % 17 === 0;
                 })).toEqual(void 0);
-                test.expect(factories.Collection([88, 2, 1, 5, 70, 23, 43, 9]).findLast(function (item) {
+                test.expect(factories.Collection([88, 2, 1, 5, 70, 23, 43, 9]).findRight(function (item) {
                     return item % 2 === 0;
                 })).toEqual(70);
             }, 2);
@@ -165,22 +165,22 @@ application.scope().run(window, function (module, app, _, factories, documentVie
                     two: 2
                 })).toEqual(firstFindObj);
             }, 2);
-            test.it('findLastWhere', function () {
-                test.expect(factories.Collection([firstFindObj, secondFindObj]).findLastWhere({
+            test.it('findWhereRight', function () {
+                test.expect(factories.Collection([firstFindObj, secondFindObj]).findWhereRight({
                     one: 2
                 })).toEqual(void 0);
-                test.expect(factories.Collection([firstFindObj, secondFindObj]).findLastWhere({
+                test.expect(factories.Collection([firstFindObj, secondFindObj]).findWhereRight({
                     two: 2
                 })).toEqual(secondFindObj);
             }, 2);
-            test.it('foldr', function () {
-                test.expect(numberCollection.foldr(function (memo, idx, item) {
+            test.it('reduceRight', function () {
+                test.expect(numberCollection.reduceRight(function (memo, idx, item) {
                     memo.push(item);
                     return memo;
                 }, [])).toEqual([9, 8, 7, 6, 5, 4, 3, 2, 1, 0]);
             }, 1);
-            test.it('foldl', function () {
-                test.expect(numberCollection.foldl(function (memo, idx, item) {
+            test.it('reduce', function () {
+                test.expect(numberCollection.reduce(function (memo, idx, item) {
                     memo.push(item);
                     return memo;
                 }, [])).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);

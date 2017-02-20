@@ -2,9 +2,7 @@ var content = ['browserify', 'distribute'],
     server = ['serve', 'open'],
     stackTasks = ['stack', 'stackie', 'stackie9'],
     watch = ['watch'],
-    // docsTasks = ['builddocumentation', 'watchdocs'],
     devTasks = content.concat(watch, server),
-    // devTasks = allTasks.concat(content),
     gulp = require('gulp'),
     gulpTasker = require('./gulp'),
     path = require('path'),
@@ -25,16 +23,20 @@ var content = ['browserify', 'distribute'],
     setup = '../wrappers/start ../wrappers/constants'.split(' '),
     end = '../wrappers/end'.split(' '),
     shims = '../wrappers/shims_start shims registerElement ../wrappers/shims_end'.split(' '),
-    specs = 'utils Strings Directives Registry Collection Events directives/Linguistics Model directives/Events directives/Data directives/Children Promise directives/DependencyManager Deferred WeakMap HTTP Module ResizeObserver DOMA ElementWatcher Looper directives/Element View Buster tests'.split(' '),
+    specs = 'utils Strings Directives Registry Collection Events directives/Linguistics Model directives/Events directives/Data directives/Children Promise directives/DependencyManager Deferred WeakMap Module HTTP ResizeObserver DOMA ElementWatcher Looper directives/Element View Buster tests'.split(' '),
     modules = specs.slice(0),
     removed = modules.splice.apply(modules, [1, 0].concat(shims)),
-    // result = console.log(modules),
     library = setup.concat(modules, end),
     auto_app = ['odette', 'application'],
     // just to make a new one
     specModules = ['setup'].concat(specs, auto_app, ['teardown']),
     extraModules = 'Socket Router LocalStorage NoSock'.split(' '),
     framedModules = 'index'.split(' '),
+    routeToFile = function (folder) {
+        return function (name) {
+            return path.join(__dirname, folder, name + '.js');
+        };
+    },
     makeSpecPath = function (name) {
         return path.join('./src/spec/', name + '.js');
     },
@@ -66,6 +68,8 @@ var content = ['browserify', 'distribute'],
         serverIndex: './index.js',
         ignoreFiles: ['.git/', 'node_modules/', './gulp', 'gulpfile.js', './dist', './results']
     }), {
+        jsOdetteNode: routeToFile('./src/node/')('index'),
+        jsOdetteNodeDistribute: 'index.js',
         gulpdir: __dirname,
         src: './src/**/*',
         // jsAllLib: './src/lib/**/*.js',
@@ -82,9 +86,11 @@ var content = ['browserify', 'distribute'],
         jsOdetteDistribute: 'odette.js',
         jsApplicationDistribute: 'application.js',
         jsLibraryDistribute: 'library.js',
+        jsNodeDistribute: 'index.js',
         jsDistributes: './dist/build/',
         jsFull: _.map(auto_app.concat(library, ['../wrappers/auto_setup']), libPath),
-        jsFullOutput: 'odette-full.js'
+        jsFullOutput: 'odette-full.js',
+        jsFullOutputDistribute: 'odette-full.js'
     }),
     settings = require('./settings'),
     argv = require('optimist').argv;

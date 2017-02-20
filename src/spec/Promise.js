@@ -1,4 +1,4 @@
-application.scope().run(window, function (module, app, _, factories, documentView, scopedFactories, $) {
+application.scope().run(window, function (module, app, _, factories, $) {
     test.describe('Promise', function () {
         var madeit, promise, handler = function () {
             madeit++;

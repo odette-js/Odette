@@ -43,7 +43,7 @@ application.scope().module('LocalStorage', function (module, app, _, factories) 
         },
         each: function (handler) {
             var copy = this.copy();
-            _.each(copy, handler, this);
+            _.forOwn(copy, handler, this);
             return copy;
         }
     });

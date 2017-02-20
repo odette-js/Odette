@@ -3,6 +3,7 @@ var CHILDREN = capitalize(CHILD + 'ren'),
     CHILD_EVENTS = CHILD + EVENT_STRING,
     DATA_MANAGER = 'DataManager',
     MODEL = 'Model',
+    PARENT_STRING = 'Parent',
     Model = app.block(function (app) {
         var SORT = 'sort',
             ADDED = 'added',
@@ -62,11 +63,11 @@ var CHILDREN = capitalize(CHILD + 'ren'),
             },
             sendWithData = function (syncer, url, type) {
                 var json = syncer.toJSON();
-                return _.HTTP({
-                    url: url,
-                    type: type,
-                    data: syncer.stringifyPosts ? syncer.stringify(json) : json
-                });
+                // return owner$.HTTP({
+                //     url: url,
+                //     type: type,
+                //     data: syncer.stringifyPosts ? syncer.stringify(json) : json
+                // });
             },
             Syncer = factories.Directive.extend(SYNCER, extend([{
                 createType: 'POST',
@@ -101,6 +102,7 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                     // explicitly tie to parent
                     // attach events from parent
                     directive.addToHash(model);
+                    directive.keep(ID, model.id, model, insertPosition(directive, model));
                     // ties models together
                     delegateParentEvents(parent, model);
                     delegateChildEvents(parent, model);
@@ -137,22 +139,25 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                         parent = children[TARGET];
                     newModel[PARENT] = parent;
                     // add to collection
-                    children.add(newModel);
+                    // children.add(newModel);
                     // register with parent
-                    children.keep(ID, newModel.id, newModel);
-                    children.keep('cid', newModel.cid, newModel);
+                    children[REGISTRY].keep('cid', newModel.cid, newModel);
                 },
                 removeFromHash: function (child) {
-                    var directive = this;
+                    var children = this;
                     if (!child) {
                         return;
                     }
                     // remove the child from the children hash
-                    directive.remove(child);
-                    directive.drop(ID, child.id);
+                    // children.remove(child);
+                    children.drop(ID, child.id);
                     // unregister from the child hash keys
-                    directive.drop('cid', child.cid);
+                    children[REGISTRY].drop('cid', child.cid);
                 },
+                // comparator: function (a) {
+                //     return a.model.valueOf();
+                // },
+                //
                 /**
                  * @description resets the model's attributes to the object that is passed in
                  * @name Model#reset
@@ -176,7 +181,7 @@ var CHILDREN = capitalize(CHILD + 'ren'),
              * @class Parent
              * @augments {Events}
              */
-            Parent = factories.Parent = factories.Events.extend('Parent',
+            Parent = factories.Parent = factories.Events.extend(PARENT_STRING,
                 /**
                  * @lends Parent.prototype
                  */
@@ -201,14 +206,15 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                             secondary = secondary_ || {},
                             children = parent.directive(CHILDREN),
                             memo = setMemo(),
-                            diff = Collection(opts.add).foldl(function (memo, obj) {
+                            diff = Collection(opts.add).reduce(function (memo, obj) {
                                 var isChildType = parent.isChildType(obj),
                                     // create a new model
                                     // call it with new in case they use a constructor
                                     Constructor = parent.childConstructor(obj),
                                     newModel = isChildType ? obj : new Constructor(obj, secondary.shared),
                                     // unfortunately we can only find by the newly created's id
-                                    // which we only know for sure after the child has been created ^
+                                    // which we only know for sure
+                                    // after the child has been created ^
                                     foundModel = children.get(ID, newModel.id);
                                 if (foundModel) {
                                     // update the old
@@ -219,7 +225,7 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                                     children.attach(newModel);
                                     memo.add.push(newModel);
                                 }
-                            }, opts.remove ? Collection(opts.remove).foldl(function (memo, model) {
+                            }, opts.remove ? Collection(opts.remove).reduce(function (memo, model) {
                                 var children, parent = model && model[PARENT];
                                 if (!parent) {
                                     return;
@@ -329,10 +335,49 @@ var CHILDREN = capitalize(CHILD + 'ren'),
              * @class Model
              * @augments Parent
              */
-            uniqueCounter = 0,
             setId = function (model, id) {
-                model.id = (id === UNDEFINED ? ++uniqueCounter : id);
-                return uniqueCounter;
+                var identifier = model.id = (id === UNDEFINED ? app.counter() : id);
+                return identifier;
+            },
+            writeProxy = function (method) {
+                return function (key, value_, returnmodified_) {
+                    var everset = BOOLEAN_FALSE,
+                        triggerList = [],
+                        changedList = [],
+                        model = this,
+                        value = value_,
+                        data = model.directive(DATA_MANAGER),
+                        events = model[EVENT_MANAGER] || {
+                            has: noop
+                        },
+                        previous = {},
+                        returnmodified = returnmodified_;
+                    if (!data.is('frozen')) {
+                        intendedObject(key, value, function (key, value, third) {
+                            var changing, sets;
+                            if (!returnmodified && third) {
+                                returnmodified = value_;
+                            }
+                            // definitely set the value, and let us know what happened
+                            // and if you're not changing already
+                            changing = data.changing(key);
+                            sets = data[method](key, value);
+                            everset = sets || everset;
+                            if (sets && !changing) {
+                                changedList.push(key);
+                                if (events.has(CHANGE_COLON + key)) {
+                                    triggerList.push(key);
+                                }
+                            }
+                        });
+                    } else if (isObject(key) && value === BOOLEAN_TRUE) {
+                        returnmodified = BOOLEAN_TRUE;
+                    }
+                    if (returnmodified) {
+                        return changedList;
+                    }
+                    return model.modified(triggerList, everset);
+                };
             },
             Model = factories[MODEL] = factories.Parent.extend(MODEL,
                 /**
@@ -360,7 +405,9 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                             return BOOLEAN_FALSE;
                         }
                         var result = dataDirective.unset(key);
-                        this.modified([key]);
+                        if (result) {
+                            this.modified([key]);
+                        }
                         return result;
                     },
                     /**
@@ -390,14 +437,15 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                     values: checkParody(DATA_MANAGER, 'values', returnsArray),
                     has: checkParody(DATA_MANAGER, 'has', BOOLEAN_FALSE),
                     idAttribute: returns('id'),
+                    defaults: returns.object,
                     constructor: function (attributes, secondary) {
                         var model = this;
                         model.reset(attributes);
-                        this[CONSTRUCTOR + COLON + EVENT_STRING](secondary);
+                        this[CONSTRUCTOR + COLON + PARENT_STRING](secondary);
                         return model;
                     },
-                    defaults: function () {
-                        return {};
+                    idValue: function (key, attributes) {
+                        return attributes[key];
                     },
                     reset: function (data_) {
                         var dataDirective, childModel, hasResetBefore, children, model = this,
@@ -407,8 +455,8 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                             defaultsResult = model.defaults(passed),
                             newAttributes = merge(defaultsResult, passed),
                             // try to get the id from the attributes
-                            idAttributeResult = model.idAttribute(newAttributes),
-                            idResult = setId(model, newAttributes[idAttributeResult]),
+                            idValue = model.idValue(model.idAttribute(newAttributes), newAttributes),
+                            idResult = setId(model, idValue),
                             keysResult = keys(newAttributes);
                         // set id and let parent know what your new id is
                         // setup previous data
@@ -435,46 +483,25 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                      */
                     destroy: function () {
                         // just a wrapper around the parent
-                        Parent.fn.destroy.call(this);
+                        this[CONSTRUCTOR + COLON + PARENT_STRING].fn.destroy.call(this);
                         delete this.id;
                         return this;
                     },
-                    set: function (key, value_, returnmodified_) {
-                        var changedList = [],
-                            model = this,
-                            value = value_,
-                            dataDirective = model.directive(DATA_MANAGER),
-                            previous = {},
-                            returnmodified = returnmodified_;
-                        intendedObject(key, value, function (key, value, third) {
-                            if (!returnmodified && third) {
-                                returnmodified = value_;
-                            }
-                            // defconinitely set the value, and let us know what happened
-                            // and if you're not changing already, (already)
-                            if (dataDirective.set(key, value) && !dataDirective.changing[name]) {
-                                changedList.push(key);
-                            }
-                        });
-                        if (returnmodified) {
-                            return changedList;
-                        }
-                        model.modified(changedList);
-                        return model;
-                    },
-                    modified: function (list) {
-                        var dataDirective, model = this;
-                        if (!list || !list[LENGTH]) {
+                    set: writeProxy('set'),
+                    overwrite: writeProxy('overwrite'),
+                    modified: function (list, forcedigest) {
+                        var changes, model = this;
+                        if ((!list || !list[LENGTH]) && !forcedigest) {
                             // do not digest... this time
                             return model;
                         }
-                        dataDirective = model.directive(DATA_MANAGER);
-                        model.digest(list, function (name) {
-                            dataDirective.changing[name] = BOOLEAN_TRUE;
-                            model[DISPATCH_EVENT](CHANGE_COLON + name);
-                            dataDirective.changing[name] = BOOLEAN_FALSE;
+                        changes = model.directive(DATA_MANAGER).changes();
+                        return model.digest(list, function (name) {
+                            model[DISPATCH_EVENT](CHANGE_COLON + name, {
+                                key: name,
+                                value: changes[name]
+                            });
                         });
-                        return model;
                     },
                     digest: function (handler, fn) {
                         var model = this,
@@ -482,18 +509,28 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                             dataDirective = model.directive(DATA_MANAGER);
                         dataDirective.increment();
                         if (isFunction(handler)) {
-                            handler();
+                            if (handler.length) {
+                                dataDirective.increment();
+                                handler(function () {
+                                    dataDirective.decrement();
+                                    model.digest(noop);
+                                });
+                            } else {
+                                handler();
+                            }
                         } else {
-                            duff(handler, fn, model);
+                            forEach(handler, fn);
                         }
                         dataDirective.decrement();
                         // this event should only ever exist here
-                        if (dataDirective.static()) {
-                            dataDirective.increment();
-                            model[DISPATCH_EVENT](CHANGE, dataDirective[CHANGING]);
-                            dataDirective.decrement();
-                            dataDirective.finish();
+                        if (!dataDirective.static()) {
+                            return model;
                         }
+                        dataDirective.increment();
+                        model[DISPATCH_EVENT](CHANGE, dataDirective.changes());
+                        dataDirective.decrement();
+                        dataDirective.finish();
+                        return model;
                     },
                     /**
                      * @description basic json clone of the attributes object
@@ -513,6 +550,60 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                     valueOf: function () {
                         return this.id;
                     },
+                    change: Events.createEventCheck(CHANGE),
+                    /**
+                     * Convenience function for triggering a handler based on a filter.
+                     * @method
+                     * @param {String|Array} list event names, either as a space delineated list, or as an actual Array.
+                     * @param {*} filter Pass any parameter to filter the corresponding value by equality using the [isEqual]{@link _#isEqual} method.
+                     * @param {Function} fn handler when the filter is met, and evaluates truthy.
+                     * @returns {Events}
+                     * @example <caption>below the watch method waits until the property key is set to the string value.</caption>
+                     * events.watch("key", "value", function (e) {
+                     *     events.get("key") === "value"; // true
+                     * });
+                     */
+                    watch: setupWatcher(0),
+                    /**
+                     * Convenience function for triggering a handler based on a filter. Handler will be taken off after first trigger.
+                     * @method
+                     * @param {String|Array} list event names, either as a space delineated list, or as an actual Array.
+                     * @param {*} filter Pass any parameter to filter the corresponding value by equality using the [isEqual]{@link _#isEqual} method.
+                     * @param {Function} fn handler when the filter is met, and evaluates truthy.
+                     * @returns {Events}
+                     * @example <caption>The watchOnce method waits until the property key is set to the string value. Handler is taken off after it is triggered for the first time.</caption>
+                     * events.watchOnce("key", "value", function (e) {
+                     *     events.get("key") === "value"; // true
+                     * });
+                     */
+                    watchOnce: setupWatcher(0, 1),
+                    /**
+                     * Parody for the [listenTo]{@link Events#listenTo} method mixed with [watch]{@link Events#watch}. Basically it allows you to listen to another object and set up the same logic available in [watch]{@link Events#watch}.
+                     * @method
+                     * @param {String|Array} list event names, either as a space delineated list, or as an actual Array.
+                     * @param {*} filter Pass any parameter to filter the corresponding value by equality using the [isEqual]{@link _#isEqual} method.
+                     * @param {Function} fn handler when the filter is met, and evaluates truthy.
+                     * @returns {Events}
+                     * @example <caption>The watchOther method waits until the property key is set on another model to the string value.</caption>
+                     * events.watchOther(otherEvents, "key", "value", function (e) {
+                     *     otherEvents.get("key") === "value"; // true
+                     * });
+                     */
+                    watchOther: setupWatcher(1),
+                    /**
+                     * Convenience function for triggering a handler based on a filter. Handler will be taken off after first trigger.
+                     * @method
+                     * @param {String|Array} list event names, either as a space delineated list, or as an actual Array.
+                     * @param {Events} eventer an object that can have events attached and detached from it via the {@link EventsManager} directive.
+                     * @param {*} filter Pass any parameter to filter the corresponding value by equality using the [isEqual]{@link _#isEqual} method.
+                     * @param {Function} fn handler when the filter is met, and evaluates truthy.
+                     * @returns {Events}
+                     * @example <caption>The watchOther method waits until the property key is set on another model to the string value. Handler is taken off after it is triggered for the first time.</caption>
+                     * events.watchOtherOnce(otherEvents, "key", "value", function (e) {
+                     *     otherEvents.get("key") === "value"; // true
+                     * });
+                     */
+                    watchOtherOnce: setupWatcher(1, 1),
                     /**
                      * @description stringified version of attributes object
                      * @func
@@ -523,6 +614,17 @@ var CHILDREN = capitalize(CHILD + 'ren'),
                         return stringify(this.clone());
                     }
                 });
+
+        function insertPosition(children, newModel) {
+            // children.
+        }
+
+        function changeCheckHandle(key, fn, context) {
+            var bound = bindTo(fn, context);
+            return function (e) {
+                return has(e.data(), key) ? bound(e) : UNDEFINED;
+            };
+        }
         // children should actually extend from collection.
         // it should require certain things of the children it is tracking
         // and should be able to listen to them

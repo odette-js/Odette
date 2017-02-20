@@ -101,7 +101,7 @@ application.scope().module('Router', function (module, app, _, factories) {
                         return;
                     }
                     match.shift();
-                    variables = _.foldl(match, function (memo, item, index) {
+                    variables = _.reduce(match, function (memo, item, index) {
                         memo[route.keys[index]] = item;
                     }, {});
                     route.handler.call(router, variables);

@@ -1,4 +1,4 @@
-application.scope().run(window, function (module, app, _, factories, documentView, scopedFactories, $) {
+application.scope().run(window, function (module, app, _, factories, $) {
     if (app.BROWSERSTACKING) {
         return;
     }
@@ -8,7 +8,7 @@ application.scope().run(window, function (module, app, _, factories, documentVie
             failed: results.failed,
             passed: results.passed,
             total: results.total,
-            stacks: _.foldl(results.tests, function (memo, item) {
+            stacks: _.reduce(results.tests, function (memo, item) {
                 if (!item.result) {
                     memo.push(item);
                 }

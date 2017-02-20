@@ -20,7 +20,7 @@ var PromiseProxy = function (key) {
         })[key](fn);
     };
 };
-var DependencyManager = Collection.extend('DependencyManager', {
+var DependencyManager = Collection.extend(DEPENDENCY_MANAGER, {
     constructor: function (target) {
         this.target = target;
         this[CONSTRUCTOR + COLON + COLLECTION]();
@@ -50,26 +50,26 @@ var DependencyManager = Collection.extend('DependencyManager', {
     then: PromiseProxy('then'),
     catch: PromiseProxy('catch'),
     failed: function () {
-        if (this.done) {
-            return;
+        if (!this.done) {
+            this.done = BOOLEAN_TRUE;
+            this.erred = BOOLEAN_TRUE;
+            this.reset();
+            this.target.dispatchEvent('dependencies:failed');
         }
-        this.done = BOOLEAN_TRUE;
-        this.erred = BOOLEAN_TRUE;
-        this.reset();
-        this.target.dispatchEvent('dependencies:failed');
+        return this;
     },
     finished: function () {
-        if (this.done) {
-            return;
+        if (!this.done) {
+            this.done = BOOLEAN_TRUE;
+            this.reset();
+            this.target.dispatchEvent('dependencies:finished');
         }
-        this.done = BOOLEAN_TRUE;
-        this.reset();
-        this.target.dispatchEvent('dependencies:finished');
+        return this;
     },
     depend: function (promises) {
         var deps = this,
             registry = deps.directive(REGISTRY);
-        Collection(promises).each(function (promise) {
+        Collection(promises).forEach(function (promise) {
             if (deps.add(Promise(promise))) {
                 promise.then(registry.get('prebound', 'check', function () {
                     return bind(deps.check, deps);
@@ -91,4 +91,4 @@ var DependencyManager = Collection.extend('DependencyManager', {
         return deps;
     }
 });
-app.defineDirective('DependencyManager', DependencyManager);
+app.defineDirective(DEPENDENCY_MANAGER, DependencyManager);

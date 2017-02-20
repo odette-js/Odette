@@ -28,13 +28,13 @@ var WeakMap = factories.WeakMap = app.block(function (app) {
                     var item, typeGroup = this.getType(obj),
                         hash = typeGroup.hash,
                         list = typeGroup.list;
-                    return id ? (_.has(hash, id) && hash[id]) : typeGroup.data[indexOf(typeGroup.list, obj)];
+                    return id ? (has(hash, id) && hash[id]) : typeGroup.data[indexOf(typeGroup.list, obj)];
                 },
                 has: function (obj, id, typeGroup_) {
                     var item, typeGroup = typeGroup_ || this.getType(obj),
                         hash = typeGroup.hash,
                         list = typeGroup.list;
-                    return !!(id ? _.has(hash, id) : (1 + indexOf(typeGroup.list, obj)));
+                    return !!(id ? has(hash, id) : (1 + indexOf(typeGroup.list, obj)));
                 },
                 set: function (obj, datum, id) {
                     var item, idx, typeGroup = this.getType(obj),
@@ -51,7 +51,7 @@ var WeakMap = factories.WeakMap = app.block(function (app) {
                 delete: function (obj, id) {
                     var idx, typeGroup = this.getType(obj);
                     if (id) {
-                        return _.has(typeGroup.hash, id);
+                        return has(typeGroup.hash, id);
                     } else {
                         idx = indexOf(typeGroup.list, obj);
                         if (idx === -1) {
@@ -69,27 +69,20 @@ var WeakMap = factories.WeakMap = app.block(function (app) {
         },
         retreiveData = function (instance, obj, key) {
             return retreiveHash(instance).get(obj, key);
+        },
+        exposedMethods = ['has', 'get', 'set', 'delete'];
+    return factories.Directive.extend('WeakMap', _.reduce(exposedMethods, function (memo, key) {
+        memo[key] = function (one, two, three) {
+            return retreiveHash(this)[key](one, two, three);
         };
-    return factories.Directive.extend('WeakMap', {
+    }, {
         constructor: function (items) {
             var map = this;
             setInstance(map);
-            duff(items, function (item) {
+            forEach(items, function (item) {
                 map.set(item[0], item[1]);
             });
             return map;
-        },
-        has: function (obj, key) {
-            return retreiveHash(this).has(obj, key);
-        },
-        get: function (obj, key) {
-            return retreiveHash(this).get(obj, key);
-        },
-        set: function (obj, value, key) {
-            return retreiveHash(this).set(obj, value, key);
-        },
-        delete: function (obj, key) {
-            return retreiveHash(this).delete(obj, key);
         }
-    });
+    }));
 });

@@ -40,7 +40,7 @@ var Linguistics = app.block(function (app) {
         addValue = function (constant1, constant2) {
             return function () {
                 var sequencer = this;
-                duff(toArray(arguments), function (value) {
+                forEach(toArray(arguments), function (value) {
                     sequencer.add(value, constant1, constant2);
                 });
                 return sequencer;
@@ -442,7 +442,7 @@ var Linguistics = app.block(function (app) {
                  */
                 handle: function (key, arg) {
                     var sequencer = this;
-                    this.directive(REGISTRY).get('collections', key, makeCollection).eachCallBound(arg);
+                    this.directive(REGISTRY).get('collections', key, makeCollection).forEachCallBound(arg);
                     return sequencer;
                 },
                 /**

@@ -1,4 +1,4 @@
-application.scope().run(window, function (module, app, _, factories, documentView, scopedFactories, $) {
+application.scope().run(window, function (module, app, _, factories, $) {
     var registry = factories.WeakMap();
     test.describe('Registry', function () {
         test.beforeEach(function () {});

@@ -10,7 +10,7 @@ app.defineDirective('Tests', (function (app) {
         TO_EVALUATE_TO = ' to evaluate to ',
         AN_ERROR = ' an error',
         TO_BE_THROWN = ' to be thrown',
-        TO_BE_STRICTLY_EQUAL_TO_STRING = TO_BE + 'strictly equal to ',
+        TO_BE_STRICTLY_EQUAL_TO = TO_BE + 'strictly equal to ',
         checkFinished = function (states, fn) {
             return function () {
                 if (!states || states.finished) {
@@ -48,11 +48,18 @@ app.defineDirective('Tests', (function (app) {
                     expectation = new Error(makemessage.call(this, retreived, arg));
                     expectation.message = expectation.toString();
                     expectation.success = BOOLEAN_FALSE;
-                    err(expectation);
                 }
-                tiedTo.expectations.push(expectation);
+                if (tiedTo) {
+                    tiedTo.expectations.push(expectation);
+                }
                 expectation.tiedTo = tiedTo;
-                return result;
+                return {
+                    otherwise: function (string) {
+                        if (!expectation.success) {
+                            console.error(string);
+                        }
+                    }
+                };
             };
         },
         testy = function () {
@@ -74,6 +81,7 @@ app.defineDirective('Tests', (function (app) {
                     expectationsHash[where] = errIfFalse(itRetreiver, finishedExpecting, retreiver, test, positive, execute);
                     expectationsHash.not[where] = errIfFalse(itRetreiver, finishedExpecting, retreiver, negate(test), negative, execute);
                 };
+            setupBasicTests(maker);
             return {
                 group: expectationsHash,
                 maker: maker,
@@ -185,7 +193,9 @@ app.defineDirective('Tests', (function (app) {
                     if (expecting && expecting !== expectations.length) {
                         err('Number of expectations expected did not match number of expectations called in: ' + makeName(it.name) + ' expected: ' + expecting + ', got: ' + expectations.length);
                     }
-                    finished();
+                    finished(whereNot(it.expectations, {
+                        success: BOOLEAN_TRUE
+                    }));
                 },
                 done = three,
                 callback = it.callback,
@@ -230,9 +240,10 @@ app.defineDirective('Tests', (function (app) {
                     return;
                 }
                 focus(current);
-                run(current, settings, function (argument) {
+                run(current, settings, function (failures) {
                     settings.index++;
                     settings.running = BOOLEAN_FALSE;
+                    forEach(failures, err);
                     recurse();
                 });
             };
@@ -244,7 +255,7 @@ app.defineDirective('Tests', (function (app) {
                 tryToRun();
             };
         },
-        basicTests = function (maker) {
+        setupBasicTests = function (maker) {
             maker('toThrow', function (handler) {
                 var errRan = BOOLEAN_FALSE;
                 return wraptries(handler, function () {
@@ -260,9 +271,9 @@ app.defineDirective('Tests', (function (app) {
             maker('toBe', function (current, comparison) {
                 return current === comparison;
             }, function (current, comparison) {
-                return EXPECTED + SPACE + stringify(current) + TO_BE_STRICTLY_EQUAL_TO_STRING + stringify(comparison);
+                return EXPECTED + SPACE + stringify(current) + TO_BE_STRICTLY_EQUAL_TO + stringify(comparison);
             }, function (current, comparison) {
-                return EXPECTED + SPACE + stringify(current) + SPACE_NOT + TO_BE_STRICTLY_EQUAL_TO_STRING + stringify(comparison);
+                return EXPECTED + SPACE + stringify(current) + SPACE_NOT + TO_BE_STRICTLY_EQUAL_TO + stringify(comparison);
             });
             maker('toEqual', function (current, comparison) {
                 return isEqual(current, comparison);
@@ -278,7 +289,7 @@ app.defineDirective('Tests', (function (app) {
             }, function (current, comparison) {
                 return EXPECTED + SPACE + 'function not' + TO_EVALUATE_TO + stringify(comparison);
             }, BOOLEAN_TRUE);
-            each(_.is, function (value, key) {
+            forOwn(_.is, function (value, key) {
                 maker('toBe' + capitalize(key), value, function (current, comparison) {
                     return EXPECTED + SPACE + stringify(current) + TO_BE + key;
                 }, function (current, comparison) {
@@ -286,35 +297,47 @@ app.defineDirective('Tests', (function (app) {
                 });
             });
         },
-        group = function (target) {
-            var aeQ = [];
-            var beQ = [];
-            var aQ = [];
-            var its = [];
-            var descriptions = [];
-            var fin = fin;
-            var states = {};
-            var tester = testy();
-            var identifier = target.id;
-            var tryToRun = triesToRun(its, tester.focus, function () {
-                var i, item;
-                for (i = 0; i < aQ.length; i++) {
-                    item = aQ[i];
-                    item(its);
-                }
-            });
-            basicTests(tester.maker);
-            return {
-                afterEach: checkFinished(states, afterEach(aeQ)),
-                beforeEach: checkFinished(states, beforeEach(beQ)),
-                expect: tester.expect,
-                describe: checkFinished(states, describe(descriptions, aeQ, beQ)),
-                it: checkFinished(states, it(its, descriptions, aeQ, beQ)),
-                finished: finished(fin),
-                done: done(states, descriptions, its, tryToRun, aQ),
-                maker: tester.maker,
-                group: group.bind(NULL, (identifier ? (identifier + HYPHEN) : EMPTY_STRING) + (++id))
+        Tests = Directive.extend('Tests', {
+            constructor: function (target) {
+                var aeQ = [];
+                var beQ = [];
+                var aQ = [];
+                var its = [];
+                var descriptions = [];
+                var fin = fin;
+                var states = {};
+                var tester = testy();
+                var identifier = target.id;
+                var tryToRun = triesToRun(its, tester.focus, function () {
+                    var i, item;
+                    for (i = 0; i < aQ.length; i++) {
+                        item = aQ[i];
+                        item(its);
+                    }
+                });
+                return merge(this, {
+                    maker: tester.maker,
+                    expect: tester.expect,
+                    finished: finished(fin),
+                    afterEach: checkFinished(states, afterEach(aeQ)),
+                    beforeEach: checkFinished(states, beforeEach(beQ)),
+                    done: done(states, descriptions, its, tryToRun, aQ),
+                    it: checkFinished(states, it(its, descriptions, aeQ, beQ)),
+                    describe: checkFinished(states, describe(descriptions, aeQ, beQ)),
+                    group: function () {
+                        return Tests((identifier ? (identifier + HYPHEN) : EMPTY_STRING) + (++id));
+                    }
+                });
+            }
+        });
+    _.publicize({
+        expect: (function () {
+            var tester;
+            return function (expectation) {
+                tester = tester || testy();
+                return tester.expect(expectation);
             };
-        };
-    return group;
+        }())
+    });
+    return Tests;
 }(app)));

@@ -155,7 +155,7 @@ app.scope(function (app) {
                         exception('bubbling discerners must return a different object each time it is run');
                     }
                 }
-                duff(list, function (target) {
+                forEach(list, function (target) {
                     target[DISPATCH_EVENT](evnt, data, options);
                 });
                 return start;
@@ -209,7 +209,7 @@ app.scope(function (app) {
                 delete this[HANDLERS][list[NAME]];
             },
             reset: function () {
-                return each(this.handlers, this.scrub, this);
+                return forOwn(this.handlers, bindTo(this.scrub, this));
             },
             queue: function (stack, handler, evnt) {
                 return stack.toArray().push(handler);
@@ -244,27 +244,23 @@ app.scope(function (app) {
                 running[name] = BOOLEAN_TRUE;
                 subset = events.subset(list.toArray(), evnt);
                 stack_length = stack[LENGTH];
-                stopped = wraptry(function () {
-                    var stopped, handler, i = 0,
-                        subLength = subset[LENGTH];
-                    for (; i < subLength && !stopped; i++) {
-                        handler = subset[i];
-                        if (!handler.disabled && events.queue(stack, handler, evnt)) {
-                            handler.fn(evnt);
-                            events.unQueue(stack, handler, evnt);
-                        }
-                        stopped = !!evnt.is(PROPAGATION_HALTED);
+                var handler, i = 0,
+                    subLength = subset[LENGTH];
+                for (; i < subLength && !stopped; i++) {
+                    handler = subset[i];
+                    if (!handler.disabled && events.queue(stack, handler, evnt)) {
+                        handler.fn(evnt);
+                        events.unQueue(stack, handler, evnt);
                     }
-                }, function () {
-                    return BOOLEAN_TRUE;
-                });
+                    stopped = !!evnt.is(PROPAGATION_HALTED);
+                }
                 if (stack_length < stack[LENGTH]) {
                     events.unQueue(stack, handler, evnt);
                 }
                 if (stopped) {
                     events.cancelled(stack, evnt);
                 } else {
-                    bus.eachCall('run', evnt);
+                    bus.forEachCall('run', evnt);
                 }
                 evnt.finished();
                 running[name] = !!cached;
@@ -276,13 +272,13 @@ app.scope(function (app) {
             addBus: function (key, target, prefix, filter) {
                 var bus, eventer = this,
                     proxyStack = eventer.proxyStack;
-                if (!(bus = proxyStack.get(key))) {
+                proxyStack.get(ID, key, function () {
                     if (eventer.target === target) {
                         exception('bus target cannot be the same as delegated target');
                     }
-                    bus = {
-                        prefix: prefix || EMPTY_STRING,
+                    proxyStack.push({
                         target: target,
+                        prefix: prefix || EMPTY_STRING,
                         filter: filter || returnsTrue,
                         run: function (evnt) {
                             if (!this.filter(evnt)) {
@@ -290,18 +286,15 @@ app.scope(function (app) {
                             }
                             this.target[DISPATCH_EVENT](this.prefix ? (this.prefix + evnt.name) : evnt.name, evnt);
                         }
-                    };
-                    proxyStack.push(bus);
-                    proxyStack.keep(ID, key, bus);
-                }
+                    });
+                });
                 return this;
             },
             removeBus: function (key) {
                 var eventer = this,
                     proxyStack = eventer.proxyStack;
-                if ((bus = proxyStack.get(key))) {
+                if ((bus = proxyStack.drop(ID, key))) {
                     proxyStack.remove(bus);
-                    proxyStack.drop(ID, key);
                     bus.filter = returnsFalse;
                 }
                 return !!bus;

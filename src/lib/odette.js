@@ -5,13 +5,15 @@
  */
 (function (root, KEY, factory) {
     if (typeof define === 'function' && define.amd) {
-        define([], factory);
+        define([], function () {
+            return factory(root);
+        });
     } else if (typeof exports === 'object') {
-        module.exports = factory();
+        module.exports = factory(root, KEY);
     } else {
-        root.Odette = factory();
+        root[KEY] = factory(root, KEY);
     }
-}(this, 'Odette', function (context) {
+}(this, 'Odette', function (context, KEY) {
     'use strict';
     /**
      * Odette Object
@@ -27,7 +29,7 @@
         HAS_ACCESS = 'hasAccess',
         LOCATION = 'location',
         PERIOD = '.',
-        global_ = this || window,
+        global_ = this || context,
         doc = global_.document,
         BOOLEAN_TRUE = !0,
         BOOLEAN_FALSE = !1,
@@ -41,9 +43,12 @@
             ']': 2
         },
         noop = function () {},
+        type = function (thing) {
+            return typeof thing;
+        },
         typeConstructor = function (str) {
             return function (thing) {
-                return typeof thing === str;
+                return type(thing) === str;
             };
         },
         now = function () {
@@ -146,7 +151,7 @@
             var val, n, base = obj.url,
                 query = [];
             if (isObject(obj)) {
-                each(obj.query, function (val, n) {
+                forOwn(obj.query, function (val, n) {
                     if (val !== UNDEFINED) {
                         val = encodeURIComponent(stringify(val));
                         query.push(n + '=' + val);
@@ -231,7 +236,7 @@
         exception = function (message) {
             throw new Error(message);
         },
-        each = function (obj_, fn, ctx) {
+        forOwn = function (obj_, fn, ctx) {
             var n, keys, obj = obj_;
             if (isObject(obj)) {
                 if (isArray(obj)) {
@@ -257,7 +262,7 @@
          * @returns {Object} object1
          */
         merge = function (object1, object2) {
-            each(object2, function (value, key) {
+            forOwn(object2, function (value, key) {
                 object1[key] = value;
             });
             return object1;
@@ -281,12 +286,13 @@
                 this.definedAgainst = [];
                 return this;
             }
-            Application[PROTOTYPE].extend = function (obj) {
+            var AppPrototype = Application[PROTOTYPE];
+            AppPrototype.extend = function (obj) {
                 return this.merge(this, obj);
             };
-            Application[PROTOTYPE].merge = merge;
-            Application[PROTOTYPE].each = each;
-            Application[PROTOTYPE].extend({
+            AppPrototype.merge = merge;
+            AppPrototype.each = forOwn;
+            AppPrototype.extend({
                 exception: exception,
                 destroy: noop,
                 wraptry: wraptry,
@@ -376,6 +382,8 @@
                                 definitionOptions.handler.apply(app, [app, globl, opts]);
                                 app.defining = BOOLEAN_FALSE;
                                 app.defined = BOOLEAN_TRUE;
+                            }, function (e) {
+                                console.log(e);
                             });
                         });
                     }
@@ -450,7 +458,7 @@
                 return {
                     Application: Application,
                     Odette: Odette,
-                    LOADED_CONTEXT: window,
+                    LOADED_CONTEXT: context,
                     EXECUTED_AT: executionTime,
                     WHERE: WHERE,
                     VERSION: odette_version,
@@ -471,13 +479,16 @@
                         return this;
                     },
                     emptyQueue: function (fn) {
-                        var queued = queue.slice(0);
-                        var shared = this;
-                        var current = shared.scope();
+                        var shared = this,
+                            queued = queue.slice(0),
+                            current = shared.scope(),
+                            previous = current.defining;
                         queue = [];
+                        current.defining = BOOLEAN_TRUE;
                         map(queued, fn || function (q) {
                             q.handler.apply(q.context, [shared, current]);
                         });
+                        current.defining = previous;
                         return shared;
                     },
                     registerVersion: function (scopedV, app) {
@@ -542,7 +553,7 @@
                     },
                     hoist: function (windo, toHere) {
                         var application = this,
-                            target = (toHere || window);
+                            target = (toHere || context);
                         if (!windo) {
                             return BOOLEAN_FALSE;
                         }
@@ -627,7 +638,9 @@
             app = application.get(version);
             if (!app) {
                 app = application.registerVersion(version);
-                fn.apply(global_, [application, app]);
+                if (fn) {
+                    fn.apply(global_, [application, app]);
+                }
             }
             if (alt) {
                 alt.apply(global_, [application, app]);

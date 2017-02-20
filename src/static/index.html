@@ -16,8 +16,8 @@
                 display: block;
                 margin: 0;
             }
-            #main-region {
-                height: 100%;
+            #main-region, #app {
+                height: 50%;
                 width: 100%;
             }
 
@@ -39,13 +39,13 @@
 
 <script type="text/x-odette" id="profile-summary">
 return [
-    ["span", null, first_name + ' ' + last_name, {
-        key: "full_name" }],
-    ["p", null, clicks + '', {
-        key: "click_counter" }]
+    ["span", { key: "full_name" }, first_name + ' ' + last_name],
+    ["p", { key: "click_counter" }, clicks + ''],
+    ["div", { key: 'infos'}, false]
 ];
 </script>
         <div id="main-region"></div>
+        <div id="app"></div>
         <script type="text/javascript" src="__ROOT_URL__/js/odette.js"></script>
         <script type="text/javascript" src="__ROOT_URL__/js/application.js"></script>
         <script type="text/javascript" src="__ROOT_URL__/js/library.js"></script>

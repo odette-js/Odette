@@ -16,7 +16,7 @@
 //     var Socket = _.Socket = factories.Model.extend({
 //         constructor: function (options) {
 //             var socket = this;
-//             var cachedHandlers = socket.handlers = _.foldl(list, function (memo, item) {
+//             var cachedHandlers = socket.handlers = _.reduce(list, function (memo, item) {
 //                 memo[item] = _.bind(basicdispatch, socket);
 //                 return memo;
 //             }, {});

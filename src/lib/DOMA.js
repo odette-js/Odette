@@ -12,12 +12,12 @@ var ATTACHED = 'attached',
     CUSTOM = 'custom',
     REMOVING = 'removing',
     ACCESSABLE = 'accessable',
+    CURRENT_TARGET = 'currentTarget',
     CUSTOM_LISTENER = CUSTOM + 'Listener',
     UPPER_CHILD = 'Child',
     APPEND_CHILD = 'append' + UPPER_CHILD,
     REMOVE = 'remove',
     REMOVE_CHILD = REMOVE + UPPER_CHILD,
-    HTML = 'html',
     INNER_HTML = 'innerHTML',
     TEXT = 'text',
     INNER_TEXT = 'innerText',
@@ -32,9 +32,6 @@ var ATTACHED = 'attached',
     FONT_SIZE = 'fontSize',
     DEFAULT_VIEW = 'defaultView',
     DIV = 'div',
-    makeDataAttr = function (key, value) {
-        return '[' + (value == NULL ? key : (key + '="' + value + '"')) + ']';
-    },
     CUSTOM_ATTRIBUTE = makeDataAttr(CUSTOM_KEY),
     devicePixelRatio = (win.devicePixelRatio || 1),
     propsList = toArray('type,href,className,height,width,id,tabIndex,title,alt,innerHTML,outerHTML,textContent'),
@@ -53,32 +50,13 @@ var ATTACHED = 'attached',
     AudioProcessingEvents = toArray('audioprocess,complete'),
     UIEvents = toArray('abort,error,hashchange,load,orientationchange,readystatechange,resize,scroll,select,unload,beforeunload'),
     ProgressEvent = toArray('abort,error,load,loadend,loadstart,popstate,progress,timeout'),
-    AllEvents = concatUnique(Events, SVGEvent, KeyboardEvent, CompositionEvents, GamePadEvent, MouseEvents, TouchEvents, DeviceEvents, FocusEvents, TimeEvents, AnimationEvents, AudioProcessingEvents, UIEvents, ProgressEvent),
+    AllEvents = concatUnique([Events, SVGEvent, KeyboardEvent, CompositionEvents, GamePadEvent, MouseEvents, TouchEvents, DeviceEvents, FocusEvents, TimeEvents, AnimationEvents, AudioProcessingEvents, UIEvents, ProgressEvent]),
     knownPrefixes = toArray('-o-,-ms-,-moz-,-webkit-,mso-,-xv-,-atsc-,-wap-,-khtml-,-apple-,prince-,-ah-,-hp-,-ro-,-rim-,-tc-'),
     validTagNames = toArray('a,abbr,address,area,article,aside,audio,b,base,bdi,bdo,blockquote,body,br,button,canvas,caption,cite,code,col,colgroup,data,datalist,dd,del,dfn,div,dl,dt,em,embed,fieldset,figcaption,figure,footer,form,h1,h2,h3,h4,h5,h6,head,header,hr,html,i,iframe,img,input,ins,kbd,keygen,label,legend,li,link,main,map,mark,meta,meter,nav,noscript,object,ol,optgroup,option,output,p,param,pre,progress,q,rb,rp,rt,rtc,ruby,s,samp,script,section,select,small,source,span,strong,style,sub,sup,table,tbody,td,template,textarea,tfoot,th,thead,time,title,tr,track,u,ul,var,video,wbr'),
     validTagsNamesHash = wrap(validTagNames, BOOLEAN_TRUE),
     ALL_EVENTS_HASH = wrap(AllEvents, BOOLEAN_TRUE),
     knownPrefixesHash = wrap(knownPrefixes, BOOLEAN_TRUE),
-    getClosestWindow = function (windo_) {
-        var windo = windo_ || win;
-        return isWindow(windo) ? windo : (windo && windo[DEFAULT_VIEW] ? windo[DEFAULT_VIEW] : (windo.ownerGlobal ? windo.ownerGlobal : DOMA(windo).parent(WINDOW)[ITEM](0) || win));
-    },
-    getComputed = function (el, ctx) {
-        var ret = getClosestWindow(ctx).getComputedStyle(el);
-        return ret ? ret : getClosestWindow(el).getComputedStyle(el) || clone(el[STYLE]) || {};
-    },
-    allStyles = getComputed(doc[BODY], win),
-    createAttributeFromTag = function (tag) {
-        return '[' + CUSTOM_KEY + '="' + tag + '"]';
-    },
-    tag = function (el, str) {
-        var tag;
-        if (!el || !isElement(el)) {
-            return BOOLEAN_FALSE;
-        }
-        tag = el[LOCAL_NAME].toLowerCase();
-        return str ? tag === str.toLowerCase() : tag;
-    },
+    allStyles,
     numberBasedCss = {
         columnCount: BOOLEAN_TRUE,
         columns: BOOLEAN_TRUE,
@@ -127,265 +105,15 @@ var ATTACHED = 'attached',
         }
         return kebabed;
     }),
-    prefixedStyles = (function () {
-        var i, j, n, found, prefixIndex, __prefix, styleName, currentCheck, deprefixed, currentLen,
-            validCssNames = [],
-            prefixed = {},
-            len = 0,
-            addPrefix = function (list, prefix) {
-                if (indexOf(list, __prefix) === -1) {
-                    list.push(__prefix);
-                }
-            };
-        for (i = 0; i < knownPrefixes[LENGTH]; i++) {
-            currentLen = knownPrefixes[i][LENGTH];
-            if (len < currentLen) {
-                len = currentLen;
-            }
-        }
-        for (n in allStyles) {
-            found = 0;
-            currentCheck = EMPTY_STRING;
-            __prefix = EMPTY_STRING;
-            if (isNumber(+n)) {
-                styleName = allStyles[n];
-            } else {
-                styleName = kebabCase(n);
-            }
-            kebabCase(styleName);
-            camelCase(styleName);
-            deprefixed = styleName;
-            for (j = 0; j < len && styleName[j] && !found; j++) {
-                currentCheck += styleName[j];
-                prefixIndex = indexOf(knownPrefixes, currentCheck);
-                if (prefixIndex !== -1) {
-                    __prefix = knownPrefixes[prefixIndex];
-                    deprefixed = styleName.split(__prefix).join(EMPTY_STRING);
-                    found = 1;
-                }
-                prefixIndex = indexOf(knownPrefixes, HYPHEN + currentCheck);
-                if (prefixIndex !== -1) {
-                    __prefix = knownPrefixes[prefixIndex];
-                    deprefixed = styleName.split(currentCheck).join(EMPTY_STRING);
-                    found = 1;
-                }
-            }
-            deprefixed = camelCase(deprefixed);
-            validCssNames.push(deprefixed);
-            if (!prefixed[deprefixed]) {
-                prefixed[deprefixed] = [];
-            }
-            addPrefix(prefixed[deprefixed], __prefix);
-        }
-        return prefixed;
-    }()),
-    allowsPassiveEvents = function () {
-        return !!wraptry(function () {
-            var supportsPassive = BOOLEAN_FALSE;
-            var opts = Object.defineProperty({}, 'passive', {
-                get: function () {
-                    supportsPassive = BOOLEAN_TRUE;
-                }
-            });
-            window.addEventListener('test', NULL, opts);
-            return supportsPassive;
-        });
-    },
-    convertStyleValue = function (key, value) {
-        return +value !== +value ? value : (timeBasedCss[key] ? value + 'ms' : (!numberBasedCss[key] ? value + PIXELS : value));
-    },
-    updateStyleWithImportant = function (string, key_, value) {
-        var newStyles, found, key = kebabCase(key_);
-        return (newStyles = foldl(string.split(';'), function (memo, item_, index, items) {
-            var item = item_.trim(),
-                itemSplit = item.split(COLON),
-                property = itemSplit[0].trim(),
-                shifted = itemSplit.shift(),
-                setValue = itemSplit.join(COLON).trim();
-            if (property === key) {
-                found = BOOLEAN_TRUE;
-                setValue = value + ' !important';
-            }
-            if (key === property) {
-                memo.push(property + ': ' + setValue);
-            } else {
-                if ((!item_ && !index) || (index === items[LENGTH] - 1 && !found)) {
-                    memo.push(key + ': ' + value + ' !important');
-                } else {
-                    //
-                }
-            }
-            return memo;
-        }, []).join('; ')) ? newStyles + ';' : newStyles;
-    },
-    updateStyle = function (element, key_, value_) {
-        var changed, key = key_,
-            value = value_ !== '' ? convertStyleValue(key, value_) : value_;
-        duff(prefixedStyles[camelCase(key)], function (prefix) {
-            var styleKey = prefix + kebabCase(key),
-                styleVal = element[STYLE][styleKey];
-            if (styleVal !== value) {
-                element[STYLE][styleKey] = value;
-                changed = BOOLEAN_TRUE;
-            }
-        });
-        return changed;
-    },
-    applyStyle = function (element, key_, value_, important_) {
-        var newStyles, found, cached, changed, updatedStyle,
-            key = key_,
-            value = value_,
-            important = important_;
-        if (!isElement(element)) {
-            return BOOLEAN_FALSE;
-        }
-        cached = attributeApi.read(element, STYLE);
-        if (isObject(key_)) {
-            important = value_;
-            value = NULL;
-        }
-        if (important) {
-            // write with importance
-            intendedObject(key, value, function (key, value) {
-                updatedStyle = updateStyleWithImportant(element, key, value);
-            });
-            return updateStyle !== cached;
-        } else {
-            intendedObject(key, value, function (key_, value_) {
-                changed = updateStyle(element, key_, value_) ? BOOLEAN_TRUE : changed;
-            });
-        }
-        return changed;
-    },
-    writeAttribute = function (el, key, val_) {
-        var val = val_;
-        if (val === BOOLEAN_FALSE || val == NULL) {
-            removeAttribute(el, key);
-        } else {
-            if (isObject(val_)) {
-                if (key === STYLE) {
-                    if (!el[STYLE]) {
-                        return;
-                    }
-                    applyStyle(el, val);
-                    return;
-                } else {
-                    val = foldl(val_, function (memo, value, key) {
-                        if (value) {
-                            memo.push(key);
-                        }
-                    }).join(SPACE);
-                }
-            }
-            if (val !== BOOLEAN_FALSE && val != NULL) {
-                el.setAttribute(key, (val === BOOLEAN_TRUE ? EMPTY_STRING : val) + EMPTY_STRING);
-            }
-        }
-    },
-    registeredElementName = function (name, manager) {
-        return capitalize(ELEMENT) + HYPHEN + manager[__ELID__] + HYPHEN + name;
-    },
-    iframeContent = function (head, body) {
-        return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="user-scalable=no,width=device-width,initial-scale=1"><meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">' + head + '</head><body>' + body + '</body></html>';
-    },
-    filtersParentNotMe = function (parent) {
-        return function (element) {
-            return element[PARENT_NODE] === parent;
-        };
-    },
-    returnsSelector = function (string, owner) {
-        var registeredElements = owner.registeredElements;
-        return registeredElements[string] === BOOLEAN_TRUE ? string : createAttributeFromTag(string);
-    },
-    convertSelector = function (str, owner) {
-        // removes custom tag names and replaces them with [is="tag"]
-        // if anyone knows some regexp that would be better than this, then take a stab at it
-        return map(toArray(str, SPACE), function (level) {
-            return level.replace(/^(\S*?)([\.|\#|\[])/i, function (match_) {
-                var match = match_;
-                var last = match[LENGTH] - 1;
-                return last ? (returnsSelector(match.slice(0, last), owner) + match.slice(last)) : match;
-            });
-        }).join(SPACE);
-    },
-    superElements = function (context, key) {
-        return isElement(context[key]) ? [context[key]] : [];
-    },
     superElementsHash = {
-        body: BOOLEAN_TRUE,
-        head: BOOLEAN_TRUE,
-        document: BOOLEAN_TRUE
-    },
-    dataReconstructor = function (list, fn) {
-        return foldl(list, function (memo, arg1, arg2, arg3) {
-            if (fn(arg1, arg2, arg3)) {
-                memo.push(arg1);
-            }
-            return memo;
-        }, []);
-    },
-    // takes string to query for, subset of tree to query for and manager so it can always get to the document
-    query = function (str_, ctx, manager) {
-        var directSelector, elements, str = str_,
-            context = ctx,
-            returnsArray = returns.first,
-            owner = manager.owner;
-        if (manager && manager === owner) {
-            if (superElementsHash[str]) {
-                return superElements(context, str);
-            }
+        body: directSuperAccessor,
+        head: directSuperAccessor,
+        document: function (context) {
+            return context;
+        },
+        window: function (context) {
+            return context.defaultView;
         }
-        if (manager && str[0] === '>') {
-            directSelector = BOOLEAN_TRUE;
-            str = manager.queryString() + str;
-        }
-        str = convertSelector(str, owner);
-        elements = context.querySelectorAll(str);
-        if (directSelector) {
-            return dataReconstructor(elements, filtersParentNotMe(context));
-        } else {
-            return toArray(elements);
-        }
-    },
-    matchesSelector = function (element, selector, owner) {
-        var match, parent, matchesSelector;
-        if (!selector || !element || element[NODE_TYPE] !== 1) {
-            return BOOLEAN_FALSE;
-        }
-        matchesSelector = element.webkitMatchesSelector || element.mozMatchesSelector || element.oMatchesSelector || element.matchesSelector;
-        if (matchesSelector) {
-            return matchesSelector.call(element, selector);
-        }
-        // fall back to performing a selector:
-        parent = element[PARENT_NODE];
-        if (!parent) {
-            parent = createElement(DIV, ensure(element.ownerDocument, BOOLEAN_TRUE));
-            parent[APPEND_CHILD](element);
-        }
-        return indexOf(query(selector, parent, owner), element) !== -1;
-    },
-    readAttribute = function (el, key) {
-        var coerced, val = el.getAttribute(key);
-        return convertAttributeValue(val);
-    },
-    cautiousConvertValue = function (generated) {
-        var converted = +generated;
-        return generated[LENGTH] && converted === converted && converted + EMPTY_STRING === generated ? converted : generated;
-    },
-    convertAttributeValue = function (val_) {
-        var val = val_;
-        if (val === EMPTY_STRING) {
-            return BOOLEAN_TRUE;
-        } else {
-            return val == NULL ? BOOLEAN_FALSE : cautiousConvertValue(val);
-        }
-    },
-    /**
-     * @private
-     * @func
-     */
-    removeAttribute = function (el, key) {
-        el.removeAttribute(key);
     },
     attributeApi = {
         preventUnCamel: BOOLEAN_FALSE,
@@ -393,515 +121,80 @@ var ATTACHED = 'attached',
         write: writeAttribute,
         remove: removeAttribute
     },
-    appendChild = function (parent, target) {
-        return target && parent.appendChild && parent.appendChild(target);
-    },
-    removeChild = function (el, target) {
-        var result = el && (target ? appendChild(target, el) : el.parentNode && el.parentNode.removeChild(el));
-    },
-    readProperty = function (el, property) {
-        return el[property];
-    },
-    writeProperty = function (el, property, value) {
-        if (value == NULL) {
-            return removeProperty(el, property);
-        }
-        el[property] = value;
-    },
-    removeProperty = function (el, property) {
-        el[property] = NULL;
-    },
     propertyApi = {
         preventUnCamel: BOOLEAN_TRUE,
         read: readProperty,
         write: writeProperty,
         remove: removeProperty
     },
-    baseNodeToJSON = function (node) {
-        var obj = {
-            tagName: tag(node),
-            comment: BOOLEAN_FALSE,
-            text: BOOLEAN_FALSE
-        };
-        duff(node.attributes, function (attr) {
-            var attributes = obj.attributes = obj.attributes || {};
-            attributes[camelCase(attr[LOCAL_NAME])] = attr.value;
-        });
-        return obj;
+    HTMLConstantsArray = toArray('area,base,br,col,colgroup,command,embed,hr,img,input,keygen,link,meta,param,source,track,wbr'),
+    HTMLConstantsObject = wrap(HTMLConstantsArray, BOOLEAN_TRUE),
+    /*
+    if the tag name, and key are the same
+        then it can be updated
+    else
+        the node should be swapped out with another node
+    we are now working with the node that will be inserted / is inserted into the dom
+        update it's attributes / properties
+    diff the children
+        if the dom node has no children
+            then create new children from the virtual node
+        if the dom node has children and the virtual node has none,
+            then remove all of the dom node's children
+
+     */
+    canDiffAccepts = {
+        string: BOOLEAN_TRUE,
+        number: BOOLEAN_TRUE
     },
-    commentJSON = function (text) {
+    cantDiffAttrs = {
+        is: BOOLEAN_TRUE,
+        style: BOOLEAN_TRUE
+    },
+    parseSelector = copyCacheable(function (total) {
+        var t, id, i = 0,
+            length = total[LENGTH],
+            classes = [],
+            attrs = {};
+        total.replace(/[#|\.|\[]|\]/igm, function (char, index) {
+            if (!t) {
+                if (index === 0) {
+                    t = 'div';
+                } else {
+                    t = total.slice(0, index);
+                }
+            } else {
+                parseTo(i, index);
+            }
+            i = index;
+            return '';
+        });
+        parseTo(i, length);
+        if (classes.length) {
+            attrs.class = classes.join(' ');
+        }
         return {
-            tag: BOOLEAN_FALSE,
-            comment: BOOLEAN_TRUE,
-            text: BOOLEAN_FALSE,
-            content: text
+            tag: t,
+            id: id,
+            attrs: attrs,
+            class: classes
         };
-    },
-    textJSON = function (text) {
-        return {
-            tag: BOOLEAN_FALSE,
-            comment: BOOLEAN_FALSE,
-            text: BOOLEAN_TRUE,
-            content: text
-        };
-    },
-    finalInsertBefore = function (parent, el1, el2) {
-        return el1 && parent.insertBefore && parent.insertBefore(el1, el2);
-    },
-    insertBefore = function (parent, inserting, target) {
-        var children;
-        if (isObject(target)) {
-            finalInsertBefore(parent, inserting, target);
-        } else {
-            if (isNumber(target)) {
-                children = parent[CHILD_NODES];
-                target = children[LENGTH] > target ? children[target] : BOOLEAN_FALSE;
-                if (target) {
-                    finalInsertBefore(parent, inserting, target);
-                } else {
-                    appendChild(parent, inserting);
-                }
-            } else {
-                if (target) {
-                    // handle query string
-                } else {
-                    appendChild(parent, inserting);
-                }
+
+        function parseTo(i, here) {
+            var part, char = total[i];
+            if (char === '#') {
+                id = attrs.id = total.slice(i + 1, here);
+            } else if (char === '.') {
+                classes.push(total.slice(i + 1, here))
+            } else if (char === '[') {
+                part = total.slice(i + 1, here - 1);
+                part = part.split(/\=[\'|\"]/);
+                attrs[camelCase(part[0])] = part[1];
+            } else if (!t && i === 0) {
+                t = total.slice(i, here);
             }
         }
-    },
-    collectAttr = function (memo, attribute, future) {
-        var attributeKey = attribute[LOCAL_NAME];
-        if (future) {
-            memo.attrsA[attributeKey] = BOOLEAN_TRUE;
-            memo.accessB[attributeKey] = attribute.value;
-        } else {
-            memo.attrsA[attributeKey] = BOOLEAN_TRUE;
-            memo.accessA[attributeKey] = attribute.value;
-        }
-        if (memo.hash[attributeKey]) {
-            return;
-        }
-        memo.hash[attributeKey] = BOOLEAN_TRUE;
-        memo.list.push(attributeKey);
-    },
-    returnsJSONNodeType = function (tagName) {
-        return tagName === 'text' ? 3 : 1;
-    },
-    checkNeedForCustom = function (el) {
-        return el[__ELID__] && attributeApi.read(el, 'is') !== BOOLEAN_FALSE;
-    },
-    diffAttributes = function (a, b, diffs, context) {
-        var bKeys, aAttributes = a.attributes,
-            aLength = aAttributes.length,
-            bLength = (bKeys = keys(b[1])).length,
-            attrs = foldl({
-                length: Math.max(aLength, bLength)
-            }, function (memo, voided, index) {
-                var key;
-                if (memo.aLength > index) {
-                    collectAttr(memo, aAttributes[index]);
-                }
-                if (memo.bLength > index) {
-                    key = bKeys[index];
-                    collectAttr(memo, {
-                        localName: kebabCase(key),
-                        value: b[1][key]
-                    }, BOOLEAN_TRUE);
-                }
-            }, {
-                list: [],
-                hash: {},
-                attrsA: {},
-                accessA: {},
-                attrsB: {},
-                accessB: {},
-                aLength: aLength,
-                bLength: bLength
-            }),
-            anElId = a[__ELID__],
-            updates;
-        duff(attrs.list, function (key) {
-            if (attrs.accessA[key] !== attrs.accessB[key]) {
-                updates = updates || {};
-                updates[key] = attrs.accessB[key] === UNDEFINED ? NULL : attrs.accessB[key];
-            }
-        });
-        if (!updates) {
-            return;
-        }
-        diffs.updating.push(function () {
-            var manager, props;
-            each(updates, function (value, key) {
-                if (!propsHash[key]) {
-                    return;
-                }
-                delete updates[key];
-                props = props || {};
-                props[key] = value;
-            });
-            if (checkNeedForCustom(a)) {
-                manager = context.returnsManager(a);
-                if (keys(updates)[LENGTH]) {
-                    manager.attr(updates);
-                }
-                if (props) {
-                    manager.prop(props);
-                }
-            } else {
-                each(updates, function (value, key) {
-                    attributeApi.write(a, kebabCase(key), value);
-                });
-                each(props, function (value, key) {
-                    propertyApi.write(a, kebabCase(key), value);
-                });
-            }
-        });
-    },
-    collectVirtualKeys = function (virtualized, diff, previous_hash, level_, index_) {
-        var groups, children = virtualized[2];
-        var uniques = virtualized[3];
-        var level = level_ || 0;
-        var index = index_ || 0;
-        if (uniques) {
-            groups = toArray(uniques.group);
-            if (uniques.key) {
-                diff.ids[uniques.key] = {
-                    virtual: virtualized,
-                    level: level,
-                    index: index,
-                    group: groups[LENGTH] ? groups : NULL,
-                    el: previous_hash[uniques.key]
-                };
-            }
-        }
-        duff(children, function (child, index) {
-            collectVirtualKeys(child, diff, previous_hash, level + 1, index);
-        });
-    },
-    computeStringDifference = function (a, b, context, diffs) {
-        if (isString(b[2])) {
-            if (a.innerHTML !== b[2]) {
-                diffs.updating.push(function () {
-                    if (checkNeedForCustom(a)) {
-                        context.returnsManager(a).html(b[2]);
-                    } else {
-                        a.innerHTML = b[2];
-                    }
-                });
-            }
-            return BOOLEAN_TRUE;
-        }
-    },
-    insertMapper = function (els, parent, context, i, hash) {
-        var frag = doc.createDocumentFragment();
-        duff(els, function (el) {
-            context.deltas.create(el, frag, hash);
-        });
-        return {
-            parent: parent,
-            el: frag,
-            index: i
-        };
-    },
-    filtersAlreadyInserted = function (els, hash) {
-        return _.filter(els, function (el) {
-            var identifiers = el[3];
-            if (identifiers && identifiers.key) {
-                return !hash[identifiers.key];
-            }
-            return BOOLEAN_TRUE;
-        });
-    },
-    diffChildren = function (a, b, hash, stopper, layer_level, diffs, context) {
-        var aChildren = a.childNodes;
-        var bChildren = b[2];
-        var mutations = diffs.mutations;
-        var keys = diffs.keys;
-        // it was a string, so there's nothing more to compute in regards to children
-        if (computeStringDifference(a, b, context, diffs)) {
-            return diffs;
-        }
-        var aChildrenLength = aChildren && aChildren[LENGTH];
-        var bChildrenLength = bChildren && bChildren[LENGTH];
-        var maxLength = Math.max(aChildrenLength, bChildrenLength);
-        var j, finished, bChild, removing, result, dontCreate, offset = 0,
-            i = 0,
-            focus = 0;
-        if (!bChildren || isNumber(bChildren)) {
-            return diffs;
-        }
-        for (; i < maxLength && !finished; i++) {
-            if (aChildrenLength <= i) {
-                // rethink this. it's a little weird
-                diffs.inserting.push(insertMapper(filtersAlreadyInserted(toArray(bChildren).slice(i), hash), a, context, i, diffs.keys));
-                return diffs;
-            } else {
-                if (b[2] && stopper(b)) {
-                    // do not do children
-                    if (bChildrenLength <= i) {
-                        dontCreate = BOOLEAN_TRUE;
-                        diffs.removing.push.apply(diffs.removing, toArray(aChildren).slice(i));
-                        return diffs;
-                    } else {
-                        result = nodeComparison(aChildren[i], bChildren[i], hash, stopper, layer_level, i, diffs, context, a);
-                        if (result === BOOLEAN_FALSE) {
-                            diffs.removing.push(a);
-                            diffs.inserting.push(insertMapper([b], a, context, i + offset, diffs.keys));
-                        }
-                    }
-                }
-            }
-        }
-        return diffs;
-    },
-    newDiff = function (context) {
-        var diffs = {
-            removing: [],
-            updating: [],
-            inserting: [],
-            mutations: {
-                remove: function () {
-                    if (!diffs.removing[LENGTH]) {
-                        return;
-                    }
-                    // maintains attach state on dommanager
-                    context.$(diffs.removing).remove();
-                    return BOOLEAN_TRUE;
-                },
-                update: function () {
-                    // attributes and content
-                    duff(diffs.updating, function (fn) {
-                        fn();
-                    });
-                },
-                insert: function () {
-                    if (!diffs.inserting[LENGTH]) {
-                        return;
-                    }
-                    diffs.inserting.sort(function (a, b) {
-                        return a.index > b.index ? 1 : -1;
-                    });
-                    var target, index, currentFragment, actuallyInserting = [],
-                        inserting = diffs.inserting.slice(0);
-                    // group sections into document fragments
-                    while (inserting[LENGTH]) {
-                        // shift off of the inserting list
-                        target = inserting.shift();
-                        // if no index is defined
-                        if (index === UNDEFINED) {
-                            // define an index
-                            index = target.index;
-                            // set a current fragment
-                            currentFragment = {
-                                index: target.index,
-                                el: context.createDocumentFragment(),
-                                parent: target.parent
-                            };
-                            // push it to the final insert list
-                            actuallyInserting.push(currentFragment);
-                            // append the target element to the fragment
-                            appendChild(currentFragment.el, target.el);
-                        } else {
-                            if (target.parent === currentFragment.parent && index + 1 === target.index) {
-                                // append to current fragment
-                                appendChild(currentFragment.el, target.el);
-                                // update index
-                                index = target.index;
-                            } else {
-                                // unshift target
-                                inserting.unshift(target);
-                                // reset index to undefined to start new document fragment
-                                index = UNDEFINED;
-                            }
-                        }
-                    }
-                    duff(actuallyInserting, function (list, idx, lists) {
-                        // maintains attach state on dom manager
-                        context.returnsManager(list.parent).insertAt(list.el, list.index);
-                    });
-                    return BOOLEAN_TRUE;
-                }
-            },
-            keys: {},
-            ids: {},
-            group: {},
-            futureTree: {},
-            futureHash: {}
-        };
-        return diffs;
-    },
-    // cannot start with a text node
-    nodeComparison = function (a_, b_, hash_, stopper_, layer_level_, index_, diffs_, context, future_parent_) {
-        var returns, resultant, current, inserting, identifyingKey, identified, first = !diffs_,
-            a = a_,
-            b = b_,
-            index = index_ || 0,
-            future_parent = future_parent_,
-            diffs = diffs_ || newDiff(context),
-            stopper = stopper_ || returnsTrue,
-            keys = diffs.keys,
-            mutations = diffs.mutations,
-            layer_level = layer_level_ || 0,
-            hash = hash_ || {},
-            layerLength = b[LENGTH],
-            identifiers = b[3],
-            tagA = tag(a);
-        if (first) {
-            collectVirtualKeys(b, diffs, hash);
-        }
-        if (tagA === b[0] && a.nodeType === returnsJSONNodeType(b[0])) {
-            if (identifiers && (identifyingKey = identifiers.key)) {
-                current = hash[identifyingKey];
-                identified = diffs.ids[identifyingKey];
-                if (current) {
-                    if (current === a) {
-                        diffs.keys[identifyingKey] = current;
-                    } else {
-                        if (identified.virtual[0] === tagA) {
-                            // has the effect of removing it at the same time as inserting it
-                            diffs.removing.push(a);
-                            identified.parent = future_parent;
-                            diffs.inserting.push(identified);
-                            a = diffs.keys[identifyingKey] = current;
-                        } else {
-                            diffs.removing.push(a);
-                            diffs.inserting.push(insertMapper([b], future_parent, context, index, diffs.keys));
-                            diffs.keys[identifyingKey] = a;
-                            return diffs;
-                        }
-                    }
-                } else {
-                    diffs.inserting.push(insertMapper([b], future_parent, context, index, diffs.keys));
-                    return diffs;
-                }
-            }
-            // what is different.
-            diffAttributes(a, b, diffs, context);
-            return diffChildren(a, b, hash, stopper, layer_level + 1, diffs, context);
-        } else {
-            // instant fail
-            if (first) {
-                exception('at least the first node must match tagName and nodeType');
-            }
-            return BOOLEAN_FALSE;
-        }
-    },
-    nodeToJSON = function (node, shouldStop_, includeComments) {
-        var obj, children, childrenLength, shouldStop = shouldStop_ || noop;
-        obj = baseNodeToJSON(node);
-        if (obj.attributes && obj.attributes.is && obj.attributes.dataRenderer) {
-            return {
-                selfSufficient: BOOLEAN_TRUE
-            };
-        }
-        if (!shouldStop(node, obj)) {
-            return obj;
-        }
-        children = node.childNodes;
-        if (!(childrenLength = children[LENGTH])) {
-            return obj;
-        }
-        obj.children = foldl(children, function (memo, child) {
-            if (isElement(child)) {
-                memo.push(nodeToJSON(child, shouldStop, includeComments));
-            } else if (child.nodeType === 3) {
-                memo.push(textJSON(child.textContent));
-            } else if (includeComments) {
-                if (child.nodeType === 8) {
-                    memo.push(commentJSON(child.textContent));
-                } else {
-                    memo.push({
-                        err: BOOLEAN_TRUE
-                    });
-                }
-            }
-        }, []);
-        return obj;
-    },
-    createDocumentFragment = function (nulled, context) {
-        return context.is(DOCUMENT) && context.element().createDocumentFragment();
-    },
-    isElement = function (object) {
-        return !!(object && isNumber(object[NODE_TYPE]) && object[NODE_TYPE] === object.ELEMENT_NODE);
-    },
-    isDocument = function (obj) {
-        return obj && isNumber(obj[NODE_TYPE]) && obj[NODE_TYPE] === obj.DOCUMENT_NODE;
-    },
-    isFragment = function (frag) {
-        return frag && frag[NODE_TYPE] === doc.DOCUMENT_FRAGMENT_NODE;
-    },
-    canBeProcessed = function (item) {
-        return isWindow(item) || isElement(item) || isDocument(item) || isFragment(item);
-    },
-    collectChildren = function (element) {
-        return toArray(element.children || element.childNodes);
-    },
-    openBlock = function (selector, total) {
-        return once(function () {
-            total.push(selector.join('') + ' {');
-        });
-    },
-    closeBlock = function (total) {
-        return once(function () {
-            total.push(' }\n');
-        });
-    },
-    buildCss = function (json, selector_, memo_, beforeAnyMore) {
-        var result, baseSelector = selector_ || [],
-            memo = memo_ || [],
-            opensBlock = noop,
-            closesBlock = noop;
-        if (memo_) {
-            opensBlock = openBlock(baseSelector, memo);
-        }
-        if (beforeAnyMore) {
-            beforeAnyMore();
-        }
-        result = foldl(json, function (memo, block, key) {
-            var cameled, trimmed = key.trim();
-            // var media = trimmed[0] === '@';
-            // if (media) {
-            // return total_.concat(medium[trimmed.split(' ').shift()](json, trimmed, total));
-            // handle one way... possible with an extendable handler?
-            // } else {
-            if (isObject(block)) {
-                duff(toArray(trimmed, COMMA), function (trimmd_) {
-                    trimmed = trimmd_.trim();
-                    if (baseSelector[LENGTH]) {
-                        if (trimmed[0] !== '&') {
-                            trimmed = ' ' + trimmed;
-                        } else {
-                            trimmed = trimmed.slice(1);
-                        }
-                    }
-                    opensBlock = openBlock(baseSelector, memo);
-                    baseSelector.push(trimmed);
-                    buildCss(block, baseSelector, memo, closesBlock);
-                    baseSelector.pop();
-                });
-            } else {
-                opensBlock();
-                closesBlock = closeBlock(memo);
-                // always on the same line
-                // console.log(prefixedStyles);
-                cameled = camelCase(trimmed);
-                duff(prefixedStyles[cameled] || [''], function (prefix) {
-                    memo.push('\n\t' + prefix + kebabCase(cameled) + ': ' + convertStyleValue(trimmed, block) + ';');
-                });
-            }
-        }, memo);
-        closesBlock(memo);
-        return result.join('');
-    },
-    WeakMapRemap = function (instance, list) {
-        duff(list, function (name) {
-            var method = instance.get.bind(instance);
-            instance[name] = function (element, identifier) {
-                return method(element, identifier || this.identifier(element));
-            };
-        });
-    },
+    }),
     ElementalWeakMap = WeakMap.extend({
         constructor: function () {
             var map = this;
@@ -913,37 +206,927 @@ var ATTACHED = 'attached',
             map.super.apply(map, arguments);
         },
         identifier: function (el) {
-                return (el && ((isWindow(el) || isDocument(el)) ? BOOLEAN_FALSE : el[__ELID__]));
-            }
-            // ,
-            // ensure: function (el, owner) {
-            //     var id, data, map = this;
-            //     if (!(data = map.get(el))) {
-            //         id = app.counter() + HYPHEN + now();
-            //         data = {
-            //             id: id
-            //         };
-            //         map.set(el, data, id);
-            //         DomManager(el, data, owner, id);
-            //     }
-            //     return data[DOM_MANAGER_STRING];
-            // }
+            return el && (isWindow(el) ? BOOLEAN_FALSE : el[__ELID__]);
+        }
     }),
     globalAssociator = ElementalWeakMap();
+
+function makeDataAttr(key, value) {
+    return '[' + (value == NULL ? key : (key + '="' + value + '"')) + ']';
+}
+
+function getClosestWindow(windo_) {
+    var windo = windo_ || win;
+    return isWindow(windo) ? windo : (windo && windo[DEFAULT_VIEW] ? windo[DEFAULT_VIEW] : (windo.ownerGlobal ? windo.ownerGlobal : DOMA(windo).parent(WINDOW)[ITEM](0) || win));
+}
+
+function getComputed(el, ctx) {
+    var ret = getClosestWindow(ctx).getComputedStyle(el);
+    return ret ? ret : getClosestWindow(el).getComputedStyle(el) || clone(el[STYLE]) || {};
+}
+
+function createAttributeFromTag(tag) {
+    return '[' + CUSTOM_KEY + '="' + tag + '"]';
+}
+
+function tag(el, str) {
+    var tag;
+    if (!el || !isElement(el)) {
+        return BOOLEAN_FALSE;
+    }
+    tag = el[LOCAL_NAME].toLowerCase();
+    return str ? tag === str.toLowerCase() : tag;
+}
+
+function allowsPassiveEvents() {
+    return !!wraptry(function () {
+        var supportsPassive = BOOLEAN_FALSE;
+        var opts = Object.defineProperty({}, 'passive', {
+            get: function () {
+                supportsPassive = BOOLEAN_TRUE;
+            }
+        });
+        window.addEventListener('test', NULL, opts);
+        return supportsPassive;
+    });
+}
+
+function convertStyleValue(key, value) {
+    return +value !== +value ? value : (timeBasedCss[key] ? value + 'ms' : (!numberBasedCss[key] ? value + PIXELS : value));
+}
+
+function updateStyleWithImportant(string, key_, value) {
+    var newStyles, found, key = kebabCase(key_);
+    return (newStyles = reduce(string.split(';'), function (memo, item_, index, items) {
+        var item = item_.trim(),
+            itemSplit = item.split(COLON),
+            property = itemSplit[0].trim(),
+            shifted = itemSplit.shift(),
+            setValue = itemSplit.join(COLON).trim();
+        if (property === key) {
+            found = BOOLEAN_TRUE;
+            setValue = value + ' !important';
+        }
+        if (key === property) {
+            memo.push(property + ': ' + setValue);
+        } else {
+            if ((!item_ && !index) || (index === items[LENGTH] - 1 && !found)) {
+                memo.push(key + ': ' + value + ' !important');
+            } else {
+                //
+            }
+        }
+        return memo;
+    }, []).join('; ')) ? newStyles + ';' : newStyles;
+}
+
+function writeAttribute(el, key, val_) {
+    var val = val_;
+    if (val === BOOLEAN_FALSE || val == NULL) {
+        removeAttribute(el, key);
+    } else {
+        if (isObject(val_)) {
+            if (key === STYLE) {
+                if (!el[STYLE]) {
+                    return;
+                }
+                applyStyle(el, val);
+                return;
+            } else {
+                val = reduce(val_, function (memo, value, key) {
+                    if (value) {
+                        memo.push(key);
+                    }
+                }).join(SPACE);
+            }
+        }
+        if (val !== BOOLEAN_FALSE && val != NULL) {
+            el.setAttribute(key, (val === BOOLEAN_TRUE ? EMPTY_STRING : val) + EMPTY_STRING);
+        }
+    }
+}
+
+function registeredElementName(name, manager) {
+    return capitalize(ELEMENT) + HYPHEN + manager[__ELID__] + HYPHEN + name;
+}
+
+function iframeContent(head, body) {
+    return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="user-scalable=no,width=device-width,initial-scale=1"><meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">' + head + '</head><body>' + body + '</body></html>';
+}
+
+function filtersParentNotMe(parent) {
+    return function (element) {
+        return element[PARENT_NODE] === parent;
+    };
+}
+
+function returnsSelector(string, owner) {
+    var registeredElements = owner.registeredElements;
+    return registeredElements[string] === BOOLEAN_TRUE ? string : createAttributeFromTag(string);
+}
+
+function convertSelector(str, owner) {
+    // removes custom tag names and replaces them with [is="tag"]
+    // if anyone knows some regexp that would be better than this, then take a stab at it
+    return map(toArray(str, SPACE), function (level) {
+        return level.replace(/^(\S*?)([\.|\#|\[])/i, function (match_) {
+            var match = match_;
+            var last = match[LENGTH] - 1;
+            return last ? (returnsSelector(match.slice(0, last), owner) + match.slice(last)) : match;
+        });
+    }).join(SPACE);
+}
+
+function directSuperAccessor(context, key) {
+    return context[key];
+}
+
+function dataReconstructor(list, fn) {
+    return reduce(list, function (memo, arg1, arg2, arg3) {
+        if (fn(arg1, arg2, arg3)) {
+            memo.push(arg1);
+        }
+        return memo;
+    }, []);
+}
+// takes string to query for, subset of tree to query for and manager so it can always get to the document
+function query(str_, ctx, manager) {
+    var superElement, directSelector, elements, str = (str_ || EMPTY_STRING).trim(),
+        context = ctx,
+        returnsArray = returns.first,
+        owner = manager.owner;
+    if (!str) {
+        return [];
+    }
+    if (manager && manager === owner) {
+        if ((superElement = superElementsHash[str])) {
+            // assume context is window since (manager === owner)
+            return [superElement(context, str)];
+        }
+    }
+    if (manager && str[0] === '>') {
+        directSelector = BOOLEAN_TRUE;
+        str = manager.queryString() + str;
+    }
+    str = convertSelector(str, owner);
+    elements = context.querySelectorAll(str);
+    if (directSelector) {
+        return dataReconstructor(elements, filtersParentNotMe(context));
+    } else {
+        return toArray(elements);
+    }
+}
+
+function matchesSelector(element, selector, owner) {
+    var match, parent, matchesSelector;
+    if (!selector || !element || element[NODE_TYPE] !== 1) {
+        return BOOLEAN_FALSE;
+    }
+    matchesSelector = element.webkitMatchesSelector || element.mozMatchesSelector || element.oMatchesSelector || element.matchesSelector;
+    if (matchesSelector) {
+        return matchesSelector.call(element, selector);
+    }
+    // fall back to performing a selector:
+    parent = element[PARENT_NODE];
+    if (!parent) {
+        parent = createElement(DIV, ensure(element.ownerDocument, BOOLEAN_TRUE));
+        parent[APPEND_CHILD](element);
+    }
+    return indexOf(query(selector, parent, owner), element) !== -1;
+}
+
+function readAttribute(el, key) {
+    var coerced, val = el.getAttribute(key);
+    return convertAttributeValue(val);
+}
+
+function cautiousConvertValue(generated) {
+    var converted = +generated;
+    return generated[LENGTH] && converted === converted && converted + EMPTY_STRING === generated ? converted : generated;
+}
+
+function convertAttributeValue(val_) {
+    var val = val_;
+    if (val === EMPTY_STRING) {
+        return BOOLEAN_TRUE;
+    } else {
+        return val == NULL ? BOOLEAN_FALSE : cautiousConvertValue(val);
+    }
+}
+
+function removeAttribute(el, key) {
+    el.removeAttribute(key);
+}
+
+function appendChild(parent, target) {
+    return target && parent.appendChild && parent.appendChild(target);
+}
+
+function removeChild(el, target) {
+    var result = el && (target ? appendChild(target, el) : el.parentNode && el.parentNode.removeChild(el));
+}
+
+function readProperty(el, property) {
+    return el[property];
+}
+
+function writeProperty(el, property, value) {
+    if (value == NULL) {
+        return removeProperty(el, property);
+    }
+    el[property] = value;
+}
+
+function removeProperty(el, property) {
+    el[property] = NULL;
+}
+
+function HTMLAttribute(attr, value) {
+    return value ? (' ' + attr + '="' + value + '"') : '';
+}
+
+function HTMLAttributes(attrs) {
+    var HTML = this;
+    return reduce(attrs, function (memo, value, key) {
+        return value ? memo + HTML.attribute(kebabCase(key), value) : memo;
+    }, EMPTY_STRING);
+}
+
+function HTMLOpenTag(tag, attrs_) {
+    var base, prefixer, HTML = this,
+        attrs = (base = HTML.attributesBase[tag]) ? base(attrs_) : attrs_,
+        tagOpenPrefixes = HTML.tagOpenPrefixes;
+    return (tagOpenPrefixes[tag] || tagOpenPrefixes.defaults)(attrs) + tag + HTML.attributes(attrs);
+}
+
+function basicAttributeCondensation(key, value, next) {
+    var nxt = next || returns.first;
+    return function (attrs_) {
+        var attrs = attrs_ || {};
+        if (!attrs[key]) {
+            attrs[key] = value;
+        }
+        return nxt(attrs);
+    };
+}
+
+function HTMLTagEmpty(tag, attrs) {
+    return this.tagOpen(tag, attrs) + '/>';
+}
+
+function HTMLTagContent(tag, attrs, content) {
+    return this.tagOpen(tag, attrs) + '>' + content + '</' + tag + '>';
+}
+
+function HTMLTagBuild(tag_, attrs_, content) {
+    var special, HTML = this,
+        parsed = parseSelector(tag_),
+        tag = parsed.tag,
+        attrs = merge(parsed.attrs, attrs_);
+    return (special = HTML.tagSpecial[tag]) ? special(attrs, content) : (HTML.tagsEmpty[tag] ? HTML.tagEmpty(tag, attrs) : HTML.tagContent(tag, attrs, content));
+}
+
+function HTMLBuild(template) {
+    var HTML = this;
+    return isString(template) ? template : reduce(template, function (memo, child) {
+        // can be used recurisvely
+        return memo + (isString(child) ? child : HTML.tagBuild(child[0], child[1], HTML.build(child[2])));
+    }, EMPTY_STRING);
+}
+
+function baseNodeToJSON(node) {
+    var t = tag(node);
+    return [t, reduce(node.attributes, function (attributes, attr) {
+        attributes[camelCase(attr[LOCAL_NAME])] = attr.value;
+    }, {})];
+}
+
+function commentJSON(text) {
+    return {
+        tag: BOOLEAN_FALSE,
+        comment: BOOLEAN_TRUE,
+        text: BOOLEAN_FALSE,
+        content: text
+    };
+}
+
+function textJSON(text) {
+    return {
+        tag: BOOLEAN_FALSE,
+        comment: BOOLEAN_FALSE,
+        text: BOOLEAN_TRUE,
+        content: text
+    };
+}
+
+function finalInsertBefore(parent, el1, el2) {
+    return el1 && parent.insertBefore && parent.insertBefore(el1, el2);
+}
+
+function insertBefore(parent, inserting, target) {
+    var children;
+    if (isObject(target)) {
+        finalInsertBefore(parent, inserting, target);
+    } else {
+        if (isNumber(target)) {
+            children = parent[CHILD_NODES];
+            target = children[LENGTH] > target ? children[target] : BOOLEAN_FALSE;
+            if (target) {
+                finalInsertBefore(parent, inserting, target);
+            } else {
+                appendChild(parent, inserting);
+            }
+        } else {
+            if (target) {
+                // handle query string
+            } else {
+                appendChild(parent, inserting);
+            }
+        }
+    }
+}
+
+function collectAttr(memo, attribute, future) {
+    var attributeKey = attribute[LOCAL_NAME];
+    if (future) {
+        memo.attrsA[attributeKey] = BOOLEAN_TRUE;
+        memo.accessB[attributeKey] = attribute.value;
+    } else {
+        memo.attrsA[attributeKey] = BOOLEAN_TRUE;
+        memo.accessA[attributeKey] = attribute.value;
+    }
+    if (memo.hash[attributeKey]) {
+        return;
+    }
+    memo.hash[attributeKey] = BOOLEAN_TRUE;
+    memo.list.push(attributeKey);
+}
+
+function returnsJSONNodeType(tagName) {
+    return tagName === 'text' ? 3 : 1;
+}
+
+function checkNeedForCustom(el) {
+    return el[__ELID__] && attributeApi.read(el, CUSTOM_KEY) !== BOOLEAN_FALSE;
+}
+
+function HTML() {
+    var HTML, addTextCssAttribute = basicAttributeCondensation('type', 'text/css'),
+        basicStyleAttributes = basicAttributeCondensation('rel', 'stylesheet', addTextCssAttribute),
+        attributesBase = {
+            link: basicStyleAttributes,
+            style: basicStyleAttributes,
+            script: basicAttributeCondensation('type', 'text/javascript'),
+            button: basicAttributeCondensation('type', 'submit'),
+            input: basicAttributeCondensation('type', 'input'),
+            form: basicAttributeCondensation('method', 'get')
+        },
+        tagOpenPrefixes = {
+            defaults: returns('<'),
+            html: returns('<!DOCTYPE html><')
+        };
+    return (HTML = {
+        build: HTMLBuild,
+        tagOpen: HTMLOpenTag,
+        tagEmpty: HTMLTagEmpty,
+        tagBuild: HTMLTagBuild,
+        tagContent: HTMLTagContent,
+        tagOpenPrefixes: tagOpenPrefixes,
+        attributesBase: attributesBase,
+        attributes: HTMLAttributes,
+        attribute: HTMLAttribute,
+        tagsEmpty: merge({}, HTMLConstantsObject),
+        tagSpecial: {
+            stylesheet: function (attrs, content) {
+                return attrs.href ? HTML.tagEmpty('link', attrs) : HTML.tagContent('style', attrs, content);
+            }
+        }
+    });
+}
+
+function nodeToJSON(node, shouldStop_, includeComments) {
+    return {};
+    // var obj, children, childrenLength, shouldStop = shouldStop_ || noop;
+    // obj = baseNodeToJSON(node);
+    // if (obj.attributes && obj.attributes.is && obj.attributes.dataRenderer) {
+    //     return {
+    //         selfSufficient: BOOLEAN_TRUE
+    //     };
+    // }
+    // if (!shouldStop(node, obj)) {
+    //     return obj;
+    // }
+    // children = node.childNodes;
+    // if (!(childrenLength = children[LENGTH])) {
+    //     return obj;
+    // }
+    // obj.children = reduce(children, function (memo, child) {
+    //     if (isElement(child)) {
+    //         memo.push(nodeToJSON(child, shouldStop, includeComments));
+    //     } else if (child.nodeType === 3) {
+    //         memo.push(textJSON(child.textContent));
+    //     } else if (includeComments) {
+    //         if (child.nodeType === 8) {
+    //             memo.push(commentJSON(child.textContent));
+    //         } else {
+    //             memo.push({
+    //                 err: BOOLEAN_TRUE
+    //             });
+    //         }
+    //     }
+    // }, []);
+    // return obj;
+}
+// cannot start with a text node
+function createDiffer(context) {
+    var hash, updating, swaps;
+
+    function resolveLater(key) {
+        return isString(key) ? function () {
+            return hash[key]
+        } : returns(key)
+    }
+
+    function swapNodes(h) {
+        var $remove, add, remove,
+            add = h.add(),
+            remove = h.remove();
+        if (add && remove) {
+            $remove = context.returnsManager(remove);
+            $remove.insertBefore(add);
+            $remove.remove();
+        } else if (remove) {
+            context.$(remove).remove();
+        } else {
+            context.returnsManager(h.parent).insertAfter(add, h.index);
+        }
+    }
+    return {
+        context: context,
+        swaps: (swaps = []),
+        keys: (hash = {}),
+        updating: (updating = []),
+        queue: {
+            add: function (node, index, parent) {
+                return this.swap(NULL, node, index, parent);
+            },
+            remove: function (node, parent) {
+                return this.swap(node, NULL, NULL, parent);
+            },
+            html: function (node, content) {},
+            swap: function (first, last, index, parent) {
+                swaps.push({
+                    parent: parent,
+                    index: index,
+                    remove: resolveLater(first),
+                    add: resolveLater(last)
+                });
+            },
+            update: function (node, updates, fn) {
+                updating.push({
+                    node: node,
+                    updates: updates,
+                    fn: fn
+                });
+            }
+        },
+        mutate: {
+            swap: function () {
+                forEach(swaps, swapNodes);
+            },
+            update: function () {
+                // attributes and content
+                forEach(updating, function (item) {
+                    item.fn(item.node, item.updates);
+                });
+            },
+        }
+    };
+}
+
+function createDocumentFragment(nulled, context) {
+    return context.is(DOCUMENT) && context.element().createDocumentFragment();
+}
+
+function isElement(object) {
+    return !!(object && isNumber(object[NODE_TYPE]) && object[NODE_TYPE] === object.ELEMENT_NODE);
+}
+
+function isDocument(obj) {
+    return obj && isNumber(obj[NODE_TYPE]) && obj[NODE_TYPE] === obj.DOCUMENT_NODE;
+}
+
+function isFragment(frag) {
+    return frag && frag[NODE_TYPE] === doc.DOCUMENT_FRAGMENT_NODE;
+}
+
+function canBeProcessed(item) {
+    return isWindow(item) || isElement(item) || isDocument(item) || isFragment(item);
+}
+
+function collectChildren(element) {
+    return toArray(element.children || element.childNodes);
+}
+
+function openBlock(selector, total) {
+    return once(function () {
+        total.push(selector.join('') + ' {');
+    });
+}
+
+function closeBlock(total) {
+    return once(function () {
+        total.push(' }\n');
+    });
+}
+
+function WeakMapRemap(instance, list) {
+    forEach(list, function (name) {
+        var method = instance.get.bind(instance);
+        instance[name] = function (element, identifier) {
+            return method(element, identifier || this.identifier(element));
+        };
+    });
+}
+
+function nodeComparison(_a, _b, _hash, _stopper, context) {
+    var returns, mutate, removing, updating, inserting, keysHash, resultant, current, inserting, identifyingKey, identified,
+        a = _a,
+        b = cloneJSON(_b),
+        layer_level = 0,
+        // check kids
+        stopper = _stopper || returnsTrue,
+        diffs = createDiffer(context),
+        keysHash = diffs.keys;
+    updateElement(a, b);
+    return diffs;
+
+    function updateNode(a, hash) {
+        var manager, props, attrs = hash.attrs,
+            style = hash.style;
+        forOwn(attrs, function (value, key) {
+            if (!propsHash[key]) {
+                return;
+            }
+            delete attrs[key];
+            props = props || {};
+            props[key] = value;
+        });
+        if (checkNeedForCustom(a)) {
+            manager = context.returnsManager(a);
+            if (keys(attrs)[LENGTH]) {
+                manager.attr(attrs);
+            }
+            if (props) {
+                manager.prop(props);
+            }
+            if (style) {
+                manager.css(style);
+            }
+        } else {
+            forOwn(attrs, function (value, key) {
+                attributeApi.write(a, kebabCase(key), value);
+            });
+            forOwn(props, function (value, key) {
+                propertyApi.write(a, kebabCase(key), value);
+            });
+            if (style) {
+                applyStyle(a, style);
+            }
+        }
+    }
+
+    function arrayLikeMax(aLength, bLength) {
+        return {
+            length: Math.max(aLength, bLength)
+        };
+    }
+
+    function diffNodeProperties(a, bAttrs, props, style_) {
+        var style, bKeys, aAttributes = a.attributes,
+            aLength = aAttributes[LENGTH],
+            bKeys = keys(bAttrs),
+            bLength = bKeys[LENGTH],
+            attrs = reduce(arrayLikeMax(aLength, bLength), //
+                function (memo, voided, index) {
+                    var key;
+                    if (memo.aLength > index) {
+                        collectAttr(memo, aAttributes[index]);
+                    }
+                    if (memo.bLength > index) {
+                        key = bKeys[index];
+                        collectAttr(memo, {
+                            localName: kebabCase(key),
+                            value: bAttrs[key]
+                        }, BOOLEAN_TRUE);
+                    }
+                }, {
+                    list: [],
+                    hash: {},
+                    attrsA: {},
+                    accessA: {},
+                    attrsB: {},
+                    accessB: {},
+                    aLength: aLength,
+                    bLength: bLength
+                }),
+            anElId = a[__ELID__],
+            updates,
+            accessA = attrs.accessA,
+            accessB = attrs.accessB;
+        // diffs styles
+        if (attrs.attrsA[STYLE]) {
+            aStyle = a[STYLE];
+            styl = style_ || {};
+            stylKeys = keys(styl);
+            styleIterator = arrayLikeMax(a.style[LENGTH], stylKeys[LENGTH]);
+            style = reduce(styleIterator, function (style, key) {
+                var valueA = aStyle[key];
+                var valueB = styl[key];
+                if (isUndefined(valueB)) {
+                    style[key] = '';
+                } else if (!isStrictlyEqual(valueA, (converted = convertStyleValue(key, valueB)))) {
+                    style[key] = converted;
+                }
+            }, {});
+        } else {
+            style = style_;
+        }
+        forEach(attrs.list, function (key) {
+            if (cantDiffAttrs[key]) {
+                return;
+            }
+            var accessAValue = accessA[key];
+            var accessBValue = accessB[key];
+            if (accessAValue !== accessBValue) {
+                if (accessAValue === UNDEFINED && accessBValue === BOOLEAN_FALSE) {
+                    return;
+                }
+                updates = updates || {};
+                updates[key] = accessBValue === UNDEFINED ? NULL : accessBValue;
+            }
+        });
+        if (updates) {
+            diffs.queue.update(a, {
+                attrs: updates,
+                style: style,
+                props: props
+            }, updateNode);
+        }
+    }
+
+    function accessStyle(virtual) {
+        return (virtual[1] || {}).style;
+    }
+
+    function accessChildren(virtual) {
+        return (virtual && virtual[2]);
+    }
+
+    function resolveIncompatability(node, virtual) {
+        var t, key = accessKey(virtual),
+            registered = keysHash[key];
+        //     t = tag(node),
+        //     tg = accessTag(virtual);
+        // if (!t) {
+        //     // check this later
+        //     // probably text
+        //     if (tg === 'text') {
+        //         return {
+        //             node: node
+        //         };
+        //     }
+        // }
+        // if (t && t === tagName(virtual)) {
+        //     // the node did not move and
+        //     // did not change it's tag name
+        //     return {
+        //         node: registered || node
+        //     };
+        // }
+        if ((t = tag(node)) && t === tagName(virtual)) {
+            // the node did not move and
+            // did not change it's tag name
+            return {
+                node: registered || node
+            };
+        }
+        var frag = context.createDocumentFragment();
+        var newEl = createFromVirtual(virtual, frag, keysHash);
+        return {
+            node: newEl,
+            frag: frag
+        };
+    }
+
+    function buildAttrs(virtual) {
+        return merge(parseSelector(accessTag(virtual)).attrs, accessAttrs(virtual));
+    }
+
+    function fillVirtual(virtual) {
+        if (!virtual) {
+            return false;
+        }
+        var first = accessTag(virtual);
+        if (!first) {
+            return virtual;
+        }
+        var attrs = accessMeta(virtual);
+        var children = accessChildren(virtual);
+        return (isString(attrs) || isArray(attrs)) ? [first, NULL, rewrapChildren(attrs)] : [first, attrs, rewrapChildren(children)];
+    }
+
+    function accessProps(virtual) {
+        return accessMeta(virtual).props;
+    }
+
+    function updateElement(_node, _virtual) {
+        var virtual = fillVirtual(_virtual);
+        var hash = resolveIncompatability(_node, virtual);
+        var frag = hash.frag;
+        var node = hash.node;
+        diffChildren(node, virtual);
+        diffNodeProperties(node, buildAttrs(virtual), accessProps(virtual), accessStyle(virtual));
+        setKey(node, virtual);
+        // should anything take it's place
+        return frag || node;
+        // assume that you have a json object
+        // and you have a node
+    }
+
+    function createStringSet(a, b) {
+        if (checkNeedForCustom(a)) {
+            context.returnsManager(a).html(b);
+        } else {
+            a.innerHTML = b;
+        }
+    }
+
+    function computeStringDifference(a, bChildren) {
+        if (notNaN(bChildren) && canDiffAccepts[type(bChildren)]) {
+            if (a.innerHTML != bChildren) {
+                diffs.queue.update(a, bChildren, createStringSet);
+            }
+            return BOOLEAN_TRUE;
+        }
+    }
+
+    function setKey(node, virtual) {
+        var key;
+        if ((key = accessKey(virtual))) {
+            if (keysHash[key]) {
+                if (keysHash[key] !== node) {
+                    return console.log('problem diffing');
+                }
+            }
+            keysHash[key] = node;
+        }
+    }
+
+    function rewrapChildren(_children) {
+        var first, children = _children;
+        // take care of children, null, false, and string case
+        // where the children are simply going to be overwritten
+        if (!children || isString(children)) {
+            return children;
+        }
+        if (isArray(children) && (first = children[0]) && isString(first)) {
+            children = [children];
+        }
+        return children;
+    }
+
+    function diffChildren(_a, _b) {
+        var a = _a;
+        var b = _b || [];
+        var aChildren = toArray(a.childNodes || []);
+        var bChildren = b[2] = rewrapChildren(b[2]);
+        // var mutate = diffs.mutate;
+        // var keys = diffs.keys;
+        // it was a string, so there's nothing more
+        // to compute in regards to children
+        // strings just wipe out the previous els
+        if ((!bChildren && bChildren !== EMPTY_STRING) || !stopper(b) || computeStringDifference(a, bChildren)) {
+            return;
+        }
+        var bChildrenLength = bChildren[LENGTH];
+        var aChildrenLength = aChildren[LENGTH];
+        var maxLength = Math.max(aChildrenLength, bChildrenLength);
+        var fragment, aChild, virtual, infos, originalChild, j, finished, bChild, removing, result, dontCreate, offset = 0,
+            i = 0,
+            focus = 0,
+            key = accessKey(b);
+        // do nothing (false, null, NUMBER, or stopper failed)
+        if (!bChildrenLength) {
+            return diffs.queue.remove(aChildren, a);
+        }
+        if (!aChildrenLength) {
+            infos = insertMapper(bChildren.slice(0), a, 0);
+            return diffs.queue.add(infos.el, infos.index, infos.parent);
+        }
+        for (; i < maxLength; i++) {
+            originalChild = aChildren[i];
+            virtual = bChildren[i];
+            if (virtual) {
+                if (originalChild) {
+                    aChild = updateElement(originalChild, virtual, a);
+                    // setKey(firstChild(aChild), virtual);
+                } else {
+                    aChild = context.createDocumentFragment();
+                    setKey(createFromVirtual(virtual, aChild, keysHash), virtual);
+                }
+                if (aChild !== originalChild) {
+                    diffs.queue.swap(originalChild, aChild, i, a);
+                }
+            } else {
+                diffs.queue.remove(aChildren.slice(i), a);
+                i = maxLength;
+                // aChild = context.createDocumentFragment();
+                // setKey(createFromVirtual(virtual, aChild, keysHash), virtual);
+            }
+        }
+    }
+
+    function updateFromVirtual(node, children, parent) {
+        var results;
+        if (isString(children)) {
+            node.innerHTML = children;
+        } else {
+            forEach(children, function (child) {
+                appendChild(node, createFromVirtual(child, node));
+            });
+        }
+        if (parent) {
+            parent.appendChild(node);
+        }
+        return node;
+    }
+
+    function accessTag(virtual) {
+        return virtual && virtual[0];
+    }
+
+    function accessMeta(virtual) {
+        return virtual && virtual[1] || {};
+    }
+
+    function accessAttrs(virtual) {
+        return accessMeta(virtual).attrs;
+    }
+
+    function accessKey(virtual) {
+        return (virtual && virtual[1] || {}).key;
+    }
+
+    function tagName(virtual) {
+        return parseSelector(accessTag(virtual)).tag;
+    }
+
+    function createFromVirtual(_virtual, parent) {
+        var key, data, created,
+            virtual = fillVirtual(_virtual);
+        if (virtual[0] === 'text') {
+            parent.innerHTML = virtual[2];
+            return;
+        }
+        // var parsed = parseSelector(virtual[0]);
+        created = context.createElement(virtual[0], buildAttrs(virtual)).element();
+        setKey(created, virtual);
+        return updateFromVirtual(created, virtual[2], parent);
+    }
+
+    function insertMapper(els, parent, i) {
+        var frag = doc.createDocumentFragment();
+        forEach(els, function (el) {
+            createFromVirtual(el, frag, keysHash);
+        });
+        return {
+            parent: parent,
+            el: frag,
+            index: i
+        };
+    }
+}
 app.scope(function (app) {
-    var ensure = function (el, owner) {
-            var data, id, attach_id, manager, associator;
+    if (!window.document) {
+        options.$ = {};
+        return;
+    }
+    var noMatch = /(.)^/,
+        ensure = function (el, owner) {
+            var data, id, manager, associator, attach_id = BOOLEAN_TRUE;
             if (owner === BOOLEAN_TRUE) {
-                data = globalAssociator.get(el, el[__ELID__]);
+                id = el[__ELID__];
+                attach_id = !id;
+                data = globalAssociator.get(el, id);
                 associator = globalAssociator;
             } else {
                 associator = globalAssociator;
                 if (isWindow(el)) {
                     data = globalAssociator.get(el);
-                    id = BOOLEAN_FALSE;
+                    attach_id = id = BOOLEAN_FALSE;
                 } else {
                     associator = owner.data;
-                    attach_id = BOOLEAN_TRUE;
                     id = el[__ELID__];
                     if (id) {
                         data = associator.get(el, id);
@@ -956,40 +1139,15 @@ app.scope(function (app) {
             if (!data) {
                 data = {};
                 associator.set(el, data, id);
+                if (attach_id) {
+                    el[__ELID__] = id;
+                }
             }
             if (!(manager = data[DOM_MANAGER_STRING])) {
                 manager = DomManager(el, data, owner, id);
             }
             return manager;
         },
-        noMatch = /(.)^/,
-        // templateMiddleware = function (string) {
-        //     var split = string.split('<');
-        //     var pseudo = foldl(split, function (memo, splitstring) {
-        //         var endsplit = splitstring.split('>');
-        //         if (endsplit[LENGTH] === 1) {
-        //             // just text
-        //             memo.list.push(splitstring);
-        //             return;
-        //         }
-        //         var nexttext = endsplit[1];
-        //         var contained = endsplit[0];
-        //     }, {
-        //         layer: 0,
-        //         list: []
-        //     });
-        //     return string;
-        // },
-        // foldAttributes = function (attributes) {
-        //     return attributes[LENGTH] ? _.foldl(attributes, function (memo, attribute) {
-        //         memo[attribute[LOCAL_NAME]] = attribute.value;
-        //     }) : NULL;
-        // },
-        // virtualizeDom = function (nodes) {
-        //     return _.map(nodes, function (node) {
-        //         return [node.tagName, foldAttributes(node.attributes)];
-        //     });
-        // },
         templateGenerator = function (text_, templateSettings) {
             var render, template, trimmed, argument, settings = merge({}, templateSettings),
                 text = text_,
@@ -1007,7 +1165,7 @@ app.scope(function (app) {
                 });
             }
             return function (data, helpers) {
-                return render.call(data, helpers, _);
+                return render.call(data, _, helpers);
             };
             // }
             // var matcher = RegExp([
@@ -1068,7 +1226,7 @@ app.scope(function (app) {
         motionMorph = /^device/,
         rforceEvent = /^webkitmouseforce/,
         Image = win.Image,
-        hasWebP = (function () {
+        hasWebP = function () {
             var countdown = 4,
                 result = BOOLEAN_TRUE,
                 queue = [],
@@ -1079,13 +1237,12 @@ app.scope(function (app) {
                         if (countdown) {
                             return;
                         }
-                        duff(queue, function (item) {
-                            item(result);
-                        });
+                        var q = queue.slice(0);
                         queue = [];
+                        _.forEachCallBound(q, result);
                     };
                 };
-            duff(["UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA", "UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==", "UklGRkoAAABXRUJQVlA4WAoAAAAQAAAAAAAAAAAAQUxQSAwAAAARBxAR/Q9ERP8DAABWUDggGAAAABQBAJ0BKgEAAQAAAP4AAA3AAP7mtQAAAA==", "UklGRlIAAABXRUJQVlA4WAoAAAASAAAAAAAAAAAAQU5JTQYAAAD/////AABBTk1GJgAAAAAAAAAAAAAAAAAAAGQAAABWUDhMDQAAAC8AAAAQBxAREYiI/gcA"], function (val) {
+            forEach(["UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA", "UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==", "UklGRkoAAABXRUJQVlA4WAoAAAAQAAAAAAAAAAAAQUxQSAwAAAARBxAR/Q9ERP8DAABWUDggGAAAABQBAJ0BKgEAAQAAAP4AAA3AAP7mtQAAAA==", "UklGRlIAAABXRUJQVlA4WAoAAAASAAAAAAAAAAAAQU5JTQYAAAD/////AABBTk1GJgAAAAAAAAAAAAAAAAAAAGQAAABWUDhMDQAAAC8AAAAQBxAREYiI/gcA"], function (val) {
                 var img = new Image();
                 img.onload = emptyqueue(noop);
                 img.onerror = emptyqueue(function () {
@@ -1100,7 +1257,14 @@ app.scope(function (app) {
                     queue.push(cb);
                 }
             };
-        }()),
+        },
+        checkingWebP,
+        handlesWebP = function (fn) {
+            if (!checkingWebP) {
+                checkingWebP = hasWebP();
+            }
+            checkingWebP(fn);
+        },
         fetch = function (url) {
             return Promise(function (s, f) {
                 var img = new Image();
@@ -1134,7 +1298,7 @@ app.scope(function (app) {
                 if (isFunction(fn) || isFunction(fn2)) {
                     doma.on(attr, fn, fn2, capturing);
                 } else {
-                    doma.each(makeEachTrigger(attr, api, fn));
+                    doma.forEach(makeEachTrigger(attr, api, fn));
                 }
                 return doma;
             };
@@ -1187,23 +1351,25 @@ app.scope(function (app) {
             });
         },
         box = function (el, ctx) {
-            var clientrect, computed, ret;
+            var computed, ret, pf = parseFloat,
+                TEN = 10,
+                ZERO = 0;
             if (!isElement(el)) {
                 ret = {
-                    borderBottom: 0,
-                    borderRight: 0,
-                    borderLeft: 0,
-                    borderTop: 0,
-                    paddingBottom: 0,
-                    paddingRight: 0,
-                    paddingLeft: 0,
-                    paddingTop: 0,
-                    marginBottom: 0,
-                    marginRight: 0,
-                    marginLeft: 0,
-                    marginTop: 0,
-                    height: 0,
-                    width: 0
+                    borderBottom: ZERO,
+                    borderRight: ZERO,
+                    borderLeft: ZERO,
+                    borderTop: ZERO,
+                    paddingBottom: ZERO,
+                    paddingRight: ZERO,
+                    paddingLeft: ZERO,
+                    paddingTop: ZERO,
+                    marginBottom: ZERO,
+                    marginRight: ZERO,
+                    marginLeft: ZERO,
+                    marginTop: ZERO,
+                    height: ZERO,
+                    width: ZERO
                 };
                 if (isWindow(el)) {
                     ret.height = el[INNER_HEIGHT];
@@ -1216,29 +1382,28 @@ app.scope(function (app) {
             } else {
                 if (el.parentNode) {
                     computed = getComputed(el, ctx);
-                    clientrect = clientRect(el, ctx);
                 } else {
-                    computed = clientRect = {};
+                    computed = {};
                 }
                 return {
-                    borderBottom: +computed.borderBottomWidth || 0,
-                    borderRight: +computed.borderRightWidth || 0,
-                    borderLeft: +computed.borderLeftWidth || 0,
-                    borderTop: +computed.borderTopWidth || 0,
-                    paddingBottom: +computed.paddingBottom || 0,
-                    paddingRight: +computed.paddingRight || 0,
-                    paddingLeft: +computed.paddingLeft || 0,
-                    paddingTop: +computed.paddingTop || 0,
-                    marginBottom: +computed.marginBottom || 0,
-                    marginRight: +computed.marginRight || 0,
-                    marginLeft: +computed.marginLeft || 0,
-                    marginTop: +computed.marginTop || 0,
-                    top: clientrect[TOP] || 0,
-                    left: clientrect[LEFT] || 0,
-                    right: clientrect[RIGHT] || 0,
-                    bottom: clientrect[BOTTOM] || 0,
-                    width: clientrect[WIDTH] || 0,
-                    height: clientrect[HEIGHT] || 0
+                    borderBottom: pf(computed.borderBottomWidth, TEN) || ZERO,
+                    borderRight: pf(computed.borderRightWidth, TEN) || ZERO,
+                    borderLeft: pf(computed.borderLeftWidth, TEN) || ZERO,
+                    borderTop: pf(computed.borderTopWidth, TEN) || ZERO,
+                    paddingBottom: pf(computed.paddingBottom, TEN) || ZERO,
+                    paddingRight: pf(computed.paddingRight, TEN) || ZERO,
+                    paddingLeft: pf(computed.paddingLeft, TEN) || ZERO,
+                    paddingTop: pf(computed.paddingTop, TEN) || ZERO,
+                    marginBottom: pf(computed.marginBottom, TEN) || ZERO,
+                    marginRight: pf(computed.marginRight, TEN) || ZERO,
+                    marginLeft: pf(computed.marginLeft, TEN) || ZERO,
+                    marginTop: pf(computed.marginTop, TEN) || ZERO,
+                    top: pf(computed[TOP], TEN) || ZERO,
+                    left: pf(computed[LEFT], TEN) || ZERO,
+                    right: pf(computed[RIGHT], TEN) || ZERO,
+                    bottom: pf(computed[BOTTOM], TEN) || ZERO,
+                    width: pf(computed[WIDTH], TEN) || ZERO,
+                    height: pf(computed[HEIGHT], TEN) || ZERO
                 };
             }
         },
@@ -1281,7 +1446,7 @@ app.scope(function (app) {
                 return ((idx + 1) % 2);
             }
         },
-        numberToUnit = {
+        convertUnit = {
             'in': function (val, el, win, styleAttr) {
                 return val / 96;
             },
@@ -1329,7 +1494,7 @@ app.scope(function (app) {
         numToUnits = function (num, unit, el, winTop, styleAttr, returnNum) {
             var number = num;
             if (num) {
-                number = numberToUnit[unit](num, el, winTop, styleAttr);
+                number = convertUnit[unit](num, el, winTop, styleAttr);
             }
             number = (number || 0);
             if (!returnNum) {
@@ -1397,7 +1562,7 @@ app.scope(function (app) {
                 first = !diffs_,
                 diffs = diffs_ || [],
                 target = outputA.length > elements.length ? (opposition = outputA) && outputB : (opposition = outputB) && outputA;
-            _.foldl(target, function (diffs, element, index) {
+            _.reduce(target, function (diffs, element, index) {
                 var correspondant = opposition[index];
                 var tagNameA = element.tagName;
                 var tagNameB = correspondant.tagName;
@@ -1405,8 +1570,8 @@ app.scope(function (app) {
                     // swap node
                     return;
                 }
-                var isA = attributeApi.read(element, 'is');
-                var isB = attributeApi.read(correspondant, 'is');
+                var isA = attributeApi.read(element, CUSTOM_KEY);
+                var isB = attributeApi.read(correspondant, CUSTOM_KEY);
                 if (isA || isB) {
                     // swap node
                     return;
@@ -1420,30 +1585,29 @@ app.scope(function (app) {
         //     '3': BOOLEAN_TRUE,
         //     '8': BOOLEAN_TRUE
         // },
-        createElement = function (tag_, manager, attributes_, children_) {
-            var confirmedObject, foundElement, elementName, newElement, newManager, documnt = manager && manager.element(),
+        createElement = function (selector_, manager, attributes_, children_) {
+            var confirmedObject, parsed, style, foundElement, elementName, newElement, newManager, documnt = manager && manager.element(),
                 registeredElements = manager && manager.registeredElements,
-                attributes = attributes_,
+                parsed = parseSelector(selector_),
+                tag = parsed.tag,
+                parsedAttrs = parsed.attrs,
+                passedAttrs = attributes_ && attributes_.attrs,
+                attributes = (passedAttrs || keys(parsedAttrs)[LENGTH]) ? merge(parsedAttrs, passedAttrs) : NULL,
                 children = children_,
-                tag = tag_;
-            if (isObject(tag)) {
-                children = tag.children;
-                attributes = tag.attributes;
-                confirmedObject = BOOLEAN_TRUE;
-                tag = tag.tagName;
-                if (tag_.text) {
-                    return makeText(tag_.content, manager);
-                }
-                if (tag_.comment) {
-                    return makeComment(tag_.content, manager);
-                }
-            }
+                selector = selector_;
+            parsed = parseSelector(selector);
+            tag = parsed.tag;
+            attributes = merge(parsed.attrs, attributes);
             foundElement = registeredElements && registeredElements[tag];
             // native create
             if (!tag) {
                 exception('custom tag names must be registered before they can be used');
             }
             newElement = documnt.createElement(tag);
+            if (attributes && (style = attributes.style) && isObject(style)) {
+                applyStyle(newElement, style);
+                delete attributes.style;
+            }
             if (foundElement && foundElement !== BOOLEAN_TRUE) {
                 attributeApi.write(newElement, CUSTOM_KEY, tag);
             }
@@ -1454,13 +1618,8 @@ app.scope(function (app) {
             if (attributes) {
                 newManager.attr(attributes);
             }
-            if (!children) {
-                return newManager;
-            }
-            if (isString(children)) {
-                newManager.html(children);
-            } else {
-                newManager.append(reconstruct(children, manager));
+            if (children) {
+                updateFromVirtual(newElement, children);
             }
             return newManager;
         },
@@ -1484,7 +1643,7 @@ app.scope(function (app) {
             return list.concat.apply(list, items ? map(items, handler) : context.map(handler));
         },
         createElements = function (tagName, context) {
-            return DOMA(foldl(toArray(tagName, SPACE), function (memo, name) {
+            return DOMA(reduce(toArray(tagName, SPACE), function (memo, name) {
                 var createdElement = createElement(name, context);
                 memo.push(createdElement);
                 return memo;
@@ -1502,7 +1661,7 @@ app.scope(function (app) {
                     els = els && toArray(els);
                 }
                 frag = context.createDocumentFragment();
-                duff(els, function (manager_) {
+                forEach(els, function (manager_) {
                     var parentNode, manager = context.returnsManager(manager_),
                         el = manager.element();
                     if (!manager.is(ELEMENT) || manager.is(FRAGMENT)) {
@@ -1521,7 +1680,7 @@ app.scope(function (app) {
         htmlTextManipulator = function (attr) {
             return function (string) {
                 var dom = this;
-                return string !== UNDEFINED ? dom.eachCall(attr, string) && dom : dom.results(attr).join(EMPTY_STRING);
+                return string !== UNDEFINED ? dom.forEachCall(attr, string) && dom : dom.results(attr).join(EMPTY_STRING);
             };
         },
         horizontalTraverser = function (method, _idxChange) {
@@ -1530,7 +1689,7 @@ app.scope(function (app) {
                     list = context.toArray(),
                     idxChange = _idxChange || idxChange_;
                 if (idxChange) {
-                    context.duff(function (manager) {
+                    context.forEach(function (manager) {
                         if ((traversal = manager[method](idxChange))) {
                             add(collected, traversal);
                         }
@@ -1603,49 +1762,15 @@ app.scope(function (app) {
         closer = function (center, current, challenger) {
             return distance(center, current) < distance(center, challenger);
         },
-        createSelector = function (doma, args, fn) {
-            var fun, selector, capturing, group, name = args.shift();
-            if (isString(args[0]) || args[0] == NULL) {
-                selector = args.shift();
-            }
-            if (isString(args[0])) {
-                args[0] = doma[args[0]];
-            }
-            if (!isFunction(args[0])) {
-                return this;
-            }
-            fun = args.shift();
-            capturing = args.shift();
-            if (isString(capturing)) {
-                group = capturing;
-                capturing = BOOLEAN_FALSE;
-            } else {
-                capturing = !!capturing;
-            }
-            // that's all folks
-            group = args.shift();
-            fn(doma, name, selector, fun, capturing, group);
-            return doma;
-        },
-        expandEventListenerArguments = function (fn) {
-            return function () {
-                var selector, doma = this,
-                    args = toArray(arguments),
-                    nameOrObject = args.shift();
-                if (isObject(nameOrObject)) {
-                    if (isString(args[0])) {
-                        selector = args.shift();
-                    }
-                    each(nameOrObject, function (handler, key) {
-                        createSelector(doma, [key, selector, handler].concat(args), fn);
-                    });
-                    return doma;
-                } else {
-                    args.unshift(nameOrObject);
-                    return createSelector(doma, args, fn);
-                }
-            };
-        },
+        // expandEventListenerArguments = function (fn) {
+        //     return function (events, handler, options) {
+        //         var doma = this;
+        //         forEach(toArray(events), function (evnt) {
+        //             fn(doma, evnt, handler, options);
+        //         });
+        //         return doma;
+        //     };
+        // },
         validateEvent = function (evnt, el, name_) {
             return evnt && isObject(evnt) && !isWindow(evnt) && isNumber(evnt.AT_TARGET) ? evnt : {
                 data: stringify(evnt),
@@ -1667,7 +1792,7 @@ app.scope(function (app) {
             }
             return capturing;
         },
-        _eventExpander = foldl({
+        _eventExpander = reduce({
             resize: 'resize,orientationchange',
             ready: 'DOMContentLoaded',
             wheel: 'wheel,mousewheel',
@@ -1682,45 +1807,57 @@ app.scope(function (app) {
         }, function (memo, value, key) {
             memo[key] = toArray(value);
         }, {}),
-        distilledEventName = foldl(_eventExpander, function (memo, arr, key) {
-            duff(arr, function (item) {
+        distilledEventName = reduce(_eventExpander, function (memo, arr, key) {
+            forEach(arr, function (item) {
                 memo[item] = key;
             });
             return memo;
         }, {}),
-        eventExpander = function (expanders, fn, stack_) {
-            var stack = stack_ || [];
-            return function (nme) {
-                var name = nme,
-                    hadInList = indexOf(stack, name) !== -1;
-                // prevents circular
-                if (!hadInList) {
-                    stack.push(name);
-                }
-                if (expanders[name] && !hadInList) {
-                    duff(expanders[name], eventExpander(expanders, fn, stack.slice(0)));
-                    stack.pop();
-                    return BOOLEAN_TRUE;
-                } else {
-                    fn(name, stack[0], stack.slice(0));
-                }
-                if (!hadInList) {
-                    stack.pop();
-                }
+        // eventExpander = function (expanders, fn, stack_) {
+        //     var stack = stack_ || [];
+        //     return function (nme) {
+        //         var name = nme,
+        //             hadInList = indexOf(stack, name) !== -1;
+        //         // prevents circular
+        //         if (!hadInList) {
+        //             stack.push(name);
+        //         }
+        //         if (expanders[name] && !hadInList) {
+        //             forEach(expanders[name], eventExpander(expanders, fn, stack.slice(0)));
+        //             stack.pop();
+        //             return BOOLEAN_TRUE;
+        //         } else {
+        //             fn(name, stack[0], stack.slice(0));
+        //         }
+        //         if (!hadInList) {
+        //             stack.pop();
+        //         }
+        //     };
+        // },
+        eventObjectExpansion = function (fn) {
+            return function (a, b_, c_) {
+                var managers = this;
+                intendedObject(a, b_, function (a, b, c) {
+                    managers.forEach(function (manager) {
+                        fn(manager, a, b, (c ? b_ : c_) || {});
+                    });
+                });
+                return managers;
             };
         },
-        addEventListener = expandEventListenerArguments(function (manager, name, selector, callback, capture, group) {
-            return isFunction(callback) ? _addEventListener(manager, name, group, selector, callback, capture) : manager;
+        addEventListener = eventObjectExpansion(function (manager, events, handler, options) {
+            return isFunction(handler) ? _addEventListener(manager, events, handler, options) : manager;
         }),
-        addEventListenerOnce = expandEventListenerArguments(function (manager, types, selector, callback, capture, group) {
-            var _callback;
-            return isFunction(callback) && _addEventListener(manager, types, group, selector, (_callback = once(function () {
-                _removeEventListener(manager, types, group, selector, _callback, capture);
-                return callback.apply(this, arguments);
-            })), capture);
+        addEventListenerOnce = eventObjectExpansion(function (manager, events, handler, options) {
+            var _handler;
+            options.matchHandler = handler;
+            return isFunction(handler) && _addEventListener(manager, events, (_handler = once(function () {
+                _removeEventListener(manager, events, _handler, options);
+                return handler.apply(this, arguments);
+            })), options);
         }),
-        removeEventListener = expandEventListenerArguments(function (manager, name, selector, handler, capture, group) {
-            return isFunction(handler) ? _removeEventListener(manager, name, group, selector, handler, capture) : manager;
+        removeEventListener = eventObjectExpansion(function (manager, events, handler, options) {
+            return isFunction(handler) ? _removeEventListener(manager, events, handler, options) : manager;
         }),
         elementSwapper = {
             window: function (manager) {
@@ -1730,34 +1867,75 @@ app.scope(function (app) {
                 return manager.owner;
             }
         },
-        _addEventListener = function (manager_, eventNames, group, selector_, handler, capture) {
-            var events, selector = selector_,
-                manager = elementSwapper[selector] ? ((selector = '') || elementSwapper[selector_](manager_)) : manager_,
+        resolveSelector = function (selector) {
+            if (!selector) {
+                return;
+            }
+            if (isObject(selector)) {
+                return merge({
+                    selector: BOOLEAN_TRUE,
+                    filter: returns.true,
+                    matches: strictMatch
+                }, selector);
+            } else if (isFunction(selector)) {
+                return {
+                    selector: BOOLEAN_TRUE,
+                    filter: selector,
+                    matches: strictMatch
+                };
+            } else {
+                return {
+                    selector: BOOLEAN_TRUE,
+                    filter: selectingLater,
+                    matches: strictMatch
+                };
+            }
+
+            function strictMatch(comparator) {
+                return comparator === selector;
+            }
+
+            function selectingLater(target, $document) {
+                return matchesSelector(target, selector, $document);
+            }
+        },
+        // _addEventListener = function (manager_, eventNames, group, selector_, handler, capture) {
+        _addEventListener = function (manager_, events, handler, options) {
+            var eventManager, selector_ = options.selector,
+                selector = selector_,
+                // use as string if possible
+                manager = elementSwapper[selector_] ? ((selector = EMPTY_STRING) || elementSwapper[selector_](manager_)) : manager_,
+                // turns into an object
+                selector = resolveSelector(selector),
                 wasCustom = manager.is(CUSTOM),
-                spaceList = toArray(eventNames, SPACE),
+                spaceList = toArray(events, SPACE),
+                passive = options.passive,
                 handlesExpansion = function (name, passedName, nameStack) {
-                    events = events || manager.directive(EVENT_MANAGER);
+                    eventManager = eventManager || manager.directive(EVENT_MANAGER);
                     if (!ALL_EVENTS_HASH[name]) {
                         manager.mark(CUSTOM_LISTENER);
                     }
-                    events.attach(name, {
-                        capturing: !!capture,
+                    eventManager.attach(name, {
+                        capturing: !!options.capture,
+                        passive: passive,
                         origin: manager,
                         handler: handler,
-                        group: group,
+                        matchHandler: options.matchHandler,
+                        group: options.group,
                         selector: selector,
                         passedName: passedName,
                         domName: name,
                         domTarget: manager,
-                        nameStack: nameStack
+                        nameStack: nameStack.slice(0)
                     });
-                },
-                expansion = eventExpander(manager.owner.events.expanders, handlesExpansion);
-            duff(spaceList, function (evnt) {
-                if (expansion(evnt)) {
-                    handlesExpansion(evnt, evnt, [evnt]);
-                }
-            });
+                }; //,
+            // expansion = expandEvents(manager.owner.events.expanders, handlesExpansion);
+            manager.expandEvents(spaceList, handlesExpansion);
+            // forEach(spaceList, function (evnt) {
+            //     if (expansion(evnt)) {
+            //         handlesExpansion(evnt, evnt, [evnt]);
+            //     }
+            // });
             if (!wasCustom && manager.is(CUSTOM_LISTENER)) {
                 markCustom(manager, BOOLEAN_TRUE);
                 manager.remark(ATTACHED, isAttached(manager.element(), manager.owner));
@@ -1800,83 +1978,91 @@ app.scope(function (app) {
                 return attributeApi[method](this.element(), one, two);
             };
         },
-        getInnard = function (attribute, manager) {
-            var windo, win, doc, parentElement, returnValue = EMPTY_STRING;
-            if (manager.is(IFRAME)) {
-                testIframe(manager);
-                windo = manager.window();
-                if (windo && windo.is(ACCESSABLE)) {
-                    parentElement = windo.element();
-                    doc = parentElement[DOCUMENT];
-                    returnValue = doc.body ? doc.body[PARENT_NODE].outerHTML : EMPTY_STRING;
+        getInnard = function (attribute) {
+            return function (manager, index) {
+                var windo, win, doc, parentElement, returnValue = EMPTY_STRING;
+                if (manager.is(IFRAME)) {
+                    testIframe(manager);
+                    windo = manager.window();
+                    if (windo && windo.is(ACCESSABLE)) {
+                        parentElement = windo.element();
+                        return wraptry(function () {
+                            var doc = parentElement[DOCUMENT];
+                            return doc.body ? doc.body[PARENT_NODE].outerHTML : EMPTY_STRING;
+                        });
+                    }
+                } else {
+                    if (manager.is(ELEMENT)) {
+                        parentElement = manager.element();
+                        return parentElement[attribute];
+                    }
                 }
-            } else {
-                if (manager.is(ELEMENT)) {
-                    parentElement = manager.element();
-                    returnValue = parentElement[attribute];
-                }
-            }
-            return returnValue;
+                return EMPTY_STRING;
+            };
         },
-        setInnard = function (attribute, manager, value, vars) {
-            var children, previous, cachedValue, win, doc, windo, doTheThing, parentElement,
-                writes = BOOLEAN_TRUE,
-                owner = manager.owner,
-                appliedvalue = value || EMPTY_STRING;
-            if (manager.is(IFRAME)) {
-                windo = manager.window();
-                testIframe(manager);
-                // if (windo) {
-                if (windo.is(ACCESSABLE)) {
-                    parentElement = windo.element();
-                    doc = parentElement[DOCUMENT];
-                    doc.open();
-                    each(vars, function (value, key) {
-                        parentElement[key] = value;
-                    });
-                    doc.write(appliedvalue);
-                    doc.close();
-                    doTheThing = BOOLEAN_TRUE;
-                }
-            } else {
-                if (manager.is(ELEMENT)) {
-                    parentElement = manager.element();
-                    if (attribute === INNER_HTML) {
-                        if (isArray(appliedvalue)) {
-                            manager.render(appliedvalue);
-                            appliedvalue = manager.html();
-                            writes = BOOLEAN_FALSE;
-                        } else {
-                            children = manager.$(CUSTOM_ATTRIBUTE).toArray();
+        setInnard = function (attribute, value, vars) {
+            return function (manager, index) {
+                var children, previous, cachedValue, win, doc, windo, doTheThing, parentElement,
+                    writes = BOOLEAN_TRUE,
+                    owner = manager.owner,
+                    appliedvalue = value || EMPTY_STRING;
+                if (manager.is(IFRAME)) {
+                    windo = manager.window();
+                    testIframe(manager);
+                    if (windo.is(ACCESSABLE)) {
+                        parentElement = windo.element();
+                        doc = parentElement[DOCUMENT];
+                        doc.open();
+                        forOwn(vars, function (value, key) {
+                            parentElement[key] = value;
+                        });
+                        doc.write(toFunction(appliedvalue)(manager));
+                        doc.close();
+                        doTheThing = BOOLEAN_TRUE;
+                    }
+                } else {
+                    if (manager.is(ELEMENT)) {
+                        parentElement = manager.element();
+                        if (attribute === INNER_HTML) {
+                            if (isArray(appliedvalue)) {
+                                writes = BOOLEAN_FALSE;
+                                manager.render(appliedvalue);
+                                appliedvalue = manager.html();
+                            } else {
+                                children = manager.$(CUSTOM_ATTRIBUTE).toArray();
+                                previous = parentElement[attribute];
+                            }
+                        }
+                        if (writes) {
                             previous = parentElement[attribute];
+                            appliedvalue = toFunction(appliedvalue)(previous, index);
+                            if (appliedvalue !== previous) {
+                                parentElement[attribute] = appliedvalue;
+                            }
                         }
-                    }
-                    if (writes) {
-                        previous = parentElement[attribute];
-                        parentElement[attribute] = appliedvalue;
-                    }
-                    if (children && children[LENGTH]) {
-                        // detach old
-                        dispatchDetached(children, owner);
-                        // establish new
-                    }
-                    if (writes) {
-                        manager.$(CUSTOM_ATTRIBUTE, parentElement);
-                        if (previous !== appliedvalue) {
-                            manager.dispatchEvent('contentChanged');
+                        if (children && children[LENGTH]) {
+                            // detach old
+                            dispatchDetached(children, owner);
+                            // establish new
+                        }
+                        if (writes) {
+                            manager.$(CUSTOM_ATTRIBUTE, parentElement);
+                            if (previous !== appliedvalue) {
+                                manager.dispatchEvent('contentChanged');
+                            }
                         }
                     }
                 }
-            }
+            };
         },
         innardManipulator = function (attribute) {
             return function (value, vars) {
                 var manager = this,
                     returnValue = manager;
                 if (value === UNDEFINED) {
-                    return getInnard(attribute, manager);
+                    return manager.map(getInnard(attribute, manager)).join(EMPTY_STRING);
                 } else {
-                    setInnard(attribute, manager, value, vars);
+                    manager.forEach(setInnard(attribute, value, vars));
                     return manager;
                 }
             };
@@ -1994,12 +2180,12 @@ app.scope(function (app) {
             }
             return BOOLEAN_FALSE;
         },
-        eachCall = _.eachCall,
+        forEachCall = _.forEachCall,
         dispatchDomEvent = function (evnt, mark) {
             return function (list, owner) {
                 var managers = [];
                 // mark all managers first
-                duff(list, function (element) {
+                forEach(list, function (element) {
                     var tagname = element[TAG_NAME].toLowerCase();
                     var registeredOptions = owner.registeredElementOptions[tagname] || {};
                     var autotriggers = registeredOptions.autotriggers || {};
@@ -2011,7 +2197,7 @@ app.scope(function (app) {
                         managers.push(m);
                     }
                 });
-                eachCall(managers, DISPATCH_EVENT, evnt);
+                forEachCall(managers, DISPATCH_EVENT, evnt);
             };
         },
         dispatchDetached = dispatchDomEvent('detach', BOOLEAN_FALSE),
@@ -2024,13 +2210,13 @@ app.scope(function (app) {
                 }
             },
             add: function (attributeManager, add) {
-                duff(add, attributeManager.add, attributeManager);
+                forEach(add, attributeManager.add, attributeManager);
             },
             remove: function (attributeManager, remove) {
-                duff(remove, attributeManager.remove, attributeManager);
+                forEach(remove, attributeManager.remove, attributeManager);
             },
             toggle: function (attributeManager, togglers, direction) {
-                duff(togglers, function (toggler) {
+                forEach(togglers, function (toggler) {
                     attributeManager.toggle(toggler, direction);
                 });
             },
@@ -2056,7 +2242,7 @@ app.scope(function (app) {
                 kebabCased = api.preventUnCamel ? attribute : domHappy(attribute),
                 withClass = kebabCased === CLASSNAME || kebabCased === CLASS__NAME,
                 trigger = (withClass ? (api = propertyApi) && (kebabCased = CLASSNAME) && CLASSNAME : passedTrigger_) || kebabCased;
-            api = propsHash[camelCase(trigger)] ? propertyApi : attributeApi;
+            // api = propsHash[camelCase(trigger)] ? propertyApi : attributeApi;
             return function (manager, idx) {
                 var converted, generated, el = manager.element(),
                     read = api.read(el, kebabCased),
@@ -2138,7 +2324,7 @@ app.scope(function (app) {
                         return usingApi.read(context.element(), keyprocess(first));
                     } else {
                         reverseCache = {};
-                        context.each(unmarkChange(intendedIteration(first, second, function (first, second, manager, idx) {
+                        context.forEach(unmarkChange(intendedIteration(first, second, function (first, second, manager, idx) {
                             var processor = reverseCache[first] = reverseCache[first] || proc(first, second, NULL, usingApi, keyprocess, isObject(second) ? NULL : 'set');
                             processor(manager, idx);
                         })));
@@ -2155,7 +2341,7 @@ app.scope(function (app) {
             return first && handler(first, 0);
         },
         domIterates = function (handler, context) {
-            context.each(handler);
+            context.forEach(handler);
             return context;
         },
         returnsFirst = function (fn, context) {
@@ -2166,7 +2352,7 @@ app.scope(function (app) {
         },
         // makeValueTarget = function (target, passed_, api, domaHappy) {
         //     var passed = passed_ || target;
-        //     return _.foldl(toArray('add,remove,toggle,change,has,set'), function (memo, method_) {
+        //     return _.reduce(toArray('add,remove,toggle,change,has,set'), function (memo, method_) {
         //         var method = method_ + 'Value';
         //         memo[method_ + capitalize(target)] = function (one, two) {
         //             return this[method](passed, one, two, api, domaHappy, target);
@@ -2219,7 +2405,7 @@ app.scope(function (app) {
             /**
              * This method adds the list or space delineated string to the target manager's element.
              * @method
-             * @name  DomManager#addClass
+             * @name DomManager # addClass
              * @example <caption>Add a spaces separated list of classes.</caption>
              * targetManager.addClass('item1 class2');
              * @example
@@ -2228,7 +2414,7 @@ app.scope(function (app) {
             add: classApplicationWrapper('add', function (element, list) {
                 element.classList.add.apply(element.classList, list);
             }, function (element, current, list) {
-                duff(list, passesFirstArgument(bind(arrayAdds, NULL, current)));
+                forEach(list, passesFirstArgument(bind(arrayAdds, NULL, current)));
                 element[CLASSNAME] = current.join(SPACE);
             }),
             /**
@@ -2243,7 +2429,7 @@ app.scope(function (app) {
             remove: classApplicationWrapper('remove', function (element, list) {
                 element.classList.remove.apply(element.classList, list);
             }, function (element, current, list) {
-                duff(list, passesFirstArgument(bind(arrayRemoves, NULL, current)));
+                forEach(list, passesFirstArgument(bind(arrayRemoves, NULL, current)));
                 element[CLASSNAME] = current.join(SPACE);
             }),
             /**
@@ -2260,7 +2446,7 @@ app.scope(function (app) {
              * targetManager.toggleClass('item1 class2', false); // equivalent to calling removeClass
              */
             toggle: classApplicationWrapper('toggler', noop, function (element, current, list, direction) {
-                duff(list, passesFirstArgument(bind(toggles, NULL, current, direction)));
+                forEach(list, passesFirstArgument(bind(toggles, NULL, current, direction)));
                 element[CLASSNAME] = current.join(SPACE);
             }),
             /*
@@ -2270,7 +2456,7 @@ app.scope(function (app) {
                 return !element.classList.contains.apply(element.classList, list);
             }, function (element, current, list) {
                 return find(list, function (item) {
-                    return !has(current, item, BOOLEAN_TRUE);
+                    return !contains(current, item);
                 });
             }),
             /**
@@ -2284,8 +2470,8 @@ app.scope(function (app) {
                 element.classList.remove.apply(element.classList, list);
                 element.classList.add.apply(element.classList, toArray(second, SPACE));
             }, function (element, current, list, second) {
-                duff(list, passesFirstArgument(bind(arrayRemoves, NULL, current)));
-                duff(second, passesFirstArgument(bind(arrayAdds, NULL, current)));
+                forEach(list, passesFirstArgument(bind(arrayRemoves, NULL, current)));
+                forEach(second, passesFirstArgument(bind(arrayAdds, NULL, current)));
                 element[CLASSNAME] = current.join(SPACE);
             })
         },
@@ -2296,10 +2482,10 @@ app.scope(function (app) {
                 };
             };
         },
-        classApi = foldl(foldl(toArray('add,remove,toggle,change'), function (memo, key) {
+        classApi = reduce(reduce(toArray('add,remove,toggle,change'), function (memo, key) {
             memo[key] = function (manipulator) {
                 return function (classes, second) {
-                    this.each(manipulator(toArray(classes, SPACE), second ? toArray(second, SPACE) : UNDEFINED));
+                    this.forEach(manipulator(toArray(classes, SPACE), second ? toArray(second, SPACE) : UNDEFINED));
                     return this;
                 };
             };
@@ -2407,7 +2593,7 @@ app.scope(function (app) {
             var registeredElements, $, setup, wrapped, windo = windo_,
                 doc = windo[DOCUMENT],
                 manager = returnsManager(doc, BOOLEAN_TRUE),
-                unregisteredElements = factories.Registry(),
+                unregisteredElements = Registry(),
                 expanders = cloneJSON(_eventExpander),
                 cachedMotionEvent, lastCalculatedMotionEvent = 0,
                 cachedMotionCalculation = {},
@@ -2452,7 +2638,7 @@ app.scope(function (app) {
                     }
                 },
                 formsCallbacks = function (opts, list, autotriggers) {
-                    return foldl(list, function (memo, evnt, item) {
+                    return reduce(list, function (memo, evnt, item) {
                         var value = opts[evnt];
                         var val = !!value;
                         if (val) {
@@ -2475,7 +2661,7 @@ app.scope(function (app) {
                     }, {});
                 },
                 remap = function (options) {
-                    return foldl(options, function (memo, value, key) {
+                    return reduce(options, function (memo, value, key) {
                         if (value === NULL) {
                             return;
                         }
@@ -2483,82 +2669,85 @@ app.scope(function (app) {
                             value: value
                         };
                     }, {});
-                },
-                deltas = {
-                    update: function (node, attrs, children, hash) {
-                        var results;
-                        each(attrs, function (value, key) {
-                            if (propsHash[key]) {
-                                propertyApi.write(node, kebabCase(key), value);
-                            } else {
-                                attributeApi.write(node, kebabCase(key), value);
-                            }
-                        });
-                        results = isString(children) ? (node.innerHTML = children) : duff(children, function (child) {
-                            appendChild(node, deltas.create(child, node, hash));
-                        });
-                        return node;
-                    },
-                    create: function (virtual, parent, hash) {
-                        var key, data, created;
-                        if (virtual[0] === 'text') {
-                            parent.innerHTML += virtual[1];
-                            return;
-                        }
-                        created = doc.createElement(virtual[0]);
-                        data = virtual[3];
-                        if (data && data.key) {
-                            if (hash[data.key]) {
-                                exception('can\'t have a non unique key at ' + data.key);
-                            }
-                            hash[data.key] = created;
-                        }
-                        parent.appendChild(deltas.update(created, virtual[1], virtual[2], hash));
-                        return created;
-                    },
-                    resetHtml: function (target, newhtml, context) {
-                        return function () {
-                            context.owner.returnsManager(target).html(newhtml);
-                        };
-                    },
-                    removeNodes: function (els, diffs) {
-                        return function () {
-                            var removableEls = _.filter(els, function (el) {
-                                return !_.find(diffs.keys, function (element, key) {
-                                    return element === el;
-                                });
-                            });
-                            return removableEls[LENGTH] ? duff(removableEls, passesFirstArgument(removeChild)) : BOOLEAN_FALSE;
-                        };
-                    },
-                    addNodes: function (parent, els, context, hash) {
-                        var frag = doc.createDocumentFragment();
-                        duff(els, function (el) {
-                            deltas.create(el, frag, hash);
-                        });
-                        return function () {
-                            parent.appendChild(frag);
-                            return BOOLEAN_TRUE;
-                        };
-                    },
-                    updateAttribute: function (element, key, value) {
-                        return function () {
-                            attributeApi.write(element, key, value);
-                        };
-                    },
-                    replaceNode: function (a, b, index, hash, diffs, frag_) {
-                        var frag = frag_,
-                            parent = a[PARENT_NODE];
-                        if (!frag) {
-                            frag = doc.createDocumentFragment();
-                            deltas.create(b, frag, hash);
-                        }
-                        return function () {
-                            insertBefore(parent, frag, a);
-                            var result = a[__ELID__] ? $(a).remove() : removeChild(a);
-                        };
-                    }
                 };
+            // ,
+            // deltas = {
+            //     update: function (node, attrs, children, hash) {
+            //         var results;
+            //         forOwn(attrs, function (value, key) {
+            //             if (propsHash[key]) {
+            //                 propertyApi.write(node, kebabCase(key), value);
+            //             } else {
+            //                 attributeApi.write(node, kebabCase(key), value);
+            //             }
+            //         });
+            //         results = isString(children) ? (node.innerHTML = children) : forEach(children, function (child) {
+            //             appendChild(node, deltas.create(child, node, hash));
+            //             // deltas.create(child, node, hash);
+            //         });
+            //         return node;
+            //     },
+            //     create: function (virtual, parent, hash) {
+            //         var key, data, created;
+            //         if (virtual[0] === 'text') {
+            //             parent.innerHTML += virtual[1];
+            //             return;
+            //         }
+            //         created = doc.createElement(virtual[0]);
+            //         data = virtual[3];
+            //         if (data && (key = data.key)) {
+            //             if (hash[key]) {
+            //                 created = hash[key];
+            //                 // exception('can\'t have a non unique key at ' + key);
+            //             }
+            //             hash[key] = created;
+            //         }
+            //         parent.appendChild(deltas.update(created, virtual[1], virtual[2], hash));
+            //         return created;
+            //     },
+            //     resetHtml: function (target, newhtml, context) {
+            //         return function () {
+            //             context.owner.returnsManager(target).html(newhtml);
+            //         };
+            //     },
+            //     removeNodes: function (els, diffs) {
+            //         return function () {
+            //             var removableEls = _.filter(els, function (el) {
+            //                 return !_.find(diffs.keys, function (element, key) {
+            //                     return element === el;
+            //                 });
+            //             });
+            //             return removableEls[LENGTH] ? forEach(removableEls, passesFirstArgument(removeChild)) : BOOLEAN_FALSE;
+            //         };
+            //     },
+            //     addNodes: function (parent, els, context, hash) {
+            //         var frag = doc.createDocumentFragment();
+            //         forEach(els, function (el) {
+            //             deltas.create(el, frag, hash);
+            //         });
+            //         return function () {
+            //             parent.appendChild(frag);
+            //             return BOOLEAN_TRUE;
+            //         };
+            //     },
+            //     updateAttribute: function (element, key, value) {
+            //         return function () {
+            //             attributeApi.write(element, key, value);
+            //         };
+            //     },
+            //     replaceNode: function (a, b, index, hash, diffs, frag_) {
+            //         var frag = frag_,
+            //             parent = a[PARENT_NODE];
+            //         if (!frag) {
+            //             frag = doc.createDocumentFragment();
+            //             deltas.create(b, frag, hash);
+            //         }
+            //         return function () {
+            //             insertBefore(parent, frag, a);
+            //             var result = a[__ELID__] ? $(a).remove() : removeChild(a);
+            //         };
+            //     }
+            // };
             if (manager.is('constructed')) {
                 return manager.$;
             }
@@ -2596,12 +2785,13 @@ app.scope(function (app) {
                 };
             }), {
                 $: $,
+                HTML: HTML(),
                 buildCss: buildCss,
                 nodeComparison: function (a, b, hash_, stopper) {
-                    return nodeComparison(a, b, hash_, stopper, NULL, NULL, NULL, manager);
+                    return nodeComparison(a, b, hash_, stopper, manager);
                 },
                 supports: {},
-                deltas: deltas,
+                // deltas: deltas,
                 registeredDomConstructors: registeredDomConstructors,
                 registeredConstructors: registeredConstructors,
                 registeredElementOptions: registeredElementOptions,
@@ -2650,8 +2840,8 @@ app.scope(function (app) {
                 // },
                 expandEvent: function (passedEvent, actualEvent) {
                     var expanders = manager.events.expanders;
-                    duff(toArray(actualEvent, SPACE), function (actualEvent) {
-                        duff(toArray(passedEvent, SPACE), function (passedEvent) {
+                    forEach(toArray(actualEvent, SPACE), function (actualEvent) {
+                        forEach(toArray(passedEvent, SPACE), function (passedEvent) {
                             expanders[passedEvent] = expanders[passedEvent] || [];
                             if (indexOf(expanders[passedEvent], actualEvent) === -1) {
                                 expanders[passedEvent].push(actualEvent);
@@ -2661,7 +2851,7 @@ app.scope(function (app) {
                     return manager;
                 },
                 customEvent: function (key, value) {
-                    duff(toArray(key, SPACE), function (key) {
+                    forEach(toArray(key, SPACE), function (key) {
                         manager.events.custom[key] = value;
                     });
                     return manager;
@@ -2710,7 +2900,7 @@ app.scope(function (app) {
                 // shared across all documents running this version
                 plugin: function (handler) {
                     plugins.push(handler);
-                    duff(allSetups, function (setup) {
+                    forEach(allSetups, function (setup) {
                         handler(setup);
                     });
                     return this;
@@ -2719,7 +2909,7 @@ app.scope(function (app) {
                     return compile(id, string, manager);
                 },
                 collectTemplates: function () {
-                    return $('script[id]').each(function (script) {
+                    return $('script[id]').forEach(function (script) {
                         compile(script.prop(ID), script.html(), manager);
                     }).remove();
                 },
@@ -2733,7 +2923,6 @@ app.scope(function (app) {
                     var doc = docManager.element();
                     var events = merge({}, opts.events);
                     var managerFn = opts.managerFn || {};
-                    // var sup = opts.super;
                     var autotriggers = {};
                     if (registeredElements[name]) {
                         if (registeredElements[name] === BOOLEAN_TRUE) {
@@ -2776,10 +2965,11 @@ app.scope(function (app) {
                     var script = manager.createElement('script', attrs);
                     // should this be head
                     return Promise(function (success, failure) {
-                        manager.$('body').item(0).append(script);
+                        var $body = manager.$('body').item(0);
                         var innard = inner || BOOLEAN_FALSE;
                         var src = url || BOOLEAN_FALSE;
                         if (src) {
+                            $body.append(script);
                             script.src(src);
                             script.on({
                                 load: success,
@@ -2788,10 +2978,36 @@ app.scope(function (app) {
                         } else {
                             wraptry(function () {
                                 script.html(innard);
+                                $body.append(script);
                                 success(innard);
-                            }, function () {
-                                failure(innard);
+                            }, failure);
+                        }
+                    });
+                },
+                style: function (url, attrs, inner) {
+                    return Promise(function (success, failure) {
+                        var style, innard = inner || BOOLEAN_FALSE;
+                        var src = url || BOOLEAN_FALSE;
+                        var baseAttrs = {
+                            type: 'text/css',
+                            rel: 'stylesheet',
+                            media: 'screen only'
+                        };
+                        if (src) {
+                            style = manager.createElement('link', extend([baseAttrs, attrs, {
+                                href: url
+                            }]));
+                            manager.$('head').item(0).append(style);
+                            $.HTTP({
+                                type: 'get',
+                                url: url
+                            }).then(function () {
+                                return style;
                             });
+                        } else {
+                            style = manager.createElement('style', merge(baseAttrs, attrs), innard);
+                            manager.$('head').item(0).append(style);
+                            success(style);
                         }
                     });
                 }
@@ -2805,7 +3021,7 @@ app.scope(function (app) {
             return $;
         },
         testWithHandler = function (win, evntname, handler, failure) {
-            duff(toArray(evntname, SPACE), function (evntname) {
+            forEach(toArray(evntname, SPACE), function (evntname) {
                 if (win.addEventListener) {
                     win.addEventListener(evntname, handler);
                     win.removeEventListener(evntname, handler);
@@ -2839,7 +3055,7 @@ app.scope(function (app) {
                     return styles[prefix + unCameled] !== UNDEFINED;
                 })) ? styles[prefix + unCameled] : styles[prefix + unCameled]);
             } else {
-                manager.each(unmarkChange(function (manager) {
+                manager.forEach(unmarkChange(function (manager) {
                     return applyStyle(manager.element(), one, two, important);
                 }));
                 return manager;
@@ -2910,11 +3126,11 @@ app.scope(function (app) {
             }
             var objects = parse(string);
             var contextDocument = context.element();
-            each(toArray(objects), function (object) {
+            forEach(toArray(objects), function (object) {
                 var element = contextDocument.createElement(object.tagName);
                 var frag = reconstruct(object.children, context);
                 element.appendChild(frag);
-                each(object.attributes, function (value, key) {
+                forEach(object.attributes, function (value, key) {
                     attributeApi.write(element, kebabCase(key), value);
                 });
                 fragment.appendChild(element);
@@ -2989,7 +3205,7 @@ app.scope(function (app) {
                 }
                 copy = fixHook.props ? this.props.concat(fixHook.props) : this.props;
                 i = copy[LENGTH];
-                duff(copy, function (prop) {
+                forEach(copy, function (prop) {
                     var val = originalEvent[prop];
                     if (val != NULL) {
                         evnt[prop] = val;
@@ -2999,7 +3215,7 @@ app.scope(function (app) {
                 // Support: Cordova 2.5 (WebKit) (#13255)
                 // All events should have a target; Cordova deviceready doesn't
                 // ie also does not have a target... so use current target
-                target = evnt.target || (evnt.view ? evnt.view.event.currentTarget : event && event.currentTarget) || evnt.delegateTarget.element();
+                target = evnt.target || (evnt.view ? evnt.view.event[CURRENT_TARGET] : event && event[CURRENT_TARGET]) || evnt.delegateTarget.element();
                 if (!target) {
                     target = evnt.target = doc;
                 }
@@ -3032,7 +3248,7 @@ app.scope(function (app) {
                 if (evnt.view) {
                     evnt.view = origin.owner.returnsManager(evnt.view);
                 }
-                evnt.remark('trusted', _.has(originalEvent, IS_TRUSTED) ? originalEvent[IS_TRUSTED] : !DO_NOT_TRUST);
+                evnt.remark('trusted', has(originalEvent, IS_TRUSTED) ? originalEvent[IS_TRUSTED] : !DO_NOT_TRUST);
                 (fixHook.reaction || noop)(evnt, originalEvent);
             }
         },
@@ -3045,7 +3261,8 @@ app.scope(function (app) {
                     return evnt;
                 }
                 e.originalEvent = evnt;
-                if (!has(evnt.target) || !has(evnt.currentTarget)) {
+                // check this
+                if (!has(evnt, TARGET) || !has(evnt, CURRENT_TARGET)) {
                     e.delegateTarget = opts.origin;
                 } else {
                     e.delegateTarget = opts.origin.owner.returnsManager(opts.target);
@@ -3117,7 +3334,7 @@ app.scope(function (app) {
                 }
             },
             add: function (list, evnt) {
-                var foundDuplicate, delegateCount, obj, eventHandler, hadMainHandler, domTarget, events = this,
+                var foundDuplicate, delegateCount, obj, eventHandler, hadMainHandler, domTarget, selector, events = this,
                     el = evnt.element,
                     i = 0,
                     // needs an extra hash to care for the actual event hanlders that get attached to dom
@@ -3157,19 +3374,19 @@ app.scope(function (app) {
                     list.insertAt(evnt, mainHandler[CAPTURE_COUNT]);
                     ++mainHandler[CAPTURE_COUNT];
                 } else {
-                    if (evnt.selector) {
+                    if (selector = evnt.selector) {
                         delegateCount = mainHandler[DELEGATE_COUNT];
                         ++mainHandler[DELEGATE_COUNT];
-                        if (delegateCount) {
-                            list.insertAt(evnt, mainHandler[CAPTURE_COUNT] + delegateCount);
-                        } else {
-                            list.insertAt(evnt, mainHandler[CAPTURE_COUNT]);
-                        }
+                        // if (delegateCount) {
+                        list.insertAt(evnt, mainHandler[CAPTURE_COUNT] + delegateCount);
+                        // } else {
+                        //     list.insertAt(evnt, mainHandler[CAPTURE_COUNT]);
+                        // }
                     } else {
                         list.toArray().push(evnt);
                     }
                 }
-                duff(evnt.nameStack, function (name) {
+                forEach(evnt.nameStack, function (name) {
                     evnt.fn = (customEvents[name] || returns.first)(evnt.fn, name, evnt) || evnt.fn;
                 });
                 if (eventHandler) {
@@ -3192,17 +3409,17 @@ app.scope(function (app) {
                 });
             },
             queue: function (stack, handler, evnt) {
-                if (evnt[PROPAGATION_STOPPED] && evnt.currentTarget !== handler.temporaryTarget) {
+                if (evnt[PROPAGATION_STOPPED] && evnt[CURRENT_TARGET] !== handler.temporaryTarget) {
                     evnt[PROPAGATION_HALTED] = BOOLEAN_TRUE;
                     return BOOLEAN_FALSE;
                 }
-                evnt.currentTarget = handler.temporaryTarget;
+                evnt[CURRENT_TARGET] = handler.temporaryTarget;
                 handler.mainHandler.currentEvent = evnt;
                 stack.push(handler);
                 return BOOLEAN_TRUE;
             },
             unQueue: function (stack, handler, evnt) {
-                evnt.currentTarget = handler.currentTarget = NULL;
+                evnt[CURRENT_TARGET] = handler[CURRENT_TARGET] = NULL;
                 handler.mainHandler.currentEvent = NULL;
                 stack.pop();
                 return this;
@@ -3263,10 +3480,10 @@ app.scope(function (app) {
                 // only take the target so we don't try to make managers for everyone
                 target = evnt.target.element();
                 // there are no delegated events, so just return everything after capture
-                if (!delegateCount || target === el) {
-                    return list_.slice(captureCount);
-                }
                 sumCount = captureCount + delegateCount;
+                if (!delegateCount || target === el) {
+                    return list_.slice(sumCount);
+                }
                 i = captureCount;
                 afterwards = list_.slice(sumCount);
                 ordersEventsByHierarchy = manager.ordersEventsByHierarchy();
@@ -3278,11 +3495,12 @@ app.scope(function (app) {
                     parent = target;
                     while (!found && parent && isElement(parent) && parent !== el) {
                         ++counter;
-                        if (matchesSelector(parent, selector, manager.owner)) {
+                        if (selector && selector.filter(parent, manager.owner)) {
                             found = parent;
                             // hold on to the temporary target
                             first.temporaryTarget = found;
-                            // how far up did you have to go before you got to the top
+                            // how far up did you have to go
+                            // before you got to the top
                             first.parentNodeNumber = counter;
                             if (ordersEventsByHierarchy) {
                                 if (!(j = list[LENGTH])) {
@@ -3407,6 +3625,38 @@ app.scope(function (app) {
                  * @type {Boolean}
                  */
                 isValidDomManager: BOOLEAN_TRUE,
+                expandEvents: function (list, fn, _stack) {
+                    var manager = this;
+                    forEach(list, function (name) {
+                        manager.expandEvent(name, fn, _stack);
+                    });
+                    return manager;
+                },
+                expandEvent: function (name, fn, _stack) {
+                    var manager = this,
+                        owner = manager.owner,
+                        events = owner.events,
+                        expanders = events.expanders,
+                        stack = _stack || [],
+                        hadInList = indexOf(stack, name) !== -1,
+                        copy = stack.slice(0);
+                    // prevents circular
+                    if (!hadInList) {
+                        copy.push(name);
+                    }
+                    if (expanders[name] && !hadInList) {
+                        manager.expandEvents(expanders[name], fn, copy);
+                    } else {
+                        // name === current
+                        // stack[0] === origin
+                        // copy === stack
+                        fn(name, stack[0] || name, copy);
+                    }
+                    if (!hadInList) {
+                        copy.pop();
+                    }
+                    return manager;
+                },
                 /**
                  * The query symbol ($) is used to query elements inside of the current context. When this function is called, the target is queried using querySelectorAll and the query string is passed in. When the elements are returned, they are wrapped in a {@link DOMA} object.
                  * @method
@@ -3436,8 +3686,8 @@ app.scope(function (app) {
                  */
                 queryString: function () {
                     var clas, json = baseNodeToJSON(this.element()),
-                        string = json.tagName;
-                    return foldl(json.attributes, function (string, attr, key) {
+                        string = json[0];
+                    return reduce(json[1], function (string, attr, key) {
                         if (key === ID || key === CLASS) {
                             return string;
                         }
@@ -3447,12 +3697,10 @@ app.scope(function (app) {
                 render: function (els) {
                     var result, el = this.element();
                     var diff = this.owner.nodeComparison(el, [el.localName, this.attributes(), els]);
-                    var mutations = diff.mutations;
-                    var memo = BOOLEAN_FALSE;
+                    var mutate = diff.mutate;
                     // if it's a function, then do it last
-                    result = mutations.remove() || memo;
-                    result = mutations.update() || result;
-                    result = mutations.insert() || result;
+                    result = mutate.swap() || BOOLEAN_FALSE;
+                    result = mutate.update() || result;
                     diff.changed = result;
                     this[DISPATCH_EVENT](RENDER, diff);
                     return diff;
@@ -3477,13 +3725,13 @@ app.scope(function (app) {
                     var elementAttributes = element.attributes;
                     if (!fun) {
                         memo = {};
-                        duff(elementAttributes, function (attribute) {
+                        forEach(elementAttributes, function (attribute) {
                             memo[attribute.localName] = attribute.value;
                         });
                         return memo;
                     }
                     bound = bindTo(fun, manager);
-                    duff(elementAttributes, function (attribute) {
+                    forEach(elementAttributes, function (attribute) {
                         bound(attribute.value, attribute.localName);
                     });
                     return manager;
@@ -3567,7 +3815,7 @@ app.scope(function (app) {
                         if (!isFunction(handlr)) {
                             return;
                         }
-                        duff(toArray(key, SPACE), function (key) {
+                        forEach(toArray(key, SPACE), function (key) {
                             var bound, handlers = registry.get('boundHandlers-' + other.__elid__, key, function () {
                                 return [];
                             });
@@ -3593,12 +3841,12 @@ app.scope(function (app) {
                     intendedObject(key, handler, function (key, handler_) {
                         var handler = isString(handler_) ? context[handler_] : handler_;
                         if (!key && !handler) {
-                            duff(keys(context.directive(REGISTRY).group('boundHandlers-' + other.__elid__)), function (list, key) {
+                            forEach(keys(context.directive(REGISTRY).group('boundHandlers-' + other.__elid__)), function (list, key) {
                                 other.off(key, namespace);
                             });
                         } else if (key && handler) {
                             // take a specific one off
-                            duff(toArray(key, SPACE), function (unbounded) {
+                            forEach(toArray(key, SPACE), function (unbounded) {
                                 var found, handlers = registry.get('boundHandlers-' + other.__elid__, key, function () {
                                     return [];
                                 });
@@ -3609,13 +3857,13 @@ app.scope(function (app) {
                                 }
                             });
                         } else if (key) {
-                            duff(toArray(key, SPACE), function (unbounded) {
+                            forEach(toArray(key, SPACE), function (unbounded) {
                                 // take all the handlers that match this key off
                                 other.off(key, namespace);
                             });
                         } else if (handler) {
                             // take all the keys that match this handler off
-                            duff(keys(context.directive(REGISTRY).group('boundHandlers-' + other.__elid__)), function (list, key) {
+                            forEach(keys(context.directive(REGISTRY).group('boundHandlers-' + other.__elid__)), function (list, key) {
                                 find(list, function (item) {
                                     if (item.fn !== handler) {
                                         return;
@@ -3867,7 +4115,7 @@ app.scope(function (app) {
                     hash[DOM_MANAGER_STRING] = manager;
                     if (manager.is(ELEMENT) || manager.is(FRAGMENT)) {
                         ownerDoc = el.ownerDocument;
-                        el[__ELID__] = elid;
+                        // el[__ELID__] = elid;
                         if (!(ownerElId = ownerDoc[__ELID__]) || !ensure(ownerDoc, BOOLEAN_TRUE)) {
                             app.run(ownerDoc.defaultView, noop);
                         }
@@ -3875,7 +4123,7 @@ app.scope(function (app) {
                     } else {
                         if ((isDocument = manager.is(DOCUMENT))) {
                             owner = owner === BOOLEAN_TRUE ? manager : owner;
-                            el[__ELID__] = elid;
+                            // el[__ELID__] = elid;
                         }
                     }
                     manager.owner = owner || BOOLEAN_FALSE;
@@ -3887,8 +4135,8 @@ app.scope(function (app) {
                         markGlobal(manager, el);
                     }
                     if (manager.is(ELEMENT)) {
-                        if (!attributeApi.read(el, 'is')) {
-                            attributeApi.write(el, 'is', BOOLEAN_TRUE);
+                        if (!attributeApi.read(el, CUSTOM_KEY)) {
+                            attributeApi.write(el, CUSTOM_KEY, BOOLEAN_TRUE);
                         }
                         if (!validTagsNamesHash[manager[TAG_NAME]]) {
                             manager[REGISTERED_AS] = manager[TAG_NAME];
@@ -4226,10 +4474,10 @@ app.scope(function (app) {
                     var filter, resultant, manager = this,
                         children = collectChildren(manager.element());
                     if (eq == NULL) {
-                        return memo ? ((children = map(children, manager.owner.returnsManager, manager.owner)) && result(memo, 'is', FRAGMENT) ? memo.append(children) : (memo.push.apply(memo, children) ? memo : memo)) : manager.wrap(children);
+                        return memo ? ((children = map(children, manager.owner.returnsManager, manager.owner)) && result(memo, CUSTOM_KEY, FRAGMENT) ? memo.append(children) : (arrayPush.apply(memo, children) ? memo : memo)) : manager.wrap(children);
                     } else {
                         filter = createDomFilter(eq, manager.owner);
-                        resultant = foldl(children, function (memo, child, idx, children) {
+                        resultant = reduce(children, function (memo, child, idx, children) {
                             if (filter(child, idx, children)) {
                                 memo.push(manager.owner.returnsManager(child));
                             }
@@ -4424,16 +4672,15 @@ app.scope(function (app) {
                  * @return {Array}
                  * @example <caption>pseudo iterate over the DomManager in question</caption>
                  * @example
-                 * bodyManager.each(function (manager, index) {
+                 * bodyManager.forEach(function (manager, index) {
                  *     manager === bodyManager; // true
                  *     index === 0; // true
                  * });
                  */
-                each: function (fn, context) {
-                    var manager = this,
-                        wrapped = [manager],
-                        result = context ? fn.call(context, manager, 0, wrapped) : fn(manager, 0, wrapped);
-                    return wrapped;
+                each: managerForEach,
+                forEach: managerForEach,
+                map: function (fn, context) {
+                    return [bind(fn, context, this, 0, [])()];
                 },
                 /**
                  * Parody method of the {@link DOMA} that fake iterates with the single manager.
@@ -4572,21 +4819,24 @@ app.scope(function (app) {
                 };
             })
         ])),
-        _removeEventListener = function (manager_, name, group, selector_, handler, capture_) {
-            var selector = selector_,
+        _removeEventListener = function (manager_, name, handler_, options) {
+            var selector = options.selector,
+                handler = options.matchHandler || handler_,
                 manager = elementSwapper[selector] ? ((selector = '') || elementSwapper[selector_](manager_)) : manager_,
-                capture = !!capture_,
+                capture = !!options.capture_,
+                group = options.group,
                 directive = manager.directive(EVENT_MANAGER),
                 removeFromList = function (list, name) {
                     return list.obliteration(function (obj) {
-                        if ((!name || name === obj.passedName) && (!handler || obj.handler === handler) && (!group || obj.group === group) && (!selector || obj.selector === selector)) {
+                        var selected;
+                        if ((!name || name === obj.passedName) && (!handler || obj.handler === handler || handler === obj.matchHandler) && (!group || obj.group === group) && (isNil(selector) ? BOOLEAN_TRUE : ((selected = obj.selector) && selected.matches(selector)))) {
                             directive.detach(obj);
                         }
                     });
                 };
-            return name ? duff(toArray(name, SPACE), eventExpander(manager.owner.events.expanders, function (name, passedName) {
+            return name ? manager.expandEvents(toArray(name, SPACE), function (name, passedName) {
                 removeFromList(directive[HANDLERS][name], passedName);
-            })) : each(directive[HANDLERS], passesFirstArgument(removeFromList));
+            }) : forOwn(directive[HANDLERS], passesFirstArgument(removeFromList));
         },
         /**
          * @class DOMA
@@ -4619,6 +4869,7 @@ app.scope(function (app) {
         },
         exportResult = _.publicize({
             isIE: isIE,
+            handlesWebP: handlesWebP,
             nodeDocument: nodeDocument,
             nodeWindow: nodeWindow,
             elementEventDispatcher: elementEventDispatcher,
@@ -4637,7 +4888,7 @@ app.scope(function (app) {
             isDocument: isDocument,
             isFragment: isFragment,
             unitToNumber: unitToNumber,
-            numberToUnit: numberToUnit
+            convertUnit: convertUnit
         }),
         setupDomContentLoaded = function (handler, documentManager) {
             var bound = bind(handler, documentManager),
@@ -4645,7 +4896,7 @@ app.scope(function (app) {
                 domHandler = function (e) {
                     documentManager.off('DOMContentLoaded', domHandler);
                     windo.off('load', domHandler);
-                    documentManager.$(CUSTOM_ATTRIBUTE).each(documentManager.returnsManager);
+                    documentManager.$(CUSTOM_ATTRIBUTE).forEach(documentManager.returnsManager);
                     bound(documentManager.$, e);
                 };
             if (documentManager.is('ready')) {
@@ -4659,12 +4910,12 @@ app.scope(function (app) {
         },
         applyToEach = function (method) {
             return function (one, two, three, four, five, six) {
-                return this.each(function (manager) {
+                return this.forEach(function (manager) {
                     manager[method](one, two, three, four, five, six);
                 });
             };
         },
-        allEachMethods = toArray(DESTROY + ',show,hide,style,remove,on,off,once,addEventListener,removeEventListener,dispatchEvent').concat(allDirectMethods),
+        allEachMethods = toArray(DESTROY + ',show,hide,style,remove,dispatchEvent').concat(allDirectMethods), //,on,off,once,addEventListener,removeEventListener
         firstMethods = toArray('tag,element,client,box,flow'),
         applyToFirst = function (method) {
             var shouldBeContext = method !== 'tag';
@@ -4680,6 +4931,10 @@ app.scope(function (app) {
                 return element && element[property];
             };
         },
+        domaManagerSwappable = toArray('on,off,once,addEventListener,removeEventListener'),
+        stealFromPrototype = function (method) {
+            return DomManager.fn[method];
+        },
         /**
          * DOMA is the document object model abstraction. A wrapper for the dom objects available in the browser's window. Operates off of the assumption that all dom interactions should be normalized, and efficient as possible.
          * @class DOMA
@@ -4694,9 +4949,9 @@ app.scope(function (app) {
              */
             constructor: function (str, ctx, isValid, validContext, documentContext) {
                 var isArrayResult, els = str,
-                    dom = this,
-                    context = dom.context = validContext ? ctx.item(0) : documentContext,
-                    owner = dom.owner = documentContext,
+                    doma = this,
+                    context = doma.context = validContext ? ctx.item(0) : documentContext,
+                    owner = doma.owner = documentContext,
                     unwrapped = context.element();
                 if (str && !isWindow(str) && str.isValidDOMA) {
                     return str;
@@ -4707,7 +4962,9 @@ app.scope(function (app) {
                     }
                 } else {
                     if (!isValid) {
-                        if (!str) {} else if (isString(str)) {
+                        if (!str) {
+                            els = [];
+                        } else if (isString(str)) {
                             if (str[0] === '<') {
                                 els = makeTree(str, owner);
                             } else {
@@ -4729,9 +4986,9 @@ app.scope(function (app) {
                             }
                         }
                     }
-                    dom.reset(els);
+                    doma.reset(els);
                 }
-                return dom;
+                return doma;
             },
             /**
              * Sets value of an attribute on the DomManagers. Replaces all values in a space delineated list.
@@ -4762,7 +5019,7 @@ app.scope(function (app) {
             changeValue: changeValue(domIterates),
             add: attachPrevious(function (context, query) {
                 var found = context.owner.$(query);
-                return concatUnique(context.toArray(), found.toArray());
+                return concatUnique([context.toArray(), found.toArray()]);
             }),
             addBack: attachPrevious(function (context, selector) {
                 var previous = context._previous;
@@ -4779,17 +5036,17 @@ app.scope(function (app) {
             },
             push: function () {
                 var owner = this.context.owner;
-                this.items.push.apply(this.items, foldl(arguments, function (memo, el) {
+                arrayPush.apply(this.items, reduce(arguments, function (memo, el) {
                     if (!el) {
                         return memo;
                     }
                     if (isWindow(el)) {
                         memo.push(el);
                     } else {
-                        memo = memo.concat(!isWindow(el) && isFunction(el.unwrap) ? el.toArray() : owner.returnsManager(el));
+                        return memo.concat(!isWindow(el) && isFunction(el.toArray) ? el.toArray() : owner.returnsManager(el));
                     }
                     return memo;
-                }, [], owner));
+                }, []));
                 return this;
             },
             elements: function () {
@@ -4819,14 +5076,14 @@ app.scope(function (app) {
                     push = function (el) {
                         matchers.push(context.owner.returnsManager(el));
                     };
-                // look into foldl so we do not get duplicate elements
-                return duff(context.toArray(), function (manager) {
-                    duff(query(str, manager.element(), manager), push);
+                // look into reduce so we do not get duplicate elements
+                return forEach(context.toArray(), function (manager) {
+                    forEach(query(str, manager.element(), manager), push);
                 }) && matchers;
             }),
             children: attachPrevious(function (context, eq) {
-                // this should be rewritten as context.foldl
-                return foldl(context.toArray(), function (memo, manager) {
+                // this should be rewritten as context.reduce
+                return reduce(context.toArray(), function (memo, manager) {
                     return manager.children(eq, memo);
                 }, []);
             }),
@@ -4878,7 +5135,7 @@ app.scope(function (app) {
                 var manager = this,
                     owner = manager.owner,
                     els = isAppendable(els_) ? this.context.returnsManager(els_) : owner.$(els_).fragment();
-                return this.each(function (manager) {
+                return this.forEach(function (manager) {
                     var elements = els;
                     if (clone) {
                         elements = elements.clone();
@@ -4920,7 +5177,7 @@ app.scope(function (app) {
                 });
             },
             clone: attachPrevious(function (context) {
-                return context.foldl(function (memo, manager) {
+                return context.reduce(function (memo, manager) {
                     if (manager.is(ELEMENT)) {
                         memo.push(manager.clone());
                     }
@@ -4930,7 +5187,7 @@ app.scope(function (app) {
             parent: attachPrevious(function (context, original) {
                 // ensure unique
                 var hash = {};
-                return context.foldl(function (memo, manager) {
+                return context.reduce(function (memo, manager) {
                     var parent;
                     if ((parent = manager.parent(original)) && !hash[parent.element()[__ELID__]]) {
                         hash[parent.element()[__ELID__]] = parent;
@@ -4947,8 +5204,8 @@ app.scope(function (app) {
                     return doma.indexOf(el) === -1;
                 });
             },
-            html: htmlTextManipulator(HTML),
-            text: htmlTextManipulator(TEXT),
+            html: innardManipulator(INNER_HTML),
+            text: innardManipulator(INNER_TEXT),
             map: function (handler, context) {
                 return Collection(map(this.toArray(), handler, context));
             },
@@ -4958,13 +5215,163 @@ app.scope(function (app) {
             toString: function () {
                 return stringify(this);
             }
-        }, wrap(allEachMethods, applyToEach), wrap(firstMethods, applyToFirst), wrap(readMethods, applyToTarget)])),
+        }, wrap(allEachMethods, applyToEach), wrap(firstMethods, applyToFirst), wrap(readMethods, applyToTarget), wrap(domaManagerSwappable, stealFromPrototype)])),
         allSetups = [],
-        plugins = [];
+        plugins = [],
+        allStyles = getComputed(doc.createElement(DIV), win),
+        prefixedStyles = (function () {
+            var i, j, n, found, prefixIndex, __prefix, styleName, currentCheck, deprefixed, currentLen,
+                validCssNames = [],
+                prefixed = {},
+                len = 0,
+                addPrefix = function (list, prefix) {
+                    if (indexOf(list, __prefix) === -1) {
+                        list.push(__prefix);
+                    }
+                };
+            for (i = 0; i < knownPrefixes[LENGTH]; i++) {
+                currentLen = knownPrefixes[i][LENGTH];
+                if (len < currentLen) {
+                    len = currentLen;
+                }
+            }
+            for (n in allStyles) {
+                found = 0;
+                currentCheck = EMPTY_STRING;
+                __prefix = EMPTY_STRING;
+                if (isNumber(+n)) {
+                    styleName = allStyles[n];
+                } else {
+                    styleName = kebabCase(n);
+                }
+                kebabCase(styleName);
+                camelCase(styleName);
+                deprefixed = styleName;
+                for (j = 0; j < len && styleName[j] && !found; j++) {
+                    currentCheck += styleName[j];
+                    prefixIndex = indexOf(knownPrefixes, currentCheck);
+                    if (prefixIndex !== -1) {
+                        __prefix = knownPrefixes[prefixIndex];
+                        deprefixed = styleName.split(__prefix).join(EMPTY_STRING);
+                        found = 1;
+                    }
+                    prefixIndex = indexOf(knownPrefixes, HYPHEN + currentCheck);
+                    if (prefixIndex !== -1) {
+                        __prefix = knownPrefixes[prefixIndex];
+                        deprefixed = styleName.split(currentCheck).join(EMPTY_STRING);
+                        found = 1;
+                    }
+                }
+                deprefixed = camelCase(deprefixed);
+                validCssNames.push(deprefixed);
+                if (!prefixed[deprefixed]) {
+                    prefixed[deprefixed] = [];
+                }
+                addPrefix(prefixed[deprefixed], __prefix);
+            }
+            return prefixed;
+        }());
+
+    function managerForEach(fn, context) {
+        var manager = this,
+            wrapped = [manager],
+            result = context ? fn.call(context, manager, 0, wrapped) : fn(manager, 0, wrapped);
+        return wrapped;
+    }
+
+    function updateStyle(element, key_, value_) {
+        var changed, key = key_,
+            value = value_ !== '' ? convertStyleValue(key, value_) : value_;
+        forEach(prefixedStyles[camelCase(key)], function (prefix) {
+            var styleKey = prefix + kebabCase(key),
+                styleVal = element[STYLE][styleKey];
+            if (styleVal !== value) {
+                element[STYLE][styleKey] = value;
+                changed = BOOLEAN_TRUE;
+            }
+        });
+        return changed;
+    }
+
+    function buildCss(json, selector_, memo_, beforeAnyMore) {
+        var result, baseSelector = selector_ || [],
+            memo = memo_ || [],
+            opensBlock = noop,
+            closesBlock = noop;
+        if (memo_) {
+            opensBlock = openBlock(baseSelector, memo);
+        }
+        if (beforeAnyMore) {
+            beforeAnyMore();
+        }
+        result = reduce(json, function (memo, block, key) {
+            var cameled, trimmed = key.trim();
+            // var media = trimmed[0] === '@';
+            // if (media) {
+            // return total_.concat(medium[trimmed.split(' ').shift()](json, trimmed, total));
+            // handle one way... possible with an extendable handler?
+            // } else {
+            if (isObject(block)) {
+                forEach(toArray(trimmed, COMMA), function (trimmd_) {
+                    trimmed = trimmd_.trim();
+                    if (baseSelector[LENGTH]) {
+                        if (trimmed[0] !== '&') {
+                            trimmed = ' ' + trimmed;
+                        } else {
+                            trimmed = trimmed.slice(1);
+                        }
+                    }
+                    opensBlock = openBlock(baseSelector, memo);
+                    baseSelector.push(trimmed);
+                    buildCss(block, baseSelector, memo, closesBlock);
+                    baseSelector.pop();
+                });
+            } else {
+                opensBlock();
+                closesBlock = closeBlock(memo);
+                // always on the same line
+                // console.log(prefixedStyles);
+                cameled = camelCase(trimmed);
+                forEach(prefixedStyles[cameled] || [''], function (prefix) {
+                    memo.push('\n\t' + prefix + kebabCase(cameled) + ': ' + convertStyleValue(trimmed, block) + ';');
+                });
+            }
+        }, memo);
+        closesBlock(memo);
+        return result.join('');
+    }
+
+    function applyStyle(element, key_, value_, important_) {
+        var newStyles, found, cached, changed, updatedStyle,
+            key = key_,
+            value = value_,
+            important = important_;
+        if (!isElement(element)) {
+            return BOOLEAN_FALSE;
+        }
+        cached = attributeApi.read(element, STYLE);
+        if (isObject(key_)) {
+            important = value_;
+            value = NULL;
+        }
+        if (important) {
+            // write with importance
+            intendedObject(key, value, function (key, value) {
+                updatedStyle = updateStyleWithImportant(element, key, value);
+            });
+            return updateStyle !== cached;
+        } else {
+            intendedObject(key, value, function (key_, value_) {
+                changed = updateStyle(element, key_, value_) ? BOOLEAN_TRUE : changed;
+            });
+        }
+        return changed;
+    }
     app.undefine(function (app, windo, passed) {
         var setup = DOMA_SETUP(windo);
+        setup.HTTP = setup.document.HTTP = passed.HTTP;
         allSetups.push(setup);
-        duff(plugins, function (plugin) {
+        forEach(plugins, function (plugin) {
             plugin(setup);
         });
         setup.collectTemplates();

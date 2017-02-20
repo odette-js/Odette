@@ -1,4 +1,4 @@
-application.scope().run(window, function (module, app, _, factories, documentView, scopedFactories, $) {
+application.scope().run(window, function (module, app, _, factories, $) {
     var elementData = _.associator,
         divsLength = 5;
     test.describe('DOMA', function () {
@@ -139,7 +139,7 @@ application.scope().run(window, function (module, app, _, factories, documentVie
         });
         test.describe('it can find it\'s children', function () {
             test.it('by calling the children method', function () {
-                divs.duff(function (manager, idx) {
+                divs.forEach(function (manager, idx) {
                     var div = manager.element();
                     var span1 = document.createElement('span');
                     var span2 = document.createElement('span');
@@ -150,7 +150,7 @@ application.scope().run(window, function (module, app, _, factories, documentVie
                 });
                 var kids = divs.children();
                 test.expect(kids.length()).toEqual(10);
-                kids.duff(function (kid, idx) {
+                kids.forEach(function (kid, idx) {
                     test.expect(kid.element().localName).toEqual('span');
                 });
                 kids = divs.children(1);
@@ -161,12 +161,12 @@ application.scope().run(window, function (module, app, _, factories, documentVie
                 test.expect(kids.element() === kids.item(1)).toEqual(false);
             }, (divsLength * 2) + 5);
             test.it('by querying the dom elements', function () {
-                divs.duff(function (div, idx) {
+                divs.forEach(function (div, idx) {
                     div.element().innerHTML = '<span></span><img/>';
                 });
                 var kids = divs.$('img');
                 test.expect(kids.length()).toEqual(5);
-                kids.duff(function (kid, idx) {
+                kids.forEach(function (kid, idx) {
                     test.expect(kid.element().tagName).toEqual('IMG');
                 });
             }, 6);
@@ -279,27 +279,69 @@ application.scope().run(window, function (module, app, _, factories, documentVie
                 divs.dispatchEvent('click');
                 test.expect(count).toEqual(5);
                 divs.dispatchEvent('click');
-                test.expect(count).toEqual(5);
+                test.expect(count).toEqual(5).otherwise('handler was not successfully removed from event queue when using .once()');
             }, 3);
-            test.it('be careful with the once function because they can be added multiple times to the queue, since they use a proxy function, like the one available at _.once', function () {
+            test.it('events can also be taken off', function () {
+                divs.on('click', handler);
+                test.expect(count).toBe(0);
+                divs.dispatchEvent('click');
+                test.expect(count).toBe(5);
+                divs.off('click', handler);
+                divs.dispatchEvent('click');
+                test.expect(count).toBe(5).otherwise('was not able to detach event handler with .off()');
+            }, 3);
+            test.it('events can also be taken off from once', function () {
                 divs.once('click', handler);
-                test.expect(count).toEqual(0);
+                test.expect(count).toBe(0);
+                divs.off('click', handler);
                 divs.dispatchEvent('click');
-                test.expect(count).toEqual(5);
-                divs.dispatchEvent('click');
-                test.expect(count).toEqual(5);
-            }, 3);
+                test.expect(count).toBe(0).otherwise('was not able to detach once event handler with .off()');
+            }, 2);
+            test.it('events can be delegated to children using the selector option', function () {
+                var $div = $.createElement('div');
+                var $span = $.createElement('span');
+                $div.append($span);
+                $div.on('click', function () {
+                    count = 100;
+                });
+                $div.on('click', function (e) {
+                    e.stopPropagation();
+                    count++;
+                }, {
+                    selector: 'span'
+                });
+                $('body').append($div);
+                test.expect(count).toBe(0);
+                $span.click();
+                test.expect(count).toBe(1).otherwise('dom node event delegation failed');
+                $div.destroy();
+                $span.destroy();
+            }, 2);
+            // test.it('events can be filtered by the children that the event goes through', function () {
+            //     var $div = $.createElement('div', null, [
+            //         ['span']
+            //     ]);
+            //     console.log($div);
+            // });
+            // test.it('be careful with the once function because they can be added multiple times to the queue, since they use a proxy function, like the one available at _.once', function () {
+            //     divs.once('click', handler);
+            //     test.expect(count).toEqual(0);
+            //     divs.dispatchEvent('click');
+            //     test.expect(count).toEqual(5);
+            //     divs.dispatchEvent('click');
+            //     test.expect(count).toEqual(5);
+            // }, 3);
         });
         test.describe('the each function is special because', function () {
             test.it('it wraps each element in a DOMA object before passing it through your iterator', function () {
-                divs.each(function (el, idx) {
+                divs.forEach(function (el, idx) {
                     test.expect(_.isInstance(el, factories.DOMA)).toEqual(false);
                     test.expect(factories.DomManager.isInstance(el)).toEqual(true);
                     test.expect(el.element()).toBe(divs.item(idx).element());
                 });
             }, divsLength * 3);
-            test.it('where the duff and forEach function just gives you the element at each index, just like a collection', function () {
-                divs.duff(function (el, idx) {
+            test.it('where the forEach and forEach function just gives you the element at each index, just like a collection', function () {
+                divs.forEach(function (el, idx) {
                     test.expect(_.isInstance(el, $)).toEqual(false);
                 });
                 divs.forEach(function (el, idx) {
@@ -309,16 +351,16 @@ application.scope().run(window, function (module, app, _, factories, documentVie
         });
         test.describe('adding and removing classes is done by string checking instead of the classList to invoke only one reflow', function () {
             test.it('you can use addClass', function () {
-                divs.each(function (div, idx) {
+                divs.forEach(function (div, idx) {
                     test.expect(div.hasClass('three')).toEqual(false);
                 });
                 divs.addClass('three');
-                divs.each(function (div, idx) {
+                divs.forEach(function (div, idx) {
                     test.expect(div.hasClass('three')).toEqual(true);
                 });
             }, 10);
             test.it('you can use removeClass', function () {
-                divs.each(function (div, idx) {
+                divs.forEach(function (div, idx) {
                     test.expect(div.hasClass('three')).toEqual(false);
                 });
                 test.expect(divs.hasClass('three')).toEqual(false);
@@ -330,31 +372,31 @@ application.scope().run(window, function (module, app, _, factories, documentVie
                 test.expect(divs.hasClass('one')).toEqual(true);
             }, 2);
             test.it('you can use toggleClass swap classes depending on whether or not they exist on each element', function () {
-                divs.each(function (div, idx) {
+                divs.forEach(function (div, idx) {
                     test.expect(div.hasClass('one')).toEqual(true);
                 });
                 divs.toggleClass('one');
-                divs.each(function (div, idx) {
+                divs.forEach(function (div, idx) {
                     test.expect(div.hasClass('one')).toEqual(false);
                 });
             }, divsLength * 2);
             test.it('it will also do this for individual elements', function () {
                 var list = [],
                     unique = [];
-                divs.each(function (div, idx) {
+                divs.forEach(function (div, idx) {
                     var res = div.hasClass('two');
                     list.push(res);
                     _.add(unique, res);
                 });
                 divs.toggleClass('two');
-                divs.each(function (div, idx) {
+                divs.forEach(function (div, idx) {
                     test.expect(div.hasClass('two')).toEqual(!list[idx]);
                 }, divsLength + 1);
                 test.expect(unique.length > 1).toEqual(true);
             }, divsLength + 1);
             test.it('you can also use changeClass as a shorthand of removeClass and addClass', function () {
                 divs.changeClass('one not two', 'three');
-                divs.each(function (div, idx) {
+                divs.forEach(function (div, idx) {
                     test.expect(div.hasClass('one')).toEqual(false);
                     test.expect(div.hasClass('two')).toEqual(false);
                     test.expect(div.hasClass('not')).toEqual(false);
@@ -364,7 +406,7 @@ application.scope().run(window, function (module, app, _, factories, documentVie
         });
         test.describe('there is also a data attributes interface', function () {
             test.it('where you can add', function () {
-                divs.duff(function (div, idx) {
+                divs.forEach(function (div, idx) {
                     test.expect(div.element().getAttribute('data-one')).toEqual(null);
                     test.expect(div.element().getAttribute('data-two')).toEqual(null);
                 });
@@ -372,7 +414,7 @@ application.scope().run(window, function (module, app, _, factories, documentVie
                     one: 'one',
                     two: 'two'
                 });
-                divs.duff(function (div, idx) {
+                divs.forEach(function (div, idx) {
                     test.expect(div.element().getAttribute('data-one')).toEqual('one');
                     test.expect(div.element().getAttribute('data-two')).toEqual('two');
                 });
@@ -382,7 +424,7 @@ application.scope().run(window, function (module, app, _, factories, documentVie
                     one: 'one',
                     two: 'two'
                 });
-                divs.duff(function (div, idx) {
+                divs.forEach(function (div, idx) {
                     test.expect(div.element().getAttribute('data-one')).toEqual('one');
                     test.expect(div.element().getAttribute('data-two')).toEqual('two');
                 });
@@ -390,7 +432,7 @@ application.scope().run(window, function (module, app, _, factories, documentVie
                     one: false,
                     two: false
                 });
-                divs.duff(function (div, idx) {
+                divs.forEach(function (div, idx) {
                     test.expect(div.element().getAttribute('data-one')).toEqual(null);
                     test.expect(div.element().getAttribute('data-two')).toEqual(null);
                 });
@@ -400,7 +442,7 @@ application.scope().run(window, function (module, app, _, factories, documentVie
                     one: 'one',
                     two: 'two'
                 });
-                divs.duff(function (div) {
+                divs.forEach(function (div) {
                     test.expect(div.element().getAttribute('data-one')).toEqual('one');
                     test.expect(div.element().getAttribute('data-two')).toEqual('two');
                 });
@@ -408,27 +450,64 @@ application.scope().run(window, function (module, app, _, factories, documentVie
         });
         test.describe('it can also manipulate elements in other ways', function () {
             test.it('like by manipulating their attributes', function () {
-                divs.duff(function (div) {
+                divs.forEach(function (div) {
                     test.expect(div.element().getAttribute('tabindex')).toEqual(null);
+                    test.expect(div.attr('tabindex')).toEqual(false);
                 });
                 divs.attr({
                     tabindex: -1
                 });
-                divs.each(function (div, idx) {
+                divs.forEach(function (div, idx) {
                     test.expect(div.attr('tabindex')).toEqual(-1);
+                    test.expect(div.element().getAttribute('tabindex')).toEqual('-1');
                 });
-            }, divsLength * 2);
+            }, divsLength * 4);
             test.it('or by manipulating their properties', function () {
-                divs.duff(function (div, idx) {
+                divs.forEach(function (div, idx) {
+                    test.expect(div.element().align).toEqual('');
                     test.expect(div.element().align).toEqual('');
                 });
                 divs.prop({
                     align: 'left'
                 });
-                divs.each(function (div, idx) {
+                divs.forEach(function (div, idx) {
                     test.expect(div.prop('align')).toEqual('left');
+                    test.expect(div.element().align).toEqual('left');
                 });
-            }, divsLength * 2);
+            }, divsLength * 4);
+            test.it('it can even handle cross attr property setting', function () {
+                var $inputs = $(divs.map(function (div, index) {
+                    return $.createElement('input');
+                }).toArray());
+                $inputs.forEach(function ($input) {
+                    test.expect($input.prop('value')).toBe('');
+                    test.expect($input.attr('value')).toBe(false);
+                });
+                $inputs.forEach(function ($input) {
+                    $input.target.value = 'here';
+                });
+                $inputs.forEach(function ($input) {
+                    test.expect($input.prop('value')).toBe('here');
+                    test.expect($input.attr('value')).toBe(false);
+                });
+                $inputs.forEach(function ($input) {
+                    $input.target.value = '';
+                });
+                $inputs.forEach(function ($input) {
+                    test.expect($input.prop('value')).toBe('');
+                    test.expect($input.attr('value')).toBe(false);
+                });
+                $inputs.prop('value', 'here');
+                $inputs.forEach(function ($input) {
+                    test.expect($input.prop('value')).toBe('here');
+                    test.expect($input.attr('value')).toBe(false);
+                });
+                $inputs.prop('value', false);
+                $inputs.forEach(function ($input) {
+                    test.expect($input.prop('value')).toBe('');
+                    test.expect($input.attr('value')).toBe(false);
+                });
+            }, divsLength * 2 * 5);
         });
         test.describe('can have specialized elements', function () {
             test.describe('has lifecycle events', function () {
@@ -557,29 +636,21 @@ application.scope().run(window, function (module, app, _, factories, documentVie
         }, 1);
         var template1 = function (data) {
             var listItems = _.map(data && data.points, function (item, index) {
-                return [item.tag, {
-                        class: "classname" + (item.number || index)
-                    },
-                    item.text, {
-                        key: 'listitem' + (item.number || index)
-                    }
-                ];
+                return [item.tag + '.' + "classname" + (item.number || index), {
+                    key: 'listitem' + (item.number || index)
+                }, item.text];
             });
-            return ['div', {
-                    class: 'tree'
+            return ['div.tree', {
+                    key: 'tree'
                 },
                 [
-                    ['span', {
-                        class: 'spanned'
-                    }, 'name', {
+                    ['span.spanned', {
                         key: 'name'
-                    }],
-                    ['ul', {
-                            class: 'container'
-                        },
-                        listItems, {
+                    }, 'name'],
+                    ['ul.container', {
                             key: 'container'
-                        }
+                        },
+                        listItems
                     ]
                 ]
             ];
@@ -597,10 +668,11 @@ application.scope().run(window, function (module, app, _, factories, documentVie
         };
         var basicTemplateKeyTagNames = {
             name: 'span',
-            container: 'ul'
+            container: 'ul',
+            tree: 'div'
         };
-        var applyMutations = function (mutations) {
-            _.duff([mutations.remove, mutations.update, mutations.insert], function (fn) {
+        var applyMutations = function (mutate) {
+            _.forEach([mutate.swap, mutate.update], function (fn) {
                 fn();
             });
         };
@@ -612,32 +684,33 @@ application.scope().run(window, function (module, app, _, factories, documentVie
             });
             test.it('and update them', function () {
                 var diff = $.nodeComparison($root.element(), templatized);
+                // 1
                 test.expect($root.html()).toEqual('');
-                _.each(diff.mutations, function (level, key) {
+                // 2,3
+                _.forOwn(diff.mutate, function (level, key) {
                     test.expect(_.isFunction(level)).toBe(true);
                 });
-                applyMutations(diff.mutations);
+                applyMutations(diff.mutate);
+                // 4
                 test.expect($root.html()).not.toEqual('');
-            }, 5);
+            }, 4);
             test.it('collects keys that the template marks using index 3 of each child', function () {
                 var diff = $.nodeComparison($root.element(), templatized);
-                _.each(diff.keys, function (element, key) {
+                _.forOwn(diff.keys, function (element, key) {
                     test.expect(element.tagName.toLowerCase()).toEqual(basicTemplateKeyTagNames[key] || 'li');
                 });
-            }, 4);
+            }, 5);
             test.it('updates attributes when needed', function () {
                 var attributes = {};
                 var diff = $.nodeComparison($root.element(), templatized);
                 var attrs = $root.attributes();
-                test.expect(attrs).not.toEqual(templatized[1]);
-                applyMutations(diff.mutations);
-                attrs = $root.attributes();
-                delete attrs.is;
-                test.expect(attrs).toEqual(templatized[1]);
-            }, 2);
+                applyMutations(diff.mutate);
+                var attrs2 = $root.attributes();
+                test.expect(attrs).not.toEqual(attrs2);
+            }, 1);
             test.it('removes nodes when needed', function () {
                 var diff = $.nodeComparison($root.element(), templatized);
-                applyMutations(diff.mutations);
+                applyMutations(diff.mutate);
                 templatized = makeBasicTemplate([{
                     tag: 'li',
                     text: 'sometext'
@@ -645,14 +718,14 @@ application.scope().run(window, function (module, app, _, factories, documentVie
                 var $lis = $root.$('ul.container').children();
                 var $first = $lis.first();
                 var diff2 = $.nodeComparison($root.element(), templatized, diff.keys);
-                applyMutations(diff2.mutations);
+                applyMutations(diff2.mutate);
                 var $newChildren = $root.$('ul.container').children();
                 test.expect($first.element()).toBe($newChildren.first().element());
                 test.expect($newChildren.length()).toEqual(1);
             }, 2);
             test.it('removes nodes even when they\'re at the front', function () {
                 var diff = $.nodeComparison($root.element(), templatized);
-                applyMutations(diff.mutations);
+                applyMutations(diff.mutate);
                 templatized = makeBasicTemplate([{
                     tag: 'li',
                     text: 'someothertext2',
@@ -661,10 +734,10 @@ application.scope().run(window, function (module, app, _, factories, documentVie
                 var $lis = $root.$('ul.container').children();
                 var $first = $lis.first();
                 var diff2 = $.nodeComparison($root.element(), templatized, diff.keys);
-                applyMutations(diff2.mutations);
+                applyMutations(diff2.mutate);
                 var $newChildren = $root.$('ul.container').children();
                 test.expect($first.element()).not.toBe(void 0);
-                test.expect($first.element()).not.toBe($newChildren.first().element());
+                test.expect($first.element()).toBe($newChildren.first().element());
                 test.expect($newChildren.length()).toEqual(1);
             }, 3);
             test.it('and inserts them at the front when needed', function () {
@@ -674,64 +747,136 @@ application.scope().run(window, function (module, app, _, factories, documentVie
                     number: '1'
                 }]);
                 var diff = $.nodeComparison($root.element(), templatized);
-                applyMutations(diff.mutations);
+                applyMutations(diff.mutate);
                 var $lis = $root.$('ul.container').children();
                 var $first = $lis.first();
                 templatized = makeBasicTemplate();
                 var diff2 = $.nodeComparison($root.element(), templatized, diff.keys);
-                applyMutations(diff2.mutations);
+                applyMutations(diff2.mutate);
                 var $newChildren = $root.$('ul.container').children();
-                test.expect($first.element()).not.toBe($newChildren.first().element());
+                test.expect($first.element()).toBe($newChildren.first().element());
                 test.expect($newChildren.length()).toEqual(2);
             }, 2);
-            test.it('can rearrange elements as needed', function () {
-                templatized = makeBasicTemplate([{
-                    tag: 'li',
-                    text: 'another',
-                    number: '2'
-                }, {
-                    tag: 'li',
-                    text: 'someothertext2',
-                    number: '1'
-                }, {
-                    tag: 'li',
-                    text: 'anotherone',
-                    number: '3'
-                }, {
-                    tag: 'li',
-                    text: 'first',
-                    number: '0'
-                }]);
-                var diff = $.nodeComparison($root.element(), templatized);
-                applyMutations(diff.mutations);
-                var $lis = $root.$('ul.container').children();
-                var list = $lis.elements().toArray();
-                templatized = makeBasicTemplate([{
-                    tag: 'li',
-                    text: 'first',
-                    number: '0'
-                }, {
-                    tag: 'li',
-                    text: 'someothertextfirstindex',
-                    number: '1'
-                }, {
-                    tag: 'li',
-                    text: 'anothersecondindex',
-                    number: '2'
-                }, {
-                    tag: 'li',
-                    text: 'anotheronethird',
-                    number: '3'
-                }]);
-                var diff2 = $.nodeComparison($root.element(), templatized, diff.keys);
-                applyMutations(diff2.mutations);
-                var $newChildren = $root.$('ul.container').children();
-                // should be strictly equal to since
-                test.expect(list[3]).toBe($newChildren.element(0));
-                test.expect(list[1]).toBe($newChildren.element(1));
-                test.expect(list[0]).toBe($newChildren.element(2));
-                test.expect(list[2]).toBe($newChildren.element(3));
-                test.expect($newChildren.length()).toEqual(4);
+            test.it('does not have to have all arguments present to understand what the node should look like', function () {
+                var diff = $.nodeComparison($root.element(), ['div.tree', [
+                    ['span.name', 'here']
+                ]]);
+                applyMutations(diff.mutate);
+                test.expect($root.attr('class')).toBe('tree');
+                var $children = $root.children();
+                var $span = $children.first();
+                test.expect($span.attr('class')).toBe('name');
+                var $span = $children.first();
+                test.expect($span.html()).toBe('here');
+            }, 3);
+            test.it('does not have to have all arguments present to understand what the node should look like', function () {
+                var diff = $.nodeComparison($root.element(), ['div.tree', ['span.name', ['text', 'here']]]);
+                applyMutations(diff.mutate);
+                test.expect($root.attr('class')).toBe('tree');
+                var $children = $root.children();
+                var $span = $children.first();
+                test.expect($span.attr('class')).toBe('name');
+                var $span = $children.first();
+                test.expect($span.html()).toBe('here');
+            }, 3);
+            // test.it('can rearrange elements as needed', function () {
+            //     templatized = makeBasicTemplate([{
+            //         tag: 'li',
+            //         text: 'another',
+            //         number: '2'
+            //     }, {
+            //         tag: 'li',
+            //         text: 'someothertext2',
+            //         number: '1'
+            //     }, {
+            //         tag: 'li',
+            //         text: 'anotherone',
+            //         number: '3'
+            //     }, {
+            //         tag: 'li',
+            //         text: 'first',
+            //         number: '0'
+            //     }]);
+            //     var diff = $.nodeComparison($root.element(), templatized);
+            //     applyMutations(diff.mutate);
+            //     var $lis = $root.$('ul.container').children();
+            //     var list = $lis.elements().toArray().slice(0);
+            //     templatized = makeBasicTemplate([{
+            //         tag: 'li',
+            //         text: 'first',
+            //         number: '0'
+            //     }, {
+            //         tag: 'li',
+            //         text: 'someothertextfirstindex',
+            //         number: '1'
+            //     }, {
+            //         tag: 'li',
+            //         text: 'anothersecondindex',
+            //         number: '2'
+            //     }, {
+            //         tag: 'li',
+            //         text: 'anotheronethird',
+            //         number: '3'
+            //     }]);
+            //     var diff2 = $.nodeComparison($root.element(), templatized, diff.keys);
+            //     applyMutations(diff2.mutate);
+            //     var $newChildren = $root.$('ul.container').children();
+            //     // should be strictly equal to since
+            //     test.expect(list[3]).toBe($newChildren.element(0));
+            //     test.expect(list[1]).toBe($newChildren.element(1));
+            //     test.expect(list[0]).toBe($newChildren.element(2));
+            //     test.expect(list[2]).toBe($newChildren.element(3));
+            //     test.expect($newChildren.length()).toEqual(4);
+            // }, 5);
+        });
+        test.describe('can create elements directly from css selectors', function () {
+            test.it('such as tag selectors', function () {
+                var div = $.createElement('div');
+                test.expect(div.tagName).toBe('div');
+                var li = $.createElement('li');
+                test.expect(li.tagName).toBe('li');
+                var ul = $.createElement('ul');
+                test.expect(ul.tagName).toBe('ul');
+            }, 3);
+            test.it('tag with ids', function () {
+                var div = $.createElement('div#one');
+                test.expect(div.tagName).toBe('div');
+                test.expect(div.attr('id')).toBe('one');
+            }, 2);
+            test.it('tag with a class', function () {
+                var div = $.createElement('div.one');
+                test.expect(div.tagName).toBe('div');
+                test.expect(div.attr('class')).toBe('one');
+            }, 2);
+            test.it('tag with classes', function () {
+                var div = $.createElement('div.one.two');
+                test.expect(div.tagName).toBe('div');
+                test.expect(div.attr('class')).toBe('one two');
+            }, 2);
+            test.it('tag with an attribute', function () {
+                var div = $.createElement('div[value="three"]');
+                test.expect(div.tagName).toBe('div');
+                test.expect(div.attr('value')).toBe('three');
+            }, 2);
+            test.it('tag with attributes', function () {
+                var div = $.createElement('div[value="three"][data-key="action"]');
+                test.expect(div.tagName).toBe('div');
+                test.expect(div.attr('value')).toBe('three');
+                test.expect(div.data('key')).toBe('action');
+            }, 3);
+            test.it('just attrs', function () {
+                var div = $.createElement('[value="three"][data-key="action"]');
+                test.expect(div.tagName).toBe('div');
+                test.expect(div.attr('value')).toBe('three');
+                test.expect(div.data('key')).toBe('action');
+            }, 3);
+            test.it('complex attrs', function () {
+                var div = $.createElement('[value="5"].class-here[data-key="action"]#id-there.class-there');
+                test.expect(div.tagName).toBe('div');
+                test.expect(div.attr('class')).toBe('class-here class-there');
+                test.expect(div.attr('id')).toBe('id-there');
+                test.expect(div.attr('value')).toBe(5);
+                test.expect(div.data('key')).toBe('action');
             }, 5);
         });
     });

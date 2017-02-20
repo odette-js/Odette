@@ -1,4 +1,4 @@
-application.scope().run(window, function (module, app, _, factories, documentView, scopedFactories, $) {
+application.scope().run(window, function (module, app, _, factories, $) {
     test.describe('var _ = app._;', function () {
         var baseString = 'my string is a great string',
             specialString = 'here&are*a ()lot o~/f special_+characters',
@@ -245,14 +245,14 @@ application.scope().run(window, function (module, app, _, factories, documentVie
                     splice: function () {}
                 })).toEqual(true);
             }, 3);
-            test.it('_.each', function () {
+            test.it('_.forOwn', function () {
                 var args = [],
                     obj = {
                         one: 1,
                         two: 2,
                         three: 3
                     };
-                _.each(obj, function (item, idx, iteratingObj) {
+                _.forOwn(obj, function (item, idx, iteratingObj) {
                     args.push([item, idx, iteratingObj]);
                 });
                 test.expect(args).toEqual([
@@ -262,7 +262,7 @@ application.scope().run(window, function (module, app, _, factories, documentVie
                 ]);
                 args = [];
                 obj = ['one', 'two', 'three'];
-                _.each(obj, function (val, idx, o) {
+                _.forOwn(obj, function (val, idx, o) {
                     args.push([val, idx, o]);
                 });
                 test.expect(args).toEqual([
@@ -271,15 +271,15 @@ application.scope().run(window, function (module, app, _, factories, documentVie
                     ['three', 2, obj]
                 ]);
             }, 2);
-            test.it('_.duff', function () {
+            test.it('_.forEach', function () {
                 var test1 = [1, 2, 3, 4];
                 var count = 0;
                 test.expect(count).toEqual(0);
-                _.duff(test1, function (item) {
+                _.forEach(test1, function (item) {
                     count += item;
                 });
                 test.expect(count).toEqual(10);
-                _.duff({
+                _.forEach({
                     one: 1,
                     two: 2,
                     three: 3,
@@ -290,11 +290,11 @@ application.scope().run(window, function (module, app, _, factories, documentVie
                 test.expect(count).toEqual(10);
             }, 3);
             test.it('_.toBoolean', function () {
-                test.expect(_.toBoolean('truth')).toEqual('truth');
+                test.expect(_.toBoolean('truth')).toEqual(true);
                 test.expect(_.toBoolean('true')).toEqual(true);
-                test.expect(_.toBoolean('falsey')).toEqual('falsey');
+                test.expect(_.toBoolean('falsey')).toEqual(true);
                 test.expect(_.toBoolean('false')).toEqual(false);
-                test.expect(_.toBoolean({})).toEqual({});
+                test.expect(_.toBoolean({})).toEqual(true);
             }, 5);
             test.it('_.once', function () {
                 var count = 0,
@@ -418,14 +418,74 @@ application.scope().run(window, function (module, app, _, factories, documentVie
                     }
                 })).toEqual('//google.com?some=where&und=efined&blank=undefined&under=statement&one=1&has=false&nully=null&even=%7B%22moar%22%3A%22things%22%7D');
             }, 1);
-            test.it('_.protoProp', function () {
+            test.it('_.protoProperty', function () {
                 var box = factories.Model();
                 box.idAttribute = _.returns('something');
-                test.expect(_.protoProp(box, 'idAttribute')).toEqual(factories.Model.constructor.prototype.idAttribute);
+                test.expect(_.protoProperty(box, 'idAttribute')).toEqual(factories.Model.constructor.prototype.idAttribute);
             }, 1);
             test.it('_.roundFloat', function () {
                 test.expect(_.roundFloat(1.5489909, 3)).toEqual(1.548);
             }, 1);
+            test.it('_.unique', function () {
+                test.expect(_.unique([1, 1, 1, 1, 1, 1])).toEqual([1]);
+                var a = {};
+                var b = {};
+                test.expect(_.unique([a, b, a, b, a, b])).toEqual([a]);
+                var a = {};
+                var b = [];
+                test.expect(_.unique([a, b, a, b, a, b, a])).toEqual([a, b]);
+                var a = {
+                    one: 1
+                };
+                var b = {
+                    one: 1
+                };
+                test.expect(_.unique([a, b, a, b, a, b, a])).toEqual([a]);
+            }, 4);
+            test.it('_.find', function () {
+                var arr = [1, 2, 3, 4, 5, 6];
+                test.expect(_.find(arr, is5)).toBe(5);
+                test.expect(_.find(arr, accessB)).toBe(undefined);
+                test.expect(_.find(arr, _.returns.true)).toBe(1);
+                test.expect(_.find([], is5)).toBe(undefined);
+                test.expect(_.find([], accessB)).toBe(undefined);
+                test.expect(_.find([], _.returns.true)).toBe(undefined);
+            }, 6);
+            test.it('_.findIndex', function () {
+                var arr = [1, 2, 3, 4, 5, 6];
+                test.expect(_.findIndex(arr, is5)).toBe(4);
+                test.expect(_.findIndex(arr, accessB)).toBe(undefined);
+                test.expect(_.findIndex(arr, _.returns.true)).toBe(0);
+                test.expect(_.findIndex([], is5)).toBe(undefined);
+                test.expect(_.findIndex([], accessB)).toBe(undefined);
+                test.expect(_.findIndex([], _.returns.true)).toBe(undefined);
+            }, 6);
+            test.it('_.findRight', function () {
+                var arr = [1, 2, 3, 4, 5, 6];
+                test.expect(_.findRight(arr, is5)).toBe(5);
+                test.expect(_.findRight(arr, accessB)).toBe(undefined);
+                test.expect(_.findRight(arr, _.returns.true)).toBe(6);
+                test.expect(_.findRight([], is5)).toBe(undefined);
+                test.expect(_.findRight([], accessB)).toBe(undefined);
+                test.expect(_.findRight([], _.returns.true)).toBe(undefined);
+            }, 6);
+            test.it('_.findIndexRight', function () {
+                var arr = [1, 2, 3, 4, 5, 6];
+                test.expect(_.findIndexRight(arr, is5)).toBe(4);
+                test.expect(_.findIndexRight(arr, accessB)).toBe(undefined);
+                test.expect(_.findIndexRight(arr, _.returns.true)).toBe(5);
+                test.expect(_.findIndexRight([], is5)).toBe(undefined);
+                test.expect(_.findIndexRight([], accessB)).toBe(undefined);
+                test.expect(_.findIndexRight([], _.returns.true)).toBe(undefined);
+            }, 6);
+
+            function accessB(a) {
+                return a.b;
+            }
+
+            function is5(a) {
+                return a === 5;
+            }
         });
     });
 });

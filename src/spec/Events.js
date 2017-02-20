@@ -1,4 +1,4 @@
-application.scope().run(window, function (module, app, _, factories, documentView, scopedFactories, $) {
+application.scope().run(window, function (module, app, _, factories, $) {
     test.describe('Events', function () {
         var count, blank, box,
             Model = factories.Model,
@@ -307,18 +307,4 @@ application.scope().run(window, function (module, app, _, factories, documentVie
             });
         });
     });
-    // var box = factories.Model();
-    // var collection = [];
-    // var collection2 = [];
-    // _.count(collection, function (item, index, list) {
-    //     list.push(0);
-    // }, null, 0, 100000);
-    // var timestamp = _.now();
-    // _.duff(collection, function (item) {
-    //     collection2.push(factories.Model());
-    // });
-    // var div = document.createElement('div');
-    // div.innerHTML = _.now() - timestamp;
-    // console.log(collection2);
-    // document.body.insertBefore(div, document.body.children[0]);
 });
