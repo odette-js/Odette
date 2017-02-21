@@ -340,7 +340,9 @@
                     return this[PARENT].scope(name, fn);
                 },
                 block: function (fn) {
-                    return fn.apply(this, [this]);
+                    var app = this;
+                    var _ = app._;
+                    return fn.apply(app, [app, _, _ && _.factories]);
                 },
                 /**
                  * Proxy for the global Odette counter

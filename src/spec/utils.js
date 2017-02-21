@@ -1,4 +1,4 @@
-application.scope().run(window, function (module, app, _, factories, $) {
+application.scope().block(function (app, _, factories) {
     test.describe('var _ = app._;', function () {
         var baseString = 'my string is a great string',
             specialString = 'here&are*a ()lot o~/f special_+characters',
@@ -137,13 +137,11 @@ application.scope().run(window, function (module, app, _, factories, $) {
                 })).toEqual(false);
             }, 16);
             test.it('_.isInstance', function () {
-                var obj = {},
-                    newModel = factories.Model();
+                var obj = {};
                 test.expect(_.isInstance(obj, Object)).toEqual(true);
-                test.expect(_.isInstance(newModel, factories.Model)).toEqual(true);
-                test.expect(_.isInstance(newModel, factories.Model)).toEqual(true);
-                test.expect(_.isInstance(newModel, factories.Collection)).toEqual(false);
-            }, 4);
+                test.expect(_.isInstance([], Array)).toEqual(true);
+                test.expect(_.isInstance(obj, Array)).toEqual(false);
+            }, 3);
             test.it('_.negate', function () {
                 var falsey = _.negate(function () {
                         return false;
@@ -355,19 +353,6 @@ application.scope().run(window, function (module, app, _, factories, $) {
                     hover: false
                 });
             }, 2);
-            // test.it('_.unshift', function () {
-            //     var make = function () {
-            //         return [1, 2, 3, 4, 5, 6];
-            //     };
-            //     test.expect(_.unshift(make(), [0])).toEqual(make().unshift(0));
-            // });
-            // write async test
-            test.it('_.fetch', function (done) {
-                _.fetch("data:image/webp;base64,UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA").then(function (e) {
-                    test.expect(typeof e === 'object').toBe(true);
-                    done();
-                });
-            }, 1);
             test.it('_.parse', function () {
                 test.expect(_.parse('{"some":1,"one":true}')).toEqual({
                     some: 1,
@@ -381,23 +366,6 @@ application.scope().run(window, function (module, app, _, factories, $) {
                     one: true
                 });
             }, 2);
-            test.it('_.units', function () {
-                test.expect(_.units('')).toEqual(false);
-                test.expect(_.units(500)).toEqual(false);
-                test.expect(_.units('500')).toEqual(false);
-                test.expect(_.units('500px')).toEqual('px');
-                test.expect(_.units('500rem')).toEqual('rem');
-                test.expect(_.units('500em')).toEqual('em');
-                test.expect(_.units('500%')).toEqual('%');
-                test.expect(_.units('500ex')).toEqual('ex');
-                test.expect(_.units('500in')).toEqual('in');
-                test.expect(_.units('500cm')).toEqual('cm');
-                test.expect(_.units('500vh')).toEqual('vh');
-                test.expect(_.units('500vw')).toEqual('vw');
-                test.expect(_.units('500pc')).toEqual('pc');
-                test.expect(_.units('500pt')).toEqual('pt');
-                test.expect(_.units('500mm')).toEqual('mm');
-            }, 15);
             test.it('_.stringifyQuery', function () {
                 test.expect(_.stringifyQuery({
                     url: '//google.com',
@@ -419,9 +387,10 @@ application.scope().run(window, function (module, app, _, factories, $) {
                 })).toEqual('//google.com?some=where&und=efined&blank=undefined&under=statement&one=1&has=false&nully=null&even=%7B%22moar%22%3A%22things%22%7D');
             }, 1);
             test.it('_.protoProperty', function () {
-                var box = factories.Model();
-                box.idAttribute = _.returns('something');
-                test.expect(_.protoProperty(box, 'idAttribute')).toEqual(factories.Model.constructor.prototype.idAttribute);
+                var obj = {};
+                var originalToString = obj.toString;
+                obj.toString = function () {};
+                test.expect(_.protoProperty(obj, 'toString')).toEqual(originalToString);
             }, 1);
             test.it('_.roundFloat', function () {
                 test.expect(_.roundFloat(1.5489909, 3)).toEqual(1.548);

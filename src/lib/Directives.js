@@ -125,6 +125,9 @@ var STATUS = 'Status',
             request: parody('Messenger', 'request'),
             respond: parody('Messenger', 'respond'),
             directive: contextDirective,
+            typeOf: function () {
+                return type(this);
+            },
             directiveDestruction: function (name) {
                 var directive;
                 if (!(directive = this[name])) {
@@ -301,6 +304,7 @@ defineDirective(MESSENGER, Messenger[CONSTRUCTOR]);
 defineDirective(STATUS, Status[CONSTRUCTOR]);
 app.defineDirective = defineDirective;
 app.extendDirective = extendDirective;
+app.extend(Directive.fn);
 _.publicize({
     methodWraper: methodWraper,
     directives: {

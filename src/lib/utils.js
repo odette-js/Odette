@@ -70,7 +70,14 @@ var garbage, FOR = 'for',
     findWhereRight = convertSecondToIterable(findRight),
     findIndexWhere = convertSecondToIterable(findIndex),
     findIndexWhereRight = convertSecondToIterable(findIndexRight),
-    uniqueBy = convertSecondToIterable(uniqueWith);
+    uniqueBy = convertSecondToIterable(uniqueWith),
+    _JSON = window.JSON,
+    JSONStringify = _JSON.stringify,
+    JSONParse = _JSON.parse,
+    JSON = {
+        stringify: JSONStringify,
+        parse: JSONParse
+    };
 buildCallers(FOR + 'Each', forEach, forEachRight, builtCallers);
 buildCallers(FOR + 'Own', forOwn, forOwnRight, builtCallers);
 buildCallers(FOR + 'In', forIn, forInRight, builtCallers);
@@ -246,7 +253,6 @@ var _performance = window.performance,
         withinRange: withinRange,
         castBoolean: castBoolean,
         isUndefined: isUndefined,
-        superExtend: superExtend,
         intendedApi: intendedApi,
         isArrayLike: isArrayLike,
         performance: performance,
@@ -641,6 +647,10 @@ function collectNonEnumProps(obj, keys) {
     }
 }
 
+function assign(list) {
+    return Object.assign.apply(Object, list);
+}
+
 function extend(args, deep, stack) {
     var length = args && args[LENGTH],
         index = 1,
@@ -656,15 +666,6 @@ function returnOrApply(obj_or_fn, context, args) {
     return isFunction(obj_or_fn) ? obj_or_fn.apply(context, args) : obj_or_fn;
 }
 
-function superExtend(key, handler) {
-    return function () {
-        var context = this,
-            supertarget = context[CONSTRUCTOR].fn[key],
-            args = toArray(arguments);
-        return merge(returnOrApply(supertarget, context, args), returnOrApply(handler, context, args), BOOLEAN_TRUE);
-    };
-}
-// merge_count = 0,
 function merge(obj1, obj2, deep) {
     var customizer = isBoolean[deep] ? (deep ? deepMergeWithCustomizer : shallowMergeWithCustomizer) : deep ? deep : shallowMergeWithCustomizer;
     return mergeWith(obj1, obj2, customizer);
