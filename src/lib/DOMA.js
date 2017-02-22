@@ -4126,7 +4126,7 @@ app.scope(function (app) {
                             // el[__ELID__] = elid;
                         }
                     }
-                    manager.owner = owner || BOOLEAN_FALSE;
+                    manager.owner = owner_ === BOOLEAN_TRUE ? (owner || BOOLEAN_FALSE) : owner_;
                     manager[TARGET] = el;
                     if (manager.is(IFRAME)) {
                         manager.on(ATTRIBUTE_CHANGE + ':src detach attach', iframeChangeHandler);
