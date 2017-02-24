@@ -1,4 +1,4 @@
-var Immutable = _.Immutable = app.block(function (app) {
+var Immutable = factories.Immutable = app.block(function (app) {
     var ImmutableMap = Directive.extend('ImmutableMap', {
             valueKey: returns(ID),
             valueOf: function () {
@@ -39,7 +39,7 @@ var Immutable = _.Immutable = app.block(function (app) {
                 return this.base[key];
             },
             clone: function () {
-                return this.__constructor__(merge({}, this.base));
+                return this.create(merge({}, this.base));
             },
             toJSON: function () {
                 return JSONParse(this.toString());
@@ -51,6 +51,7 @@ var Immutable = _.Immutable = app.block(function (app) {
         ImmutableCollection = Directive.extend('ImmutableCollection', {
             indexer: returns(ID),
             sorter: returns(NAME),
+            reversed: returns(BOOLEAN_FALSE),
             sort: function () {},
             add: function () {},
             insert: function () {},
