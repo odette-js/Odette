@@ -1,6 +1,6 @@
 application.scope(function (app) {
     var _ = app._,
-        factories = _.factories,
+        factories = app.factories,
         AF = _.AF,
         Timeline = factories.Model.extend('Timeline', {
             constructor: function () {

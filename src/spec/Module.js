@@ -25,7 +25,7 @@
 //                 test.expect(module).toEqual(app.module('lower'));
 //                 test.expect(app_).toEqual(app);
 //                 test.expect(_).toEqual(app._);
-//                 test.expect(factories).toEqual(_.factories);
+//                 test.expect(factories).toEqual(app.factories);
 //             });
 //             test.expect(count).toEqual(1);
 //         }, 5);

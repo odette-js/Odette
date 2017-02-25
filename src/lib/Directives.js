@@ -9,58 +9,6 @@ var STATUS = 'Status',
         creation: {},
         destruction: {}
     },
-    returnsThird = function (one, two, three) {
-        return three;
-    },
-    parody = function (directive, method) {
-        return function (one, two, three) {
-            return this.directive(directive)[method](one, two, three);
-        };
-    },
-    iterate = function (directive, method) {
-        return function (list) {
-            var instance = this,
-                dir = instance.directive(directive);
-            forEach(list, dir[method], dir);
-            return instance;
-        };
-    },
-    checkParody = function (directive, method, defaultValue) {
-        var defaultIsFunction = isFunction(defaultValue);
-        return function (one, two, three, four, five, six) {
-            var item = this;
-            return item[directive] ? item[directive][method](one, two, three, four, five, six) : (defaultIsFunction ? defaultValue(item) : defaultValue);
-        };
-    },
-    defineDirective = function (name, creation, destruction_) {
-        var alreadyCreated, err = (!isString(name) && exception('directives must be registered with a string for a name')) || (!isFunction(creation)) && exception('directives must be registered with at least a create function');
-        directives.creation[name] = (alreadyCreated = directives.creation[name]) || creation;
-        directives.destruction[name] = directives.destruction[name] || destruction_;
-        // returns whether or not that directive is new or not
-        return directives.creation[name];
-    },
-    extendDirective = function (oldName, newName, handler_, destruction_) {
-        var Destruction = destruction_ || returnsThird;
-        var Handler = handler_ || returnsThird;
-        var oldDirective = directives.creation[oldName] || exception('directives must exist before they can be extended');
-        return app.defineDirective(newName, function (instance, name, third) {
-            return new Handler(instance, name, new directives.creation[oldName](instance, name, third));
-        }, function (instance, name, third) {
-            return Destruction(instance, name, directives.destruction[oldName](instance, name, third));
-        });
-    },
-    directive = function (that, name) {
-        var Handler, directive;
-        if ((directive = that[name])) {
-            return directive;
-        }
-        Handler = (that['directive:creation:' + name] || directives.creation[name] || returnsObject);
-        that[name] = new Handler(that, name);
-        return that[name];
-    },
-    contextDirective = function (name) {
-        return directive(this, name);
-    },
     /**
      * Directives are a powerful way to organize your code, logic, and state of the objects you create during an app's lifespan. Directives allow for the ability to replace large chunks of internal code of classes and completely change an object's behavior. Directives are the most basic
      * @class Directive
@@ -196,45 +144,43 @@ var STATUS = 'Status',
                 return this[STATUSES];
             }
         }),
-    Messenger = factories[MESSENGER] = Directive.factory(MESSENGER, //
-        function () {
-            var messenger = this,
-                responders = {},
-                callers = {};
-            messenger.call = function (key, arg) {
-                return callers && callers[key] && callers[key](arg);
-            };
-            messenger.answer = intendedApi(function (key, handler) {
-                return callers && (callers[key] = bind(isFunction(handler) ? handler : returns(handler), NULL));
+    Messenger = factories[MESSENGER] = Directive.factory(MESSENGER, function () {
+        var messenger = this,
+            responders = {},
+            callers = {};
+        messenger.call = function (key, arg) {
+            return callers && callers[key] && callers[key](arg);
+        };
+        messenger.answer = intendedApi(function (key, handler) {
+            return callers && (callers[key] = bind(isFunction(handler) ? handler : returns(handler), NULL));
+        });
+        messenger.request = function (key, arg) {
+            return (responders && responders[key]) ? responders[key](arg) : Promise.reject();
+        };
+        messenger.respond = intendedApi(function (key, handler) {
+            return responders && (responders[key] = function (arg) {
+                var result;
+                return isPromise(result = handler()) ? result : Promise.resolve(result);
             });
-            messenger.request = function (key, arg) {
-                return (responders && responders[key]) ? responders[key](arg) : Promise.reject();
-            };
-            messenger.respond = intendedApi(function (key, handler) {
-                return responders && (responders[key] = function (arg) {
-                    var result;
-                    return isPromise(result = handler()) ? result : Promise.resolve(result);
-                });
-            });
-            messenger.destroy = function () {
-                callers = responders = UNDEFINED;
-                this.mark(DESTROYED);
-            };
-        }),
-    Iterator = factories[ITERATOR] = Extendable.factory(ITERATOR, //
-        function (array) {
-            var iterator = this;
-            iterator.counter = 0;
-            iterator.next = function () {
-                return iterator.get(++iterator.counter);
-            };
-            iterator.done = function () {
-                return iterator.counter >= array[LENGTH];
-            };
-            iterator.get = function (idx) {
-                return array[idx];
-            };
-        }),
+        });
+        messenger.destroy = function () {
+            callers = responders = UNDEFINED;
+            this.mark(DESTROYED);
+        };
+    }),
+    Iterator = factories[ITERATOR] = Extendable.factory(ITERATOR, function (array) {
+        var iterator = this;
+        iterator.counter = 0;
+        iterator.next = function () {
+            return iterator.get(++iterator.counter);
+        };
+        iterator.done = function () {
+            return iterator.counter >= array[LENGTH];
+        };
+        iterator.get = function (idx) {
+            return array[idx];
+        };
+    }),
     Generator = Directive.extend(GENERATOR, {
         constructor: function (starts, next, continues) {
             var generator = this;
@@ -288,6 +234,87 @@ var STATUS = 'Status',
             return Generator(target, nxt || next, cntns || continues);
         };
     });
+defineDirective(MESSENGER, Messenger[CONSTRUCTOR]);
+defineDirective(STATUS, Status[CONSTRUCTOR]);
+app.defineDirective = defineDirective;
+app.extendDirective = extendDirective;
+app.extend(Directive.fn);
+_.publicize({
+    methodWraper: methodWraper
+});
+app.directives = {
+    parody: parody,
+    checkParody: checkParody,
+    iterate: iterate,
+    create: directive,
+    all: directives,
+    get: function (key) {
+        return directives.creation[key];
+    }
+};
+
+function returnsThird(one, two, three) {
+    return three;
+}
+
+function parody(directive, method) {
+    return function (one, two, three) {
+        return this.directive(directive)[method](one, two, three);
+    };
+}
+
+function iterate(directive, method) {
+    return function (list) {
+        var instance = this,
+            dir = instance.directive(directive);
+        forEach(list, dir[method], dir);
+        return instance;
+    };
+}
+
+function checkParody(directive, method, defaultValue) {
+    var defaultIsFunction = isFunction(defaultValue);
+    return function (one, two, three, four, five, six) {
+        var item = this;
+        return item[directive] ? item[directive][method](one, two, three, four, five, six) : (defaultIsFunction ? defaultValue(item) : defaultValue);
+    };
+}
+
+function defineDirective(name, creation, destruction_) {
+    var alreadyCreated, err = (!isString(name) && exception('directives must be registered with a string for a name')) || (!isFunction(creation)) && exception('directives must be registered with at least a create function');
+    directives.creation[name] = (alreadyCreated = directives.creation[name]) || creation;
+    directives.destruction[name] = directives.destruction[name] || destruction_;
+    // returns whether or not that directive is new or not
+    return directives.creation[name];
+}
+
+function extendDirective(oldName, newName, handler_, destruction_) {
+    var Destruction = destruction_ || returnsThird;
+    var Handler = handler_ || returnsThird;
+    var oldDirective = directives.creation[oldName] || exception('directives must exist before they can be extended');
+    return app.defineDirective(newName, function (instance, name, third) {
+        return new Handler(instance, name, new directives.creation[oldName](instance, name, third));
+    }, function (instance, name, third) {
+        return Destruction(instance, name, directives.destruction[oldName](instance, name, third));
+    });
+}
+
+function directive(that, name) {
+    var Handler, directive, scopedDirectives = that.directives;
+    if (!scopedDirectives) {
+        scopedDirectives = that.directives = {};
+    }
+    if ((directive = scopedDirectives[name])) {
+        return directive;
+    }
+    Handler = (that['directive:creation:' + name] || directives.creation[name] || returnsObject);
+    directive = scopedDirectives[name] = new Handler(that, name);
+    return directive;
+}
+
+function contextDirective(name) {
+    return directive(this, name);
+}
 
 function methodWraper(defaultFn_) {
     var defaultFn = defaultFn_ || noop;
@@ -300,21 +327,3 @@ function methodWraper(defaultFn_) {
         };
     };
 }
-defineDirective(MESSENGER, Messenger[CONSTRUCTOR]);
-defineDirective(STATUS, Status[CONSTRUCTOR]);
-app.defineDirective = defineDirective;
-app.extendDirective = extendDirective;
-app.extend(Directive.fn);
-_.publicize({
-    methodWraper: methodWraper,
-    directives: {
-        parody: parody,
-        checkParody: checkParody,
-        iterate: iterate,
-        create: directive,
-        all: directives,
-        get: function (key) {
-            return directives.creation[key];
-        }
-    }
-});

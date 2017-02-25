@@ -207,8 +207,139 @@ application.scope().block(function (app, _, factories) {
                     },
                     cloned = _.cloneJSON(original);
                 test.expect(cloned).not.toEqual(original);
+                test.expect(cloned).toEqual({
+                    some: 'thing',
+                    out: 'there'
+                });
+                original = ['thing', 'there', function () {}];
+                cloned = _.cloneJSON(original);
+                test.expect(cloned).toEqual(['thing', 'there', null]);
+                original = null;
+                cloned = _.cloneJSON(original);
+                test.expect(cloned).toEqual(null);
+            }, 4);
+            test.it('_.console', function () {
+                _.forOwn(_.console, function (value, key) {
+                    test.expect(value).not.toBe(window.console[key]);
+                });
+            }, 14);
+            test.it('_.debounce', function (done) {
+                var counter = 0;
+                simple();
+
+                function next() {
+                    var finished = _.noop;
+                    var debounce = _.debounce(function (number) {
+                        counter++;
+                        finished();
+                    }, 100, true);
+                    toEqual(1);
+                    debounce();
+                    toEqual(2);
+                    finished = done;
+                    debounce();
+                }
+
+                function simple() {
+                    var debounce = _.debounce(function (number) {
+                        counter++;
+                        toEqual(number);
+                        next();
+                    });
+                    debounce();
+                    toEqual(0);
+                    debounce(1);
+                }
+
+                function toEqual(number) {
+                    test.expect(counter).toBe(number);
+                }
+            }, 4);
+            test.it('_.defaultSort', function () {
+                test.expect(_.defaultSort(2, 1)).toBe(true);
+                test.expect(_.defaultSort(1, 2)).toBe(false);
+                test.expect(_.defaultSort(2, 2)).toBe(false);
+            }, 3);
+            test.it('_.defer', function (done) {
+                var counter = 0;
+                start(done);
+
+                function start(next) {
+                    var deferred = _.defer(function (number) {
+                        counter++;
+                        toEqual(number);
+                        next();
+                    }, 20);
+                    deferred();
+                    deferred();
+                    deferred(1);
+                }
+
+                function toEqual(number) {
+                    test.expect(counter).toBe(number);
+                }
+            }, 1);
+            test.it('_.each', function () {
+                var counter = 0,
+                    obj = [];
+                _.each(obj, check);
+                test.expect(counter).toBe(0);
+                obj = [5];
+                _.each(obj, check);
+                test.expect(counter).toBe(1);
+                obj = [5, 1];
+                _.each(obj, check);
+                test.expect(counter).toBe(3);
+                obj = {};
+                _.each(obj, check);
+                test.expect(counter).toBe(3);
+                obj = {
+                    one: 1,
+                    two: 2
+                };
+                _.each(obj, check);
+                test.expect(counter).toBe(5);
+
+                function check(value, key) {
+                    counter++;
+                    test.expect(value).toBe(obj[key]);
+                }
+            }, 5 * 2);
+            test.it('_.euclideanDistance', function () {
+                test.expect(_.euclideanDistance(0, 4, 3, 0)).toBe(5);
+                test.expect(_.euclideanDistance(22, 57, 28, 65)).toBe(10);
+            }, 2);
+            test.it('_.euclideanDistance', function () {
+                test.expect(_.euclideanOriginDistance(3, 4)).toBe(5);
+                test.expect(_.euclideanOriginDistance(-3, -4)).toBe(5);
+                test.expect(_.euclideanOriginDistance(3, -4)).toBe(5);
+                test.expect(_.euclideanOriginDistance(-3, 4)).toBe(5);
+            }, 4);
+            test.it('_.evaluate', function () {
+                var context = {
+                    one: 1,
+                    two: 2
+                };
+                var code = 'return one + two;';
+                test.expect(_.evaluate(context, code)).toBe(3);
+            }, 1);
+            test.it('_.expect', function () {
+                test.expect(_.expect(true).toBe(true)).toBe(true);
             }, 1);
             test.it('_.extend', function () {
+                var deepextendList = [{
+                    some: {}
+                }, {
+                    some: {
+                        where: 'across the sea'
+                    }
+                }, {
+                    some: {}
+                }, {
+                    some: {
+                        one: 'is waiting for me'
+                    }
+                }];
                 test.expect(_.extend([{
                     four: 1,
                     three: 3
@@ -223,42 +354,82 @@ application.scope().block(function (app, _, factories) {
                     three: 2,
                     one: 4
                 });
-                test.expect(_.extend([{
-                    some: {}
-                }, {
-                    some: {
-                        where: 'across the sea'
-                    }
-                }, {
-                    some: {}
-                }, {
-                    some: {
-                        one: 'is waiting for me'
-                    }
-                }], !0)).toEqual({
+                test.expect(_.extend(deepextendList, true)).toEqual({
                     some: {
                         where: 'across the sea',
                         one: 'is waiting for me'
                     }
                 });
-                test.expect(_.extend([{
-                    some: {}
-                }, {
-                    some: {
-                        where: 'across the sea'
-                    }
-                }, {
-                    some: {}
-                }, {
-                    some: {
-                        one: 'is waiting for me'
-                    }
-                }])).toEqual({
+                test.expect(_.extend(deepextendList)).toEqual({
                     some: {
                         one: 'is waiting for me'
                     }
                 });
             }, 3);
+            test.it('_.filter', function () {
+                var arr = [1, 2, 3, 4, 5, 6];
+                test.expect(_.filter(null, is5)).toEqual([]);
+                test.expect(_.filter(arr, is5)).toEqual([5]);
+                test.expect(_.filter(arr, accessB)).toEqual([]);
+                test.expect(_.filter(arr, _.returns.true)).toEqual(arr);
+                test.expect(_.filter([], is5)).toEqual([]);
+                test.expect(_.filter([], accessB)).toEqual([]);
+                test.expect(_.filter([], _.returns.true)).toEqual([]);
+            }, 7);
+            test.it('_.filterCall', function () {
+                var arr = [{
+                    valueOf: function () {
+                        return 5;
+                    }
+                }];
+                test.expect(_.filterCall(null, 'valueOf')).toEqual([]);
+                test.expect(_.filterCall([], 'valueOf')).toEqual([]);
+                test.expect(_.filterCall(arr, 'valueOf')).toEqual(arr);
+            }, 3);
+            test.it('_.filterCallBound', function () {
+                var arr = [one, two];
+
+                function one(arg) {
+                    return 1 + arg;
+                }
+
+                function two(arg) {
+                    return 2 + arg;
+                }
+                test.expect(_.filterCallBound(arr, -2)).toEqual([one]);
+            }, 1);
+            test.it('_.filterCallBoundTry', function () {
+                var value, arr = [one];
+                test.expect(function () {
+                    value = _.filterCallBoundTry(arr, true, _.returns.true);
+                }).not.toThrow();
+                test.expect(value).toEqual(arr);
+
+                function one(arg) {
+                    return this[arg];
+                }
+            }, 2);
+            test.it('_.filterCallTry', function () {
+                var value, one = {
+                        valueOf: function () {
+                            return this.doesnotexist();
+                        }
+                    },
+                    arr = [one];
+                test.expect(function () {
+                    value = _.filterCallTry(arr, 'valueOf', null, _.returns.true);
+                }).not.toThrow();
+                test.expect(value).toEqual(arr);
+
+                function one(arg) {
+                    return this[arg];
+                }
+
+                function two(arg) {
+                    return this[arg];
+                }
+            }, 2);
+            // continue from here alphabetically
             test.it('_.find', function () {
                 var arr = [1, 2, 3, 4, 5, 6];
                 test.expect(_.find(arr, is5)).toBe(5);

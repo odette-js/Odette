@@ -2,7 +2,7 @@ var garbage, FOR = 'for',
     FIND = 'find',
     FIND_INDEX = FIND + 'Index',
     REG_EXP = 'RegExp',
-    factories = {},
+    factories = app.factories = {},
     builtCallers = {},
     OBJECT_PROTOTYPE = OBJECT_CONSTRUCTOR[PROTOTYPE],
     nativeKeys = OBJECT_CONSTRUCTOR.keys,
@@ -24,7 +24,8 @@ var garbage, FOR = 'for',
     isObject = isTypeWrap(OBJECT, castBoolean),
     isRegExp = isToStringWrap(REG_EXP),
     nonEnumerableProps = toArray('valueOf,isPrototypeOf,propertyIsEnumerable,hasOwnProperty,toLocaleString,' + TO_STRING),
-    // Returns the first index on an array-like that passes a predicate test
+    // Returns the first index on
+    // an array-like that passes a predicate test
     returnsEmptyString = returns(''),
     iteratesIn = iterates(allKeys),
     iteratesOwn = iterates(keys),
@@ -49,17 +50,17 @@ var garbage, FOR = 'for',
     mapKeys = maps(forOwn, mapKeysIteratee, returnBaseType),
     mapValues = maps(forOwn, mapValuesIteratee, returnBaseType),
     reduce = createReduce(1),
-    dropWhile = dropsWhile(filter),
+    // dropWhile = dropsWhile(filter),
     filter = filterable(reduce),
     filterNegative = filterable(reduce, BOOLEAN_TRUE),
     forInRight = baseEach(iteratesIn, forEachRight),
     forOwnRight = baseEach(iteratesOwn, forEachRight),
-    eachRight = forOwnRight,
+    // eachRight = forOwnRight,
     mapRight = maps(forEachRight, mapValuesIteratee, returnsArray),
-    mapKeysRight = maps(eachRight, mapKeysIteratee, returnBaseType),
+    mapKeysRight = maps(forEachRight, mapKeysIteratee, returnBaseType),
     mapValuesRight = maps(forOwnRight, mapValuesIteratee, returnBaseType),
     reduceRight = createReduce(-1),
-    dropWhileRight = dropsWhile(filterRight),
+    // dropWhileRight = dropsWhile(filterRight),
     filterRight = filterable(reduceRight),
     filterNegativeRight = filterable(reduceRight, BOOLEAN_TRUE),
     where = convertSecondToIterable(filter),
@@ -81,7 +82,7 @@ var garbage, FOR = 'for',
 buildCallers(FOR + 'Each', forEach, forEachRight, builtCallers);
 buildCallers(FOR + 'Own', forOwn, forOwnRight, builtCallers);
 buildCallers(FOR + 'In', forIn, forInRight, builtCallers);
-buildCallers('each', each, eachRight, builtCallers);
+// buildCallers('each', each, eachRight, builtCallers);
 buildCallers('map', map, mapRight, builtCallers);
 buildCallers('mapValues', mapValues, mapValuesRight, builtCallers);
 buildCallers('mapKeys', mapKeys, mapKeysRight, builtCallers);
@@ -98,7 +99,7 @@ buildCallers(FIND + 'IndexWhere', findIndexWhere, findIndexWhereRight, builtCall
 buildCallers('reduce', reduce, reduceRight, builtCallers);
 buildCallers('filter', filter, filterRight, builtCallers);
 buildCallers('filterNegative', filterNegative, filterNegativeRight, builtCallers);
-buildCallers('dropWhile', dropWhile, dropWhileRight, builtCallers);
+// buildCallers('dropWhile', dropWhile, dropWhileRight, builtCallers);
 var _performance = window.performance,
     uuidHash = {},
     maths = Math,
@@ -167,8 +168,8 @@ var _performance = window.performance,
         has: has,
         now: now,
         defaultSort: defaultSort,
-        // map: map,
         noop: noop,
+        each: each,
         bind: bind,
         sort: sort,
         wrap: wrap,
@@ -231,7 +232,7 @@ var _performance = window.performance,
         toLength: toLength,
         isFinite: _isFinite,
         isBoolean: isBoolean,
-        factories: factories,
+        // factories: factories,
         cloneJSON: cloneJSON,
         toBoolean: toBoolean,
         stringify: stringify,
@@ -245,7 +246,7 @@ var _performance = window.performance,
         uniqueWith: uniqueWith,
         roundFloat: roundFloat,
         isFunction: isFunction,
-        difference: difference,
+        // difference: difference,
         iteratesIn: iteratesIn,
         lastIndexOf: lastIndexOf,
         iteratesOwn: iteratesOwn,
@@ -257,10 +258,10 @@ var _performance = window.performance,
         performance: performance,
         unwrapBlock: unwrapBlock,
         BIG_INTEGER: BIG_INTEGER,
-        differenceBy: differenceBy,
+        // differenceBy: differenceBy,
         smartIndexOf: smartIndexOf,
-        consolemaker: consolemaker,
-        executionWrapper: executionWrapper,
+        // consolemaker: consolemaker,
+        // executionWrapper: executionWrapper,
         isEmptyArray: isEmptyArray,
         parseDecimal: parseDecimal,
         keyGenerator: keyGenerator,
@@ -270,12 +271,12 @@ var _performance = window.performance,
         sortedIndexOf: sortedIndexOf,
         stringifyQuery: stringifyQuery,
         intendedObject: intendedObject,
-        differenceWith: differenceWith,
+        // differenceWith: differenceWith,
         lastIndexOfNaN: lastIndexOfNaN,
         arrayLikeToArray: arrayLikeToArray,
         euclideanDistance: euclideanDistance,
         intendedIteration: intendedIteration,
-        constructorWrapper: constructorWrapper,
+        // constructorWrapper: constructorWrapper,
         NEGATIVE_BIG_INTEGER: NEGATIVE_BIG_INTEGER,
         euclideanOriginDistance: euclideanOriginDistance,
         math: merge(wrap(toArray('E,LN2,LN10,LOG2E,LOG10E,PI,SQRT1_2,SQRT2,abs,acos,acosh,asin,asinh,atan,atan2,atanh,cbrt,ceil,clz32,cos,cosh,exp,expm1,floor,fround,hypot,imul,log,log1p,log2,log10,pow,random,round,sign,sin,sinh,sqrt,tan,tanh,trunc'), function (key) {
@@ -735,33 +736,28 @@ function chunk(array, size) {
 function compact(list) {
     return filter(list, castBoolean);
 }
-
-function differentiator(list, comparison, modder, differ) {
-    var diffs = [],
-        modifier = modder || mod;
-    if (!comparison || !(comparisonLength = comparison.length)) {
-        return list ? list.slice(0) : diffs;
-    }
-    forEach(list, function (item, index) {
-        if (!differ(modifier(item), modifier(comparison[index]))) {
-            diffs.push(item);
-        }
-    });
-    return diffs;
-}
-
-function difference(list, comparison) {
-    return differentiator(list, comparison, returnsFirstArgument, isEqual);
-}
-
-function differenceBy(list, comparison, by) {
-    return differentiator(list, comparison, by, isEqual);
-}
-
-function differenceWith(list, comparison, comparator) {
-    return differentiator(list, comparison, returnsFirstArgument, comparator);
-}
-
+// function differentiator(list, comparison, modder, differ) {
+//     var comparisonLength, diffs = [],
+//         modifier = modder || mod;
+//     if (!comparison || !(comparisonLength = comparison.length)) {
+//         return list ? list.slice(0) : diffs;
+//     }
+//     forEach(list, function (item, index) {
+//         if (!differ(modifier(item), modifier(comparison[index]))) {
+//             diffs.push(item);
+//         }
+//     });
+//     return diffs;
+// }
+// function difference(list, comparison) {
+//     return differentiator(list, comparison, returnsFirstArgument, isEqual);
+// }
+// function differenceBy(list, comparison, by) {
+//     return differentiator(list, comparison, by, isEqual);
+// }
+// function differenceWith(list, comparison, comparator) {
+//     return differentiator(list, comparison, returnsFirstArgument, comparator);
+// }
 function definedAndCall(item, caller) {
     return isUndefined(item) ? item : toFunction(caller)(item);
 }
@@ -1186,9 +1182,6 @@ function factory(name, func_) {
 }
 
 function constructorWrapper(Constructor, parent) {
-    var __ = function (one, two, three, four, five, six) {
-        return isValue(one) && isOf(one, Constructor) ? one : new Constructor(one, two, three, four, five, six);
-    };
     __.isInstance = Constructor.isInstance = function (instance) {
         return isInstance(instance, Constructor);
     };
@@ -1200,6 +1193,10 @@ function constructorWrapper(Constructor, parent) {
         __.super = Constructor.super = Constructor[PROTOTYPE].super = parent;
     }
     return __;
+
+    function __(one, two, three, four, five, six) {
+        return isValue(one) && isOf(one, Constructor) ? one : new Constructor(one, two, three, four, five, six);
+    }
 }
 
 function once(fn) {
@@ -1436,7 +1433,7 @@ function filterCommon(memo, passed) {
 function negatableFilter(array, object, string) {
     return function (reduction, negation) {
         return function (thing, iteratee) {
-            return (isArrayLike(thing) ? array : (isObject(thing) ? object : string))(thing, iteratee, negation, reduction);
+            return (isArrayLike(thing) ? array : (isObject(thing) ? object : (thing && thing.length ? string : returnsArray)))(thing, iteratee, negation, reduction);
         };
     };
 }
@@ -1512,7 +1509,7 @@ function unwrapBlock(string_) {
 }
 
 function executionWrapper(block, context) {
-    return 'with(' + (context || 'this') + '){\n' + block + '\n}';
+    return 'with(' + (context || 'this') + '){"use strict";\n' + block + '\n}';
 }
 
 function evaluate(context, string_, args) {
@@ -1521,8 +1518,8 @@ function evaluate(context, string_, args) {
         string = unwrapBlock(string_);
     }
     // use a function constructor to get around strict mode
-    var fn = new FUNCTION_CONSTRUCTOR_CONSTRUCTOR('string', executionWrapper('\teval("(function (){"+string+"}());");'));
-    fn.call(context, '"use strict";\n' + string);
+    var fn = new FUNCTION_CONSTRUCTOR_CONSTRUCTOR('string', executionWrapper(string));
+    return fn.call(context, '"use strict";\n' + string);
 }
 
 function returnBaseType(obj) {
@@ -1690,9 +1687,7 @@ function debounce(func, wait, immediate) {
             callNow = immediate && !timeout,
             later = function () {
                 timeout = NULL;
-                if (!immediate) {
-                    func.apply(context, args);
-                }
+                func.apply(context, args);
             };
         clearTimeout(timeout);
         timeout = setTimeout(later, wait);
@@ -1895,7 +1890,7 @@ function buildCallers(prefix, handler, second, memo_) {
             return item[method](arg);
         }, catcher, finallyer));
     };
-    memo[prefix + CALL + BOUND + TRY] = function (array, method, arg, catcher, finallyer) {
+    memo[prefix + CALL + BOUND + TRY] = function (array, arg, catcher, finallyer) {
         return handler(array, doTry(function (item) {
             return item(arg);
         }, catcher, finallyer));

@@ -13,9 +13,9 @@ app.defineDirective('Tests', (function (app) {
         TO_BE_STRICTLY_EQUAL_TO = TO_BE + 'strictly equal to ',
         Tests = Directive.extend('Tests', {
             constructor: function (target) {
+                var aQ = [];
                 var aeQ = [];
                 var beQ = [];
-                var aQ = [];
                 var its = [];
                 var descriptions = [];
                 var fin = fin;
@@ -48,12 +48,16 @@ app.defineDirective('Tests', (function (app) {
         expect: (function () {
             var tester;
             return function (expectation) {
-                tester = tester || testy();
+                tester = tester || testy(BOOLEAN_TRUE);
                 return tester.expect(expectation);
             };
         }())
     });
     return Tests;
+
+    function exception(message) {
+        throw new Error(message);
+    }
 
     function checkFinished(states, fn) {
         return function () {
@@ -76,7 +80,7 @@ app.defineDirective('Tests', (function (app) {
         };
     }
 
-    function errIfFalse(it, finishedExpecting, retreiver, handler, makemessage, execute) {
+    function errIfFalse(it, finishedExpecting, retreiver, handler, makemessage, execute, returnresult) {
         return function (arg) {
             var result, expectation = {},
                 retreived = retreiver(),
@@ -100,17 +104,20 @@ app.defineDirective('Tests', (function (app) {
                 tiedTo.expectations.push(expectation);
             }
             expectation.tiedTo = tiedTo;
-            return {
+            return returnresult ? expectation.success : {
                 otherwise: function (string) {
                     if (!expectation.success) {
                         console.error(string);
                     }
+                },
+                valueOf: function () {
+                    return expectation.success;
                 }
             };
         };
     }
 
-    function testy() {
+    function testy(returnresult) {
         var cached, focused, expectationsHash = {
                 not: {}
             },
@@ -126,8 +133,8 @@ app.defineDirective('Tests', (function (app) {
             focusing,
             currentExpectation,
             maker = function (where, test, positive, negative, execute) {
-                expectationsHash[where] = errIfFalse(itRetreiver, finishedExpecting, retreiver, test, positive, execute);
-                expectationsHash.not[where] = errIfFalse(itRetreiver, finishedExpecting, retreiver, negate(test), negative, execute);
+                expectationsHash[where] = errIfFalse(itRetreiver, finishedExpecting, retreiver, test, positive, execute, returnresult);
+                expectationsHash.not[where] = errIfFalse(itRetreiver, finishedExpecting, retreiver, negate(test), negative, execute, returnresult);
             };
         setupBasicTests(maker);
         return {
@@ -235,7 +242,7 @@ app.defineDirective('Tests', (function (app) {
     function run(it, settings, finished) {
         var startTime = 0,
             ran = BOOLEAN_FALSE,
-            three = function () {
+            three = function (er) {
                 var expecting, expectations;
                 if (ran) {
                     return;
@@ -251,7 +258,7 @@ app.defineDirective('Tests', (function (app) {
                     err('Number of expectations expected did not match number of expectations called in: ' + makeName(it.name) + ' expected: ' + expecting + ', got: ' + expectations.length);
                 }
                 finished(whereNot(it.expectations, {
-                    success: BOOLEAN_TRUE
+                    success: !er
                 }));
             },
             done = three,
@@ -309,6 +316,9 @@ app.defineDirective('Tests', (function (app) {
 
     function done(states, descriptions, its, tryToRun, aQ) {
         return function (afterward) {
+            if (states.finished) {
+                exception('Done was called twice');
+            }
             states.finished = BOOLEAN_TRUE;
             aQ.push(afterward);
             tryToRun();
@@ -319,7 +329,7 @@ app.defineDirective('Tests', (function (app) {
         return string && string[0].toUpperCase() + string.slice(1);
     }
 
-    function setupBasicTests(maker) {
+    function setupBasicTests(maker, returnresult) {
         maker('toThrow', function (handler) {
             var errRan = BOOLEAN_FALSE;
             return wraptries(handler, function () {
