@@ -260,7 +260,7 @@ var _performance = window.performance,
         differenceBy: differenceBy,
         smartIndexOf: smartIndexOf,
         consolemaker: consolemaker,
-        blockWrapper: blockWrapper,
+        executionWrapper: executionWrapper,
         isEmptyArray: isEmptyArray,
         parseDecimal: parseDecimal,
         keyGenerator: keyGenerator,
@@ -716,17 +716,7 @@ function whilst(filter, continuation, _memo) {
     }
     return memo;
 }
-// function countUp(limit, fn) {
-//     var start = 0;
-//     while (limit > start) {
-//         fn(start++);
-//     }
-// }
-// function countDown(number, fn) {
-//     while (number >= 0) {
-//         fn(--number);
-//     }
-// }
+
 function chunk(array, size) {
     var length, nu = [];
     if (!array || !(length = array.length)) {
@@ -792,16 +782,16 @@ function undefineAndCall(item, caller) {
     return isUndefined(item) ? item : toFunction(caller)(item);
 }
 
-function undefinedOrCall(item, caller) {
+function undefinedAlternativeCall(item, caller) {
     return isUndefined(item) ? toFunction(caller)(item) : item;
 }
 
-function undefinedOr(item, def) {
+function undefinedAlternative(item, def) {
     return isUndefined(item) ? def : item;
 }
 
 function defaultTo1(n) {
-    return undefinedOr(n, 1);
+    return undefinedAlternative(n, 1);
 }
 
 function possibleArrayIndex(n) {
@@ -1332,9 +1322,7 @@ function isEqual(a, b) {
 }
 
 function clone(obj) {
-    return mapValues(obj, function (value) {
-        return value;
-    });
+    return mapValues(obj, returnsFirstArgument);
 }
 
 function cloneJSON(obj) {
@@ -1427,11 +1415,11 @@ function stringConcat(base, string) {
 }
 
 function join(array, delimiter) {
-    return toArray(array).join(undefinedOr(delimiter, COMMA));
+    return toArray(array).join(undefinedAlternative(delimiter, COMMA));
 }
 
 function split(string, delimiter) {
-    return toString(string).split(undefinedOr(delimiter, EMPTY_STRING));
+    return toString(string).split(undefinedAlternative(delimiter, EMPTY_STRING));
 }
 
 function filterCommon(memo, passed) {
@@ -1523,7 +1511,7 @@ function unwrapBlock(string_) {
     return split.join('{');
 }
 
-function blockWrapper(block, context) {
+function executionWrapper(block, context) {
     return 'with(' + (context || 'this') + '){\n' + block + '\n}';
 }
 
@@ -1533,7 +1521,7 @@ function evaluate(context, string_, args) {
         string = unwrapBlock(string_);
     }
     // use a function constructor to get around strict mode
-    var fn = new FUNCTION_CONSTRUCTOR_CONSTRUCTOR('string', blockWrapper('\teval("(function (){"+string+"}());");'));
+    var fn = new FUNCTION_CONSTRUCTOR_CONSTRUCTOR('string', executionWrapper('\teval("(function (){"+string+"}());");'));
     fn.call(context, '"use strict";\n' + string);
 }
 

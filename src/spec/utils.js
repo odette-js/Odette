@@ -92,10 +92,6 @@ application.scope().block(function (app, _, factories) {
             }, 10);
             test.it('_.bind', function () {
                 var bound, context, args = [];
-                var unbound = function () {
-                    test.expect(this).toBe(context);
-                    test.expect(_.toArray(arguments)).toEqual(args);
-                };
                 bound = _.bind(unbound);
                 bound();
                 // does not bind if there is not a truthy context
@@ -121,10 +117,72 @@ application.scope().block(function (app, _, factories) {
                 // you can pass an array and it won't matter
                 bound = _.bind(unbound, context, args[0]);
                 bound();
+
+                function unbound() {
+                    test.expect(this).toBe(context);
+                    test.expect(_.toArray(arguments)).toEqual(args);
+                }
             }, 14);
-            // test.it('_.bindTo', function () {
-            //
-            // });
+            test.it('_.bindTo', function () {
+                var bound, context, args = [];
+                bound = _.bindTo(unbound, context, 1);
+                bound();
+                context = true;
+                bound = _.bindTo(unbound, context, 1);
+                bound();
+                context = {};
+                bound = _.bindTo(unbound, context, [1]);
+                bound();
+
+                function unbound() {
+                    test.expect(this).toBe(context);
+                    test.expect(_.toArray(arguments)).toEqual(args);
+                }
+            }, 6);
+            test.it('_.bindWith', function () {
+                var bound, context, args = [1];
+                bound = _.bindWith(unbound, [context, 1]);
+                bound();
+                context = true;
+                bound = _.bindWith(unbound, [context, 1]);
+                bound();
+                context = {};
+                args = [
+                    [1]
+                ];
+                bound = _.bindWith(unbound, [context, args[0]]);
+                bound();
+
+                function unbound() {
+                    test.expect(this).toBe(context);
+                    test.expect(_.toArray(arguments)).toEqual(args);
+                }
+            }, 6);
+            test.it('_.castBoolean', function () {
+                test.expect(_.castBoolean(true)).toBe(true);
+                test.expect(_.castBoolean([])).toBe(true);
+                test.expect(_.castBoolean([0])).toBe(true);
+                test.expect(_.castBoolean([1])).toBe(true);
+                test.expect(_.castBoolean({})).toBe(true);
+                test.expect(_.castBoolean(false)).toBe(false);
+                test.expect(_.castBoolean(undefined)).toBe(false);
+                test.expect(_.castBoolean(null)).toBe(false);
+                test.expect(_.castBoolean(0)).toBe(false);
+                test.expect(_.castBoolean(NaN)).toBe(false);
+            }, 10);
+            test.it('_.chunk', function () {
+                test.expect(_.chunk()).toBeArray();
+                test.expect(_.chunk('this string here', 3)).toEqual(['thi', 's s', 'tri', 'ng ', 'her', 'e']);
+                test.expect(_.chunk('', 5)).toEqual([]);
+                test.expect(_.chunk(false, 5)).toEqual([]);
+                test.expect(_.chunk(true, 5)).toEqual([]);
+            }, 5);
+            test.it('_.clamp', function () {
+                test.expect(_.clamp(5, 10, 100)).toBe(10);
+                test.expect(_.clamp(10, 5, 100)).toBe(10);
+                test.expect(_.clamp(100, 5, 10)).toBe(10);
+                test.expect(_.clamp(NaN, 5, 10)).toBeNan();
+            }, 4);
             test.it('_.clone', function () {
                 var original = {
                         some: 'thing',
@@ -133,7 +191,13 @@ application.scope().block(function (app, _, factories) {
                     },
                     cloned = _.clone(original);
                 test.expect(cloned).toEqual(original);
-            }, 1);
+                original = ['thing', 'there', function () {}];
+                cloned = _.clone(original);
+                test.expect(cloned).toEqual(original);
+                original = null;
+                cloned = _.clone(original);
+                test.expect(cloned).toEqual([]);
+            }, 3);
             // write more differentiating code for this test
             test.it('_.cloneJSON', function () {
                 var original = {
@@ -450,12 +514,8 @@ application.scope().block(function (app, _, factories) {
                 });
             }, 1);
             test.it('_.negate', function () {
-                var falsey = _.negate(function () {
-                        return false;
-                    }),
-                    truthy = _.negate(function () {
-                        return true;
-                    });
+                var falsey = _.negate(_.returns.false),
+                    truthy = _.negate(_.returns.true);
                 test.expect(truthy()).toEqual(false);
                 test.expect(falsey()).toEqual(true);
             }, 2);
