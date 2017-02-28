@@ -341,8 +341,7 @@
                 },
                 block: function (fn) {
                     var app = this;
-                    var _ = app._;
-                    return fn.apply(app, [app, _, _ && app.factories]);
+                    return fn.apply(app, [app, app._, app.factories]);
                 },
                 /**
                  * Proxy for the global Odette counter

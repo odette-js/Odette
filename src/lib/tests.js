@@ -11,38 +11,36 @@ app.defineDirective('Tests', (function (app) {
         AN_ERROR = ' an error',
         TO_BE_THROWN = ' to be thrown',
         TO_BE_STRICTLY_EQUAL_TO = TO_BE + 'strictly equal to ',
-        Tests = Directive.extend('Tests', {
-            constructor: function (target) {
-                var aQ = [];
-                var aeQ = [];
-                var beQ = [];
-                var its = [];
-                var descriptions = [];
-                var fin = fin;
-                var states = {};
-                var tester = testy();
-                var identifier = target.id;
-                var tryToRun = triesToRun(its, tester.focus, function () {
-                    var i, item;
-                    for (i = 0; i < aQ.length; i++) {
-                        item = aQ[i];
-                        item(its);
-                    }
-                });
-                return merge(this, {
-                    maker: tester.maker,
-                    expect: tester.expect,
-                    finished: finished(fin),
-                    afterEach: checkFinished(states, afterEach(aeQ)),
-                    beforeEach: checkFinished(states, beforeEach(beQ)),
-                    done: done(states, descriptions, its, tryToRun, aQ),
-                    it: checkFinished(states, it(its, descriptions, aeQ, beQ)),
-                    describe: checkFinished(states, describe(descriptions, aeQ, beQ)),
-                    group: function () {
-                        return Tests((identifier ? (identifier + HYPHEN) : EMPTY_STRING) + (++id));
-                    }
-                });
-            }
+        Tests = factories.Tests = Directive.factory('Tests', function (target) {
+            var aQ = [];
+            var aeQ = [];
+            var beQ = [];
+            var its = [];
+            var descriptions = [];
+            var fin = fin;
+            var states = {};
+            var tester = testy();
+            var identifier = target.id;
+            var tryToRun = triesToRun(its, tester.focus, function () {
+                var i, item;
+                for (i = 0; i < aQ.length; i++) {
+                    item = aQ[i];
+                    item(its);
+                }
+            });
+            return merge(this, {
+                maker: tester.maker,
+                expect: tester.expect,
+                finished: finished(fin),
+                afterEach: checkFinished(states, afterEach(aeQ)),
+                beforeEach: checkFinished(states, beforeEach(beQ)),
+                done: done(states, descriptions, its, tryToRun, aQ),
+                it: checkFinished(states, it(its, descriptions, aeQ, beQ)),
+                describe: checkFinished(states, describe(descriptions, aeQ, beQ)),
+                group: function () {
+                    return Tests((identifier ? (identifier + HYPHEN) : EMPTY_STRING) + (++id));
+                }
+            });
         });
     _.publicize({
         expect: (function () {

@@ -20,6 +20,20 @@ application.scope().block(function (app, _, factories) {
             }, 1);
         });
         test.describe('base array methods', function () {
+            // test.it('_.add', function () {
+            //     var list = [];
+            //     var a = 1;
+            //     _.add(list, a);
+            //     _.add(list, a);
+            //     _.add(list, a);
+            //     test.expect(list).toEqual([1]);
+            // }, 1);
+            // test.it('_.add', function () {
+            //     var list = [];
+            //     var a = [1, 1, 1, 3, 4, 3];
+            //     _.addAll(list, a);
+            //     test.expect(list).toEqual([1, 3, 4]);
+            // }, 1);
             test.it('_.indexOf', function () {
                 test.expect(_.indexOf(makeArray(), 'is')).toEqual(makeArray().indexOf('is'));
             }, 1);
@@ -376,60 +390,143 @@ application.scope().block(function (app, _, factories) {
                 test.expect(_.filter([], accessB)).toEqual([]);
                 test.expect(_.filter([], _.returns.true)).toEqual([]);
             }, 7);
-            test.it('_.filterCall', function () {
-                var arr = [{
-                    valueOf: function () {
-                        return 5;
-                    }
-                }];
-                test.expect(_.filterCall(null, 'valueOf')).toEqual([]);
-                test.expect(_.filterCall([], 'valueOf')).toEqual([]);
-                test.expect(_.filterCall(arr, 'valueOf')).toEqual(arr);
-            }, 3);
-            test.it('_.filterCallBound', function () {
-                var arr = [one, two];
-
-                function one(arg) {
-                    return 1 + arg;
-                }
-
-                function two(arg) {
-                    return 2 + arg;
-                }
-                test.expect(_.filterCallBound(arr, -2)).toEqual([one]);
+            // test.it('_.filterCall', function () {
+            //     var arr = [{
+            //         valueOf: function () {
+            //             return 5;
+            //         }
+            //     }];
+            //     test.expect(_.filterCall(null, 'valueOf')).toEqual([]);
+            //     test.expect(_.filterCall([], 'valueOf')).toEqual([]);
+            //     test.expect(_.filterCall(arr, 'valueOf')).toEqual(arr);
+            // }, 3);
+            // test.it('_.filterCallBound', function () {
+            //     var arr = [one, two];
+            //     function one(arg) {
+            //         return 1 + arg;
+            //     }
+            //     function two(arg) {
+            //         return 2 + arg;
+            //     }
+            //     test.expect(_.filterCallBound(arr, -2)).toEqual([one]);
+            // }, 1);
+            // test.it('_.filterCallBoundTry', function () {
+            //     var value, arr = [one];
+            //     test.expect(function () {
+            //         value = _.filterCallBoundTry(arr, true, _.returns.true);
+            //     }).not.toThrow();
+            //     test.expect(value).toEqual(arr);
+            //     function one(arg) {
+            //         return this[arg];
+            //     }
+            // }, 2);
+            // test.it('_.filterCallTry', function () {
+            //     var value, one = {
+            //             valueOf: function () {
+            //                 return this.doesnotexist();
+            //             }
+            //         },
+            //         arr = [one];
+            //     test.expect(function () {
+            //         value = _.filterCallTry(arr, 'valueOf', null, _.returns.true);
+            //     }).not.toThrow();
+            //     test.expect(value).toEqual(arr);
+            //     function one(arg) {
+            //         return this[arg];
+            //     }
+            //     function two(arg) {
+            //         return this[arg];
+            //     }
+            // }, 2);
+            test.it('_.filterNegative', function () {
+                test.expect(_.filterNegative([0, null, undefined, 1, true, false], _.returns.first)).toEqual([0, null, undefined, false]);
             }, 1);
-            test.it('_.filterCallBoundTry', function () {
-                var value, arr = [one];
-                test.expect(function () {
-                    value = _.filterCallBoundTry(arr, true, _.returns.true);
-                }).not.toThrow();
-                test.expect(value).toEqual(arr);
-
-                function one(arg) {
-                    return this[arg];
-                }
-            }, 2);
-            test.it('_.filterCallTry', function () {
-                var value, one = {
-                        valueOf: function () {
-                            return this.doesnotexist();
-                        }
-                    },
-                    arr = [one];
-                test.expect(function () {
-                    value = _.filterCallTry(arr, 'valueOf', null, _.returns.true);
-                }).not.toThrow();
-                test.expect(value).toEqual(arr);
-
-                function one(arg) {
-                    return this[arg];
-                }
-
-                function two(arg) {
-                    return this[arg];
-                }
-            }, 2);
+            // test.it('_.filterNegativeCall', function () {
+            //     var obj1 = {
+            //         method: _.returns.true
+            //     };
+            //     var obj2 = {
+            //         method: _.returns.false
+            //     };
+            //     var list = [obj1, obj2];
+            //     test.expect(_.filterNegativeCall(list, 'method')).toEqual([obj2]);
+            // }, 1);
+            // test.it('_.filterNegativeCallBound', function () {
+            //     test.expect(_.filterNegativeCallBound([_.returns.true, _.returns.false])).toEqual([_.returns.false]);
+            // }, 1);
+            // test.it('_.filterNegativeCallBoundTry', function () {
+            //     _.filterNegativeCallBoundTry([ //
+            //         a, _.console.exception, a
+            //     ], 1, function (e) {
+            //         test.expect(e).toBeTruthy();
+            //     });
+            //     function a(arg) {
+            //         test.expect(arg).toBe(1);
+            //     }
+            // }, 3);
+            // test.it('_.filterNegativeCallTry', function () {
+            //     var a = {
+            //         method: function (arg) {
+            //             test.expect(arg).toBe(1);
+            //         }
+            //     };
+            //     _.filterNegativeCallTry([a, {}, a], 'method', 1, function (e) {
+            //         test.expect(e).toBeTruthy();
+            //     });
+            // }, 3);
+            test.it('_.filterNegativeRight', function () {
+                var list = [null, false, true, 1];
+                var copy = list.slice(0).reverse();
+                var counter = 0;
+                var nulist = _.filterNegativeRight(list, function (item) {
+                    test.expect(item).toBe(copy[counter++]);
+                    return item;
+                });
+                test.expect(nulist).toEqual([false, null]);
+            }, 5);
+            // test.it('_.filterNegativeRightCall', function () {
+            //     var obj1 = {
+            //         method: _.returns.false
+            //     };
+            //     var obj2 = {
+            //         method: _.returns.true
+            //     };
+            //     var list = [obj1, obj2];
+            //     var copy = list.slice(0).reverse();
+            //     var counter = 0;
+            //     var nulist = _.filterNegativeRightCall(list, 'method');
+            //     test.expect(nulist).toEqual([obj1]);
+            // }, 1);
+            // test.it('_.filterNegativeRightCallBound', function () {
+            //     var obj1 = _.returns.false;
+            //     var obj2 = _.returns.true;
+            //     var list = [obj1, obj2];
+            //     var copy = list.slice(0).reverse();
+            //     var counter = 0;
+            //     var nulist = _.filterNegativeRightCallBound(list, 'method');
+            //     test.expect(nulist).toEqual([obj1]);
+            // }, 1);
+            // test.it('_.filterNegativeRightCallBound', function () {
+            //     var obj1 = _.returns.false;
+            //     var obj2 = _.returns.true;
+            //     var list = [obj1, obj2];
+            //     var nulist = _.filterNegativeRightCallBound(list);
+            //     test.expect(nulist).toEqual([obj1]);
+            // }, 1);
+            // test.it('_.filterNegativeRightCallBoundTry', function () {
+            //     var obj1 = _.returns.false;
+            //     var obj2 = _.returns.true;
+            //     var list = [obj1, _.console.exception, obj2];
+            //     var nulist = _.filterNegativeRightCallBoundTry(list, null, function (e) {
+            //         test.expect(e).toBeTruthy();
+            //     });
+            //     test.expect(nulist).toEqual([obj1]);
+            // }, 2);
             // continue from here alphabetically
+            test.it('_.filterRight', function () {
+                var list = [1, false, true, 0, null, {}];
+                test.expect(_.filterRight(list, _.returns.first)).toEqual([{}, true, 1]);
+            }, 1);
             test.it('_.find', function () {
                 var arr = [1, 2, 3, 4, 5, 6];
                 test.expect(_.find(arr, is5)).toBe(5);
@@ -439,6 +536,39 @@ application.scope().block(function (app, _, factories) {
                 test.expect(_.find([], accessB)).toBe(undefined);
                 test.expect(_.find([], _.returns.true)).toBe(undefined);
             }, 6);
+            // test.it('_.findIn', function () {
+            //     Con.prototype = {
+            //         two: 2
+            //     };
+            //     var obj = new Con();
+            //     var result = _.findIn(obj, function (value, key) {
+            //         return value;
+            //     });
+            //     test.expect(result).toBe(1);
+            //     result = _.findIn(obj, function (value, key) {
+            //         return key === 'two';
+            //     });
+            //     test.expect(result).toBe(2);
+            //     result = _.findIn(obj, function (value, key) {
+            //         return value > 3;
+            //     });
+            //     test.expect(result).toBeUndefined();
+            //     function Con() {
+            //         this.one = 1;
+            //         return this;
+            //     }
+            // }, 3);
+            // test.it('_.findInRight', function () {
+            //     Con.prototype = {
+            //         two: 2,
+            //         three: 3
+            //     };
+            //     var obj = new Con();
+            //     function Con() {
+            //         this.one = 1;
+            //         return this;
+            //     }
+            // });
             test.it('_.findIndex', function () {
                 var arr = [1, 2, 3, 4, 5, 6];
                 test.expect(_.findIndex(arr, is5)).toBe(4);
@@ -466,24 +596,79 @@ application.scope().block(function (app, _, factories) {
                 test.expect(_.findRight([], accessB)).toBe(undefined);
                 test.expect(_.findRight([], _.returns.true)).toBe(undefined);
             }, 6);
-            test.it('_.forEach', function () {
-                var test1 = [1, 2, 3, 4];
-                var count = 0;
-                test.expect(count).toEqual(0);
-                _.forEach(test1, function (item) {
-                    count += item;
+            test.it('_.findIndexWhereRight', function () {
+                var list = [{
+                    one: 1
+                }, {
+                    one: 2
+                }, {
+                    one: 2,
+                    here: true
+                }];
+                test.expect(_.findIndexWhereRight(list, {
+                    here: true
+                })).toEqual(2);
+            }, 1);
+            test.it('_.findWhereRight', function () {
+                var list = [{
+                    one: 1
+                }, {
+                    one: 2
+                }, {
+                    one: 2,
+                    here: true
+                }];
+                test.expect(_.findWhereRight(list, {
+                    here: true
+                })).toEqual({
+                    one: 2,
+                    here: true
                 });
-                test.expect(count).toEqual(10);
-                _.forEach({
-                    one: 1,
-                    two: 2,
-                    three: 3,
-                    four: 4
-                }, function (item) {
-                    count += item;
-                });
-                test.expect(count).toEqual(10);
-            }, 3);
+            }, 1);
+            // test.it('_.findRemoveWhere', function () {
+            //     var a = {
+            //         index: 1
+            //     };
+            //     var b = {
+            //         index: 2
+            //     };
+            //     var list = [a, b, a, b, a, b];
+            //     _.findRemoveWhere(list, {
+            //         index: 2
+            //     });
+            //     test.expect(list).toEqual([a, a, b, a, b]);
+            // }, 1);
+            // test.it('_.findRemoveWhereRight', function () {
+            //     var a = {
+            //         index: 1
+            //     };
+            //     var b = {
+            //         index: 2
+            //     };
+            //     var list = [a, b, a, b, a, b];
+            //     _.findRightRemoveWhere(list, {
+            //         index: 1
+            //     });
+            //     test.expect(list).toEqual([a, b, a, b, b]);
+            // }, 1);
+            // test.it('_.forEach', function () {
+            //     var test1 = [1, 2, 3, 4];
+            //     var count = 0;
+            //     test.expect(count).toEqual(0);
+            //     _.forEach(test1, function (item) {
+            //         count += item;
+            //     });
+            //     test.expect(count).toEqual(10);
+            //     _.forEach({
+            //         one: 1,
+            //         two: 2,
+            //         three: 3,
+            //         four: 4
+            //     }, function (item) {
+            //         count += item;
+            //     });
+            //     test.expect(count).toEqual(10);
+            // }, 3);
             test.it('_.forOwn', function () {
                 var args = [],
                     obj = {

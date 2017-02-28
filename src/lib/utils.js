@@ -30,17 +30,17 @@ var garbage, FOR = 'for',
     iteratesIn = iterates(allKeys),
     iteratesOwn = iterates(keys),
     findIndex = baseForEachEnd,
-    findIndexIn = baseFind(iteratesIn, findIndex),
-    findIndexOwn = baseFind(iteratesOwn, findIndex),
+    // findIndexIn = baseFind(iteratesIn, findIndex),
+    // findIndexOwn = baseFind(iteratesOwn, findIndex),
     findIndexRight = baseForEachEndRight,
-    findIndexInRight = baseFind(iteratesIn, findIndexRight),
-    findIndexOwnRight = baseFind(iteratesOwn, findIndexRight),
+    // findIndexInRight = baseFind(iteratesIn, findIndexRight),
+    // findIndexOwnRight = baseFind(iteratesOwn, findIndexRight),
     find = findAccessor(baseForEachEnd),
-    findIn = baseFind(iteratesIn, find),
-    findOwn = baseFind(iteratesOwn, find),
+    // findIn = baseFind(iteratesIn, find, findAccess),
+    // findOwn = baseFind(iteratesOwn, find, findAccess),
     findRight = findAccessor(findIndexRight),
-    findInRight = baseFind(iteratesIn, findRight),
-    findOwnRight = baseFind(iteratesOwn, findRight),
+    // findInRight = baseFind(iteratesIn, findRight, findAccess),
+    // findOwnRight = baseFind(iteratesOwn, findRight, findAccess),
     now_offset = dateNow(),
     filterable = negatableFilter(filterCommon(returnsArray, arrayAdd), filterCommon(returnsObject, objectSet), filterCommon(returnsEmptyString, stringConcat)),
     forIn = baseEach(iteratesIn, forEach),
@@ -50,7 +50,7 @@ var garbage, FOR = 'for',
     mapKeys = maps(forOwn, mapKeysIteratee, returnBaseType),
     mapValues = maps(forOwn, mapValuesIteratee, returnBaseType),
     reduce = createReduce(1),
-    // dropWhile = dropsWhile(filter),
+    dropWhile = dropsWhile(filter),
     filter = filterable(reduce),
     filterNegative = filterable(reduce, BOOLEAN_TRUE),
     forInRight = baseEach(iteratesIn, forEachRight),
@@ -60,8 +60,8 @@ var garbage, FOR = 'for',
     mapKeysRight = maps(forEachRight, mapKeysIteratee, returnBaseType),
     mapValuesRight = maps(forOwnRight, mapValuesIteratee, returnBaseType),
     reduceRight = createReduce(-1),
-    // dropWhileRight = dropsWhile(filterRight),
     filterRight = filterable(reduceRight),
+    dropWhileRight = dropsWhile(filterRight),
     filterNegativeRight = filterable(reduceRight, BOOLEAN_TRUE),
     where = convertSecondToIterable(filter),
     whereRight = convertSecondToIterable(filterRight),
@@ -72,6 +72,8 @@ var garbage, FOR = 'for',
     findIndexWhere = convertSecondToIterable(findIndex),
     findIndexWhereRight = convertSecondToIterable(findIndexRight),
     uniqueBy = convertSecondToIterable(uniqueWith),
+    // addAll = doToAll(add),
+    // removeAll = doToAll(remove),
     _JSON = window.JSON,
     JSONStringify = _JSON.stringify,
     JSONParse = _JSON.parse,
@@ -89,17 +91,17 @@ buildCallers('mapKeys', mapKeys, mapKeysRight, builtCallers);
 buildCallers('where', where, whereRight, builtCallers);
 buildCallers('whereNot', whereNot, whereNotRight, builtCallers);
 buildCallers(FIND, find, findRight, builtCallers);
-buildCallers(FIND + 'Own', findOwn, findOwnRight, builtCallers);
-buildCallers(FIND + 'In', findOwn, findOwnRight, builtCallers);
+// buildCallers(FIND + 'Own', findOwn, findOwnRight, builtCallers);
+// buildCallers(FIND + 'In', findIn, findInRight, builtCallers);
 buildCallers(FIND_INDEX, findIndex, findIndexRight, builtCallers);
-buildCallers(FIND_INDEX + 'Own', findIndexOwn, findIndexOwnRight, builtCallers);
-buildCallers(FIND_INDEX + 'In', findIndexIn, findIndexInRight, builtCallers);
+// buildCallers(FIND_INDEX + 'Own', findIndexOwn, findIndexOwnRight, builtCallers);
+// buildCallers(FIND_INDEX + 'In', findIndexIn, findIndexInRight, builtCallers);
 buildCallers(FIND + 'Where', findWhere, findWhereRight, builtCallers);
 buildCallers(FIND + 'IndexWhere', findIndexWhere, findIndexWhereRight, builtCallers);
 buildCallers('reduce', reduce, reduceRight, builtCallers);
 buildCallers('filter', filter, filterRight, builtCallers);
 buildCallers('filterNegative', filterNegative, filterNegativeRight, builtCallers);
-// buildCallers('dropWhile', dropWhile, dropWhileRight, builtCallers);
+buildCallers('dropWhile', dropWhile, dropWhileRight, builtCallers);
 var _performance = window.performance,
     uuidHash = {},
     maths = Math,
@@ -131,14 +133,16 @@ var _performance = window.performance,
         string: isString,
         object: isObject,
         nan: isNaN,
-        int: isInt,
+        int: isInteger,
         array: isArray,
         'function': isFunction,
         boolean: isBoolean,
         'null': isNull,
+        undefined: isUndefined,
         nil: isNil,
         value: isValue,
         isKey: isKey,
+        isIndex: isIndex,
         validInteger: isValidInteger,
         arrayLike: isArrayLike,
         instance: isInstance,
@@ -160,6 +164,31 @@ var _performance = window.performance,
      * @namespace _
      */
     _ = app._ = merge({
+        filter: filter,
+        matches: matches,
+        results: results,
+        // add: add,
+        // removeAll: removeAll,
+        // addAll: addAll,
+        // insertAt: insertAt,
+        // removeAt: removeAt,
+        // removeWhere: removeWhere,
+        // findRemoveWhere: findRemoveWhere,
+        // remove: remove,
+        // cycle: cycle,
+        // uncycle: uncycle,
+        concat: concat,
+        where: where,
+        findWhere: findWhere,
+        findWhereRight: findWhereRight,
+        range: range,
+        count: count,
+        countTo: countTo,
+        countFrom: countFrom,
+        whereNot: whereNot,
+        forEachRight: forEachRight,
+        flatten: flatten,
+        eq: equalize,
         is: is,
         to: to,
         pI: pI,
@@ -180,7 +209,7 @@ var _performance = window.performance,
         chunk: chunk,
         parse: parse,
         merge: merge,
-        isInt: isInt,
+        isInteger: isInteger,
         defer: defer,
         clone: clone,
         clamp: clamp,
@@ -299,7 +328,7 @@ merge(returns, {
     first: returnsFirstArgument,
     second: returnsSecondArgument
 });
-app.logWrappedErrors = isBoolean.false = isBoolean.true = BOOLEAN_TRUE;
+isBoolean.false = isBoolean.true = BOOLEAN_TRUE;
 factories.Extendable = constructorWrapper(Extendable, OBJECT_CONSTRUCTOR);
 /**
  * @lends _
@@ -398,8 +427,12 @@ function isNil(item) {
     return isNull(item) || isUndefined(item);
 }
 
+function isIndex(number) {
+    return number >= 0 && isNumber(number)
+}
+
 function isKey(item) {
-    return isNumber(item) || isString(item);
+    return isIndex(item) || isString(item);
 }
 
 function isValue(item) {
@@ -585,7 +618,7 @@ function isBoolean(argument) {
     return isStrictlyEqual(argument, BOOLEAN_TRUE) || isStrictlyEqual(argument, BOOLEAN_FALSE);
 }
 
-function isInt(num) {
+function isInteger(num) {
     return num === Math.round(num);
 }
 
@@ -954,16 +987,21 @@ function baseForEachEndRight(list, callback, start, end) {
     return baseForEachEnd(list, callback, start === UNDEFINED ? lastIndex(list) : start, end === UNDEFINED ? 0 : end, -1);
 }
 
-function findAccessor(fn) {
-    return function (value, callback, index) {
+function findAccess(result, obj) {
+    return isUndefined(result) ? result : obj[result];
+}
+
+function findAccessor(fn, found) {
+    return function (obj, predicate, a, b, c) {
         var foundAt;
-        if ((foundAt = fn(obj, predicate, index)) !== UNDEFINED) {
+        if (!isUndefined(foundAt = fn(obj, predicate, a, b, c))) {
             return obj[foundAt];
         }
     };
 }
 
-function baseFind(iterates, forEachEnd) {
+function baseFind(iterates, forEachEnd, resultprocess_) {
+    var resultprocess = resultprocess_ || returnsFirstArgument;
     return function (obj_, iteratee_) {
         var obj = obj_,
             iteratee = iteratee_;
@@ -974,7 +1012,7 @@ function baseFind(iterates, forEachEnd) {
             iteratee = iterates(obj, iteratee);
             obj = iteratee.keys;
         }
-        return forEachEnd(obj, iteratee);
+        return resultprocess(forEachEnd(obj, iteratee), obj_);
     };
 }
 
@@ -994,15 +1032,6 @@ function baseFromToEnd(values, callback, _start, _end, _step) {
         }
         index += step;
     }
-}
-
-function findAccessor(fn) {
-    return function (obj, predicate, a, b, c) {
-        var foundAt = fn(obj, predicate, a, b, c);
-        if (foundAt !== UNDEFINED) {
-            return obj[foundAt];
-        }
-    };
 }
 
 function validKey(key) {
@@ -1373,23 +1402,20 @@ function concatUnique(list) {
         }, memo);
     }, []);
 }
-
-function cycle(arr, num_) {
-    var length = arr[LENGTH],
-        num = num_ % length,
-        piece = arr.splice(num);
-    arr.unshift.apply(arr, piece);
-    return arr;
-}
-
-function uncycle(array, num_) {
-    var length = array[LENGTH],
-        num = num_ % length,
-        piece = array.splice(0, length - num);
-    arrayPush.apply(array, piece);
-    return array;
-}
-
+// function cycle(arr, num_) {
+//     var length = arr[LENGTH],
+//         num = num_ % length,
+//         piece = arr.splice(num);
+//     arr.unshift.apply(arr, piece);
+//     return arr;
+// }
+// function uncycle(array, num_) {
+//     var length = array[LENGTH],
+//         num = num_ % length,
+//         piece = array.splice(0, length - num);
+//     arrayPush.apply(array, piece);
+//     return array;
+// }
 function isMatch(object, attrs) {
     var key, i = 0,
         keysResult = keys(attrs),
@@ -1875,26 +1901,26 @@ function buildCallers(prefix, handler, second, memo_) {
         BOUND = 'Bound',
         TRY = 'Try';
     memo[prefix] = handler;
-    memo[prefix + CALL] = function (array, method, arg) {
-        return handler(array, function (item) {
-            return item[method](arg);
-        });
-    };
-    memo[prefix + CALL + BOUND] = function (array, arg) {
-        return handler(array, function (fn) {
-            return fn(arg);
-        });
-    };
-    memo[prefix + CALL + TRY] = function (array, method, arg, catcher, finallyer) {
-        return handler(array, doTry(function (item) {
-            return item[method](arg);
-        }, catcher, finallyer));
-    };
-    memo[prefix + CALL + BOUND + TRY] = function (array, arg, catcher, finallyer) {
-        return handler(array, doTry(function (item) {
-            return item(arg);
-        }, catcher, finallyer));
-    };
+    // memo[prefix + CALL] = function (array, method, arg) {
+    //     return handler(array, function (item) {
+    //         return item[method](arg);
+    //     });
+    // };
+    // memo[prefix + CALL + BOUND] = function (array, arg) {
+    //     return handler(array, function (fn) {
+    //         return fn(arg);
+    //     });
+    // };
+    // memo[prefix + CALL + TRY] = function (array, method, arg, catcher, finallyer) {
+    //     return handler(array, doTry(function (item) {
+    //         return item[method](arg);
+    //     }, catcher, finallyer));
+    // };
+    // memo[prefix + CALL + BOUND + TRY] = function (array, arg, catcher, finallyer) {
+    //     return handler(array, doTry(function (item) {
+    //         return item(arg);
+    //     }, catcher, finallyer));
+    // };
     merge(builtCallers, memo);
     if (second) {
         buildCallers(prefix + 'Right', second);
@@ -2059,6 +2085,160 @@ function flows(fromHere, toHere) {
     return function (arg) {
         return callMethod(toIsString, toHere, this, callMethod(fromIsString, fromHere, this, arg));
     };
+}
+// function removeWhere(list, matchr) {
+//     var matcher = matches(matchr);
+//     forEachRight(list, function (item, index) {
+//         if (matcher(item)) {
+//             removeAt(list, index);
+//         }
+//     });
+// }
+// function doToAll(handler) {
+//     return function (list, items, lookAfter, lookBefore, fromRight) {
+//         var count = 0;
+//         forEach(items, function (item) {
+//             count += handler(list, item, lookAfter, lookBefore, fromRight);
+//         });
+//         return count === list[LENGTH];
+//     };
+// }
+// function remove(list, item, lookAfter, lookBefore, fromRight) {
+//     var index = indexOf(list, item, lookAfter, lookBefore, fromRight);
+//     if (index + 1) {
+//         removeAt(list, index);
+//     }
+//     index = index + 1;
+//     return !!index;
+// }
+// function removeAt(list, index) {
+//     return list.splice(index, 1)[0];
+// }
+// function add(list, item, lookAfter, lookBefore, fromRight) {
+//     var value = 0,
+//         index = indexOf(list, item, lookAfter, lookBefore, fromRight);
+//     if (index === -1) {
+//         value = list.push(item);
+//     }
+//     return !!value;
+// }
+// function insertAt(list, item, index) {
+//     var len = list[LENGTH],
+//         lastIdx = len || 0;
+//     list.splice(index || 0, 0, item);
+//     return len !== list[LENGTH];
+// }
+function equalize(list, num, caller_) {
+    var n, thisNum, caller = caller_ || noop,
+        items = [],
+        numb = num || 0,
+        isNumberResult = isNumber(numb),
+        isArrayLikeResult = isArrayLike(numb);
+    if (numb < 0) {
+        isNumberResult = !1;
+    }
+    if (!list[LENGTH]) {
+        return items;
+    }
+    if (isNumberResult) {
+        items = [list[numb]];
+        caller(items[0]);
+    } else {
+        if (isArrayLikeResult) {
+            forEach(numb, function (num) {
+                var item = list[num];
+                items.push(item);
+                caller(item);
+            });
+        } else {
+            items = [list[0]];
+            caller(items[0]);
+        }
+    }
+    return items;
+}
+
+function range(start, stop, step, inclusive) {
+    var length, range, idx;
+    if (stop == NULL) {
+        stop = start || 0;
+        start = 0;
+    }
+    if (!isFinite(start) || !isNumber(start)) {
+        start = 0;
+    }
+    step = +step || 1;
+    length = Math.max(Math.ceil((stop - start) / step), 0) + (+inclusive || 0);
+    range = [];
+    idx = 0;
+    while (idx < length) {
+        range[idx] = start;
+        idx++;
+        start += step;
+    }
+    return range;
+}
+
+function count(list, runner, start, end) {
+    var obj, idx;
+    if (start >= end || !isNumber(start) || !isNumber(end) || !isFinite(start) || !isFinite(end)) {
+        return list;
+    }
+    end = Math.abs(end);
+    idx = start;
+    while (idx < end) {
+        obj = NULL;
+        if (list[LENGTH] > idx) {
+            obj = list[idx];
+        }
+        runner(obj, idx, list);
+        idx++;
+    }
+    return list;
+}
+
+function countTo(list, runner, num) {
+    return count(list, runner, 0, clamp(num, 0));
+}
+
+function countFrom(list, runner, num) {
+    return count(list, runner, clamp(num, 0) || 0, list[LENGTH]);
+}
+
+function closestIndex(array, searchElement, minIndex_, maxIndex_) {
+    var currentIndex, currentElement, found,
+        minIndex = minIndex_ || 0,
+        maxIndex = maxIndex_ || array[LENGTH] - 1;
+    while (minIndex <= maxIndex) {
+        currentIndex = (minIndex + maxIndex) / 2 | 0;
+        currentElement = array[currentIndex];
+        // calls valueOf
+        if (currentElement < searchElement) {
+            minIndex = currentIndex + 1;
+        } else if (currentElement > searchElement) {
+            maxIndex = currentIndex - 1;
+        } else {
+            return currentIndex;
+        }
+    }
+    found = ~~maxIndex;
+    return found;
+}
+
+function findRemover(iterator) {
+    return function (list, matcher) {
+        var found;
+        if (isIndex(found = iterator(list, matcher))) {
+            remove(list, found);
+        }
+    };
+}
+
+function findRemoveWhere(list, matcher) {
+    var found;
+    if ((found = findWhere(list, matcher))) {
+        remove(list, found);
+    }
 }
 /**
  * @class Extendable

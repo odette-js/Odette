@@ -1,1 +1,2 @@
-var test = application.scope().directive('Tests');
+var app = application.scope();
+var test = app.directive('Tests');
