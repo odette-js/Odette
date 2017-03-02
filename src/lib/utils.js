@@ -5,27 +5,27 @@ var garbage, FOR = 'for',
     factories = {},
     builtCallers = {},
     OBJECT_PROTOTYPE = OBJECT_CONSTRUCTOR[PROTOTYPE],
-    nativeKeys = OBJECT_CONSTRUCTOR.keys,
-    objectToString = OBJECT_PROTOTYPE.toString,
-    ENUM_BUG = !{
-        toString: NULL
-    }.propertyIsEnumerable(TO_STRING),
-    isFinite_ = win.isFinite,
-    symbolTag = createToStringResult(SYMBOL),
-    isSymbolWrap = isTypeWrap(SYMBOL),
-    pathByStringRegExp = /\]\.|\.|\[|\]/igm,
+    // nativeKeys = OBJECT_CONSTRUCTOR.keys,
+    // objectToString = OBJECT_PROTOTYPE.toString,
+    // ENUM_BUG = !{
+    //     toString: NULL
+    // }.propertyIsEnumerable(TO_STRING),
+    // isFinite_ = win.isFinite,
+    // symbolTag = createToStringResult(SYMBOL),
+    // isSymbolWrap = isTypeWrap(SYMBOL),
+    // pathByStringRegExp = /\]\.|\.|\[|\]/igm,
     arrayConcat = ARRAY.concat,
     arrayPush = ARRAY.push,
     MAX_ARRAY_INDEX = Math.pow(2, 53) - 1,
-    isArray = ARRAY_CONSTRUCTOR.isArray,
-    isFunction = isTypeWrap(FUNCTION),
-    isString = isTypeWrap(STRING),
-    isNumber = isTypeWrap(NUMBER, notNaN),
-    isObject = isTypeWrap(OBJECT, castBoolean),
+    // isArray = ARRAY_CONSTRUCTOR.isArray,
+    // isFunction = isTypeWrap(FUNCTION),
+    // isString = isTypeWrap(STRING),
+    // isNumber = isTypeWrap(NUMBER, notNaN),
+    // isObject = isTypeWrap(OBJECT, castBoolean),
     isRegExp = isToStringWrap(REG_EXP),
     nonEnumerableProps = toArray('valueOf,isPrototypeOf,propertyIsEnumerable,hasOwnProperty,toLocaleString,' + TO_STRING),
     // Returns the first index on an array-like that passes a predicate test
-    returnsEmptyString = returns(''),
+    // returnsEmptyString = returns(''),
     iteratesIn = iterates(allKeys),
     iteratesOwn = iterates(keys),
     findIndex = baseForEachEnd,
@@ -259,7 +259,7 @@ var _performance = window.performance,
         isEmptyArray: isEmptyArray,
         parseDecimal: parseDecimal,
         keyGenerator: keyGenerator,
-        protoProperty: protoProperty,
+        // protoProperty: protoProperty,
         reverseParams: reverseParams,
         // objectToArray: objectToArray,
         sortedIndexOf: sortedIndexOf,
@@ -298,146 +298,127 @@ factories.Extendable = constructorWrapper(Extendable, OBJECT_CONSTRUCTOR);
 /**
  * @lends _
  */
-function noop() {}
-
-function returnsSelf() {
-    return this;
-}
-
-function returnsObject() {
-    return {};
-}
-
-function returnsArray() {
-    return [];
-}
-
-function returnsFirstArgument(value) {
-    return value;
-}
-
-function returnsSecondArgument(nil, value) {
-    return value;
-}
-
-function createToStringResult(string) {
-    return BRACKET_OBJECT_SPACE + string + ']';
-}
-
-function callObjectToString(item) {
-    return objectToString.call(item);
-}
-
-function isToStringWrap(string_) {
-    var string = createToStringResult(string_);
-    return function (item) {
-        return isStrictlyEqual(callObjectToString(item), string);
-    };
-}
-
-function indexOfNaN(array, fromIndex, toIndex, fromRight) {
-    if (!array) {
-        return -1;
-    }
-    var other, limit = toIndex || array[LENGTH],
-        index = fromIndex + (fromRight ? 0 : -1),
-        incrementor = fromRight ? -1 : 1;
-    while ((index += incrementor) < limit) {
-        other = array[index];
-        if (other !== other) {
-            return index;
-        }
-    }
-    return -1;
-}
-
-function property(string) {
-    return function (object) {
-        return object[string];
-    };
-}
-
-function indexOf(array, value, fromIndex, toIndex, fromRight) {
-    var index, limit, incrementor;
-    if (!array) {
-        return -1;
-    }
-    if (value !== value) {
-        return indexOfNaN(array, fromIndex, toIndex, fromRight);
-    }
-    index = (fromIndex || 0) - 1;
-    limit = toIndex || array[LENGTH];
-    incrementor = fromRight ? -1 : 1;
-    while ((index += incrementor) < limit) {
-        if (array[index] === value) {
-            return index;
-        }
-    }
-    return -1;
-}
-
-function lastIndexOf(a, b, c, d) {
-    return indexOf(a, b, c, d, BOOLEAN_TRUE);
-}
-
-function lastIndexOfNaN(a, b, c) {
-    return indexOfNaN(a, b, c, BOOLEAN_TRUE);
-}
-
-function contains(list, item, start, end) {
-    return indexOf(list, item, start, end) !== -1;
-}
-
-function isNil(item) {
-    return isNull(item) || isUndefined(item);
-}
-
-function isKey(item) {
-    return isNumber(item) || isString(item);
-}
-
-function isValue(item) {
-    return notNaN(item) && !isNil(item);
-}
-
-function sortedIndexOf(list, item, minIndex_, maxIndex_, fromRight) {
-    var guess, min = minIndex_ || 0,
-        max = maxIndex_ || lastIndex(list),
-        bitwise = (max <= TWO_TO_THE_31) ? BOOLEAN_TRUE : BOOLEAN_FALSE;
-    if (item !== item) {
-        // bitwise does not work for NaN
-        return indexOfNaN(list, min, max, fromRight);
-    }
-    if (bitwise) {
-        while (min <= max) {
-            guess = (min + max) >> 1;
-            if (list[guess] === item) {
-                return guess;
-            } else {
-                if (list[guess] < item) {
-                    min = guess + 1;
-                } else {
-                    max = guess - 1;
-                }
-            }
-        }
-    } else {
-        while (min <= max) {
-            guess = (min + max) / 2 | 0;
-            if (list[guess] === item) {
-                return guess;
-            } else {
-                if (list[guess] < item) {
-                    min = guess + 1;
-                } else {
-                    max = guess - 1;
-                }
-            }
-        }
-    }
-    return -1;
-}
-
+// function noop() {}
+// function returnsSelf() {
+//     return this;
+// }
+// function returnsObject() {
+//     return {};
+// }
+// function returnsArray() {
+//     return [];
+// }
+// function returnsFirstArgument(value) {
+//     return value;
+// }
+// function returnsSecondArgument(nil, value) {
+//     return value;
+// }
+// function createToStringResult(string) {
+//     return BRACKET_OBJECT_SPACE + string + ']';
+// }
+// function callObjectToString(item) {
+//     return objectToString.call(item);
+// }
+// function isToStringWrap(string_) {
+//     var string = createToStringResult(string_);
+//     return function (item) {
+//         return isStrictlyEqual(callObjectToString(item), string);
+//     };
+// }
+// function indexOfNaN(array, fromIndex, toIndex, fromRight) {
+//     if (!array) {
+//         return -1;
+//     }
+//     var other, limit = toIndex || array[LENGTH],
+//         index = fromIndex + (fromRight ? 0 : -1),
+//         incrementor = fromRight ? -1 : 1;
+//     while ((index += incrementor) < limit) {
+//         other = array[index];
+//         if (other !== other) {
+//             return index;
+//         }
+//     }
+//     return -1;
+// }
+// function property(string) {
+//     return function (object) {
+//         return object[string];
+//     };
+// }
+// function indexOf(array, value, fromIndex, toIndex, fromRight) {
+//     var index, limit, incrementor;
+//     if (!array) {
+//         return -1;
+//     }
+//     if (value !== value) {
+//         return indexOfNaN(array, fromIndex, toIndex, fromRight);
+//     }
+//     index = (fromIndex || 0) - 1;
+//     limit = toIndex || array[LENGTH];
+//     incrementor = fromRight ? -1 : 1;
+//     while ((index += incrementor) < limit) {
+//         if (array[index] === value) {
+//             return index;
+//         }
+//     }
+//     return -1;
+// }
+// function lastIndexOf(a, b, c, d) {
+//     return indexOf(a, b, c, d, BOOLEAN_TRUE);
+// }
+// function lastIndexOfNaN(a, b, c) {
+//     return indexOfNaN(a, b, c, BOOLEAN_TRUE);
+// }
+// function contains(list, item, start, end) {
+//     return indexOf(list, item, start, end) !== -1;
+// }
+// function isNil(item) {
+//     return isNull(item) || isUndefined(item);
+// }
+// function isKey(item) {
+//     return isNumber(item) || isString(item);
+// }
+// function isValue(item) {
+//     return notNaN(item) && !isNil(item);
+// }
+// function sortedIndexOf(list, item, minIndex_, maxIndex_, fromRight) {
+//     var guess, min = minIndex_ || 0,
+//         max = maxIndex_ || lastIndex(list),
+//         bitwise = (max <= TWO_TO_THE_31) ? BOOLEAN_TRUE : BOOLEAN_FALSE;
+//     if (item !== item) {
+//         // bitwise does not work for NaN
+//         return indexOfNaN(list, min, max, fromRight);
+//     }
+//     if (bitwise) {
+//         while (min <= max) {
+//             guess = (min + max) >> 1;
+//             if (list[guess] === item) {
+//                 return guess;
+//             } else {
+//                 if (list[guess] < item) {
+//                     min = guess + 1;
+//                 } else {
+//                     max = guess - 1;
+//                 }
+//             }
+//         }
+//     } else {
+//         while (min <= max) {
+//             guess = (min + max) / 2 | 0;
+//             if (list[guess] === item) {
+//                 return guess;
+//             } else {
+//                 if (list[guess] < item) {
+//                     min = guess + 1;
+//                 } else {
+//                     max = guess - 1;
+//                 }
+//             }
+//         }
+//     }
+//     return -1;
+// }
 function smartIndexOf(array, item, _from, _to, _rtl) {
     return (_from === BOOLEAN_TRUE && array && array[LENGTH] > 100 ? sortedIndexOf : indexOf)(array, item, _from, _to, _rtl);
 }
@@ -540,15 +521,12 @@ function isFalse(item) {
 function isTrue(item) {
     return isStrictlyEqual(item, BOOLEAN_TRUE);
 }
-
-function lowerCaseString(item) {
-    return item.toLowerCase();
-}
-
-function type(object) {
-    return typeof object;
-}
-
+// function lowerCaseString(item) {
+//     return item.toLowerCase();
+// }
+// function type(object) {
+//     return typeof object;
+// }
 function isTypeWrap(type_, fn_) {
     var ty = lowerCaseString(type_);
     var fn = fn_ || function () {
@@ -582,25 +560,20 @@ function isBoolean(argument) {
 function isInt(num) {
     return num === Math.round(num);
 }
-
-function isNull(thing) {
-    return isStrictlyEqual(thing, NULL);
-}
-
-function isUndefined(thing) {
-    return isStrictlyEqual(thing, UNDEFINED);
-}
-
-function isDefined(thing) {
-    return !isUndefined(thing);
-}
-
-function negate(fn) {
-    return function (a1, a2, a3, a4, a5, a6) {
-        return !fn(a1, a2, a3, a4, a5, a6);
-    };
-}
-
+// function isNull(thing) {
+//     return isStrictlyEqual(thing, NULL);
+// }
+// function isUndefined(thing) {
+//     return isStrictlyEqual(thing, UNDEFINED);
+// }
+// function isDefined(thing) {
+//     return !isUndefined(thing);
+// }
+// function negate(fn) {
+//     return function (a1, a2, a3, a4, a5, a6) {
+//         return !fn(a1, a2, a3, a4, a5, a6);
+//     };
+// }
 function _isFinite(thing) {
     return isNumber(thing) && isFinite_(thing);
 }
@@ -795,31 +768,24 @@ function undefineAndCall(item, caller) {
 function undefinedOrCall(item, caller) {
     return isUndefined(item) ? toFunction(caller)(item) : item;
 }
-
-function undefinedOr(item, def) {
-    return isUndefined(item) ? def : item;
-}
-
-function defaultTo1(n) {
-    return undefinedOr(n, 1);
-}
-
-function possibleArrayIndex(n) {
-    return clamp(n, 0, MAX_ARRAY_INDEX);
-}
-
-function slice(array, start, end) {
-    return toArray(array, possibleArrayIndex(start), possibleArrayIndex(end));
-}
-
-function drop(array, _n) {
-    return slice(array, defaultTo1(_n));
-}
-
-function dropRight(array, _n) {
-    return slice(array, 0, defaultTo1(_n));
-}
-
+// function undefinedOr(item, def) {
+//     return isUndefined(item) ? def : item;
+// }
+// function defaultTo1(n) {
+//     return undefinedOr(n, 1);
+// }
+// function possibleArrayIndex(n) {
+//     return clamp(n, 0, MAX_ARRAY_INDEX);
+// }
+// function slice(array, start, end) {
+//     return toArray(array, possibleArrayIndex(start), possibleArrayIndex(end));
+// }
+// function drop(array, _n) {
+//     return slice(array, defaultTo1(_n));
+// }
+// function dropRight(array, _n) {
+//     return slice(array, 0, defaultTo1(_n));
+// }
 function toIterable(iteratee) {
     return isFunction(iteratee) ? iteratee : (isArray(iteratee) ? matchesProperty(iteratee) : (isObject(iteratee) ? matches(iteratee) : property(iteratee)));
 }
@@ -849,17 +815,15 @@ function fromPairs(keys) {
     });
     return obj;
 }
-
-function iterateOverPath(path, fn, object) {
-    var list = path;
-    if (!isArray(list)) {
-        list = path.split(pathByStringRegExp);
-        // check for extra empty string
-        list = lastIs(path, ']') ? dropRight(list) : list;
-    }
-    return find(list, fn);
-}
-
+// function iterateOverPath(path, fn, object) {
+//     var list = path;
+//     if (!isArray(list)) {
+//         list = path.split(pathByStringRegExp);
+//         // check for extra empty string
+//         list = lastIs(path, ']') ? dropRight(list) : list;
+//     }
+//     return find(list, fn);
+// }
 function at(object_, path) {
     var result, object = object_ || {};
     iterateOverPath(path, function (accessor, index, list) {
@@ -874,71 +838,56 @@ function at(object_, path) {
     });
     return result;
 }
-
-function access(object, key) {
-    return object && object[key];
-}
-
-function nth(array, index) {
-    var idx;
-    return (idx = +index) !== -1 ? access(array, idx) : UNDEFINED;
-}
-
-function lastIndex(array) {
-    return access(array, LENGTH) - 1;
-}
-
-function first(array) {
-    return nth(array, 0);
-}
-
-function last(array) {
-    return nth(array, lastIndex(array));
-}
-
-function nthIs(array, final, index) {
-    return isStrictlyEqual(nth(array, index || 0), final);
-}
-
-function firstIs(array, final) {
-    return nthIs(nthIs, final, 0);
-}
-
-function lastIs(array, final) {
-    return nthIs(nthIs, final, lastIndex(array));
-}
-
-function head(array, n) {
-    return slice(array, n);
-}
-
-function initial(array) {
-    return array ? dropRight(array, lastIndex(array)) : [];
-}
-
-function isArrayLike(collection) {
-    var length = castBoolean(collection) && collection[LENGTH];
-    return isArray(collection) || (isWindow(collection) ? BOOLEAN_FALSE : (isNumber(length) && !isString(collection) && length >= 0 && length <= MAX_ARRAY_INDEX && !isFunction(collection)));
-}
-
+// function access(object, key) {
+//     return object && object[key];
+// }
+// function nth(array, index) {
+//     var idx;
+//     return (idx = +index) !== -1 ? access(array, idx) : UNDEFINED;
+// }
+// function lastIndex(array) {
+//     return access(array, LENGTH) - 1;
+// }
+// function first(array) {
+//     return nth(array, 0);
+// }
+// function last(array) {
+//     return nth(array, lastIndex(array));
+// }
+// function nthIs(array, final, index) {
+//     return isStrictlyEqual(nth(array, index || 0), final);
+// }
+// function firstIs(array, final) {
+//     return nthIs(nthIs, final, 0);
+// }
+// function lastIs(array, final) {
+//     return nthIs(nthIs, final, lastIndex(array));
+// }
+// function head(array, n) {
+//     return slice(array, n);
+// }
+// function initial(array) {
+//     return array ? dropRight(array, lastIndex(array)) : [];
+// }
+// function isArrayLike(collection) {
+//     var length = castBoolean(collection) && collection[LENGTH];
+//     return isArray(collection) || (isWindow(collection) ? BOOLEAN_FALSE : (isNumber(length) && !isString(collection) && length >= 0 && length <= MAX_ARRAY_INDEX && !isFunction(collection)));
+// }
 function convertSecondToIterable(fn) {
     return function (a, b, c, d, e, f) {
         return fn(a, toIterable(b), c, d, e, f);
     };
 }
-
-function iterates(keys) {
-    return function (obj, iterator) {
-        handler.keys = keys(obj);
-        return handler;
-
-        function handler(key, idx, list) {
-            // gives you the key, use that to get the value
-            return iterator(obj[key], key, obj);
-        }
-    };
-}
-
+// function iterates(keys) {
+//     return function (obj, iterator) {
+//         handler.keys = keys(obj);
+//         return handler;
+//         function handler(key, idx, list) {
+//             // gives you the key, use that to get the value
+//             return iterator(obj[key], key, obj);
+//         }
+//     };
+// }
 function baseEach(iterates, forEach) {
     return function (obj_, iteratee_) {
         var obj = obj_,
@@ -953,21 +902,17 @@ function baseEach(iterates, forEach) {
         return forEach(obj, iteratee);
     };
 }
-
-function baseForEach(list, iterator, step) {
-    var greaterThanZero, last;
-    return (!list || !iterator) ? [] : (last = lastIndex(list)) >= 0 ? baseFromTo(list, iterator, (greaterThanZero = step > 0) ? 0 : last, greaterThanZero ? last : 0, step) : [];
-}
-
-function baseForEachEnd(list, iterator, start, stop, step) {
-    var greaterThanZero, last;
-    return baseFromToEnd(list, iterator, start === UNDEFINED ? 0 : start, stop === UNDEFINED ? lastIndex(list) : stop, step || 1);
-}
-
-function baseForEachEndRight(list, callback, start, end) {
-    return baseForEachEnd(list, callback, start === UNDEFINED ? lastIndex(list) : start, end === UNDEFINED ? 0 : end, -1);
-}
-
+// function baseForEach(list, iterator, step) {
+//     var greaterThanZero, last;
+//     return (!list || !iterator) ? [] : (last = lastIndex(list)) >= 0 ? baseFromTo(list, iterator, (greaterThanZero = step > 0) ? 0 : last, greaterThanZero ? last : 0, step) : [];
+// }
+// function baseForEachEnd(list, iterator, start, stop, step) {
+//     var greaterThanZero, last;
+//     return baseFromToEnd(list, iterator, start === UNDEFINED ? 0 : start, stop === UNDEFINED ? lastIndex(list) : stop, step || 1);
+// }
+// function baseForEachEndRight(list, callback, start, end) {
+//     return baseForEachEnd(list, callback, start === UNDEFINED ? lastIndex(list) : start, end === UNDEFINED ? 0 : end, -1);
+// }
 function findAccessor(fn) {
     return function (value, callback, index) {
         var foundAt;
@@ -991,25 +936,23 @@ function baseFind(iterates, forEachEnd) {
         return forEachEnd(obj, iteratee);
     };
 }
-
-function baseFromToEnd(values, callback, _start, _end, _step) {
-    var limit, counter, value, step = _step || 1,
-        end = _end,
-        start = _start,
-        goingDown = step < 0,
-        index = start;
-    if (goingDown ? start < end : start > end) {
-        return;
-    }
-    limit = ((goingDown ? start - end : end - start)) / Math.abs(step || 1);
-    for (counter = 0; index >= 0 && counter <= limit; counter++) {
-        if (callback(values[index], index, values)) {
-            return index;
-        }
-        index += step;
-    }
-}
-
+// function baseFromToEnd(values, callback, _start, _end, _step) {
+//     var limit, counter, value, step = _step || 1,
+//         end = _end,
+//         start = _start,
+//         goingDown = step < 0,
+//         index = start;
+//     if (goingDown ? start < end : start > end) {
+//         return;
+//     }
+//     limit = ((goingDown ? start - end : end - start)) / Math.abs(step || 1);
+//     for (counter = 0; index >= 0 && counter <= limit; counter++) {
+//         if (callback(values[index], index, values)) {
+//             return index;
+//         }
+//         index += step;
+//     }
+// }
 function findAccessor(fn) {
     return function (obj, predicate, a, b, c) {
         var foundAt = fn(obj, predicate, a, b, c);
@@ -1221,116 +1164,114 @@ function once(fn) {
         }
     };
 }
-// Internal recursive comparison function for `isEqual`.
-function eq(a, b, aStack, bStack) {
-    var className, areArrays, aCtor, bCtor, length, objKeys, key, aNumber, bNumber;
-    // Identical objects are equal. `0 === -0`, but they aren't identical.
-    // See the [Harmony `egal` proposal](http://wiki.ecmascript.org/doku.php?id=harmony:egal).
-    if (a === b) {
-        return a !== 0 || 1 / a === 1 / b;
-    }
-    // A strict comparison is necessary because `NULL == undefined`.
-    if (a === NULL || a === UNDEFINED || b === UNDEFINED || b === NULL) {
-        return a === b;
-    }
-    // Unwrap any wrapped objects.
-    // if (a instanceof _) a = a._wrapped;
-    // if (b instanceof _) b = b._wrapped;
-    // Compare `[[Class]]` names.
-    className = objectToString.call(a);
-    if (className !== objectToString.call(b)) {
-        return BOOLEAN_FALSE;
-    }
-    switch (className) {
-        // Strings, numbers, regular expressions, dates, and booleans are compared by value.
-    case createToStringResult(REG_EXP):
-        // RegExps are coerced to strings for comparison (Note: EMPTY_STRING + /a/i === '/a/i')
-    case createToStringResult(STRING):
-        // Primitives and their corresponding object wrappers are equivalent; thus, `"5"` is
-        // equivalent to `new String("5")`.
-        return EMPTY_STRING + a === EMPTY_STRING + b;
-    case createToStringResult(NUMBER):
-        // `NaN`s are equivalent, but non-reflexive.
-        // Object(NaN) is equivalent to NaN
-        aNumber = toNumber(a);
-        bNumber = toNumber(b);
-        if (aNumber !== aNumber) {
-            return bNumber !== bNumber;
-        }
-        // An `egal` comparison is performed for other numeric values.
-        return aNumber === 0 ? 1 / aNumber === 1 / b : aNumber === bNumber;
-    case BRACKET_OBJECT_SPACE + 'Date]':
-    case BRACKET_OBJECT_SPACE + 'Boolean]':
-        // Coerce dates and booleans to numeric primitive values. Dates are compared by their
-        // millisecond representations. Note that invalid dates with millisecond representations
-        // of `NaN` are not equivalent.
-        return toNumber(a) === toNumber(b);
-    }
-    areArrays = className === BRACKET_OBJECT_SPACE + 'Array]';
-    if (!areArrays) {
-        if (!isObject(a) || !isObject(b)) {
-            return BOOLEAN_FALSE;
-        }
-        // Objects with different constructors are not equivalent, but `Object`s or `Array`s
-        // from different frames are.
-        aCtor = a[CONSTRUCTOR];
-        bCtor = b[CONSTRUCTOR];
-        if (aCtor !== bCtor && !(isFunction(aCtor) && (aCtor instanceof aCtor) && isFunction(bCtor) && (bCtor instanceof bCtor)) && (CONSTRUCTOR in a && CONSTRUCTOR in b)) {
-            return BOOLEAN_FALSE;
-        }
-    }
-    // Assume equality for cyclic structures. The algorithm for detecting cyclic
-    // structures is adapted from ES 5.1 section 15.12.3, abstract operation `JO`.
-    // Initializing stack of traversed objects.
-    // It's done here since we only need them for objects and arrays comparison.
-    // aStack = aStack || [];
-    // bStack = bStack || [];
-    length = aStack[LENGTH];
-    while (length--) {
-        // Linear search. Performance is inversely proportional to the number of
-        // unique nested structures.
-        if (aStack[length] === a) {
-            return bStack[length] === b;
-        }
-    }
-    // Add the first object to the stack of traversed objects.
-    aStack.push(a);
-    bStack.push(b);
-    // Recursively compare objects and arrays.
-    if (areArrays) {
-        // Compare array lengths to determine if a deep comparison is necessary.
-        length = a[LENGTH];
-        if (length !== b[LENGTH]) {
-            return BOOLEAN_FALSE;
-        }
-        // Deep compare the contents, ignoring non-numeric properties.
-        while (length--) {
-            if (!eq(a[length], b[length], aStack, bStack)) {
-                return BOOLEAN_FALSE;
-            }
-        }
-    } else {
-        // Deep compare objects.
-        objKeys = keys(a);
-        length = objKeys[LENGTH];
-        // Ensure that both objects contain the same number of properties before comparing deep equality.
-        if (keys(b)[LENGTH] !== length) return BOOLEAN_FALSE;
-        while (length--) {
-            // Deep compare each member
-            key = objKeys[length];
-            if (!(has(b, key) && eq(a[key], b[key], aStack, bStack))) return BOOLEAN_FALSE;
-        }
-    }
-    // Remove the first object from the stack of traversed objects.
-    aStack.pop();
-    bStack.pop();
-    return BOOLEAN_TRUE;
-}
-
-function isEqual(a, b) {
-    return eq(a, b, [], []);
-}
-
+// // Internal recursive comparison function for `isEqual`.
+// function eq(a, b, aStack, bStack) {
+//     var className, areArrays, aCtor, bCtor, length, objKeys, key, aNumber, bNumber;
+//     // Identical objects are equal. `0 === -0`, but they aren't identical.
+//     // See the [Harmony `egal` proposal](http://wiki.ecmascript.org/doku.php?id=harmony:egal).
+//     if (a === b) {
+//         return a !== 0 || 1 / a === 1 / b;
+//     }
+//     // A strict comparison is necessary because `NULL == undefined`.
+//     if (a === NULL || a === UNDEFINED || b === UNDEFINED || b === NULL) {
+//         return a === b;
+//     }
+//     // Unwrap any wrapped objects.
+//     // if (a instanceof _) a = a._wrapped;
+//     // if (b instanceof _) b = b._wrapped;
+//     // Compare `[[Class]]` names.
+//     className = objectToString.call(a);
+//     if (className !== objectToString.call(b)) {
+//         return BOOLEAN_FALSE;
+//     }
+//     switch (className) {
+//         // Strings, numbers, regular expressions, dates, and booleans are compared by value.
+//     case createToStringResult(REG_EXP):
+//         // RegExps are coerced to strings for comparison (Note: EMPTY_STRING + /a/i === '/a/i')
+//     case createToStringResult(STRING):
+//         // Primitives and their corresponding object wrappers are equivalent; thus, `"5"` is
+//         // equivalent to `new String("5")`.
+//         return EMPTY_STRING + a === EMPTY_STRING + b;
+//     case createToStringResult(NUMBER):
+//         // `NaN`s are equivalent, but non-reflexive.
+//         // Object(NaN) is equivalent to NaN
+//         aNumber = toNumber(a);
+//         bNumber = toNumber(b);
+//         if (aNumber !== aNumber) {
+//             return bNumber !== bNumber;
+//         }
+//         // An `egal` comparison is performed for other numeric values.
+//         return aNumber === 0 ? 1 / aNumber === 1 / b : aNumber === bNumber;
+//     case BRACKET_OBJECT_SPACE + 'Date]':
+//     case BRACKET_OBJECT_SPACE + 'Boolean]':
+//         // Coerce dates and booleans to numeric primitive values. Dates are compared by their
+//         // millisecond representations. Note that invalid dates with millisecond representations
+//         // of `NaN` are not equivalent.
+//         return toNumber(a) === toNumber(b);
+//     }
+//     areArrays = className === BRACKET_OBJECT_SPACE + 'Array]';
+//     if (!areArrays) {
+//         if (!isObject(a) || !isObject(b)) {
+//             return BOOLEAN_FALSE;
+//         }
+//         // Objects with different constructors are not equivalent, but `Object`s or `Array`s
+//         // from different frames are.
+//         aCtor = a[CONSTRUCTOR];
+//         bCtor = b[CONSTRUCTOR];
+//         if (aCtor !== bCtor && !(isFunction(aCtor) && (aCtor instanceof aCtor) && isFunction(bCtor) && (bCtor instanceof bCtor)) && (CONSTRUCTOR in a && CONSTRUCTOR in b)) {
+//             return BOOLEAN_FALSE;
+//         }
+//     }
+//     // Assume equality for cyclic structures. The algorithm for detecting cyclic
+//     // structures is adapted from ES 5.1 section 15.12.3, abstract operation `JO`.
+//     // Initializing stack of traversed objects.
+//     // It's done here since we only need them for objects and arrays comparison.
+//     // aStack = aStack || [];
+//     // bStack = bStack || [];
+//     length = aStack[LENGTH];
+//     while (length--) {
+//         // Linear search. Performance is inversely proportional to the number of
+//         // unique nested structures.
+//         if (aStack[length] === a) {
+//             return bStack[length] === b;
+//         }
+//     }
+//     // Add the first object to the stack of traversed objects.
+//     aStack.push(a);
+//     bStack.push(b);
+//     // Recursively compare objects and arrays.
+//     if (areArrays) {
+//         // Compare array lengths to determine if a deep comparison is necessary.
+//         length = a[LENGTH];
+//         if (length !== b[LENGTH]) {
+//             return BOOLEAN_FALSE;
+//         }
+//         // Deep compare the contents, ignoring non-numeric properties.
+//         while (length--) {
+//             if (!eq(a[length], b[length], aStack, bStack)) {
+//                 return BOOLEAN_FALSE;
+//             }
+//         }
+//     } else {
+//         // Deep compare objects.
+//         objKeys = keys(a);
+//         length = objKeys[LENGTH];
+//         // Ensure that both objects contain the same number of properties before comparing deep equality.
+//         if (keys(b)[LENGTH] !== length) return BOOLEAN_FALSE;
+//         while (length--) {
+//             // Deep compare each member
+//             key = objKeys[length];
+//             if (!(has(b, key) && eq(a[key], b[key], aStack, bStack))) return BOOLEAN_FALSE;
+//         }
+//     }
+//     // Remove the first object from the stack of traversed objects.
+//     aStack.pop();
+//     bStack.pop();
+//     return BOOLEAN_TRUE;
+// }
+// function isEqual(a, b) {
+//     return eq(a, b, [], []);
+// }
 function clone(obj) {
     return mapValues(obj, function (value) {
         return value;
@@ -1413,27 +1354,21 @@ function isMatch(object, attrs) {
         return !isStrictlyEqual(attrs[key], obj[key]);
     });
 }
-
-function arrayAdd(array, item) {
-    array.push(item);
-}
-
-function objectSet(object, item, key) {
-    object[key] = item;
-}
-
-function stringConcat(base, string) {
-    return base.concat(string);
-}
-
-function join(array, delimiter) {
-    return toArray(array).join(undefinedOr(delimiter, COMMA));
-}
-
-function split(string, delimiter) {
-    return toString(string).split(undefinedOr(delimiter, EMPTY_STRING));
-}
-
+// function arrayAdd(array, item) {
+//     array.push(item);
+// }
+// function objectSet(object, item, key) {
+//     object[key] = item;
+// }
+// function stringConcat(base, string) {
+//     return base.concat(string);
+// }
+// function join(array, delimiter) {
+//     return toArray(array).join(undefinedOr(delimiter, COMMA));
+// }
+// function split(string, delimiter) {
+//     return toString(string).split(undefinedOr(delimiter, EMPTY_STRING));
+// }
 function filterCommon(memo, passed) {
     return function (thing, bound, negated, reduction) {
         var negative = !negated;
@@ -1540,11 +1475,9 @@ function evaluate(context, string_, args) {
 function returnBaseType(obj) {
     return !isObject(obj) || isArrayLike(obj) ? [] : {};
 }
-
-function isEmptyArray(array) {
-    return array && array.length === 0;
-}
-
+// function isEmptyArray(array) {
+//     return array && array.length === 0;
+// }
 function mapValuesIteratee(collection, bound, empty) {
     return empty ? function (item, index, objs) {
         arrayAdd(collection, bound(item, index, objs));
@@ -1575,23 +1508,20 @@ function mapKeysIteratee(collection, bound) {
         objectSet(collection, item, bound(item, key, objs));
     };
 }
-
-function arrayLikeToArray(arrayLike) {
-    return arrayLike[LENGTH] === 1 ? [arrayLike[0]] : ARRAY_CONSTRUCTOR.apply(NULL, arrayLike);
-}
+// function arrayLikeToArray(arrayLike) {
+//     return arrayLike[LENGTH] === 1 ? [arrayLike[0]] : ARRAY_CONSTRUCTOR.apply(NULL, arrayLike);
+// }
 // function objectToArray(obj) {
 //     return !obj ? [] : reduce(obj, function (memo, item) {
 //         memo.push(item);
 //     }, []);
 // }
-function toArray(object, delimiter) {
-    return isArrayLike(object) ? (isArray(object) ? object : arrayLikeToArray(object)) : (isString(object) ? object.split(isString(delimiter) ? delimiter : COMMA) : [object]);
-}
-
-function toString(argument) {
-    return argument ? argument.toString() : ('' + argument);
-}
-
+// function toArray(object, delimiter) {
+//     return isArrayLike(object) ? (isArray(object) ? object : arrayLikeToArray(object)) : (isString(object) ? object.split(isString(delimiter) ? delimiter : COMMA) : [object]);
+// }
+// function toString(argument) {
+//     return argument ? argument.toString() : ('' + argument);
+// }
 function flattens(list, next) {
     return reduce(list, function (memo, item) {
         if (isArrayLike(item)) {
@@ -1630,11 +1560,9 @@ function flattenDepth(list, depth_) {
 function gather(list, handler) {
     return concat(map(list, handler));
 }
-
-function clamp(number, lower, upper) {
-    return number !== number ? number : (number < lower ? lower : (number > upper ? upper : number));
-}
-
+// function clamp(number, lower, upper) {
+//     return number !== number ? number : (number < lower ? lower : (number > upper ? upper : number));
+// }
 function withinRange(number, min, max) {
     return number === clamp(number, min, max);
 }
@@ -1775,18 +1703,16 @@ function stringifyQuery(obj) {
     }
     return base;
 }
-
-function protoProperty(instance, key, farDown) {
-    var val, proto, constructor = previousConstructor(instance);
-    farDown = farDown || 1;
-    do {
-        proto = constructor[PROTOTYPE];
-        val = proto[key];
-        constructor = previousConstructor(proto);
-    } while (--farDown > 0 && constructor && _isFinite(farDown));
-    return val;
-}
-
+// function protoProperty(instance, key, farDown) {
+//     var val, proto, constructor = previousConstructor(instance);
+//     farDown = farDown || 1;
+//     do {
+//         proto = constructor[PROTOTYPE];
+//         val = proto[key];
+//         constructor = previousConstructor(proto);
+//     } while (--farDown > 0 && constructor && _isFinite(farDown));
+//     return val;
+// }
 function _uuid(idx) {
     var cryptoCheck = 'crypto' in win && 'getRandomValues' in crypto,
         sid = ('xxxxxxxx-xxxx-' + idx + 'xxx-yxxx-xxxxxxxxxxxx').replace(/[xy]/g, function (c) {

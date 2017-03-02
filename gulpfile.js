@@ -56,7 +56,7 @@ var content = ['browserify', 'distribute'],
         // watch path
         jsAll: './src/**/*.js',
         // build list
-        jsOdette: ['./src/lib/odette.js'],
+        jsOdette: ['./src/lib/odette/index.js'],
         jsApplication: ['./src/lib/application.js'],
         jsLibraryList: _.map(library, libPath),
         jsExtra: _.map(extraModules, extraPath),
@@ -77,6 +77,12 @@ var content = ['browserify', 'distribute'],
         documentationOutput: './dist/docs',
         publicized: './src/static/**/*',
         publicizedOutput: './dist',
+        // paths.jsOdette
+        // paths.jsApplication
+        // paths.jsLibraryList
+        // paths.jsFull
+        // paths.jsTestList
+        // paths.jsFramed
         jsLibraryOutput: 'library.js',
         jsOdetteOutput: 'odette.js',
         jsApplicationOutput: 'application.js',

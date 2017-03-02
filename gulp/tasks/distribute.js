@@ -13,22 +13,22 @@ var gulp = require('gulp'),
 module.exports = function (settings, paths) {
     return function () {
         // odette
-        return Promise.all(_.map([
-            [paths.jsOdetteNode, paths.jsOdetteNodeDistribute],
-            [paths.jsOdette, paths.jsOdetteDistribute],
-            [paths.jsApplication, paths.jsApplicationDistribute],
-            [paths.jsLibraryList, paths.jsLibraryDistribute],
-            [paths.jsFull, paths.jsFullOutputDistribute]
-        ], function (set) {
-            return new Promise(function (success, failure) {
-                gulp.src(set[0]).pipe(plumber()) //
-                    .pipe(concat(set[1])) //
-                    .pipe(gulp.dest(paths.jsDistributes)) //
-                    .pipe(uglify()).pipe(rename(minName(set[1]))) //
-                    .pipe(gulp.dest(paths.jsDistributes)) //
-                    .on('end', success) //
-                    .on('error', failure);
-            });
-        }));
+        // return Promise.all(_.map([
+        //     [paths.jsOdetteNode, paths.jsOdetteNodeDistribute],
+        //     [paths.jsOdette, paths.jsOdetteDistribute],
+        //     [paths.jsApplication, paths.jsApplicationDistribute],
+        //     [paths.jsLibraryList, paths.jsLibraryDistribute],
+        //     [paths.jsFull, paths.jsFullOutputDistribute]
+        // ], function (set) {
+        //     return new Promise(function (success, failure) {
+        //         gulp.src(set[0]).pipe(plumber()) //
+        //             .pipe(concat(set[1])) //
+        //             .pipe(gulp.dest(paths.jsDistributes)) //
+        //             .pipe(uglify()).pipe(rename(minName(set[1]))) //
+        //             .pipe(gulp.dest(paths.jsDistributes)) //
+        //             .on('end', success) //
+        //             .on('error', failure);
+        //     });
+        // }));
     };
 };

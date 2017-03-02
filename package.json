@@ -6,9 +6,12 @@
   "dependencies": {},
   "devDependencies": {
     "body-parser": "^1.15.0",
+    "browserstack": "^1.5.0",
+    "browserstack-webdriver": "^2.41.1",
     "express": "^4.13.4",
     "express-ws": "^1.0.0",
     "gulp": "^3.9.1",
+    "gulp-browserify": "^0.5.1",
     "gulp-concat": "^2.6.0",
     "gulp-copy": "0.0.2",
     "gulp-exit": "0.0.2",
@@ -26,9 +29,7 @@
     "q": "^1.4.1",
     "run-sequence": "^1.2.2",
     "serve-favicon": "^2.3.0",
-    "underscore": "^1.8.3",
-    "browserstack": "^1.5.0",
-    "browserstack-webdriver": "^2.41.1"
+    "underscore": "^1.8.3"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
