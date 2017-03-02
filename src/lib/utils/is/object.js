@@ -1,0 +1,1 @@
+module.exports = require('./type-wrap')('object', require('./utils/cast-boolean'));
