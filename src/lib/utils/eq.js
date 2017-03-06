@@ -1,7 +1,7 @@
-var keys = require('./keys');
-var objectToString = require('./call-object-to-string');
-var isNil = require('./is/nil');
-var toNumber = require('./to/number');
+var keys = require('./utils/keys');
+var objectToString = require('./utils/call-object-to-string');
+var isNil = require('./utils/is/nil');
+var toNumber = require('./utils/to/number');
 // Internal recursive comparison function for `isEqual`
 module.exports = function (a, b, aStack, bStack) {
     var className, areArrays, aCtor, bCtor, length, objKeys, key, aNumber, bNumber;

@@ -1,1 +1,1 @@
-module.exports = require('./type-wrap')('Number', require('./not/NaN'));
+module.exports = require('./type-wrap')('Number', require('./not/nan'));

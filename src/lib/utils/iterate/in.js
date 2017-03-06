@@ -1,1 +1,1 @@
-module.exports = require('.')(require('./keys/all'));
+module.exports = require('.')(require('./utils/keys/all'));

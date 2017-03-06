@@ -1,6 +1,6 @@
 var TWO_TO_THE_31 = 2147483647,
-    indexOfNaN = require('./nan'),
-    lastIndex = require('./index/last');
+    indexOfNaN = require('./utils/array/index/of/nan'),
+    lastIndex = require('./utils/array/index/last');
 module.exports = function (list, item, minIndex_, maxIndex_, fromRight) {
     var guess, min = minIndex_ || 0,
         max = maxIndex_ || lastIndex(list),

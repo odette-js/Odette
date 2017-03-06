@@ -1,4 +1,4 @@
-var toInteger = require('./to/integer');
+var toInteger = require('./utils/to/integer');
 module.exports = function (values, runner, _start, _end, step) {
     if (!step) {
         return [];

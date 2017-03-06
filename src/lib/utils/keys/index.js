@@ -1,8 +1,9 @@
-var ENUM_BUG = require('./enum-bug');
-var collectNonEnumProps = require('./collect-non-enum-props');
-var isObject = require('./is/object');
-var isFunction = require('./is/function');
-var nativeKeys = require('./native');
+var ENUM_BUG = require('./utils/keys/enum-bug');
+var collectNonEnumProps = require('./utils/collect-non-enum-props');
+var isObject = require('./utils/is/object');
+var isFunction = require('./utils/is/function');
+var nativeKeys = require('./utils/keys/native');
+var has = require('./utils/object/has');
 module.exports = function (obj) {
     var key, keys = [];
     if (!obj || (!isObject(obj) && !isFunction(obj))) {

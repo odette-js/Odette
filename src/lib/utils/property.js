@@ -1,5 +1,6 @@
+var get = require('./utils/object/get');
 module.exports = function (string) {
     return function (object) {
-        return object[string];
+        return get(object, string);
     };
 };

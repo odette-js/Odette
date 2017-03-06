@@ -26,7 +26,8 @@ var content = ['browserify', 'distribute'],
     specs = 'utils Strings Directives Registry Collection Events directives/Linguistics Model directives/Events directives/Data directives/Children Promise directives/DependencyManager Deferred WeakMap Module HTTP ResizeObserver DOMA ElementWatcher Looper directives/Element View Buster tests'.split(' '),
     modules = specs.slice(0),
     removed = modules.splice.apply(modules, [1, 0].concat(shims)),
-    library = setup.concat(modules, end),
+    // library = setup.concat(modules, end),
+    library = 'utils'.split(' '),
     auto_app = ['odette', 'application'],
     // just to make a new one
     specModules = ['setup'].concat(specs, auto_app, ['teardown']),
@@ -34,14 +35,15 @@ var content = ['browserify', 'distribute'],
     framedModules = 'index'.split(' '),
     routeToFile = function (folder) {
         return function (name) {
-            return path.join(__dirname, folder, name + '.js');
+            return path.join(__dirname, folder, name);
         };
     },
+    routeToLib = routeToFile('./src/lib/'),
     makeSpecPath = function (name) {
         return path.join('./src/spec/', name + '.js');
     },
     libPath = function (name) {
-        return path.join('./src/lib/', name + '.js');
+        return path.join(routeToLib.apply(this, arguments), 'index.js');
     },
     extraPath = function (name) {
         return path.join('./src/extras/', name + '.js');
@@ -52,13 +54,16 @@ var content = ['browserify', 'distribute'],
     framedPath = function (name) {
         return path.join('./src/framed/', name + '.js');
     },
+    // jsLibraryList = _.map(library, libPath),
+    // cres = console.log(jsLibraryList),
     paths = _.extend(makePath({
         // watch path
         jsAll: './src/**/*.js',
         // build list
         jsOdette: ['./src/lib/odette/index.js'],
         jsApplication: ['./src/lib/application.js'],
-        jsLibraryList: _.map(library, libPath),
+        jsLibraryList: jsLibraryList,
+        // jsLibraryList: _.map(library, libPath),
         jsExtra: _.map(extraModules, extraPath),
         jsTestList: _.map(specModules, makeSpecPath),
         jsExtraTest: _.map(extraModules, specPath),

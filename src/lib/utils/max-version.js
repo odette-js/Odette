@@ -1,5 +1,5 @@
-var map = require('./map');
-var convertVersionString = require('./convert-version');
+var map = require('./utils/array/map');
+var convertVersionString = require('./utils/convert-version');
 module.exports = function (string1, string2) {
     // string 2 is always the underdogl
     var split1, split2, provenLarger, cvs1Result = convertVersionString(string1);

@@ -1,7 +1,7 @@
-var MAX_SAFE_INTEGER = 9007199254740991;
+var MAX_SAFE_INTEGER = require('./utils/number/max-safe-integer');
 var MIN_SAFE_INTEGER = -MAX_SAFE_INTEGER;
-var clamp = require('./number/clamp');
-var toNumber = require('./number.js');
+var clamp = require('./utils/number/clamp');
+var toNumber = require('./utils/to/number');
 module.exports = function (number, notSafe) {
     var converted;
     return floatToInteger((converted = toNumber(number)) == number ? (notSafe ? converted : safeInteger(converted)) : 0);

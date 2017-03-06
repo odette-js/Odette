@@ -6,8 +6,6 @@ var gulp = require('gulp'),
     browserify = require('gulp-browserify'),
     copy = require('gulp-copy'),
     path = require('path'),
-    _ = require('underscore'),
-    q = require('q'),
     minName = function (filename) {
         var name = filename.split('.');
         name.splice(name.length - 1, 0, 'min');
@@ -15,23 +13,44 @@ var gulp = require('gulp'),
     };
 module.exports = function (settings, paths, context, name) {
     //'odette-build'
-    gulp.task(name, function () {
-        return [q.Promise(function (success, failure) {
+    // gulp.task(name, function () {
+    return function () {
+        var odette = new Promise(function (success, failure) {
             gulp.src(paths.jsOdette) //
                 .pipe(browserify()) //
                 .pipe(rename(paths.jsOdetteOutput)) //
                 .pipe(gulp.dest(paths.jspublic)) //
                 .on('end', success) //
                 .on('error', failure);
-        }), q.Promise(function (success, failure) {
+        });
+        var application = new Promise(function (success, failure) {
             gulp.src(paths.jsApplication) //
                 .pipe(browserify()) //
                 .pipe(rename(paths.jsApplicationOutput)) //
                 .pipe(gulp.dest(paths.jspublic)) //
                 .on('end', success) //
                 .on('error', failure);
-        })];
-    });
+        });
+        var library = new Promise(function (success, failure) {
+            console.log(paths.jsLibraryList, paths.jsLibraryOutput, paths.jspublic);
+            gulp.src(paths.jsLibraryList) //
+                .pipe(browserify()) //
+                .pipe(rename(paths.jsLibraryOutput)) //
+                .pipe(gulp.dest(paths.jspublic)) //
+                .on('end', success) //
+                .on('error', failure);
+        });
+        return Promise.all([odette, application, library]);
+    };
+    // , q.Promise(function (success, failure) {
+    //     gulp.src(paths.jsApplication) //
+    //         .pipe(browserify()) //
+    //         .pipe(rename(paths.jsApplicationOutput)) //
+    //         .pipe(gulp.dest(paths.jspublic)) //
+    //         .on('end', success) //
+    //         .on('error', failure);
+    // })
+    // });
     // , q.Promise(function (success, failure) {
     //             gulp.src(paths.jsApplication) //
     //                 .pipe(browserify()) //
