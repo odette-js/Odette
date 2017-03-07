@@ -1,0 +1,1 @@
+module.exports = require('./utils/array/reduce/make')(1);

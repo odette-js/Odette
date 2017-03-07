@@ -1,0 +1,1 @@
+module.exports = require('./utils/convert-second-to-iterable')(require('./utils/array/find/key-right'));

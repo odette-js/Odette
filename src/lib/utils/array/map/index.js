@@ -1,0 +1,1 @@
+module.exports = require('./utils/array/map/maker')(require('./utils/array/for/each'), require('./utils/array/map/values-iteratee'), require('./utils/returns/array'));

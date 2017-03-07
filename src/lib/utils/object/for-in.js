@@ -1,0 +1,1 @@
+module.exports = require('./utils/array/base/each')(require('./utils/iterate/in'), require('./utils/array/for/each'));

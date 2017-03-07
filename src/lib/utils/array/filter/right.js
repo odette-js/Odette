@@ -1,0 +1,1 @@
+module.exports = require('./utils/array/filter/maker')(require('./utils/array/reduce/right'));
