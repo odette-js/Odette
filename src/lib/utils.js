@@ -293,7 +293,7 @@ merge(returns, {
     first: returnsFirstArgument,
     second: returnsSecondArgument
 });
-app.logWrappedErrors = isBoolean.false = isBoolean.true = BOOLEAN_TRUE;
+isBoolean.false = isBoolean.true = BOOLEAN_TRUE;
 factories.Extendable = constructorWrapper(Extendable, OBJECT_CONSTRUCTOR);
 /**
  * @lends _
