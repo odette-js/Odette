@@ -1,1 +1,2 @@
-module.exports = window[PERFORMANCE] = window[PERFORMANCE] || {};
+var PERFORMANCE = 'performance';
+module.exports = global[PERFORMANCE] = global[PERFORMANCE] || {};

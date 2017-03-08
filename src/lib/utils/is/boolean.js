@@ -1,4 +1,7 @@
 var isStrictlyEqual = require('./utils/is/strictly-equal');
-module.exports = function (argument) {
+isBoolean.false = isBoolean.true = true;
+module.exports = isBoolean;
+
+function isBoolean(argument) {
     return isStrictlyEqual(argument, true) || isStrictlyEqual(argument, false);
-};
+}

@@ -7,5 +7,5 @@ module.exports = function (object, delimiter) {
 };
 
 function arrayLikeToArray(arrayLike) {
-    return arrayLike[LENGTH] === 1 ? [arrayLike[0]] : Array.apply(NULL, arrayLike);
+    return arrayLike.length === 1 ? [arrayLike[0]] : Array.apply(null, arrayLike);
 }

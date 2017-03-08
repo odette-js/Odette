@@ -1,4 +1,4 @@
-var isArrayLike = require('./is/array-like');
+var isArrayLike = require('./utils/is/array-like');
 module.exports = function (iterates, forEach) {
     return function (obj_, iteratee_) {
         var obj = obj_,

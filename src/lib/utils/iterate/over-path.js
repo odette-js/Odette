@@ -1,8 +1,8 @@
-var lastIs = require('./array/last-is');
-var toPath = require('./to/path');
-var isArray = require('./is/array');
-var dropRight = require('./array/drop-right');
-var find = require('./array/find');
+var lastIs = require('./utils/array/last-is');
+var toPath = require('./utils/to/path');
+var isArray = require('./utils/is/array');
+var dropRight = require('./utils/array/drop-right');
+var find = require('./utils/array/find');
 module.exports = function (path, fn, object) {
     var list = path;
     if (!isArray(list)) {

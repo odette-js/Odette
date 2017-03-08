@@ -1,5 +1,5 @@
 var ResizeObserver = factories.ResizeObserver = app.block(function (app) {
-    var doc = window.document;
+    var doc = global.document;
     if (!doc) {
         return noop;
     }
@@ -20,7 +20,6 @@ var ResizeObserver = factories.ResizeObserver = app.block(function (app) {
         getFromMap = function (observer) {
             return observerMap[observer.id];
         },
-        doc = window.document,
         body = doc.body,
         key = body.previousElemenetSibling ? 'previousElemenetSibling' : 'previousSibling',
         elementEventDispatcher = _.elementEventDispatcher,

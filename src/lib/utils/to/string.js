@@ -1,7 +1,5 @@
-module.exports = function (argument) {
-    return argument ? argument.toString() : ('' + argument);
+var isNil = require('./utils/is/nil');
+var baseToString = require('./utils/to/base/string');
+module.exports = function (value) {
+    return isNil(value) ? '' : baseToString(value);
 };
-// why did this exits
-// function toString(obj) {
-//     return obj == NULL ? EMPTY_STRING : obj + EMPTY_STRING;
-// }

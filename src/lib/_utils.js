@@ -54,23 +54,24 @@ var garbage, FOR = 'for',
     // filterNegative = filterable(reduce, BOOLEAN_TRUE),
     // forInRight = baseEach(iteratesIn, forEachRight),
     // forOwnRight = baseEach(iteratesOwn, forEachRight),
-    eachRight = forOwnRight,
-    // mapRight = maps(forEachRight, mapValuesIteratee, returnsArray),
-    // mapKeysRight = maps(eachRight, mapKeysIteratee, returnBaseType),
-    // mapValuesRight = maps(forOwnRight, mapValuesIteratee, returnBaseType),
-    // reduceRight = createReduce(-1),
-    // dropWhileRight = dropsWhile(filterRight),
-    // filterRight = filterable(reduceRight),
-    // filterNegativeRight = filterable(reduceRight, BOOLEAN_TRUE),
-    // where = convertSecondToIterable(filter),
-    // whereRight = convertSecondToIterable(filterRight),
-    // whereNot = convertSecondToIterable(filterNegative),
-    // whereNotRight = convertSecondToIterable(filterNegativeRight),
-    // findWhere = convertSecondToIterable(find),
-    // findWhereRight = convertSecondToIterable(findRight),
-    // findIndexWhere = convertSecondToIterable(findIndex),
-    // findIndexWhereRight = convertSecondToIterable(findIndexRight),
-    uniqueBy = convertSecondToIterable(uniqueWith);
+    eachRight = forOwnRight;
+// ,
+// mapRight = maps(forEachRight, mapValuesIteratee, returnsArray),
+// mapKeysRight = maps(eachRight, mapKeysIteratee, returnBaseType),
+// mapValuesRight = maps(forOwnRight, mapValuesIteratee, returnBaseType),
+// reduceRight = createReduce(-1),
+// dropWhileRight = dropsWhile(filterRight),
+// filterRight = filterable(reduceRight),
+// filterNegativeRight = filterable(reduceRight, BOOLEAN_TRUE),
+// where = convertSecondToIterable(filter),
+// whereRight = convertSecondToIterable(filterRight),
+// whereNot = convertSecondToIterable(filterNegative),
+// whereNotRight = convertSecondToIterable(filterNegativeRight),
+// findWhere = convertSecondToIterable(find),
+// findWhereRight = convertSecondToIterable(findRight),
+// findIndexWhere = convertSecondToIterable(findIndex),
+// findIndexWhereRight = convertSecondToIterable(findIndexRight),
+// uniqueBy = convertSecondToIterable(uniqueWith);
 buildCallers(FOR + 'Each', forEach, forEachRight, builtCallers);
 buildCallers(FOR + 'Own', forOwn, forOwnRight, builtCallers);
 buildCallers(FOR + 'In', forIn, forInRight, builtCallers);
@@ -114,39 +115,39 @@ var _performance = window.performance,
     startsWith = itemIs,
     // make global
     exception = console.exception,
-    is = merge(isStrictlyEqual, {
-        of: isOf,
-        equal: isEqual,
-        strictlyEqual: isStrictlyEqual,
-        emptyArray: isEmptyArray,
-        number: isNumber,
-        string: isString,
-        object: isObject,
-        nan: isNaN,
-        int: isInt,
-        array: isArray,
-        'function': isFunction,
-        boolean: isBoolean,
-        'null': isNull,
-        nil: isNil,
-        value: isValue,
-        isKey: isKey,
-        validInteger: isValidInteger,
-        arrayLike: isArrayLike,
-        instance: isInstance,
-        truthy: castBoolean,
-        falsey: negate(castBoolean),
-        false: isFalse,
-        true: isTrue
-    }),
-    to = {
-        array: toArray,
-        'function': toFunction,
-        number: toNumber,
-        string: toString,
-        finite: toFinite,
-        integer: toInteger
-    },
+    // is = merge(isStrictlyEqual, {
+    //     of: isOf,
+    //     equal: isEqual,
+    //     strictlyEqual: isStrictlyEqual,
+    //     emptyArray: isEmptyArray,
+    //     number: isNumber,
+    //     string: isString,
+    //     object: isObject,
+    //     nan: isNaN,
+    //     int: isInt,
+    //     array: isArray,
+    //     'function': isFunction,
+    //     boolean: isBoolean,
+    //     'null': isNull,
+    //     nil: isNil,
+    //     value: isValue,
+    //     isKey: isKey,
+    //     validInteger: isValidInteger,
+    //     arrayLike: isArrayLike,
+    //     instance: isInstance,
+    //     truthy: castBoolean,
+    //     falsey: negate(castBoolean),
+    //     false: isFalse,
+    //     true: isTrue
+    // }),
+    // to = {
+    //     array: toArray,
+    //     'function': toFunction,
+    //     number: toNumber,
+    //     string: toString,
+    //     finite: toFinite,
+    //     integer: toInteger
+    // },
     /**
      * @static
      * @namespace _
@@ -279,20 +280,21 @@ var _performance = window.performance,
             min: mathArray('min'),
             max: mathArray('max')
         })
-    }, builtCallers),
-    returnsTrue = returns(BOOLEAN_TRUE),
-    returnsFalse = returns(BOOLEAN_FALSE),
-    returnsNull = returns(NULL);
-merge(returns, {
-    true: returnsTrue,
-    false: returnsFalse,
-    null: returnsNull,
-    array: returnsArray,
-    object: returnsObject,
-    self: returnsSelf,
-    first: returnsFirstArgument,
-    second: returnsSecondArgument
-});
+    }, builtCallers);
+// ,
+// returnsTrue = returns(BOOLEAN_TRUE),
+// returnsFalse = returns(BOOLEAN_FALSE),
+// returnsNull = returns(NULL);
+// merge(returns, {
+//     true: returnsTrue,
+//     false: returnsFalse,
+//     null: returnsNull,
+//     array: returnsArray,
+//     object: returnsObject,
+//     self: returnsSelf,
+//     first: returnsFirstArgument,
+//     second: returnsSecondArgument
+// });
 app.logWrappedErrors = isBoolean.false = isBoolean.true = BOOLEAN_TRUE;
 factories.Extendable = constructorWrapper(Extendable, OBJECT_CONSTRUCTOR);
 /**
@@ -697,42 +699,33 @@ function differentiator(list, comparison, modder, differ) {
     });
     return diffs;
 }
-
-function difference(list, comparison) {
-    return differentiator(list, comparison, returnsFirstArgument, isEqual);
-}
-
-function differenceBy(list, comparison, by) {
-    return differentiator(list, comparison, by, isEqual);
-}
-
-function differenceWith(list, comparison, comparator) {
-    return differentiator(list, comparison, returnsFirstArgument, comparator);
-}
-
-function definedAndCall(item, caller) {
-    return isUndefined(item) ? item : toFunction(caller)(item);
-}
-
-function definedOrCall(item, caller) {
-    return isUndefined(item) ? toFunction(caller)(item) : item;
-}
-
-function definedOr(item, def) {
-    return isUndefined(item) ? item : def;
-}
-
-function definedThenCall(item, bool, caller) {
-    return matchesBinary(isUndefined(item), bool) ? toFunction(caller)(item) : item;
-}
-
-function undefineAndCall(item, caller) {
-    return isUndefined(item) ? item : toFunction(caller)(item);
-}
-
-function undefinedOrCall(item, caller) {
-    return isUndefined(item) ? toFunction(caller)(item) : item;
-}
+// function difference(list, comparison) {
+//     return differentiator(list, comparison, returnsFirstArgument, isEqual);
+// }
+// function differenceBy(list, comparison, by) {
+//     return differentiator(list, comparison, by, isEqual);
+// }
+// function differenceWith(list, comparison, comparator) {
+//     return differentiator(list, comparison, returnsFirstArgument, comparator);
+// }
+// function definedAndCall(item, caller) {
+//     return isUndefined(item) ? item : toFunction(caller)(item);
+// }
+// function definedOrCall(item, caller) {
+//     return isUndefined(item) ? toFunction(caller)(item) : item;
+// }
+// function definedOr(item, def) {
+//     return isUndefined(item) ? item : def;
+// }
+// function definedThenCall(item, bool, caller) {
+//     return matchesBinary(isUndefined(item), bool) ? toFunction(caller)(item) : item;
+// }
+// function undefineAndCall(item, caller) {
+//     return isUndefined(item) ? item : toFunction(caller)(item);
+// }
+// function undefinedOrCall(item, caller) {
+//     return isUndefined(item) ? toFunction(caller)(item) : item;
+// }
 // function undefinedOr(item, def) {
 //     return isUndefined(item) ? def : item;
 // }
@@ -992,13 +985,12 @@ function undefinedOrCall(item, caller) {
 //     }
 //     return castBoolean(thing);
 // }
-function parseDecimal(num) {
-    return parseFloat(num) || 0;
-}
-
-function pI(num) {
-    return parseInt(num, 10) || 0;
-}
+// function parseDecimal(num) {
+//     return parseFloat(num) || 0;
+// }
+// function pI(num) {
+//     return parseInt(num, 10) || 0;
+// }
 // function allKeys(obj) {
 //     var key, keys = [];
 //     for (key in obj) {

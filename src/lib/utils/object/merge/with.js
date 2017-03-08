@@ -1,10 +1,11 @@
 var isUndefined = require('./utils/is/undefined');
 var keys = require('./utils/keys');
+var isStrictlyEqual = require('./utils/is/strictly-equal');
 module.exports = function (o1, o2, customizer, _stack) {
     var key, o1Val, o2Val, i = 0,
         instanceKeys = keys(o2),
         stack = _stack || [],
-        l = instanceKeys[LENGTH];
+        l = instanceKeys.length;
     for (; i < l; i++) {
         key = instanceKeys[i];
         o1Val = o1[key];

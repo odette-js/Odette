@@ -9,7 +9,7 @@ module.exports = function (array, value, fromIndex, toIndex, fromRight) {
         return indexOfNaN(array, fromIndex, toIndex, fromRight);
     }
     index = (fromIndex || 0) - 1;
-    limit = toIndex || array[LENGTH];
+    limit = toIndex || array.length;
     incrementor = fromRight ? -1 : 1;
     while ((index += incrementor) < limit) {
         if (array[index] === value) {

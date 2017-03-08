@@ -1,4 +1,4 @@
-var cryptoCheck = 'crypto' in window && 'getRandomValues' in crypto;
+var cryptoCheck = 'crypto' in global && 'getRandomValues' in crypto;
 var uuidHash = {};
 module.exports = function () {
     return _uuid(4);
@@ -8,7 +8,7 @@ function _uuid(idx) {
     var sid = ('xxxxxxxx-xxxx-' + idx + 'xxx-yxxx-xxxxxxxxxxxx').replace(/[xy]/g, function (c) {
         var rnd, r, v;
         if (cryptoCheck) {
-            rnd = window.crypto.getRandomValues(new Uint32Array(1));
+            rnd = global.crypto.getRandomValues(new Uint32Array(1));
             if (rnd === undefined) {
                 cryptoCheck = false;
             }

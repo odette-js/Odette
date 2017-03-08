@@ -1,3 +1,3 @@
-module.exports = function (value) {
-    return !!value;
+module.exports = function (item) {
+    return !!item;
 };

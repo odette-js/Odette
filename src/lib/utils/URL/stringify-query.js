@@ -10,7 +10,7 @@ module.exports = function (obj) {
                 query.push(n + '=' + val);
             }
         });
-        if (query[LENGTH]) {
+        if (query.length) {
             base += '?';
         }
         base += query.join('&');

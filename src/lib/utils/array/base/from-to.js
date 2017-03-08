@@ -9,7 +9,7 @@ module.exports = function (values, runner, _start, _end, step) {
         index = start,
         distance = (goingDown ? start - end : end - start) + 1,
         leftover = distance % 8,
-        iterations = parseNumber(distance / 8);
+        iterations = toInteger(distance / 8);
     if (leftover > 0) {
         do {
             runner(values[index], index, values);
