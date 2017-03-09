@@ -6,6 +6,10 @@ var gulp = require('gulp'),
     browserify = require('gulp-browserify'),
     copy = require('gulp-copy'),
     path = require('path'),
+    fs = require('fs'),
+    gutil = require('gulp-util'),
+    through = require('through2'),
+    _ = require('lodash'),
     minName = function (filename) {
         var name = filename.split('.');
         name.splice(name.length - 1, 0, 'min');
@@ -32,7 +36,6 @@ module.exports = function (settings, paths, context, name) {
                 .on('error', failure);
         });
         var library = new Promise(function (success, failure) {
-            console.log(paths.jsLibraryList, paths.jsLibraryOutput, paths.jspublic);
             gulp.src(paths.jsLibraryList) //
                 .pipe(browserify()) //
                 .pipe(rename(paths.jsLibraryOutput)) //
@@ -110,3 +113,61 @@ module.exports = function (settings, paths, context, name) {
     // });
     // gulp.task(name, ['odette-build', 'library-build', 'full-build', 'spec-build', 'public-framed', 'public-build']);
 };
+// function browserify() {
+//     'use strict';
+//     var watchify = require('watchify');
+//     var browserify = require('browserify');
+//     var gulp = require('gulp');
+//     var source = require('vinyl-source-stream');
+//     var buffer = require('vinyl-buffer');
+//     var gutil = require('gulp-util');
+//     var sourcemaps = require('gulp-sourcemaps');
+//     var assign = require('lodash.assign');
+//     // add custom browserify options here
+//     var customOpts = {
+//         entries: ['./src/index.js'],
+//         debug: true
+//     };
+//     var opts = _.assign({}, watchify.args, customOpts);
+//     var b = watchify(browserify(opts));
+//     // add transformations here
+//     // i.e. b.transform(coffeeify);
+//     gulp.task('js', bundle); // so you can run `gulp js` to build the file
+//     b.on('update', bundle); // on any dep update, runs the bundler
+//     b.on('log', gutil.log); // output build logs to terminal
+//     function bundle() {
+//         return b.bundle()
+//             // log errors if they happen
+//             .on('error', gutil.log.bind(gutil, 'Browserify Error')).pipe(source('bundle.js'))
+//             // optional, remove if you don't need to buffer file contents
+//             .pipe(buffer())
+//             // optional, remove if you dont want sourcemaps
+//             .pipe(sourcemaps.init({
+//                 loadMaps: true
+//             })) // loads map from browserify file
+//             // Add transformation tasks to the pipeline here.
+//             .pipe(sourcemaps.write('./')) // writes .map file
+//             .pipe(gulp.dest('./dist'));
+//     }
+// }
+// function browserify() {
+//     return through.obj(function (file, encoding, cb) {
+//         // console.log(JSON.stringify(file));
+//         var browserify = require('browserify');
+//         var b = browserify(file._contents.data);
+//         file.contents = file.pipe(b.bundle(cb));
+//         this.push(file);
+//         // .bundle(function (err, result) {
+//         //     if (err) {
+//         //         return cb(err);
+//         //     }
+//         //     // return cb(null, result);
+//         //     cb(null, new gutil.File({
+//         //         base: file.base,
+//         //         cwd: file.cwd,
+//         //         path: file.path,
+//         //         contents: result
+//         //     }));
+//         // });
+//     });
+// }

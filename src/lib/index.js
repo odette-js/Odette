@@ -1,2 +1,1 @@
-var _ = require('./utils/index.js');
-console.log(_);
+var _ = require('./utils');

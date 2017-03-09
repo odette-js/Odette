@@ -56,14 +56,13 @@ var content = ['browserify', 'distribute'],
     },
     // jsLibraryList = _.map(library, libPath),
     // cres = console.log(jsLibraryList),
+    // result = console.log(jsLibraryList),
     paths = _.extend(makePath({
         // watch path
         jsAll: './src/**/*.js',
         // build list
-        jsOdette: ['./src/lib/odette/index.js'],
-        jsApplication: ['./src/lib/application.js'],
-        jsLibraryList: jsLibraryList,
-        // jsLibraryList: _.map(library, libPath),
+        // jsOdette: ['./src/lib/odette/index.js'],
+        // jsApplication: ['./src/lib/application.js'],
         jsExtra: _.map(extraModules, extraPath),
         jsTestList: _.map(specModules, makeSpecPath),
         jsExtraTest: _.map(extraModules, specPath),
@@ -73,6 +72,9 @@ var content = ['browserify', 'distribute'],
         serverIndex: './index.js',
         ignoreFiles: ['.git/', 'node_modules/', './gulp', 'gulpfile.js', './dist', './results']
     }), {
+        jsApplication: './src/lib/application.js',
+        jsOdette: './src/lib/odette/index.js',
+        jsLibraryList: './src/lib/index.js',
         jsOdetteNode: routeToFile('./src/node/')('index'),
         jsOdetteNodeDistribute: 'index.js',
         gulpdir: __dirname,
