@@ -11,15 +11,20 @@ startup_input := src/lib/application.js
 startup_output := dist/js/startup.js
 startup_output_min := dist/js/startup.min.js
 
+# watch:
+# 	fswatch -0 -o --one-event ./src/ | xargs -0 -n 1 $(MAKE) fresh
 
 fresh: clean build_all
 
+
+# test:
+# 	$(NODE) ./
 
 ensure_folder:
 	mkdir -p dist
 
 ensure_build_js: ensure_folder
-	mkdir dist/js
+	mkdir -p dist/js
 
 build_all: ensure_build_js build_library build_odette build_startup
 

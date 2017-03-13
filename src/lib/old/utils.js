@@ -1,61 +1,61 @@
-var garbage, FOR = 'for',
-    FIND = 'find',
-    FIND_INDEX = FIND + 'Index',
-    REG_EXP = 'RegExp',
-    factories = {},
-    builtCallers = {},
-    OBJECT_PROTOTYPE = OBJECT_CONSTRUCTOR[PROTOTYPE],
-    // nativeKeys = OBJECT_CONSTRUCTOR.keys,
-    // objectToString = OBJECT_PROTOTYPE.toString,
-    // ENUM_BUG = !{
-    //     toString: NULL
-    // }.propertyIsEnumerable(TO_STRING),
-    // isFinite_ = win.isFinite,
-    // symbolTag = createToStringResult(SYMBOL),
-    // isSymbolWrap = isTypeWrap(SYMBOL),
-    // pathByStringRegExp = /\]\.|\.|\[|\]/igm,
-    // arrayConcat = ARRAY.concat,
-    // arrayPush = ARRAY.push,
-    // MAX_ARRAY_INDEX = Math.pow(2, 53) - 1,
-    // isArray = ARRAY_CONSTRUCTOR.isArray,
-    // isFunction = isTypeWrap(FUNCTION),
-    // isString = isTypeWrap(STRING),
-    // isNumber = isTypeWrap(NUMBER, notNaN),
-    // isObject = isTypeWrap(OBJECT, castBoolean),
-    // isRegExp = isToStringWrap(REG_EXP),
-    // nonEnumerableProps = toArray('valueOf,isPrototypeOf,propertyIsEnumerable,hasOwnProperty,toLocaleString,' + TO_STRING),
-    // Returns the first index on an array-like that passes a predicate test
-    // returnsEmptyString = returns(''),
-    // iteratesIn = iterates(allKeys),
-    // iteratesOwn = iterates(keys),
-    // findIndex = baseForEachEnd,
-    // findIndexIn = baseFind(iteratesIn, findIndex),
-    // findIndexOwn = baseFind(iteratesOwn, findIndex),
-    // findIndexRight = baseForEachEndRight,
-    // findIndexInRight = baseFind(iteratesIn, findIndexRight),
-    // findIndexOwnRight = baseFind(iteratesOwn, findIndexRight),
-    // find = findAccessor(baseForEachEnd),
-    // findIn = baseFind(iteratesIn, find),
-    // findOwn = baseFind(iteratesOwn, find),
-    // findRight = findAccessor(findIndexRight),
-    // findInRight = baseFind(iteratesIn, findRight),
-    // findOwnRight = baseFind(iteratesOwn, findRight),
-    // now_offset = dateNow(),
-    // filterable = negatableFilter(filterCommon(returnsArray, arrayAdd), filterCommon(returnsObject, objectSet), filterCommon(returnsEmptyString, stringConcat)),
-    // forIn = baseEach(iteratesIn, forEach),
-    // forOwn = baseEach(iteratesOwn, forEach),
-    // each = forOwn,
-    // map = maps(forEach, mapValuesIteratee, returnsArray),
-    // mapKeys = maps(forOwn, mapKeysIteratee, returnBaseType),
-    // mapValues = maps(forOwn, mapValuesIteratee, returnBaseType),
-    // reduce = createReduce(1),
-    // dropWhile = dropsWhile(filter),
-    // filter = filterable(reduce),
-    // filterNegative = filterable(reduce, BOOLEAN_TRUE),
-    // forInRight = baseEach(iteratesIn, forEachRight),
-    // forOwnRight = baseEach(iteratesOwn, forEachRight),
-    eachRight = forOwnRight;
-// ,
+// var garbage, FOR = 'for',
+//     FIND = 'find',
+//     FIND_INDEX = FIND + 'Index',
+//     REG_EXP = 'RegExp',
+//     factories = {},
+//     builtCallers = {},
+//     OBJECT_PROTOTYPE = OBJECT_CONSTRUCTOR[PROTOTYPE];
+//,
+// nativeKeys = OBJECT_CONSTRUCTOR.keys,
+// objectToString = OBJECT_PROTOTYPE.toString,
+// ENUM_BUG = !{
+//     toString: NULL
+// }.propertyIsEnumerable(TO_STRING),
+// isFinite_ = win.isFinite,
+// symbolTag = createToStringResult(SYMBOL),
+// isSymbolWrap = isTypeWrap(SYMBOL),
+// pathByStringRegExp = /\]\.|\.|\[|\]/igm,
+// arrayConcat = ARRAY.concat,
+// arrayPush = ARRAY.push,
+// MAX_ARRAY_INDEX = Math.pow(2, 53) - 1,
+// isArray = ARRAY_CONSTRUCTOR.isArray,
+// isFunction = isTypeWrap(FUNCTION),
+// isString = isTypeWrap(STRING),
+// isNumber = isTypeWrap(NUMBER, notNaN),
+// isObject = isTypeWrap(OBJECT, castBoolean),
+// isRegExp = isToStringWrap(REG_EXP),
+// nonEnumerableProps = toArray('valueOf,isPrototypeOf,propertyIsEnumerable,hasOwnProperty,toLocaleString,' + TO_STRING),
+// Returns the first index on an array-like that passes a predicate test
+// returnsEmptyString = returns(''),
+// iteratesIn = iterates(allKeys),
+// iteratesOwn = iterates(keys),
+// findIndex = baseForEachEnd,
+// findIndexIn = baseFind(iteratesIn, findIndex),
+// findIndexOwn = baseFind(iteratesOwn, findIndex),
+// findIndexRight = baseForEachEndRight,
+// findIndexInRight = baseFind(iteratesIn, findIndexRight),
+// findIndexOwnRight = baseFind(iteratesOwn, findIndexRight),
+// find = findAccessor(baseForEachEnd),
+// findIn = baseFind(iteratesIn, find),
+// findOwn = baseFind(iteratesOwn, find),
+// findRight = findAccessor(findIndexRight),
+// findInRight = baseFind(iteratesIn, findRight),
+// findOwnRight = baseFind(iteratesOwn, findRight),
+// now_offset = dateNow(),
+// filterable = negatableFilter(filterCommon(returnsArray, arrayAdd), filterCommon(returnsObject, objectSet), filterCommon(returnsEmptyString, stringConcat)),
+// forIn = baseEach(iteratesIn, forEach),
+// forOwn = baseEach(iteratesOwn, forEach),
+// each = forOwn,
+// map = maps(forEach, mapValuesIteratee, returnsArray),
+// mapKeys = maps(forOwn, mapKeysIteratee, returnBaseType),
+// mapValues = maps(forOwn, mapValuesIteratee, returnBaseType),
+// reduce = createReduce(1),
+// dropWhile = dropsWhile(filter),
+// filter = filterable(reduce),
+// filterNegative = filterable(reduce, BOOLEAN_TRUE),
+// forInRight = baseEach(iteratesIn, forEachRight),
+// forOwnRight = baseEach(iteratesOwn, forEachRight),
+// eachRight = forOwnRight,
 // mapRight = maps(forEachRight, mapValuesIteratee, returnsArray),
 // mapKeysRight = maps(eachRight, mapKeysIteratee, returnBaseType),
 // mapValuesRight = maps(forOwnRight, mapValuesIteratee, returnBaseType),
@@ -72,27 +72,27 @@ var garbage, FOR = 'for',
 // findIndexWhere = convertSecondToIterable(findIndex),
 // findIndexWhereRight = convertSecondToIterable(findIndexRight),
 // uniqueBy = convertSecondToIterable(uniqueWith);
-buildCallers(FOR + 'Each', forEach, forEachRight, builtCallers);
-buildCallers(FOR + 'Own', forOwn, forOwnRight, builtCallers);
-buildCallers(FOR + 'In', forIn, forInRight, builtCallers);
-buildCallers('each', each, eachRight, builtCallers);
-buildCallers('map', map, mapRight, builtCallers);
-buildCallers('mapValues', mapValues, mapValuesRight, builtCallers);
-buildCallers('mapKeys', mapKeys, mapKeysRight, builtCallers);
-buildCallers('where', where, whereRight, builtCallers);
-buildCallers('whereNot', whereNot, whereNotRight, builtCallers);
-buildCallers(FIND, find, findRight, builtCallers);
-buildCallers(FIND + 'Own', findOwn, findOwnRight, builtCallers);
-buildCallers(FIND + 'In', findOwn, findOwnRight, builtCallers);
-buildCallers(FIND_INDEX, findIndex, findIndexRight, builtCallers);
-buildCallers(FIND_INDEX + 'Own', findIndexOwn, findIndexOwnRight, builtCallers);
-buildCallers(FIND_INDEX + 'In', findIndexIn, findIndexInRight, builtCallers);
-buildCallers(FIND + 'Where', findWhere, findWhereRight, builtCallers);
-buildCallers(FIND + 'IndexWhere', findIndexWhere, findIndexWhereRight, builtCallers);
-buildCallers('reduce', reduce, reduceRight, builtCallers);
-buildCallers('filter', filter, filterRight, builtCallers);
-buildCallers('filterNegative', filterNegative, filterNegativeRight, builtCallers);
-buildCallers('dropWhile', dropWhile, dropWhileRight, builtCallers);
+//     buildCallers(FOR + 'Each', forEach, forEachRight, builtCallers);
+// buildCallers(FOR + 'Own', forOwn, forOwnRight, builtCallers);
+// buildCallers(FOR + 'In', forIn, forInRight, builtCallers);
+// buildCallers('each', each, eachRight, builtCallers);
+// buildCallers('map', map, mapRight, builtCallers);
+// buildCallers('mapValues', mapValues, mapValuesRight, builtCallers);
+// buildCallers('mapKeys', mapKeys, mapKeysRight, builtCallers);
+// buildCallers('where', where, whereRight, builtCallers);
+// buildCallers('whereNot', whereNot, whereNotRight, builtCallers);
+// buildCallers(FIND, find, findRight, builtCallers);
+// buildCallers(FIND + 'Own', findOwn, findOwnRight, builtCallers);
+// buildCallers(FIND + 'In', findOwn, findOwnRight, builtCallers);
+// buildCallers(FIND_INDEX, findIndex, findIndexRight, builtCallers);
+// buildCallers(FIND_INDEX + 'Own', findIndexOwn, findIndexOwnRight, builtCallers);
+// buildCallers(FIND_INDEX + 'In', findIndexIn, findIndexInRight, builtCallers);
+// buildCallers(FIND + 'Where', findWhere, findWhereRight, builtCallers);
+// buildCallers(FIND + 'IndexWhere', findIndexWhere, findIndexWhereRight, builtCallers);
+// buildCallers('reduce', reduce, reduceRight, builtCallers);
+// buildCallers('filter', filter, filterRight, builtCallers);
+// buildCallers('filterNegative', filterNegative, filterNegativeRight, builtCallers);
+// buildCallers('dropWhile', dropWhile, dropWhileRight, builtCallers);
 var _performance = window.performance,
     uuidHash = {},
     maths = Math,
@@ -1696,39 +1696,38 @@ function now_shim() {
 function buildCallerKeys(prefix) {
     return keys(buildCallers(prefix, noop, noop));
 }
-
-function buildCallers(prefix, handler, second, memo_) {
-    var memo = memo_ || {},
-        CALL = 'Call',
-        BOUND = 'Bound',
-        TRY = 'Try';
-    memo[prefix] = handler;
-    memo[prefix + CALL] = function (array, method, arg) {
-        return handler(array, function (item) {
-            return item[method](arg);
-        });
-    };
-    memo[prefix + CALL + BOUND] = function (array, arg) {
-        return handler(array, function (fn) {
-            return fn(arg);
-        });
-    };
-    memo[prefix + CALL + TRY] = function (array, method, arg, catcher, finallyer) {
-        return handler(array, doTry(function (item) {
-            return item[method](arg);
-        }, catcher, finallyer));
-    };
-    memo[prefix + CALL + BOUND + TRY] = function (array, method, arg, catcher, finallyer) {
-        return handler(array, doTry(function (item) {
-            return item(arg);
-        }, catcher, finallyer));
-    };
-    merge(builtCallers, memo);
-    if (second) {
-        buildCallers(prefix + 'Right', second);
-    }
-    return memo;
-}
+// function buildCallers(prefix, handler, second, memo_) {
+//     var memo = memo_ || {},
+//         CALL = 'Call',
+//         BOUND = 'Bound',
+//         TRY = 'Try';
+//     memo[prefix] = handler;
+//     memo[prefix + CALL] = function (array, method, arg) {
+//         return handler(array, function (item) {
+//             return item[method](arg);
+//         });
+//     };
+//     memo[prefix + CALL + BOUND] = function (array, arg) {
+//         return handler(array, function (fn) {
+//             return fn(arg);
+//         });
+//     };
+//     memo[prefix + CALL + TRY] = function (array, method, arg, catcher, finallyer) {
+//         return handler(array, doTry(function (item) {
+//             return item[method](arg);
+//         }, catcher, finallyer));
+//     };
+//     memo[prefix + CALL + BOUND + TRY] = function (array, method, arg, catcher, finallyer) {
+//         return handler(array, doTry(function (item) {
+//             return item(arg);
+//         }, catcher, finallyer));
+//     };
+//     merge(builtCallers, memo);
+//     if (second) {
+//         buildCallers(prefix + 'Right', second);
+//     }
+//     return memo;
+// }
 // function results(array, method, arg) {
 //     return map(array, function (item) {
 //         return result(item, method, arg);
@@ -1878,6 +1877,6 @@ function consolemaker(canTrace) {
  * @class Extendable
  * @private
  */
-function Extendable() {
-    return this;
-}
+// function Extendable() {
+//     return this;
+// }

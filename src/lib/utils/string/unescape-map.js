@@ -1,0 +1,1 @@
+module.exports = require('./utils/object/invert')(require('./utils/string/escape-map'));

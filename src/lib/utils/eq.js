@@ -1,18 +1,22 @@
+var CONSTRUCTOR = 'constructor';
 var keys = require('./utils/keys');
 var objectToString = require('./utils/call-object-to-string');
+var is0 = require('./utils/is/0');
+var isOf = require('./utils/is/of');
 var isNil = require('./utils/is/nil');
 var toNumber = require('./utils/to/number');
+var isStrictlyEqual = require('./utils/is/strictly-equal');
 // Internal recursive comparison function for `isEqual`
 module.exports = function (a, b, aStack, bStack) {
     var className, areArrays, aCtor, bCtor, length, objKeys, key, aNumber, bNumber;
     // Identical objects are equal. `0 === -0`, but they aren't identical.
     // See the [Harmony `egal` proposal](http://wiki.ecmascript.org/doku.php?id=harmony:egal).
-    if (a === b) {
-        return a !== 0 || 1 / a === 1 / b;
+    if (isStrictlyEqual(a, b)) {
+        return a !== 0 || isStrictlyEqual(1 / a, 1 / b);
     }
     // A strict comparison is necessary because `NULL == undefined`.
     if (isNil(a) || isNil(b)) {
-        return a === b;
+        return isStrictlyEqual(a, b);
     }
     // Unwrap any wrapped objects.
     // if (a instanceof _) a = a._wrapped;
@@ -29,7 +33,7 @@ module.exports = function (a, b, aStack, bStack) {
     case createToStringResult(STRING):
         // Primitives and their corresponding object wrappers are equivalent; thus, `"5"` is
         // equivalent to `new String("5")`.
-        return EMPTY_STRING + a === EMPTY_STRING + b;
+        return isStrictlyEqual(EMPTY_STRING + a, EMPTY_STRING + b);
     case createToStringResult(NUMBER):
         // `NaN`s are equivalent, but non-reflexive.
         // Object(NaN) is equivalent to NaN
@@ -39,15 +43,15 @@ module.exports = function (a, b, aStack, bStack) {
             return bNumber !== bNumber;
         }
         // An `egal` comparison is performed for other numeric values.
-        return aNumber === 0 ? 1 / aNumber === 1 / b : aNumber === bNumber;
+        return is0(aNumber) ? isStrictlyEqual(1 / aNumber, 1 / b) : isStrictlyEqual(aNumber, bNumber);
     case BRACKET_OBJECT_SPACE + 'Date]':
     case BRACKET_OBJECT_SPACE + 'Boolean]':
         // Coerce dates and booleans to numeric primitive values. Dates are compared by their
         // millisecond representations. Note that invalid dates with millisecond representations
         // of `NaN` are not equivalent.
-        return toNumber(a) === toNumber(b);
+        return isStrictlyEqual(toNumber(a), toNumber(b));
     }
-    areArrays = className === BRACKET_OBJECT_SPACE + 'Array]';
+    areArrays = isStrictlyEqual(className, BRACKET_OBJECT_SPACE + 'Array]');
     if (!areArrays) {
         if (!isObject(a) || !isObject(b)) {
             return false;
@@ -56,7 +60,7 @@ module.exports = function (a, b, aStack, bStack) {
         // from different frames are.
         aCtor = a[CONSTRUCTOR];
         bCtor = b[CONSTRUCTOR];
-        if (aCtor !== bCtor && !(isFunction(aCtor) && (aCtor instanceof aCtor) && isFunction(bCtor) && (bCtor instanceof bCtor)) && (CONSTRUCTOR in a && CONSTRUCTOR in b)) {
+        if (aCtor !== bCtor && !(isFunction(aCtor) && isOf(aCtor, aCtor) && isFunction(bCtor) && isOf(bCtor, bCtor)) && (CONSTRUCTOR in a && CONSTRUCTOR in b)) {
             return false;
         }
     }
@@ -70,8 +74,8 @@ module.exports = function (a, b, aStack, bStack) {
     while (length--) {
         // Linear search. Performance is inversely proportional to the number of
         // unique nested structures.
-        if (aStack[length] === a) {
-            return bStack[length] === b;
+        if (isStrictlyEqual(aStack[length], a)) {
+            return isStrictlyEqual(bStack[length], b);
         }
     }
     // Add the first object to the stack of traversed objects.
@@ -105,5 +109,5 @@ module.exports = function (a, b, aStack, bStack) {
     // Remove the first object from the stack of traversed objects.
     aStack.pop();
     bStack.pop();
-    return BOOLEAN_TRUE;
+    return true;
 }
