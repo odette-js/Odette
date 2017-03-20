@@ -230,6 +230,15 @@ application.scope().run(window, function (module, app, _, factories, $) {
                     divs.dispatchEvent('mouseout');
                     test.expect(count).toEqual(15);
                 }, 2);
+                test.it('recovers when there is an error', function () {
+                    divs.item(0).on('click', function () {
+                        throw new Error('erred');
+                    });
+                    divs.item(0).on('click', function () {
+                        test.expect(1).toBe(1);
+                    });
+                    divs.click();
+                }, 1);
             });
         });
         test.describe('the domm is also special because it abstracts event listeners for you', function () {
