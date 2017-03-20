@@ -1,4 +1,4 @@
-var keys = require('./utils/keys');
+var keys = require('./utils/object/keys');
 module.exports = function (obj) {
     var i = 0,
         result = {},

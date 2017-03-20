@@ -1,1 +1,0 @@
-var test = application.scope().directive('Tests');

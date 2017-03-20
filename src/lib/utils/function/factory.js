@@ -1,4 +1,4 @@
-module.exports = function (name, func_) {
+module.exports = function factory(name, func_) {
     var func = func_ ? func_ : name;
     var extensor = {
         constructor: function () {

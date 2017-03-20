@@ -1,6 +1,6 @@
 var isUndefined = require('./utils/is/undefined');
-var castBoolean = require('./utils/cast-boolean');
-module.exports = function (current, which) {
+var castBoolean = require('./utils/boolean/cast');
+module.exports = function toggle(current, which) {
     if (isUndefined(which)) {
         return !current;
     } else {

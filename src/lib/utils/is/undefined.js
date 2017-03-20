@@ -1,4 +1,4 @@
 var isStrictlyEqual = require('./strictly-equal');
 module.exports = function (thing) {
-    return isStrictlyEqual(thing, undefined);
+    return isStrictlyEqual(thing);
 };

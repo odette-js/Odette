@@ -1,7 +1,7 @@
 var isUndefined = require('./utils/is/undefined');
-module.exports = function (fn) {
+module.exports = function cacheable(fn) {
     var cache = {};
-    return function (input) {
+    return function cacheableInstance(input) {
         var value;
         if (isUndefined(value = cache[input])) {
             value = cache[input] = fn(input);

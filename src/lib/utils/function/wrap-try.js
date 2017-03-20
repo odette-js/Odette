@@ -1,4 +1,4 @@
-function wraptry(trythis, errthat, finalfunction) {
+module.exports = function wraptry(trythis, errthat, finalfunction) {
     var returnValue, err = null;
     try {
         returnValue = trythis();
@@ -9,4 +9,4 @@ function wraptry(trythis, errthat, finalfunction) {
         returnValue = finalfunction ? finalfunction(err, returnValue) : returnValue;
     }
     return returnValue;
-}
+};

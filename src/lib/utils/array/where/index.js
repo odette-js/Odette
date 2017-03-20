@@ -1,1 +1,1 @@
-module.exports = require('./utils/convert-second-to-iterable')(require('./utils/array/filter'));
+module.exports = require('./utils/function/convert-second-to-iterable')(require('./utils/array/filter'));

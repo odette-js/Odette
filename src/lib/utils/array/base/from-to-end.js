@@ -1,4 +1,4 @@
-module.exports = function (values, callback, _start, _end, _step) {
+module.exports = function fromToEnd(values, callback, _start, _end, _step) {
     var limit, counter, value, step = _step || 1,
         end = _end,
         start = _start,

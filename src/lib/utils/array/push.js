@@ -1,3 +1,3 @@
-module.exports = function (array, value) {
+module.exports = function push(array, value) {
     return array.push(value);
 };

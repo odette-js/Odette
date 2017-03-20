@@ -1,1 +1,1 @@
-module.exports = require('./utils/returns')(false);
+module.exports = require('./utils/returns/passed')(false);

@@ -1,5 +1,5 @@
 var isObject = require('./utils/is/object');
-var keys = require('./utils/keys');
+var keys = require('./utils/object/keys');
 var forEach = require('./utils/array/for/each');
 module.exports = function (key, value, iterator) {
     var keysResult, isObjectResult = isObject(key);

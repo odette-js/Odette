@@ -1,4 +1,4 @@
-var type = require('./utils/type');
+var type = require('./utils/string/type');
 var lowerCaseString = require('./utils/string/lower-case');
 module.exports = function (type_, fn_) {
     var ty = lowerCaseString(type_);

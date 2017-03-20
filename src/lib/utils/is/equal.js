@@ -1,4 +1,4 @@
-var eq = require('./utils/eq');
-module.exports = function (a, b) {
+var eq = require('./utils/array/eq');
+module.exports = function isEqual(a, b) {
     return eq(a, b, [], []);
 };

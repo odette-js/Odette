@@ -1,6 +1,6 @@
 var isNan = require('./utils/is/nan');
 var indexOfNan = require('./utils/array/index/of/nan');
-module.exports = function (array, value, fromIndex, toIndex, fromRight) {
+module.exports = function indexOf(array, value, fromIndex, toIndex, fromRight) {
     var index, limit, incrementor;
     if (!array) {
         return -1;

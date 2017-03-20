@@ -1,5 +1,5 @@
 var isStrictlyEqual = require('./utils/is/strictly-equal');
-module.exports = function (string_) {
+module.exports = function unwrapBlock(string_) {
     var string = string_.toString(),
         split = string.split('{'),
         first = split[0],

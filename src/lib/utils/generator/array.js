@@ -1,7 +1,7 @@
 var greaterThanZero = require('./utils/number/greater-than/0');
 var returnsSecondArgument = require('./utils/returns/second');
 var returnsFirstArgument = require('./utils/returns/first');
-module.exports = function (array, dir_, cap_, incrementor_, transformer_) {
+module.exports = function arrayGenerator(array, dir_, cap_, incrementor_, transformer_) {
     var previous, dir = dir_ || 1,
         length = array.length,
         counter = dir > 0 ? -1 : length,
@@ -10,7 +10,7 @@ module.exports = function (array, dir_, cap_, incrementor_, transformer_) {
             return counter >= length;
         } : greaterThanZero),
         incrementor = incrementor_ || returnsSecondArgument;
-    return function (fn) {
+    return function generateNext(fn) {
         counter += dir;
         if (cap(counter)) {
             return;

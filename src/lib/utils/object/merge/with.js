@@ -1,5 +1,5 @@
 var isUndefined = require('./utils/is/undefined');
-var keys = require('./utils/keys');
+var keys = require('./utils/object/keys');
 var isStrictlyEqual = require('./utils/is/strictly-equal');
 module.exports = function (o1, o2, customizer, _stack) {
     var key, o1Val, o2Val, i = 0,

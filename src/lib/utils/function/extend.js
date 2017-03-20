@@ -1,16 +1,39 @@
 var isString = require('./utils/is/string');
 var merge = require('./utils/object/merge');
+var has = require('./utils/object/has');
+var isInstance = require('./utils/is/instance');
+var factory = require('./utils/function/factory');
+var bind = require('./utils/function/bind');
 var PROTOTYPE = 'prototype';
 var CONSTRUCTOR = 'constructor';
+var FUNCTION_CONSTRUCTOR_CONSTRUCTOR = Function[CONSTRUCTOR];
+var EXTEND = 'extend';
 var DOUBLE_UNDERSCORE = '__';
+var COLON = ':';
 var CONSTRUCTOR_KEY = DOUBLE_UNDERSCORE + CONSTRUCTOR + DOUBLE_UNDERSCORE;
-module.exports = function (name, protoProps) {
+constructorExtend.wrapper = constructorWrapper;
+module.exports = constructorExtend;
+
+function constructorWrapper(Constructor, parent) {
+    var __ = function (one, two, three, four, five, six) {
+        return isValue(one) && isOf(one, Constructor) ? one : new Constructor(one, two, three, four, five, six);
+    };
+    __.isInstance = Constructor.isInstance = function (instance) {
+        return isInstance(instance, Constructor);
+    };
+    __.factory = Constructor.factory = factory;
+    __.fn = Constructor.fn = Constructor[PROTOTYPE].fn = Constructor[PROTOTYPE];
+    __.constructor = Constructor;
+    __[EXTEND] = Constructor[EXTEND] = bind(constructorExtend, Constructor);
+    if (parent) {
+        __.super = Constructor.super = Constructor[PROTOTYPE].super = parent;
+    }
+    return __;
+}
+
+function constructorExtend(name, protoProps) {
     var nameString, constructorKeyName, child, passedParent, hasConstructor, constructor, parent = this,
         nameIsStr = isString(name);
-    if (name === false) {
-        merge(parent[PROTOTYPE], protoProps);
-        return parent;
-    }
     if (!nameIsStr) {
         protoProps = name;
     }

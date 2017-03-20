@@ -1,7 +1,7 @@
 var cacheable = require('./utils/function/cacheable');
-module.exports = function (fn, baseCategory) {
+module.exports = function categoricallyCachable(fn, baseCategory) {
     var cache = {};
-    return function (string, category_) {
+    return function categoricallyCachableInstance(string, category_) {
         var cacher;
         var category = category_ || baseCategory;
         cacher = cache[category] = cache[category] || cacheable(fn(category));

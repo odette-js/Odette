@@ -1,4 +1,4 @@
-var keys = require('./utils/keys');
+var keys = require('./utils/object/keys');
 var isNil = require('./utils/is/nil');
 module.exports = function (map) {
     var source = '(?:' + keys(map).join('|') + ')';

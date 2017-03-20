@@ -1,5 +1,5 @@
-var castBoolean = require('./utils/cast-boolean');
+var castBoolean = require('./utils/boolean/cast');
 var get = require('./utils/object/get');
 module.exports = function (thennable) {
-    return castBoolean(get(thennable, 'then'), get(thennable, 'catch'));
+    return isFunction(get(thennable, 'then')) && isFunction(get(thennable, 'catch'));
 };

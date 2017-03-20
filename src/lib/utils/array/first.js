@@ -1,4 +1,4 @@
 var nth = require('./utils/array/nth');
-module.exports = function (array) {
+module.exports = function first(array) {
     return nth(array, 0);
 };

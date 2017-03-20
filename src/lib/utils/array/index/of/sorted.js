@@ -1,7 +1,7 @@
 var TWO_TO_THE_31 = 2147483647,
     indexOfNaN = require('./utils/array/index/of/nan'),
     lastIndex = require('./utils/array/index/last');
-module.exports = function (list, item, minIndex_, maxIndex_, fromRight) {
+module.exports = function sortedIndexOf(list, item, minIndex_, maxIndex_, fromRight) {
     var guess, min = minIndex_ || 0,
         max = maxIndex_ || lastIndex(list),
         bitwise = (max <= TWO_TO_THE_31) ? true : false;

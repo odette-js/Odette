@@ -1,3 +1,3 @@
-module.exports = function (func, context) {
+module.exports = function bindTo(func, context) {
     return context ? func.bind(context) : func;
 };

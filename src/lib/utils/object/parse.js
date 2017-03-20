@@ -5,7 +5,7 @@ var couldBeJSON = require('./utils/JSON/could-be');
 var JSONParse = require('./utils/JSON/parse');
 var toNumber = require('./utils/to/number');
 var has = require('./utils/object/has');
-var baseDataTypes = require('./utils/base-data-types');
+var baseDataTypes = require('./utils/is/base-data-types');
 module.exports = function (val_) {
     var valTrimmed, valLength, coerced, val = val_;
     if (!isString(val)) {

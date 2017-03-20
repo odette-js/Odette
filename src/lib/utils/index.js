@@ -1,10 +1,11 @@
 var FIND = 'find';
 var FIND_KEY = FIND + 'Key';
+var buildMethods = require('./utils/function/build');
 var isStrictlyEqual = require('./utils/is/strictly-equal');
 var merge = require('./utils/object/merge');
 var capitalize = require('./utils/string/capitalize');
 var mapKeys = require('./utils/array/map/keys');
-var returns = require('./utils/returns');
+var returns = require('./utils/returns/passed');
 var kebab = require('./utils/string/case/kebab');
 var extend = require('./utils/object/extend');
 var forEach = require('./utils/array/for/each');
@@ -56,69 +57,9 @@ var cases = {
     snake: require('./utils/string/case/snake'),
     upper: require('./utils/string/case/upper')
 };
-var returnsHash = {
-    array: require('./utils/returns/array'),
-    baseType: require('./utils/returns/base-type'),
-    emptyString: require('./utils/returns/empty-string'),
-    false: require('./utils/returns/false'),
-    first: require('./utils/returns/first'),
-    object: require('./utils/returns/object'),
-    null: require('./utils/returns/null'),
-    self: require('./utils/returns/self'),
-    second: require('./utils/returns/second'),
-    true: require('./utils/returns/true'),
-};
-var to = {
-    array: require('./utils/to/array'),
-    boolean: require('./utils/cast-boolean'),
-    finite: require('./utils/to/finite'),
-    function: require('./utils/to/function'),
-    integer: require('./utils/to/integer'),
-    iterable: require('./utils/to/iterable'),
-    length: require('./utils/to/length'),
-    number: require('./utils/to/number'),
-    object: require('./utils/to/object'),
-    path: require('./utils/to/path'),
-    stringResult: require('./utils/to/string-result'),
-    string: require('./utils/to/string'),
-};
-var is = {
-    arrayLike: require('./utils/is/array-like'),
-    array: require('./utils/is/array'),
-    boolean: require('./utils/is/boolean'),
-    defined: require('./utils/is/defined'),
-    emptyArray: require('./utils/is/empty-array'),
-    empty: require('./utils/is/empty'),
-    equal: require('./utils/is/equal'),
-    false: require('./utils/is/false'),
-    falsey: require('./utils/is/falsey'),
-    function: require('./utils/is/function'),
-    greaterThan: require('./utils/is/greater-than'),
-    http: require('./utils/is/http'),
-    infinite: require('./utils/is/infinite'),
-    instance: require('./utils/is/instance'),
-    integer: require('./utils/is/integer'),
-    key: require('./utils/is/key'),
-    match: require('./utils/is/match'),
-    nan: require('./utils/is/nan'),
-    nil: require('./utils/is/nil'),
-    null: require('./utils/is/null'),
-    number: require('./utils/is/number'),
-    object: require('./utils/is/object'),
-    of: require('./utils/is/of'),
-    promise: require('./utils/is/promise'),
-    regExp: require('./utils/is/reg-exp'),
-    strictlyEqual: isStrictlyEqual,
-    string: require('./utils/is/string'),
-    symbol: require('./utils/is/symbol'),
-    thennable: require('./utils/is/thennable'),
-    true: require('./utils/is/true'),
-    truthy: require('./utils/is/truthy'),
-    undefined: require('./utils/is/undefined'),
-    validInteger: require('./utils/is/valid-integer'),
-    value: require('./utils/is/value'),
-    window: require('./utils/is/window')
-};
+var returnsHash = require('./utils/returns/passed');
+var to = require('./utils/to');
+var is = require('./utils/is');
 module.exports = extend([{
         to: to,
         merge: merge,
@@ -127,10 +68,10 @@ module.exports = extend([{
         is: merge(isStrictlyEqual, is),
         cacheable: require('./utils/function/cacheable'),
         categoricallyCacheable: require('./utils/function/cacheable/categorically'),
-        castBoolean: require('./utils/cast-boolean'),
-        nonEnumerableProps: require('./utils/non-enumerable-props'),
-        callObjectToString: require('./utils/call-object-to-string'),
-        eq: require('./utils/eq'),
+        castBoolean: require('./utils/boolean/cast'),
+        nonEnumerableProps: require('./utils/object/non-enumerable-props'),
+        callObjectToString: require('./utils/function/object-to-string'),
+        eq: require('./utils/array/eq'),
         concat: require('./utils/array/concat'),
         concatUnique: require('./utils/array/concat/unique'),
         flatten: require('./utils/array/flatten'),
@@ -173,8 +114,8 @@ module.exports = extend([{
         dateOffset: require('./utils/date/offset'),
         date: require('./utils/date'),
         now: require('./utils/date/now'),
+        dateParse: require('./utils/date/current-zone/parse'),
         defaultTo1: require('./utils/default-to/1'),
-        debounce: require('./utils/function/async/debounce'),
         defer: require('./utils/function/async/defer'),
         throttle: require('./utils/function/async/throttle'),
         bindTo: require('./utils/function/bind-to'),
@@ -201,8 +142,8 @@ module.exports = extend([{
         cloneJSON: require('./utils/JSON/clone'),
         parseJSON: require('./utils/JSON/parse'),
         stringifyJSON: require('./utils/JSON/stringify'),
-        keys: require('./utils/keys'),
-        allKeys: require('./utils/keys/all'),
+        keys: require('./utils/object/keys'),
+        allKeys: require('./utils/object/keys/all'),
         euclideanDistance: require('./utils/number/euclidean-distance'),
         euclideanDistanceOrigin: require('./utils/number/euclidean-distance/origin'),
         greaterThan0: require('./utils/number/greater-than/0'),
@@ -252,6 +193,7 @@ module.exports = extend([{
         unescape: require('./utils/string/unescape'),
         unescapeMap: require('./utils/string/unescape-map'),
         units: require('./utils/string/units'),
+        uuid: require('./utils/string/uuid'),
         words: require('./utils/string/words'),
         time: require('./utils/time'),
         indent: require('./utils/string/indent'),
@@ -260,75 +202,48 @@ module.exports = extend([{
         protocols: require('./utils/URL/protocols'),
         reference: require('./utils/URL/reference'),
         stringifyQuery: require('./utils/URL/stringify-query'),
-        matchesBinary: require('./utils/matches-binary'),
-        matchesProperty: require('./utils/matches-property'),
-        matches: require('./utils/matches'),
-        maxVersion: require('./utils/max-version'),
-        baseDataTypes: require('./utils/base-data-types'),
-        negate: require('./utils/negate'),
-        property: require('./utils/property'),
+        matchesBinary: require('./utils/object/matches/binary'),
+        matchesProperty: require('./utils/object/matches/property'),
+        matches: require('./utils/object/matches'),
+        maxVersion: require('./utils/string/max-version'),
+        baseDataTypes: require('./utils/is/base-data-types'),
+        negate: require('./utils/function/negate'),
+        property: require('./utils/object/property'),
         noop: require('./utils/function/noop'),
         parse: require('./utils/object/parse'),
-        type: require('./utils/type')
-    }, mapKeys(is, mapKeysPrefix('is')), mapKeys(returnsHash, mapKeysPrefix('returns')), mapKeys(to, mapKeysPrefix('to')), mapKeys(cases, function (value, key) {
+        type: require('./utils/string/type'),
+        buildMethods: buildMethods
+    },
+    mapKeys(is, mapKeysPrefix('is')),
+    mapKeys(returnsHash, mapKeysPrefix('returns')),
+    mapKeys(to, mapKeysPrefix('to')),
+    mapKeys(cases, function (value, key) {
         return key + 'Case';
     }),
-    buildCallers('forEach', forEach, forEachRight),
-    buildCallers('forOwn', forOwn, forOwnRight),
-    buildCallers('forIn', forIn, forInRight),
-    buildCallers('map', map, mapRight),
-    buildCallers('mapValues', mapValues, mapValuesRight),
-    buildCallers('mapKeys', mapKeys, mapKeysRight),
-    buildCallers('where', where, whereRight),
-    buildCallers('whereNot', whereNot, whereNotRight),
-    buildCallers(FIND, find, findRight),
-    buildCallers(FIND + 'In', findIn, findInRight),
-    buildCallers(FIND + 'Own', findOwn, findOwnRight),
-    buildCallers(FIND_KEY, findKey, findKeyRight),
-    buildCallers(FIND_KEY + 'Own', findKeyOwn, findKeyOwnRight),
-    buildCallers(FIND_KEY + 'In', findKeyIn, findKeyInRight),
-    buildCallers(FIND + 'Where', findWhere, findWhereRight),
-    buildCallers(FIND_KEY + 'Where', findKeyWhere, findKeyWhereRight),
-    buildCallers('reduce', reduce, reduceRight),
-    buildCallers('filter', filter, filterRight),
-    buildCallers('filterNegative', filterNegative, filterNegativeRight),
-    buildCallers('dropWhile', dropWhile, dropWhileRight)
+    buildMethods('forEach', forEach, forEachRight),
+    buildMethods('forOwn', forOwn, forOwnRight),
+    buildMethods('forIn', forIn, forInRight),
+    buildMethods('map', map, mapRight),
+    buildMethods('mapValues', mapValues, mapValuesRight),
+    buildMethods('mapKeys', mapKeys, mapKeysRight),
+    buildMethods('where', where, whereRight),
+    buildMethods('whereNot', whereNot, whereNotRight),
+    buildMethods(FIND, find, findRight),
+    buildMethods(FIND + 'In', findIn, findInRight),
+    buildMethods(FIND + 'Own', findOwn, findOwnRight),
+    buildMethods(FIND_KEY, findKey, findKeyRight),
+    buildMethods(FIND_KEY + 'Own', findKeyOwn, findKeyOwnRight),
+    buildMethods(FIND_KEY + 'In', findKeyIn, findKeyInRight),
+    buildMethods(FIND + 'Where', findWhere, findWhereRight),
+    buildMethods(FIND_KEY + 'Where', findKeyWhere, findKeyWhereRight),
+    buildMethods('reduce', reduce, reduceRight),
+    buildMethods('filter', filter, filterRight),
+    buildMethods('filterNegative', filterNegative, filterNegativeRight),
+    buildMethods('dropWhile', dropWhile, dropWhileRight)
 ]);
 
 function mapKeysPrefix(prefix) {
     return function (value, key) {
         return prefix + capitalize(key);
     };
-}
-
-function buildCallers(prefix, handler, second, memo_) {
-    var memo = memo_ || {},
-        CALL = 'Call',
-        BOUND = 'Bound',
-        TRY = 'Try';
-    memo[prefix] = handler;
-    memo[prefix + CALL] = function (array, method, arg) {
-        return handler(array, function (item) {
-            return item[method](arg);
-        });
-    };
-    memo[prefix + CALL + BOUND] = function (array, arg) {
-        return handler(array, function (fn) {
-            return fn(arg);
-        });
-    };
-    memo[prefix + CALL + TRY] = function (array, method, arg, catcher, finallyer) {
-        return handler(array, doTry(function (item) {
-            return item[method](arg);
-        }, catcher, finallyer));
-    };
-    memo[prefix + CALL + BOUND + TRY] = function (array, method, arg, catcher, finallyer) {
-        return handler(array, doTry(function (item) {
-            return item(arg);
-        }, catcher, finallyer));
-    };
-    if (second) {
-        buildCallers(prefix + 'Right', second, null, memo);
-    }
-    return memo;
 }

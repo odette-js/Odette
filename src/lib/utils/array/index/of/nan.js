@@ -1,4 +1,4 @@
-module.exports = function (array, fromIndex, toIndex, fromRight) {
+module.exports = function indexOfNaN(array, fromIndex, toIndex, fromRight) {
     if (!array) {
         return -1;
     }

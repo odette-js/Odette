@@ -1,8 +1,8 @@
-var stringify = require('./utils/stringify');
+var stringify = require('./utils/JSON/stringify');
 var parse = require('./utils/object/parse');
-module.exports = function (fn) {
+module.exports = function cacheableCopy(fn) {
     var cache = {};
-    return function (string) {
+    return function cacheableCopyInstance(string) {
         var result, cached;
         if (!(cached = cache[string])) {
             result = fn(string);

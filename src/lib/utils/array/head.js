@@ -1,4 +1,4 @@
 var slice = require('./utils/array/slice');
-module.exports = function (array, n) {
+module.exports = function head(array, n) {
     return slice(array, n);
 };

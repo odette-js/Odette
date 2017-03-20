@@ -1,4 +1,4 @@
-var keys = require('./utils/keys');
-module.exports = function (obj) {
+var keys = require('./utils/object/keys');
+module.exports = function isEmpty(obj) {
     return !keys(obj).keys;
 };

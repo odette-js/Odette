@@ -1,7 +1,7 @@
 var blockWrapper = require('./utils/function/block-wrapper');
 var isFunction = require('./utils/is/function');
 var unwrapBlock = require('./utils/function/unwrap-block');
-module.exports = function (context, string_, args) {
+module.exports = function evaluate(context, string_, args) {
     var string = string_;
     if (isFunction(string_)) {
         string = unwrapBlock(string_);

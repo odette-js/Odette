@@ -1,6 +1,6 @@
 var SYMBOL = 'symbol';
 var isStrictlyEqual = require('./utils/is/strictly-equal');
-var callObjectToString = require('./utils/call-object-to-string');
+var callObjectToString = require('./utils/function/object-to-string');
 var createToStringResult = require('./utils/to/string-result');
 var symbolTag = createToStringResult(SYMBOL);
 var isObject = require('./utils/is/object');

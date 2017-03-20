@@ -1,1 +1,1 @@
-module.exports = require('./utils/is/type-wrap')('object', require('./utils/cast-boolean'));
+module.exports = require('./utils/is/type-wrap')('object', require('./utils/boolean/cast'));

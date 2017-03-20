@@ -1,5 +1,5 @@
-module.exports = function (iteratorFn) {
-    return function (value, key, third) {
+module.exports = function reverseParameters(iteratorFn) {
+    return function reversesParameters(value, key, third) {
         return iteratorFn(key, value, third);
     };
 };

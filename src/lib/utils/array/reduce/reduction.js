@@ -1,6 +1,6 @@
 var isUndefined = require('./utils/is/undefined');
 var keyGenerator = require('./utils/array/reduce/key-generator');
-module.exports = function (accessor, iteratee, memo_, dir, startsAt1) {
+module.exports = function reduction(accessor, iteratee, memo_, dir, startsAt1) {
     var value, nextMemo, next, memo = memo_,
         generated = keyGenerator(accessor, dir);
     if (startsAt1) {

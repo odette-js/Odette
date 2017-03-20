@@ -1,6 +1,6 @@
 var arrayKeyGenerator = require('./utils/generator/array');
-var keys = require('./utils/keys');
-module.exports = function (object, dir, cap, incrementor) {
+var keys = require('./utils/object/keys');
+module.exports = function objectGenerator(object, dir, cap, incrementor) {
     var objectKeys = keys(object);
     return arrayKeyGenerator(objectKeys, dir, cap, incrementor, proxy);
 
