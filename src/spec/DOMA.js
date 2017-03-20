@@ -237,7 +237,7 @@ application.scope().run(window, function (module, app, _, factories, $) {
                     divs.item(0).on('click', function () {
                         test.expect(1).toBe(1);
                     });
-                    divs.click();
+                    divs.item(0).click();
                 }, 1);
             });
         });
