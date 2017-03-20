@@ -235,7 +235,9 @@ var isNullMessage = 'object must not be null or ' + UNDEFINED,
                     return stringify(this.toArray());
                 },
                 toJSON: function () {
-                    return results(this.toArray(), TO_JSON);
+                    return map(this.toArray(), function (item) {
+                        return item && item.toJSON ? item.toJSON() : item;
+                    });
                 },
                 copy: function () {
                     return this.items.slice(0);
