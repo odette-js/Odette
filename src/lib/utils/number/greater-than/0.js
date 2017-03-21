@@ -1,3 +1,4 @@
+var isGreaterThan = require('./utils/is/greater-than');
 module.exports = function (number) {
-    return isGreaterThan(0, number);
+    return isGreaterThan(number, 0);
 };

@@ -8,6 +8,8 @@ var isNil = require('./utils/is/nil');
 var toNumber = require('./utils/to/number');
 var createToStringResult = require('./utils/to/string-result');
 var isStrictlyEqual = require('./utils/is/strictly-equal');
+var isObject = require('./utils/is/object');
+var has = require('./utils/object/has');
 // Internal recursive comparison function for `isEqual`
 module.exports = eq;
 

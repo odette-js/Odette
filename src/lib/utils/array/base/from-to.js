@@ -1,7 +1,7 @@
 var toInteger = require('./utils/to/integer');
 module.exports = function fromTo(values, runner, _start, _end, step) {
     if (!step) {
-        return [];
+        return;
     }
     var goingDown = step < 0,
         end = _end,
@@ -36,5 +36,4 @@ module.exports = function fromTo(values, runner, _start, _end, step) {
             index += step;
         } while (--iterations > 0);
     }
-    return values;
 };

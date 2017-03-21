@@ -248,7 +248,7 @@ function run(it, settings, finished) {
             if (expecting && expecting !== expectations.length) {
                 err('Number of expectations expected did not match number of expectations called in: ' + makeName(it.name) + ' expected: ' + expecting + ', got: ' + expectations.length);
             }
-            finished(_.whereNot(it.expectations, {
+            finished(_.filterNegative(it.expectations, {
                 success: BOOLEAN_TRUE
             }));
         },

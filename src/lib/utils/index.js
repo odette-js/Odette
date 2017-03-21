@@ -20,10 +20,10 @@ var mapValues = require('./utils/array/map/values');
 var mapValuesRight = require('./utils/array/map/values-right');
 var mapKeys = require('./utils/array/map/keys');
 var mapKeysRight = require('./utils/array/map/keys-right');
-var where = require('./utils/array/where');
-var whereRight = require('./utils/array/where/right');
-var whereNot = require('./utils/array/where/not');
-var whereNotRight = require('./utils/array/where/not-right');
+// var where = require('./utils/array/where');
+// var whereRight = require('./utils/array/where/right');
+// var whereNot = require('./utils/array/where/not');
+// var whereNotRight = require('./utils/array/where/not-right');
 var find = require('./utils/array/find');
 var findRight = require('./utils/array/find/right');
 var findIn = require('./utils/array/find/in');
@@ -42,12 +42,6 @@ var filter = require('./utils/array/filter');
 var filterRight = require('./utils/array/filter/right');
 var filterNegative = require('./utils/array/filter/negative');
 var filterNegativeRight = require('./utils/array/filter/negative-right');
-var dropWhile = require('./utils/array/drop/while');
-var dropWhileRight = require('./utils/array/drop/while-right');
-var findWhere = require('./utils/array/find/where');
-var findWhereRight = require('./utils/array/find/where-right');
-var findKeyWhere = require('./utils/array/find/key-where');
-var findKeyWhereRight = require('./utils/array/find/key-where-right');
 var doTry = require('./utils/function/do-try');
 var cases = {
     spinal: kebab,
@@ -226,20 +220,17 @@ module.exports = extend([{
     buildMethods('map', map, mapRight),
     buildMethods('mapValues', mapValues, mapValuesRight),
     buildMethods('mapKeys', mapKeys, mapKeysRight),
-    buildMethods('where', where, whereRight),
-    buildMethods('whereNot', whereNot, whereNotRight),
+    // buildMethods('where', where, whereRight),
+    // buildMethods('whereNot', whereNot, whereNotRight),
     buildMethods(FIND, find, findRight),
     buildMethods(FIND + 'In', findIn, findInRight),
     buildMethods(FIND + 'Own', findOwn, findOwnRight),
     buildMethods(FIND_KEY, findKey, findKeyRight),
     buildMethods(FIND_KEY + 'Own', findKeyOwn, findKeyOwnRight),
     buildMethods(FIND_KEY + 'In', findKeyIn, findKeyInRight),
-    buildMethods(FIND + 'Where', findWhere, findWhereRight),
-    buildMethods(FIND_KEY + 'Where', findKeyWhere, findKeyWhereRight),
     buildMethods('reduce', reduce, reduceRight),
     buildMethods('filter', filter, filterRight),
-    buildMethods('filterNegative', filterNegative, filterNegativeRight),
-    buildMethods('dropWhile', dropWhile, dropWhileRight)
+    buildMethods('filterNegative', filterNegative, filterNegativeRight)
 ]);
 
 function mapKeysPrefix(prefix) {

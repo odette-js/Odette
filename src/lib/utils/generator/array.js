@@ -6,10 +6,12 @@ module.exports = function arrayGenerator(array, dir_, cap_, incrementor_, transf
         length = array.length,
         counter = dir > 0 ? -1 : length,
         transformer = transformer_ || returnsFirstArgument,
+        incrementor = incrementor_ || returnsSecondArgument,
         cap = cap_ || (counter < 0 ? function (counter) {
             return counter >= length;
-        } : greaterThanZero),
-        incrementor = incrementor_ || returnsSecondArgument;
+        } : function (counter) {
+            return counter < 0;
+        });
     return function generateNext(fn) {
         counter += dir;
         if (cap(counter)) {
