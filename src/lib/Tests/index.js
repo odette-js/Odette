@@ -231,7 +231,7 @@ function makeName(list) {
 }
 
 function run(it, settings, finished) {
-    var startTime = 0,
+    var captureError, startTime = 0,
         ran = BOOLEAN_FALSE,
         three = function () {
             var expecting, expectations;
@@ -254,15 +254,8 @@ function run(it, settings, finished) {
         },
         done = three,
         callback = it.callback,
-        one = function () {
-            startTime = time();
-            callback(done);
-        },
         callLength = callback.length,
         two = err;
-    if (callLength) {
-        three = BOOLEAN_FALSE;
-    }
     it.async = !three;
     it.running = BOOLEAN_TRUE;
     setTimeout(function () {
@@ -277,6 +270,21 @@ function run(it, settings, finished) {
             wraptries(one, two, three);
         }
     });
+
+    function one() {
+        startTime = time();
+        callback(captureError, done);
+    }
+
+    function canCaptureError(fn) {
+        return function () {
+            var args = arguments,
+                context = this;
+            return wraptries(function () {
+                return fn.apply(context, args);
+            }, err);
+        };
+    }
 }
 
 function triesToRun(its, focus, finished) {
