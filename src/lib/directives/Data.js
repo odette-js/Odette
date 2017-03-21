@@ -8,7 +8,7 @@ app.scope(function (app) {
                 return this;
             },
             set: function (key, value) {
-                return (!this.is('frozen') && this.mutable(key)) ? this.overwrite(key, value) : BOOLEAN_FALSE;
+                return (!this.is('frozen') && this.mutable(key)) ? this.write(key, value) : BOOLEAN_FALSE;
             },
             immutable: function (key) {
                 return this[IMMUTABLES][key];
@@ -16,10 +16,9 @@ app.scope(function (app) {
             mutable: function (key) {
                 return !this.immutable(key);
             },
-            overwrite: function (key, value) {
+            write: function (key, value) {
                 var data = this,
-                    current = data[CURRENT],
-                    currentValue = current[key];
+                    currentValue = data.get(key);
                 if (!isEqual(currentValue, value)) {
                     if (value === UNDEFINED) {
                         return data.unset(key);
@@ -30,6 +29,9 @@ app.scope(function (app) {
                     return BOOLEAN_TRUE;
                 }
                 return BOOLEAN_FALSE;
+            },
+            overwrite: function (key, value) {
+                return this.write(key, value);
             },
             get: function (key) {
                 return this[CURRENT][key];
@@ -86,7 +88,7 @@ app.scope(function (app) {
                 }) && (isString(lastkey) ? UNDEFINED : current[lastkey]);
             },
             has: function (key) {
-                return this[CURRENT][key] !== UNDEFINED;
+                return this.get(key) !== UNDEFINED;
             },
             forOwn: function (fn) {
                 return forOwn(this[CURRENT], fn, this);
