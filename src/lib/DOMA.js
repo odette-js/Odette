@@ -803,7 +803,7 @@ function nodeComparison(_a, _b, _hash, _stopper, context) {
     }
 
     function diffNodeProperties(a, bAttrs, props, style_) {
-        var style, bKeys, aAttributes = a.attributes,
+        var style, bKeys, aStyle, styl, stylKeys, styleIterator, aAttributes = a.attributes,
             aLength = aAttributes[LENGTH],
             bKeys = keys(bAttrs),
             bLength = bKeys[LENGTH],
