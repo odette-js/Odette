@@ -1,1 +1,0 @@
-module.exports = require('./utils/array/base/for-each-end-right');

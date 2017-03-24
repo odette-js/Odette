@@ -1,5 +1,5 @@
 var isUndefined = require('./utils/is/undefined');
-var findIndex = require('./utils/array/find/key');
+var forEachEndRight = require('./utils/array/base/for-each-end-right');
 var bindWith = require('./utils/function/bind-with');
 var isArrayLike = require('./utils/is/array-like');
 var reduce = require('./utils/array/reduce');
@@ -9,7 +9,7 @@ module.exports = function uniqueBy(list, comparator) {
         return list;
     }
     return reduce(list, function uniqueChecker(memo, a, index, list) {
-        if (isUndefined(findIndex(memo, bindWith(comparator, [null, a])))) {
+        if (isUndefined(forEachEndRight(memo, bindWith(comparator, [null, a])))) {
             memo.push(a);
         }
         return memo;

@@ -1,9 +1,9 @@
-var isUndefined = require('./utils/is/undefined');
+var isNil = require('./utils/is/nil');
 module.exports = function accessorCurry(fn) {
-    return function accessor(value, callback, index) {
+    return function accessor(object, callback, start, end) {
         var foundAt;
-        if (!isUndefined(foundAt = fn(value, callback, index))) {
-            return value[foundAt];
+        if (!isNil(foundAt = fn(object, callback, start, end))) {
+            return object[foundAt];
         }
     };
 };

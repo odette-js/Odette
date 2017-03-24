@@ -23,7 +23,7 @@ function Tests(identifier_) {
     var aQ = [];
     var its = [];
     var descriptions = [];
-    var fin = fin;
+    var fin = [];
     var states = {};
     var tester = testy();
     var tryToRun = triesToRun(its, tester.focus, function () {

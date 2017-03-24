@@ -21,10 +21,10 @@ module.exports = function (settings) {
         res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
         next();
     });
-    app.use(function (req, res, next) {
-        console.log(req.url);
-        next();
-    });
+    // app.use(function (req, res, next) {
+    //     console.log(req.url);
+    //     next();
+    // });
     app.post('/postecho', function (req, res, next) {
         if (req.body && req.body.success) {
             res.send({
