@@ -243,7 +243,9 @@ app.scope(function (app) {
                 for (; i < subLength && !stopped; i++) {
                     handler = subset[i];
                     if (!handler.disabled && events.queue(stack, handler, evnt)) {
-                        handler.fn(evnt);
+                        wraptry(function () {
+                            handler.fn(evnt);
+                        }, console.error);
                         events.unQueue(stack, handler, evnt);
                     }
                     stopped = !!evnt.is(PROPAGATION_HALTED);

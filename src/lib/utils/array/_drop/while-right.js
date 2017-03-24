@@ -1,1 +1,0 @@
-module.exports = require('./utils/array/drop/maker')(require('./utils/array/filter/right'));

@@ -803,7 +803,7 @@ function nodeComparison(_a, _b, _hash, _stopper, context) {
     }
 
     function diffNodeProperties(a, bAttrs, props, style_) {
-        var style, bKeys, aAttributes = a.attributes,
+        var style, bKeys, aStyle, styl, stylKeys, styleIterator, aAttributes = a.attributes,
             aLength = aAttributes[LENGTH],
             bKeys = keys(bAttrs),
             bLength = bKeys[LENGTH],
@@ -2917,13 +2917,14 @@ app.scope(function (app) {
                     unregisteredElements.keep(manager.registeredElementName(), manager[__ELID__], manager);
                 },
                 registerElement: function (name, options) {
-                    var xtends, opts = options || {};
+                    var opts = options || {};
                     var manager = this;
                     var docManager = this.document;
                     var doc = docManager.element();
                     var events = merge({}, opts.events);
                     var managerFn = opts.managerFn || {};
                     var autotriggers = {};
+                    var xtends = options.extends;
                     if (registeredElements[name]) {
                         if (registeredElements[name] === BOOLEAN_TRUE) {
                             exception('custom element names must not be used natively by browsers');
