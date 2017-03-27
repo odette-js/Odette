@@ -6,7 +6,6 @@ var merge = require('./utils/object/merge');
 var capitalize = require('./utils/string/capitalize');
 var mapKeys = require('./utils/array/map/keys');
 var returns = require('./utils/returns/passed');
-var kebab = require('./utils/string/case/kebab');
 var extend = require('./utils/object/extend');
 var forEach = require('./utils/array/for/each');
 var forEachRight = require('./utils/array/for/each-right');
@@ -20,10 +19,6 @@ var mapValues = require('./utils/array/map/values');
 var mapValuesRight = require('./utils/array/map/values-right');
 var mapKeys = require('./utils/array/map/keys');
 var mapKeysRight = require('./utils/array/map/keys-right');
-// var where = require('./utils/array/where');
-// var whereRight = require('./utils/array/where/right');
-// var whereNot = require('./utils/array/where/not');
-// var whereNotRight = require('./utils/array/where/not-right');
 var find = require('./utils/array/find');
 var findRight = require('./utils/array/find/right');
 var findIn = require('./utils/array/find/in');
@@ -44,8 +39,7 @@ var filterNegative = require('./utils/array/filter/negative');
 var filterNegativeRight = require('./utils/array/filter/negative-right');
 var doTry = require('./utils/function/do-try');
 var cases = {
-    spinal: kebab,
-    kebab: kebab,
+    kebab: require('./utils/string/case/kebab'),
     camel: require('./utils/string/case/camel'),
     lower: require('./utils/string/case/lower'),
     snake: require('./utils/string/case/snake'),
@@ -127,8 +121,6 @@ module.exports = extend([{
         wraptry: require('./utils/function/wrap-try'),
         objectGenerator: require('./utils/generator/object'),
         arrayGenerator: require('./utils/generator/array'),
-        isNotNan: require('./utils/is/not/nan'),
-        isNotStrictlyEqual: require('./utils/is/not/strictly-equal'),
         iterateOverPath: require('./utils/iterate/over-path'),
         iterateIn: require('./utils/iterate/in'),
         iterateOwn: require('./utils/iterate/own'),
@@ -220,8 +212,6 @@ module.exports = extend([{
     buildMethods('map', map, mapRight),
     buildMethods('mapValues', mapValues, mapValuesRight),
     buildMethods('mapKeys', mapKeys, mapKeysRight),
-    // buildMethods('where', where, whereRight),
-    // buildMethods('whereNot', whereNot, whereNotRight),
     buildMethods(FIND, find, findRight),
     buildMethods(FIND + 'In', findIn, findInRight),
     buildMethods(FIND + 'Own', findOwn, findOwnRight),

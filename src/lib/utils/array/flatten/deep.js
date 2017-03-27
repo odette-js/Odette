@@ -1,4 +1,7 @@
 var flattens = require('./utils/array/flatten/worker');
-module.exports = function flattenDeep(list) {
-    return flattens(list, flattens);
+var isArrayLike = require('./utils/is/array-like');
+module.exports = flattenDeep;
+
+function flattenDeep(list) {
+    return flattens(list, isArrayLike, flattenDeep);
 };

@@ -1,6 +1,6 @@
 var _ = require('./utils');
 var findIn = require('./in');
-test.describe('findIn', function () {
+b.describe('findIn', function () {
     var numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9];
     Class.prototype = {
         one: 5,
@@ -14,44 +14,44 @@ test.describe('findIn', function () {
         this.two = 2;
         this.five = 'fiver';
     }
-    test.it('is a function', function () {
-        test.expect(findIn).toBeFunction();
+    b.it('is a function', function (t) {
+        t.expect(findIn).toBeFunction();
     });
-    test.it('iterates through lists in reverse', function () {
+    b.it('iterates through lists in reverse', function (t) {
         var list = [];
         findIn(numbers, function (value) {
             list.push(value);
         });
-        test.expect(list).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+        t.expect(list).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
     });
-    test.it('can be stopped by returning a truthy value', function () {
+    b.it('can be stopped by returning a truthy value', function (t) {
         var list = [];
         var value = findIn(numbers, function (number) {
             list.push(number);
             return number === 5;
         });
-        test.expect(value).toEqual(5);
-        test.expect(list).toEqual([1, 2, 3, 4, 5]);
+        t.expect(value).toEqual(5);
+        t.expect(list).toEqual([1, 2, 3, 4, 5]);
     }, 2);
-    test.it('works with objects', function () {
+    b.it('works with objects', function (t) {
         var keys = [];
         var value = findIn(new Class(), function (number, key) {
             keys.push(key);
         });
-        test.expect(value).toBeUndefined();
-        test.expect(_.contains(keys, 'one')).toBeTrue();
-        test.expect(_.contains(keys, 'two')).toBeTrue();
-        test.expect(_.contains(keys, 'three')).toBeTrue();
-        test.expect(_.contains(keys, 'four')).toBeTrue();
-        test.expect(_.contains(keys, 'five')).toBeTrue();
+        t.expect(value).toBeUndefined();
+        t.expect(_.contains(keys, 'one')).toBeTrue();
+        t.expect(_.contains(keys, 'two')).toBeTrue();
+        t.expect(_.contains(keys, 'three')).toBeTrue();
+        t.expect(_.contains(keys, 'four')).toBeTrue();
+        t.expect(_.contains(keys, 'five')).toBeTrue();
     }, 6);
-    test.it('can also stop early when iterating over an object', function () {
+    b.it('can also stop early when iterating over an object', function (t) {
         var keys = [];
         var value = findIn(new Class(), function (value, key) {
             keys.push(key);
             return value === 15;
         });
-        test.expect(keys.length).not.toBeGreaterThan(4);
-        test.expect(value).toBe(15);
+        t.expect(keys.length).notToBeGreaterThan(4);
+        t.expect(value).toBe(15);
     }, 2);
 });

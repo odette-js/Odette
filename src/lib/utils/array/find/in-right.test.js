@@ -1,6 +1,6 @@
 var _ = require('./utils');
 var findInRight = require('./in-right');
-test.describe('findInRight', function () {
+b.describe('findInRight', function () {
     var numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9];
     Class.prototype = {
         one: 5,
@@ -14,42 +14,42 @@ test.describe('findInRight', function () {
         this.two = 2;
         this.five = 'fiver';
     }
-    test.it('is a function', function () {
-        test.expect(findInRight).toBeFunction();
+    b.it('is a function', function (t) {
+        t.expect(findInRight).toBeFunction();
     });
-    test.it('iterates through lists in reverse', function () {
+    b.it('iterates through lists in reverse', function (t) {
         var list = [];
         findInRight(numbers, function (value) {
             list.push(value);
         });
-        test.expect(list).toEqual([9, 8, 7, 6, 5, 4, 3, 2, 1]);
+        t.expect(list).toEqual([9, 8, 7, 6, 5, 4, 3, 2, 1]);
     });
-    test.it('can be stopped when a truthy value is returned', function () {
+    b.it('can be stopped when a truthy value is returned', function (t) {
         var list = [];
         var value = findInRight(numbers, function (value, index) {
             list.push(value);
             return index / 2 === 2;
         });
-        test.expect(list).toEqual([9, 8, 7, 6, 5]);
-        test.expect(value).toBe(5);
+        t.expect(list).toEqual([9, 8, 7, 6, 5]);
+        t.expect(value).toBe(5);
     }, 2);
-    test.it('really shines when iterating over objects', function () {
+    b.it('really shines when iterating over objects', function (t) {
         var keys = [];
         var instance = new Class();
         findInRight(instance, function (value, key) {
             keys.push(key);
         });
-        test.expect(_.contains(keys, 'one')).toBeTrue();
-        test.expect(_.contains(keys, 'two')).toBeTrue();
-        test.expect(_.contains(keys, 'five')).toBeTrue();
+        t.expect(_.contains(keys, 'one')).toBeTrue();
+        t.expect(_.contains(keys, 'two')).toBeTrue();
+        t.expect(_.contains(keys, 'five')).toBeTrue();
     }, 3);
-    test.it('iterates over prototype keys', function () {
+    b.it('iterates over prototype keys', function (t) {
         var keys = [];
         var instance = new Class();
         findInRight(instance, function (value, key) {
             keys.push(key);
         });
-        test.expect(_.contains(keys, 'three')).toBeTrue();
-        test.expect(_.contains(keys, 'four')).toBeTrue();
+        t.expect(_.contains(keys, 'three')).toBeTrue();
+        t.expect(_.contains(keys, 'four')).toBeTrue();
     }, 2);
 });

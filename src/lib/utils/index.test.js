@@ -1,8 +1,6 @@
 var _ = require('.');
-test.describe('_', function () {
-    test.it('is an object', function () {
-        test.expect(_).toBeObject();
-    }, 1);
+b.describe('_', function () {
+    b.it('is an object', function (t) {
+        t.expect(_).toBeObject();
+    });
 });
-require('./array/index.test');
-// test.done(function () {});

@@ -1,14 +1,14 @@
 var _ = require('./utils');
 var each = require('./each');
-test.describe('each', function () {
-    test.it('should be a function', function () {
-        test.expect(each).toBeFunction(true);
-    }, 1);
-    test.it('should return a function', function () {
-        test.expect(each()).toBeFunction(true);
-    }, 1);
-    test.it('should return undefined when nothing is passed', function () {
+b.describe('each', function () {
+    b.it('should be a function', function (t) {
+        t.expect(each).toBeFunction(true);
+    });
+    b.it('should return a function', function (t) {
+        t.expect(each()).toBeFunction(true);
+    });
+    b.it('should return undefined when nothing is passed', function (t) {
         var iterates = each();
-        test.expect(iterates()).toBeUndefined();
-    }, 1);
+        t.expect(iterates()).toBeUndefined();
+    });
 });

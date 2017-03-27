@@ -13,6 +13,9 @@ var id = 0,
     TO_BE_STRICTLY_EQUAL_TO = TO_BE + 'strictly equal to ',
     identifier = 0,
     _ = require('./lib/utils'),
+    isEqual = _.isEqual,
+    forEach = _.forEach,
+    forOwn = _.forOwn,
     stringify = _.stringify;
 module.exports = Tests;
 
@@ -40,11 +43,22 @@ function Tests(identifier_) {
     this.beforeEach = checkFinished(states, beforeEach(beQ));
     this.done = done(states, descriptions, its, tryToRun, aQ);
     this.it = checkFinished(states, it(its, descriptions, aeQ, beQ));
+    this.battery = checkFinished(states, battery(descriptions, its));
     this.describe = checkFinished(states, describe(descriptions, aeQ, beQ));
     this.group = function () {
         return Tests(++id);
     };
     return this;
+}
+
+function battery(descriptions, its) {
+    return bat;
+
+    function bat(name, list, runner, counter) {
+        if (Array.isArray(name)) {
+            //
+        }
+    };
 }
 
 function checkFinished(states, fn) {
@@ -307,7 +321,7 @@ function triesToRun(its, focus, finished) {
         run(current, settings, function (failures) {
             settings.index++;
             settings.running = BOOLEAN_FALSE;
-            _.forEach(failures, err);
+            forEach(failures, err);
             recurse();
         });
     };
@@ -342,20 +356,20 @@ function setupBasicTests(maker) {
         return EXPECTED + SPACE + stringify(current) + SPACE_NOT + TO_BE_STRICTLY_EQUAL_TO + stringify(comparison);
     });
     maker('toEqual', function (current, comparison) {
-        return _.isEqual(current, comparison);
+        return isEqual(current, comparison);
     }, function (current, comparison) {
         return EXPECTED + SPACE + stringify(current) + TO_EQUAL + stringify(comparison);
     }, function (current, comparison) {
         return EXPECTED + SPACE + stringify(current) + SPACE_NOT + TO_EQUAL + stringify(comparison);
     });
     maker('toEvaluateTo', function (current, comparison) {
-        return _.isEqual(current, comparison);
+        return isEqual(current, comparison);
     }, function (current, comparison) {
         return EXPECTED + SPACE + 'function' + TO_EVALUATE_TO + stringify(comparison);
     }, function (current, comparison) {
         return EXPECTED + SPACE + 'function not' + TO_EVALUATE_TO + stringify(comparison);
     }, BOOLEAN_TRUE);
-    _.forOwn(_.is, function (value, key) {
+    forOwn(_.is, function (value, key) {
         maker('toBe' + _.capitalize(key), value, function (current, comparison) {
             return EXPECTED + SPACE + stringify(current) + TO_BE + key;
         }, function (current, comparison) {

@@ -1,6 +1,6 @@
 var isOf = require('./utils/is/of');
 var CONSTRUCTOR = 'constructor';
-module.exports = function (instance, constructor_) {
+module.exports = function instance(instance, constructor_) {
     var constructor = constructor_;
     if (has(constructor, CONSTRUCTOR)) {
         constructor = constructor[CONSTRUCTOR];

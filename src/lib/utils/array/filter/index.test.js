@@ -1,22 +1,22 @@
 var _ = require('./utils');
 var filter = require('.');
-test.describe('filter', function () {
+b.describe('filter', function () {
     var numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-    test.it('creates a new list of elements', function () {
+    b.it('creates a new list of elements', function (t) {
         var list = filter(numbers, function () {
             return true;
         });
-        test.expect(list).toEqual(numbers);
-        test.expect(list).not.toBe(numbers);
+        t.expect(list).toEqual(numbers);
+        t.expect(list).notToBe(numbers);
     }, 2);
-    test.it('removes any elements that did not return a truthy value', function () {
+    b.it('removes any elements that did not return a truthy value', function (t) {
         var list = filter(numbers, function (value) {
             return value === 2 || value === 6;
         });
-        test.expect(list).toEqual([2, 6]);
+        t.expect(list).toEqual([2, 6]);
     });
-    test.it('can also use objects to filter', function () {
-        test.expect(filter([{
+    b.it('can also use objects to filter', function (t) {
+        t.expect(filter([{
             one: 1
         }, {
             two: 2
@@ -37,8 +37,8 @@ test.describe('filter', function () {
             two: 2
         }]);
     });
-    test.it('can use arrays to filter', function () {
-        test.expect(filter([{
+    b.it('can use arrays to filter', function (t) {
+        t.expect(filter([{
             one: 1
         }, {
             two: 2
@@ -53,6 +53,3 @@ test.describe('filter', function () {
         }]);
     });
 });
-require('./negative.test');
-require('./negative-right.test');
-require('./right.test');

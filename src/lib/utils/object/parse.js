@@ -1,4 +1,4 @@
-var isNotNan = require('./utils/is/not/nan');
+var isNotNan = require('./utils/is/not-nan');
 var isString = require('./utils/is/string');
 var wraptry = require('./utils/function/wrap-try');
 var couldBeJSON = require('./utils/JSON/could-be');

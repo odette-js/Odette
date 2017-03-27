@@ -1,9 +1,10 @@
 var reduce = require('./utils/array/reduce');
-var isArrayLike = require('./utils/is/array-like');
-module.exports = function flattenWorker(list, next) {
+module.exports = flattenWorker;
+
+function flattenWorker(list, filter, next) {
     return reduce(list, function (memo, item) {
-        if (isArrayLike(item)) {
-            return memo.concat(next(item));
+        if (filter(item)) {
+            return memo.concat(next(item, filter, next));
         } else {
             memo.push(item);
             return memo;
