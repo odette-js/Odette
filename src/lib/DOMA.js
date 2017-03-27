@@ -2791,6 +2791,7 @@ app.scope(function (app) {
                     return nodeComparison(a, b, hash_, stopper, manager);
                 },
                 supports: {},
+                isAttached: isAttached,
                 // deltas: deltas,
                 registeredDomConstructors: registeredDomConstructors,
                 registeredConstructors: registeredConstructors,
@@ -4331,12 +4332,13 @@ app.scope(function (app) {
                         owner = manager.owner,
                         fragmentManager = isAppendable(els) ? owner.returnsManager(els) : owner.$(els).fragment(),
                         fragment = fragmentManager.element(),
+                        isFragment = fragmentManager.is('fragment'),
                         children = index == NULL ? NULL : manager.children(),
                         child = children && children.item(index) || NULL,
                         element = child && child.element() || NULL,
                         managerElement = manager && manager.element(),
                         returns = fragmentManager.children(),
-                        fragmentChildren = collectCustom(fragmentManager, BOOLEAN_TRUE),
+                        fragmentChildren = collectCustom(fragmentManager, BOOLEAN_TRUE).concat(fragmentManager.is('fragment') ? [] : [fragment]),
                         detachNotify = dispatchDetached(fragmentChildren, owner),
                         returnValue = managerElement && insertBefore(managerElement, fragment, element),
                         notify = isAttached(managerElement, owner) && dispatchAttached(fragmentChildren, owner);
