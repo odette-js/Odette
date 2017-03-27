@@ -1747,7 +1747,7 @@ function defer(fn, time, context) {
         clearTimeout(id);
         id = setTimeout(function () {
             fn.apply(context, args);
-        });
+        }, time);
         return id;
     };
 }
