@@ -1,3 +1,4 @@
+var b = require('batterie');
 var _ = require('./utils');
 var forEachEnd = require('./for-each-end');
 b.describe('forEachEnd', function () {

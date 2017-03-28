@@ -1,3 +1,4 @@
+var b = require('batterie');
 var _ = require('./utils');
 var find = require('.');
 b.describe('find', function () {

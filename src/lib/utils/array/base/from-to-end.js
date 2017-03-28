@@ -14,4 +14,5 @@ module.exports = function fromToEnd(values, callback, _start, _end, _step) {
         }
         index += step;
     }
+    return -1;
 };

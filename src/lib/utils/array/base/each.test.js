@@ -1,3 +1,4 @@
+var b = require('batterie');
 var _ = require('./utils');
 var each = require('./each');
 b.describe('each', function () {

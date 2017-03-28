@@ -1,3 +1,4 @@
+var b = require('batterie');
 var _ = require('./utils');
 var fromTo = require('./from-to');
 b.describe('fromTo', function (t) {

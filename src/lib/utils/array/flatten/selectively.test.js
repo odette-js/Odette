@@ -1,4 +1,5 @@
 var b = require('batterie');
+var b = require('batterie');
 var _ = require('./utils');
 var flattenSelectively = require('./selectively');
 b.it('flattenSelectively', [

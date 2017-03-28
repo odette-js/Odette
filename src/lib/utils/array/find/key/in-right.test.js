@@ -1,3 +1,4 @@
+var b = require('batterie');
 var _ = require('./utils');
 var findKeyInRight = require('./in-right');
 b.describe('findKeyInRight', function () {

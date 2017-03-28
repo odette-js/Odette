@@ -1,3 +1,4 @@
+var b = require('batterie');
 var _ = require('./utils');
 var filterRight = require('./right');
 b.describe('filterRight', function () {

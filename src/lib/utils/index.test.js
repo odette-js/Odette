@@ -1,3 +1,4 @@
+var b = require('batterie');
 var _ = require('.');
 b.describe('_', function () {
     b.it('is an object', function (t) {

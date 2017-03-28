@@ -1,3 +1,4 @@
+var b = require('batterie');
 var _ = require('./utils');
 var forEachEndRight = require('./for-each-end-right');
 b.describe('forEachEndRight', function () {

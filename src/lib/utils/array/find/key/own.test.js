@@ -1,3 +1,4 @@
+var b = require('batterie');
 var _ = require('./utils');
 var findOwnKey = require('./own');
 b.describe('findOwnKey', function () {

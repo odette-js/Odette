@@ -1,0 +1,1 @@
+require('./of/_index.test');

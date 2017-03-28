@@ -1,3 +1,4 @@
+var b = require('batterie');
 var _ = require('./utils');
 var findRight = require('./right');
 b.describe('findRight', function () {

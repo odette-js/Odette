@@ -1,15 +1,14 @@
 var isNan = require('./utils/is/nan');
-var indexOfNan = require('./utils/array/index/of/nan');
 module.exports = baseIndexOf;
 
-function baseIndexOf(comparator) {
+function baseIndexOf(comparator, alternative) {
     return function (array, value, fromIndex, toIndex, fromRight) {
         var index, limit, incrementor;
         if (!array) {
             return -1;
         }
         if (isNan(value)) {
-            return indexOfNaN(array, fromIndex, toIndex, fromRight);
+            return alternative(array, fromIndex, toIndex, fromRight);
         }
         index = (fromIndex || 0) - 1;
         limit = toIndex || array.length;

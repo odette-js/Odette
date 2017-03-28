@@ -1,15 +1,5 @@
-module.exports = function indexOfNaN(array, fromIndex, toIndex, fromRight) {
-    if (!array) {
-        return -1;
-    }
-    var other, limit = toIndex || array.length,
-        index = fromIndex + (fromRight ? 0 : -1),
-        incrementor = fromRight ? -1 : 1;
-    while ((index += incrementor) < limit) {
-        other = array[index];
-        if (other !== other) {
-            return index;
-        }
-    }
-    return -1;
+var isNan = require('./utils/is/nan');
+var forEachEnd = require('./utils/array/base/for-each-end');
+module.exports = function indexOfNaN(array, fromIndex, toIndex) {
+    return forEachEnd(array, isNan, fromIndex, toIndex, 1);
 };
