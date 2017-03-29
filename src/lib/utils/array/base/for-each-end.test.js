@@ -50,7 +50,7 @@ b.describe('forEachEnd', function () {
             return number === 3;
         }, 3, 1);
         t.expect(values).toEqual([]);
-        t.expect(value).toBeUndefined();
+        t.expect(value).toBe(-1);
     }, 2);
     b.it('can also have custom steps', function (t) {
         var values = [];

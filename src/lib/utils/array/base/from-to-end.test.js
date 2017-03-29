@@ -16,7 +16,7 @@ b.describe('fromToEnd', function () {
         var res2 = fromToEnd(numbers, function (number) {
             return number === 3;
         }, 0, numbers.length - 1, 1);
-        t.expect(res1).toBeUndefined();
+        t.expect(res1).toBe(-1);
         t.expect(res2).toBe(2);
     }, 2);
     b.it('can stop its iteration when a truthy value is returned', function (t) {
@@ -32,6 +32,6 @@ b.describe('fromToEnd', function () {
             return number === 5;
         }, 1, 3, 1);
         t.expect(counter).toBe(3);
-        t.expect(result).toBeUndefined();
+        t.expect(result).toBe(-1);
     }, 2);
 });

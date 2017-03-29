@@ -5,3 +5,5 @@ require('./find/_index.test');
 require('./flatten/_index.test');
 require('./for/_index.test');
 require('./index/_index.test');
+require('./map/_index.test');
+require('./reduce/_index.test');

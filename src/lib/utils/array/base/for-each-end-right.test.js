@@ -34,7 +34,7 @@ b.describe('forEachEndRight', function () {
             return value === 1;
         }, 3, 1);
         t.expect(values).toEqual([4, 3, 2]);
-        t.expect(interruptor).toBeUndefined();
+        t.expect(interruptor).toBe(-1);
     }, 2);
     b.it('if ascending ranges are passed, no iterations will occur', function (t) {
         var values = [];
@@ -43,6 +43,6 @@ b.describe('forEachEndRight', function () {
             return value === 3;
         }, 2, 3);
         t.expect(values).toEqual([]);
-        t.expect(interruptor).toBeUndefined();
+        t.expect(interruptor).toBe(-1);
     }, 2);
 });
