@@ -6,7 +6,7 @@ var isFalse = require('./utils/is/false');
 module.exports = function sort(obj, fn_, reversed) {
     var fn = bindTo(fn_ || defaultSort, obj);
     // normalize sort function handling for safari
-    return obj.sort(function comparatorNormalization(a, b) {
+    return obj.slice(0).sort(function comparatorNormalization(a, b) {
         var result = fn(a, b);
         if (isNan(result)) {
             result = Infinity;

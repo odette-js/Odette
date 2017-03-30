@@ -76,7 +76,6 @@ module.exports = extend([{
         sort: require('./utils/array/sort'),
         sortBy: require('./utils/array/sort/by'),
         uniqueWith: require('./utils/array/unique/with'),
-        uniqueBy: require('./utils/array/unique/by'),
         console: require('./utils/console'),
         chunk: require('./utils/array/chunk'),
         compact: require('./utils/array/compact'),

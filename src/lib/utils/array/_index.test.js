@@ -7,3 +7,5 @@ require('./for/_index.test');
 require('./index/_index.test');
 require('./map/_index.test');
 require('./reduce/_index.test');
+require('./sort/_index.test');
+require('./unique/_index.test');

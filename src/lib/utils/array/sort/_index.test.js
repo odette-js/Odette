@@ -1,2 +1,2 @@
 require('./index.test');
-require('./right.test');
+require('./by.test');
