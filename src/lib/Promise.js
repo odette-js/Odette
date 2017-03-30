@@ -228,9 +228,13 @@ var PROMISE = 'Promise',
             },
             autoResolve = function (bool) {
                 return function (value) {
-                    return Promise(function (success, failure) {
-                        return bool ? success(value) : failure(value);
-                    });
+                    if (bool && isPromise(value)) {
+                        return value;
+                    } else {
+                        return Promise(function (success, failure) {
+                            return bool ? success(value) : failure(value);
+                        });
+                    }
                 };
             };
         /**
