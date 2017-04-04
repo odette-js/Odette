@@ -1,1 +1,0 @@
-module.exports = require('./type-wrap')('Number', require('./utils/function/negate')(require('./nan')));

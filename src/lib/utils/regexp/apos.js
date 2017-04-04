@@ -1,1 +1,0 @@
-module.exports = RegExp(require('./utils/regexp/source/apos'), 'g');

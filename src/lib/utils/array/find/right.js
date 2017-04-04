@@ -1,2 +1,0 @@
-var secondToIterable = require('./utils/function/convert-second-to-iterable');
-module.exports = secondToIterable(require('./utils/array/find/accessor')(require('./utils/array/base/for-each-end-right')));

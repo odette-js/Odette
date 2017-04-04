@@ -1,1 +1,0 @@
-module.exports = require('./utils/object/base/property-of')(require('./utils/string/deburr-letters'));

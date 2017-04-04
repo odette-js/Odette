@@ -1,1 +1,0 @@
-module.exports = require('./utils/string/create-escaper')(require('./utils/string/unescape-map'));
