@@ -1483,8 +1483,7 @@ app.scope(function (app) {
                 return (val / mult) * 100;
             },
             '%': function (val, el, win, styleAttr) {
-                var parent = isElement(el) ? el[PARENT_NODE] : el,
-                    _val = getStyleSize(parent, styleAttr, win);
+                var _val = getStyleSize(el, styleAttr, win);
                 return (val / _val) * 100;
             },
             pc: function (val, el, win, styleAttr) {
@@ -1537,8 +1536,7 @@ app.scope(function (app) {
                 return ((Math.max(win[INNER_HEIGHT], win[INNER_WIDTH]) || 1) * val / 100);
             },
             '%': function (val, el, win, styleAttr) {
-                var parent = isElement(el) ? el[PARENT_NODE] : el,
-                    _val = getStyleSize(parent, styleAttr);
+                var _val = getStyleSize(el, styleAttr);
                 return (val * _val) / 100;
             },
             pc: function (val, el, win, styleAttr) {
