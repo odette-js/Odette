@@ -54,5 +54,49 @@ application.scope().run(window, function (module, app, _, factories, $) {
                 done();
             });
         }, 3);
+        test.it('also handles chainging different n promises together', function (done) {
+            var counter = 0;
+            _.Promise(function (success, failure) {
+                setTimeout(success, 0);
+                counter++;
+            }).then(function () {
+                test.expect(counter).toEqual(1);
+                return runMany();
+            }).catch(function () {
+                counter++;
+                return {};
+            }).then(function () {
+                test.expect(counter).toEqual(1);
+                return _.Promise(function (success, failure) {
+                    setTimeout(success);
+                });
+            }).catch(function () {
+                console.log('should not have run');
+            }).then(function () {
+                counter++;
+                window.consolable = true;
+                return runMany(2);
+            }).catch(function (res) {
+                test.expect(res).toBe(3);
+                test.expect(counter).toBe(2);
+            }).then(function () {
+                test.expect(counter).toEqual(2);
+                done();
+            });
+
+            function runMany(fails) {
+                return _.Promise.all(_.map([1, 2, 3, 4], function (value, index) {
+                    return _.Promise(function (success, failure) {
+                        if (index === fails) {
+                            setTimeout(function () {
+                                failure(value);
+                            }, value);
+                        } else {
+                            setTimeout(success, value);
+                        }
+                    });
+                }));
+            }
+        }, 5);
     });
 });

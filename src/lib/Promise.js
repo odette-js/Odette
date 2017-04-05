@@ -33,20 +33,20 @@ var PROMISE = 'Promise',
             distillary = function (fn, arg) {
                 return fn ? fn(arg) : arg;
             },
-            emptyQueue = function (p, bool, result, original, catching) {
-                var erred, sliced, resultIsPromise, i, current, execute, argument, caught, nextp, registry = p.directive(REGISTRY),
+            emptyQueue = function (p, bool, result, original) {
+                var nextresolution, erred, sliced, resultIsPromise, i, current, execute, argument, caught, nextp, registry = p.directive(REGISTRY),
                     queue = registry.get(INSTANCES, QUEUE);
                 if (original && !p.unmark(PENDING)) {
                     return result;
                 }
                 p.unmark(PENDING);
                 p.mark(bool ? FULFILLED : REJECTED);
-                p[REGISTRY].keep(INSTANCES, RESULTS, result);
+                registry.keep(INSTANCES, RESULTS, result);
                 if (!queue || !queue.length()) {
                     return result;
                 }
                 sliced = queue.slice(0).toArray();
-                p[REGISTRY].drop(INSTANCES, QUEUE);
+                registry.drop(INSTANCES, QUEUE);
                 execute = function () {
                     return wraptry(function () {
                         var target, res = result;
@@ -54,39 +54,37 @@ var PROMISE = 'Promise',
                             target = current[1];
                         } else {
                             target = current[2];
-                        }
-                        if (catching) {
-                            target = current[3];
-                            res = catching;
+                            if (!target) {
+                                throw res;
+                            }
                         }
                         res = distillary(target, res);
                         nextp.directive(REGISTRY).keep(INSTANCES, RESULTS, res);
                         return res;
                     }, function (e) {
                         var nextpReg = nextp.directive(REGISTRY);
+                        nextresolution = BOOLEAN_FALSE;
                         p.mark(CAUGHT);
                         nextpReg.keep(INSTANCES, RESULTS, result);
-                        nextpReg.keep(INSTANCES, CAUGHT, e);
-                        caught = e;
-                        return result;
+                        return e;
                     });
                 };
                 for (i = 0; i < sliced.length; i++) {
                     current = sliced[i];
-                    caught = registry.get(INSTANCES, CAUGHT);
                     nextp = current[0];
+                    nextresolution = BOOLEAN_TRUE;
                     argument = execute();
                     if (isPromise(argument)) {
-                        argument.then(emptiesQueue(nextp, BOOLEAN_TRUE)).catch(emptiesQueue(nextp));
+                        argument.then(emptiesQueue(nextp, nextresolution)).catch(emptiesQueue(nextp));
                     } else {
-                        emptyQueue(nextp, bool, argument, BOOLEAN_FALSE, caught);
+                        emptyQueue(nextp, nextresolution, argument, BOOLEAN_FALSE);
                     }
                 }
                 return result;
             },
-            emptiesQueue = function (p, bool, original, caught) {
+            emptiesQueue = function (p, bool, original) {
                 return function (argument) {
-                    return emptyQueue(p, bool, argument, original, caught);
+                    return emptyQueue(p, bool, argument, original);
                 };
             },
             decision = function (p, bool) {
@@ -174,20 +172,25 @@ var PROMISE = 'Promise',
                         var promise = this;
                         return promiseProxy(function (pro, success, failure) {
                             var caught, result;
+                            addToQueue(promise, QUEUE, [pro, NULL, erred]);
                             if (promise.is(PENDING)) {
-                                return addToQueue(promise, QUEUE, [pro, NULL, NULL, erred]);
+                                return;
                             }
-                            caught = promise.directive(REGISTRY).get(INSTANCES, CAUGHT);
-                            if (caught) {
-                                result = erred(caught);
-                            } else {
-                                result = resultant(promise);
-                            }
-                            if (promise.is(FULFILLED)) {
-                                success(result);
-                            } else {
-                                failure(result);
-                            }
+                            emptyQueue(promise, promise.is(FULFILLED), resultant(promise));
+                            // if (promise.is(PENDING)) {
+                            // return addToQueue(promise, QUEUE, [pro, NULL, erred]);
+                            // }
+                            // caught = promise.directive(REGISTRY).get(INSTANCES, CAUGHT);
+                            // if (caught) {
+                            //     result = erred(caught);
+                            // } else {
+                            //     result = resultant(promise);
+                            // }
+                            // if (promise.is(FULFILLED)) {
+                            //     success(result);
+                            // } else {
+                            //     failure(result);
+                            // }
                         });
                     }
                 }),
@@ -197,10 +200,33 @@ var PROMISE = 'Promise',
                         exception('promise list is not iteratable.');
                     }
                     return Promise(function (success, failure) {
-                        var length = list[LENGTH];
+                        var failed, length = list[LENGTH];
                         var memo = [];
-                        var counter = function (index, data) {
+                        if (!list[LENGTH]) {
+                            success([]);
+                            return;
+                        }
+                        forEach(list, function (promise, index) {
+                            // if (window.consolable) {
+                            //     debugger;
+                            // }
+                            if (isPromise(promise)) {
+                                promise.then(function (data) {
+                                    counter(index, data);
+                                }).catch(function (res) {
+                                    failed = BOOLEAN_TRUE;
+                                    return counter(index, res);
+                                });
+                            } else {
+                                counter(index, promise);
+                            }
+                        });
+
+                        function counter(index, data) {
                             length--;
+                            if (failed) {
+                                return failure(data);
+                            }
                             if (waits) {
                                 memo[index] = data;
                                 if (!length) {
@@ -209,20 +235,7 @@ var PROMISE = 'Promise',
                             } else {
                                 success(data);
                             }
-                        };
-                        if (!list[LENGTH]) {
-                            success([]);
-                            return;
                         }
-                        forEach(list, function (promise, index) {
-                            if (isPromise(promise)) {
-                                promise.then(function (data) {
-                                    counter(index, data);
-                                }, failure);
-                            } else {
-                                counter(index, promise);
-                            }
-                        });
                     });
                 };
             },
