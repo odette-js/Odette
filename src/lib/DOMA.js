@@ -4826,18 +4826,19 @@ app.scope(function (app) {
                 manager = elementSwapper[selector] ? ((selector = '') || elementSwapper[selector_](manager_)) : manager_,
                 capture = !!options.capture_,
                 group = options.group,
-                directive = manager.directive(EVENT_MANAGER),
-                removeFromList = function (list, name) {
-                    return list.obliteration(function (obj) {
-                        var selected;
-                        if ((!name || name === obj.passedName) && (!handler || obj.handler === handler || handler === obj.matchHandler) && (!group || obj.group === group) && (isNil(selector) ? BOOLEAN_TRUE : ((selected = obj.selector) && selected.matches(selector)))) {
-                            directive.detach(obj);
-                        }
-                    });
-                };
+                directive = manager.directive(EVENT_MANAGER);
             return name ? manager.expandEvents(toArray(name, SPACE), function (name, passedName) {
                 removeFromList(directive[HANDLERS][name], passedName);
             }) : forOwn(directive[HANDLERS], passesFirstArgument(removeFromList));
+
+            function removeFromList(list, name) {
+                return list && list.obliteration(function (obj) {
+                    var selected;
+                    if ((!name || name === obj.passedName) && (!handler || obj.handler === handler || handler === obj.matchHandler) && (!group || obj.group === group) && (isNil(selector) ? BOOLEAN_TRUE : ((selected = obj.selector) && selected.matches(selector)))) {
+                        directive.detach(obj);
+                    }
+                });
+            }
         },
         /**
          * @class DOMA
