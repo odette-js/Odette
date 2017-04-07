@@ -105,11 +105,16 @@ app.scope(function (app) {
                 // if (modifier && isFunction(modifier)) {
                 //     modifier(eventsDirective, eventObject);
                 // }
-                eventObject.fn = bind(eventObject.fn || eventObject.handler, eventObject.context);
                 // attach the id to the bound function because that instance is private
                 list = handlers[name] = handlers[name] || Collection();
                 // attaching name so list can remove itself from hash
                 list[NAME] = name;
+                if (list.find(function (evnt) {
+                        return evnt.handler === eventObject.handler && evnt.origin === eventObject.origin;
+                    })) {
+                    return;
+                }
+                eventObject.fn = eventObject.fn ? eventObject.fn : bind(eventObject.handler, eventObject.context);
                 // attached so event can remove itself
                 eventObject.list = list;
                 eventsDirective.add(list, eventObject);

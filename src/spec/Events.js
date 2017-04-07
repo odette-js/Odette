@@ -83,6 +83,18 @@ application.scope().run(window, function (module, app, _, factories, $) {
                     test.expect(count).toEqual(6);
                     box.off('evnt eventer mikesevent', handler);
                 }, 3);
+                test.it('will also not put the same event handler pointer on twice', function () {
+                    box.on('evnt', handler);
+                    test.expect(count).toEqual(0);
+                    box.dispatchEvent('evnt');
+                    test.expect(count).toEqual(1);
+                    box.on('evnt', handler);
+                    box.dispatchEvent('evnt');
+                    test.expect(count).toEqual(2);
+                    box.off('evnt', handler);
+                    box.dispatchEvent('evnt');
+                    test.expect(count).toEqual(2);
+                }, 4);
             });
         });
         test.describe('Models can also listen to other, similar objects', function () {
