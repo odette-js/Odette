@@ -4832,10 +4832,10 @@ app.scope(function (app) {
             }) : forOwn(directive[HANDLERS], passesFirstArgument(removeFromList));
 
             function removeFromList(list, name) {
-                return list && list.obliteration(function (obj) {
+                return list && list.obliteration(function (obj, idx) {
                     var selected;
                     if ((!name || name === obj.passedName) && (!handler || obj.handler === handler || handler === obj.matchHandler) && (!group || obj.group === group) && (isNil(selector) ? BOOLEAN_TRUE : ((selected = obj.selector) && selected.matches(selector)))) {
-                        directive.detach(obj);
+                    directive.detach(obj, idx);
                     }
                 });
             }
