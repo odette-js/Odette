@@ -169,7 +169,7 @@ app.scope(function (app) {
                 list.push([evnt]);
             },
             remove: function (list, evnt, index) {
-                list.removeAt(evnt, index, index === UNDEFINED ? list.indexOf(evnt) : index);
+                list.removeAt(evnt, index === UNDEFINED ? list.indexOf(evnt) : index);
             },
             detachCurrent: function () {
                 return this.detach(this[STACK].last());
