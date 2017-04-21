@@ -1446,48 +1446,51 @@ app.scope(function (app) {
                 return ((idx + 1) % 2);
             }
         },
+        round106 = function (number) {
+            return Math.round10(number, -6);
+        },
         convertUnit = {
             'in': function (val, el, win, styleAttr) {
-                return val / 96;
+                return round106(val / 96);
             },
             vh: function (val, el, win, styleAttr) {
-                return (val / win[INNER_HEIGHT]) * 100;
+                return round106(round106(val / win[INNER_HEIGHT]) * 100);
             },
             px: function (val, el, win, styleAttr) {
                 return val;
             },
             cm: function (val, el, win, styleAttr) {
-                return val / 37.79527559055118;
+                return Math.round(val / 37.79527559055118);
             },
             vw: function (val, el, win, styleAttr) {
-                return (val / win[INNER_WIDTH]) * 100;
+                return round106(round106(val / win[INNER_WIDTH]) * 100);
             },
             em: function (val, el, win, styleAttr) {
-                return val / getStyleSize(el, FONT_SIZE, win);
+                return round106(val / getStyleSize(el, FONT_SIZE, win));
             },
             mm: function (val, el, win, styleAttr) {
-                return val / 3.779527559055118;
+                return round106(val / 3.779527559055118);
             },
             vmin: function (val, el, win, styleAttr) {
                 var mult = Math.min(win[INNER_HEIGHT], win[INNER_WIDTH]);
-                return (val / mult) * 100;
+                return round106(round106(val / mult) * 100);
             },
             rem: function (val, el, win, styleAttr) {
-                return val / getStyleSize(win[DOCUMENT][BODY][PARENT_NODE], FONT_SIZE, win);
+                return round106(val / getStyleSize(win[DOCUMENT][BODY][PARENT_NODE], FONT_SIZE, win));
             },
             pt: function (val, el, win, styleAttr) {
-                return val / 1.333333333333333;
+                return round106(val / 1.333333333333333);
             },
             vmax: function (val, el, win, styleAttr) {
                 var mult = Math.max(win[INNER_HEIGHT], win[INNER_WIDTH]);
-                return (val / mult) * 100;
+                return round106(round106(val / mult) * 100);
             },
             '%': function (val, el, win, styleAttr) {
                 var _val = getStyleSize(el, styleAttr, win);
-                return (val / _val) * 100;
+                return round106(round106(val / _val) * 100);
             },
             pc: function (val, el, win, styleAttr) {
-                return val / 16;
+                return round106(val / 16);
             }
         },
         numToUnits = function (num, unit, el, winTop, styleAttr, returnNum) {
@@ -1503,44 +1506,44 @@ app.scope(function (app) {
         },
         unitToNumber = {
             'in': function (val, el, win, styleAttr) {
-                return val * 96;
+                return round106(val * 96);
             },
             vh: function (val, el, win, styleAttr) {
-                return win[INNER_HEIGHT] * val / 100;
+                return round106(round106(win[INNER_HEIGHT] * val) / 100);
             },
             px: function (val, el, win, styleAttr) {
                 return val;
             },
             cm: function (val, el, win, styleAttr) {
-                return val * 37.79527559055118;
+                return round106(val * 37.79527559055118);
             },
             vw: function (val, el, win, styleAttr) {
-                return win[INNER_WIDTH] * val / 100;
+                return round106(round106(win[INNER_WIDTH] * val) / 100);
             },
             em: function (val, el, win, styleAttr) {
-                return getStyleSize(el, FONT_SIZE) * val;
+                return round106(getStyleSize(el, FONT_SIZE) * val);
             },
             mm: function (val, el, win, styleAttr) {
-                return val * 3.779527559055118;
+                return round106(val * 3.779527559055118);
             },
             vmin: function (val, el, win, styleAttr) {
-                return ((Math.min(win[INNER_HEIGHT], win[INNER_WIDTH]) || 1) * val / 100);
+                return round106(round106((Math.min(win[INNER_HEIGHT], win[INNER_WIDTH]) || 1) * val) / 100);
             },
             rem: function (val, el, win, styleAttr) {
-                return getStyleSize(win[DOCUMENT][BODY][PARENT_NODE], FONT_SIZE) * val;
+                return round106(getStyleSize(win[DOCUMENT][BODY][PARENT_NODE], FONT_SIZE) * val);
             },
             pt: function (val, el, win, styleAttr) {
-                return val * 1.333333333333333;
+                return round106(val * 1.333333333333333);
             },
             vmax: function (val, el, win, styleAttr) {
-                return ((Math.max(win[INNER_HEIGHT], win[INNER_WIDTH]) || 1) * val / 100);
+                return round106(round106((Math.max(win[INNER_HEIGHT], win[INNER_WIDTH]) || 1) * val) / 100);
             },
             '%': function (val, el, win, styleAttr) {
                 var _val = getStyleSize(el, styleAttr);
-                return (val * _val) / 100;
+                return round106(round106(val * _val) / 100);
             },
             pc: function (val, el, win, styleAttr) {
-                return val * 16;
+                return round106(val * 16);
             }
         },
         unitsToNum = function (str, el, winTop, styleAttr) {
@@ -4835,7 +4838,7 @@ app.scope(function (app) {
                 return list && list.obliteration(function (obj, idx) {
                     var selected;
                     if ((!name || name === obj.passedName) && (!handler || obj.handler === handler || handler === obj.matchHandler) && (!group || obj.group === group) && (isNil(selector) ? BOOLEAN_TRUE : ((selected = obj.selector) && selected.matches(selector)))) {
-                    directive.detach(obj, idx);
+                        directive.detach(obj, idx);
                     }
                 });
             }
