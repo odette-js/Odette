@@ -217,7 +217,7 @@ function makeDataAttr(key, value) {
 
 function getClosestWindow(windo_) {
     var windo = windo_ || win;
-    return isWindow(windo) ? windo : (windo && windo[DEFAULT_VIEW] ? windo[DEFAULT_VIEW] : (windo.ownerGlobal ? windo.ownerGlobal : DOMA(windo).parent(WINDOW)[ITEM](0) || win));
+    return isWindow(windo) ? windo : (windo && windo[DEFAULT_VIEW] ? windo[DEFAULT_VIEW] : (windo.ownerGlobal ? windo.ownerGlobal : windo.ownerDocument[DEFAULT_VIEW] || win));
 }
 
 function getComputed(el, ctx) {
