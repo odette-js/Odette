@@ -128,12 +128,14 @@ app.block(function (app) {
                     constructor: function (str) {
                         var url, thingToDo, typeThing, type, ajax = this,
                             method = 'onreadystatechange',
+                            canattachheaders = BOOLEAN_TRUE,
                             xhrReq = new view.XMLHttpRequest();
-                        // covers ie9
-                        if (!isUndefined(view.XDomainRequest)) {
-                            xhrReq = new view.XDomainRequest();
-                            method = 'onload';
-                        }
+                        // // covers ie9
+                        // if (!isUndefined(view.XDomainRequest)) {
+                        //     xhrReq = new view.XDomainRequest();
+                        //     method = 'onload';
+                        //     canattachheaders = BOOLEAN_FALSE;
+                        // }
                         if (!isObject(str)) {
                             str = str || EMPTY_STRING;
                             type = GET;
@@ -152,6 +154,7 @@ app.block(function (app) {
                             async: BOOLEAN_TRUE,
                             method: method,
                             type: type,
+                            canattachheaders: canattachheaders,
                             requestObject: xhrReq,
                             withCredentials: BOOLEAN_TRUE
                         }, str);
@@ -275,7 +278,9 @@ app.block(function (app) {
                      * @return {ajax}
                      */
                     headers: intendedApi(function (key, val) {
-                        this.options.requestObject.setRequestHeader(key, val);
+                        if (this.options.canattachheaders) {
+                            this.options.requestObject.setRequestHeader(key, val);
+                        }
                     }),
                     /**
                      * Proxy for the promise that is underlying this object. Allows an access point to chain and return regular old promises.
