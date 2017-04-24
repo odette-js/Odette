@@ -127,7 +127,8 @@ app.block(function (app) {
                     parse: parse,
                     constructor: function (str) {
                         var url, thingToDo, typeThing, type, ajax = this,
-                            method = 'onreadystatechange',
+                            // method = 'onreadystatechange',
+                            method = 'onload',
                             canattachheaders = BOOLEAN_TRUE,
                             xhrReq = new view.XMLHttpRequest();
                         // // covers ie9
@@ -222,26 +223,26 @@ app.block(function (app) {
                                     if (!xhrReqObj || hasFinished) {
                                         return;
                                     }
-                                    status = xhrReqObj[STATUS];
+                                    // status = xhrReqObj[STATUS];
                                     rawData = xhrReqObj.responseText;
-                                    if (method === 'onload' || (method === 'onreadystatechange' && xhrReqObj[READY_STATE] === 4)) {
-                                        allStates = result(ajax, 'allStates');
-                                        rawData = options.preventParse ? rawData : ajax.parse(rawData);
-                                        hasFinished = BOOLEAN_TRUE;
-                                        type = STATUS + COLON + (xhrReqObj[STATUS] === UNDEFINED ? 200 : xhrReqObj[STATUS]);
-                                        originalType = type;
-                                        path = states();
-                                        while (isString(type)) {
-                                            lasttype = type;
-                                            type = path[type];
-                                        }
-                                        if (lasttype === SUCCESS) {
-                                            success(rawData);
-                                        } else {
-                                            failure(rawData);
-                                        }
-                                        ajax.resolveAs(originalType, rawData);
+                                    // if (method === 'onload' || (method === 'onreadystatechange' && xhrReqObj[READY_STATE] === 4)) {
+                                    allStates = result(ajax, 'allStates');
+                                    rawData = options.preventParse ? rawData : ajax.parse(rawData);
+                                    hasFinished = BOOLEAN_TRUE;
+                                    type = STATUS + COLON + (xhrReqObj[STATUS] === UNDEFINED ? 200 : xhrReqObj[STATUS]);
+                                    originalType = type;
+                                    path = states();
+                                    while (isString(type)) {
+                                        lasttype = type;
+                                        type = path[type];
                                     }
+                                    if (lasttype === SUCCESS) {
+                                        success(rawData);
+                                    } else {
+                                        failure(rawData);
+                                    }
+                                    ajax.resolveAs(originalType, rawData);
+                                    // }
                                 };
                             }
                             wraptry(function () {
