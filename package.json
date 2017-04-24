@@ -1,6 +1,6 @@
 {
   "name": "odette",
-  "version": "1.0.65",
+  "version": "1.0.66",
   "description": "a comprehensive library for completing mundane tasks with ease and grace.",
   "main": "src/node/index.js",
   "dependencies": {},
