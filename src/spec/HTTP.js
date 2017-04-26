@@ -49,9 +49,9 @@ application.scope().run(window, function (module, app, _, factories, $) {
         test.describe('can handle', function () {
             test.it('failures', function (done) {
                 var handlerCounter = 0;
-                var prom = $.HTTP('https://google.com').then(function () {
+                var prom = $.HTTP('https://google.com').catch(function () {
                     throw new Error('did not handle error well');
-                }, function (result) {
+                }).catch(function (result) {
                     test.expect(true).toBe(true);
                     done();
                 });

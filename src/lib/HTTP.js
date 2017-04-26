@@ -20,7 +20,7 @@ app.block(function (app) {
         //     abort: readAndApply,
         //     error: readAndApply
         // },
-        attachBaseListeners = function (ajax) {
+        attachBaseListeners = function (ajax, failure) {
             var prog = 0,
                 req = ajax.options.requestObject;
             forEach(baseEvents, function (key) {
@@ -42,6 +42,7 @@ app.block(function (app) {
                     };
                 } else {
                     req['on' + key] = function (e) {
+                        failure(e);
                         return ajax.resolveAs(key, e);
                     };
                 }
@@ -249,7 +250,7 @@ app.block(function (app) {
                                 xhrReq.open(type.toUpperCase(), url, options.async);
                             });
                             ajax.headers(headers);
-                            attachBaseListeners(ajax);
+                            attachBaseListeners(ajax, failure);
                             // have to wrap in set timeout for ie
                             if (!outstanding) {
                                 dispatch('start');

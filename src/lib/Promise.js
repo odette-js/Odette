@@ -2,7 +2,6 @@ var PROMISE = 'Promise',
     DEFERRED = 'Deferred',
     QUEUE = 'queue',
     RESULTS = 'results',
-    CAUGHT = 'caught',
     INSTANCES = 'instances',
     FAILURE = 'failure',
     SUCCESS = 'success',
@@ -64,7 +63,6 @@ var PROMISE = 'Promise',
                     }, function (e) {
                         var nextpReg = nextp.directive(REGISTRY);
                         nextresolution = BOOLEAN_FALSE;
-                        p.mark(CAUGHT);
                         nextpReg.keep(INSTANCES, RESULTS, result);
                         return e;
                     });
@@ -177,20 +175,6 @@ var PROMISE = 'Promise',
                                 return;
                             }
                             emptyQueue(promise, promise.is(FULFILLED), resultant(promise));
-                            // if (promise.is(PENDING)) {
-                            // return addToQueue(promise, QUEUE, [pro, NULL, erred]);
-                            // }
-                            // caught = promise.directive(REGISTRY).get(INSTANCES, CAUGHT);
-                            // if (caught) {
-                            //     result = erred(caught);
-                            // } else {
-                            //     result = resultant(promise);
-                            // }
-                            // if (promise.is(FULFILLED)) {
-                            //     success(result);
-                            // } else {
-                            //     failure(result);
-                            // }
                         });
                     }
                 }),
@@ -207,9 +191,6 @@ var PROMISE = 'Promise',
                             return;
                         }
                         forEach(list, function (promise, index) {
-                            // if (window.consolable) {
-                            //     debugger;
-                            // }
                             if (isPromise(promise)) {
                                 promise.then(function (data) {
                                     counter(index, data);
