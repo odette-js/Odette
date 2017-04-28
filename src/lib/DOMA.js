@@ -1901,6 +1901,11 @@ app.scope(function (app) {
             }
         },
         // _addEventListener = function (manager_, eventNames, group, selector_, handler, capture) {
+        autoattachPassive = {
+            scroll: true,
+            touchmove: true,
+            touchstart: true
+        },
         _addEventListener = function (manager_, events, handler, options) {
             var eventManager, selector_ = options.selector,
                 selector = selector_,
@@ -1912,13 +1917,14 @@ app.scope(function (app) {
                 spaceList = toArray(events, SPACE),
                 passive = options.passive,
                 handlesExpansion = function (name, passedName, nameStack) {
+                    var pass = passive === UNDEFINED ? !!autoattachPassive[name] : passive;
                     eventManager = eventManager || manager.directive(EVENT_MANAGER);
                     if (!ALL_EVENTS_HASH[name]) {
                         manager.mark(CUSTOM_LISTENER);
                     }
                     eventManager.attach(name, {
                         capturing: !!options.capture,
-                        passive: passive,
+                        passive: pass,
                         origin: manager,
                         handler: handler,
                         matchHandler: options.matchHandler,
