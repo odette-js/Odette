@@ -3401,7 +3401,10 @@ app.scope(function (app) {
                 if (eventHandler) {
                     el = evnt.origin.element();
                     if (el.addEventListener) {
-                        el.addEventListener(evnt.domName, eventHandler, capture);
+                        el.addEventListener(evnt.domName, eventHandler, allowsPassiveEventsAfterTest ? {
+                            capture: capture,
+                            passive: evnt.passive
+                        }, capture);
                     } else {
                         if (capture) {
                             return;
@@ -4878,13 +4881,14 @@ app.scope(function (app) {
         returnsManager = function (element, owner) {
             return element && !isWindow(element) && element.isValidDomManager ? element : ensure(element, owner);
         },
+        allowsPassiveEventsAfterTest = allowsPassiveEvents(),
         exportResult = _.publicize({
             isIE: isIE,
             handlesWebP: handlesWebP,
             nodeDocument: nodeDocument,
             nodeWindow: nodeWindow,
             elementEventDispatcher: elementEventDispatcher,
-            allowsPassiveEvents: allowsPassiveEvents(),
+            allowsPassiveEvents: allowsPassiveEventsAfterTest,
             buildCss: buildCss,
             covers: covers,
             center: center,
