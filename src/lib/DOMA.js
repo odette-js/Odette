@@ -3404,7 +3404,7 @@ app.scope(function (app) {
                         el.addEventListener(evnt.domName, eventHandler, allowsPassiveEventsAfterTest ? {
                             capture: capture,
                             passive: evnt.passive
-                        }, capture);
+                        } : capture);
                     } else {
                         if (capture) {
                             return;
