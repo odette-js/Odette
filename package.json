@@ -33,7 +33,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "gulp build",
-    "dev": "gulp dev"
+    "dev": "gulp dev",
+    "share":"npm version patch && git push && npm publish"
   },
   "author": "Michael McLaughlin",
   "license": "ISC"
