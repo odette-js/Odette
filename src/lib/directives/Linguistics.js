@@ -473,7 +473,7 @@ var Linguistics = app.block(function (app) {
                  */
                 apply: function (e) {
                     var sequencer = this,
-                        checked = !!(e ? (sequencer[COUNTER] && sequencer.check()) : sequencer.check());
+                        checked = !!(e ? (sequencer[COUNTER] ? sequencer.check() : sequencer[STATE]) : sequencer.check());
                     sequencer.restart();
                     if (sequencer[STATE] !== checked) {
                         sequencer[STATE] = checked;
