@@ -1,6 +1,6 @@
 {
   "name": "odette",
-  "version": "1.0.76",
+  "version": "1.0.77",
   "description": "a comprehensive library for completing mundane tasks with ease and grace.",
   "main": "src/node/index.js",
   "dependencies": {},
@@ -34,7 +34,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "gulp build",
     "dev": "gulp dev",
-    "share":"npm version patch && git push && npm publish"
+    "share": "npm version patch && git push && npm publish"
   },
   "author": "Michael McLaughlin",
   "license": "ISC"
