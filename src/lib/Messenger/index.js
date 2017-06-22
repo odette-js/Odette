@@ -1,9 +1,10 @@
-var Directive = require('./lib/Directive'),
-    Promise = require('./lib/promise'),
-    intendedApi = require('./lib/utils/object/intended-api'),
-    isPromise = require('./lib/utils/is/promise'),
-    bind = require('./lib/utils/function/bind'),
-    isFunction = require('./lib/utils/is/function');
+var Directive = require('../Directive'),
+    Promise = require('../promise'),
+    _ = require('debit'),
+    intendedApi = _.intendedApi,
+    isPromise = _.isPromise,
+    bind = _.bind,
+    isFunction = _.isFunction;
 module.exports = Directive.factory('Messenger', function () {
     var messenger = this,
         requesters = {},

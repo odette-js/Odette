@@ -3,12 +3,13 @@
  * @class Status
  * @extends {Directive}
  */
-var Extendable = require('./lib/Extendable'),
-    isUndefined = require('./lib/utils/is/undefined'),
-    isStrictlyEqual = require('./lib/utils/is/strictly-equal'),
-    isTrue = require('./lib/utils/is/true'),
-    isFalse = require('./lib/utils/is/false'),
-    cloneJSON = require('./lib/utils/JSON/clone'),
+var Extendable = require('../Extendable'),
+    _ = require('debit'),
+    isUndefined = _.isUndefined,
+    isStrictlyEqual = _.isStrictlyEqual,
+    isTrue = _.isTrue,
+    isFalse = _.isFalse,
+    cloneJSON = _.cloneJSON,
     STATUS = 'status',
     STATUSES = STATUS + 'es';
 module.exports = Extendable.extend(STATUS,

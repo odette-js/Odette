@@ -1,5 +1,6 @@
-var constructorExtend = require('./lib/utils/function/extend');
-module.exports = constructorExtend.wrapper(Extendable, Object);
+var _ = require('debit');
+var extendConstructor = _.extendConstructor;
+module.exports = extendConstructor.wrapper(Extendable, Object);
 
 function Extendable() {
     return this;

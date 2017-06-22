@@ -4,7 +4,8 @@
   "description": "a comprehensive library for completing mundane tasks with ease and grace.",
   "main": "src/node/index.js",
   "dependencies": {
-    "batterie": "^1.0.7"
+    "batterie": "^1.0.7",
+    "debit": "^1.0.5"
   },
   "devDependencies": {
     "batterie": "^1.0.8",

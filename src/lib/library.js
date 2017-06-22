@@ -1,6 +1,6 @@
 Odette.definition(global, function (app, context, options) {
     var CONSTRUCTOR = 'constructor';
-    var _ = require('./utils');
+    var _ = require('debit');
     var directiveScopeGenerator = require('./directives');
     var scope = require('./directives/generated');
     var Directive = require('./Directive');
@@ -10,15 +10,13 @@ Odette.definition(global, function (app, context, options) {
     var SyntheticEvent = require('./SyntheticEvent');
     var Registry = require('./Registry');
     var Messenger = require('./Messenger');
-    var Tests = require('./Tests');
     var factories = {
         Data: Data,
         Status: Status,
         Directive: Directive,
         EventManager: EventManager,
         SyntheticEvent: SyntheticEvent,
-        Registry: Registry,
-        Tests: Tests
+        Registry: Registry
     };
     scope.define('Status', Status[CONSTRUCTOR]);
     scope.define('Directive', Directive[CONSTRUCTOR]);
@@ -26,7 +24,6 @@ Odette.definition(global, function (app, context, options) {
     scope.define('EventManager', EventManager[CONSTRUCTOR]);
     scope.define('Registry', Registry[CONSTRUCTOR]);
     scope.define('Messenger', Messenger[CONSTRUCTOR]);
-    scope.define('Tests', Tests);
     _.extend([app, {
         _: _,
         directiveScope: scope,

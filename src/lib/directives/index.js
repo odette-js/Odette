@@ -1,8 +1,9 @@
-var toFunction = require('./lib/utils/to/function');
-var isString = require('./lib/utils/is/string');
-var exception = require('./lib/utils/console').exception;
-var isFunction = require('./lib/utils/is/function');
-var isStrictlyEqual = require('./lib/utils/is/strictly-equal');
+var _ = require('debit');
+var toFunction = _.toFunction;
+var isString = _.isString;
+var exception = _.console.exception;
+var isFunction = _.isFunction;
+var isStrictlyEqual = _.isStrictlyEqual;
 module.exports = function () {
     var globalDirectives = {
         creation: {},

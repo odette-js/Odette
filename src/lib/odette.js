@@ -8,9 +8,24 @@
  * @type {Function}
  * @lends Odette
  */
-global.Odette = module.exports = global.Odette || (function () {
-    var UNDEFINED, KEY = 'Odette',
-        odette_version = '0.0.0',
+(function (root, KEY, factory) {
+    if (typeof define === 'function' && define.amd) {
+        define([], function () {
+            return factory(root);
+        });
+    } else if (typeof exports === 'object') {
+        module.exports = factory(root, KEY);
+    } else {
+        root[KEY] = factory(root, KEY);
+    }
+}(global || window, 'Odette', function (context, KEY) {
+    'use strict';
+    /**
+     * Odette Object
+     * @type {Function}
+     * @lends Odette
+     */
+    var UNDEFINED, odette_version = '0.0.0',
         EMPTY_STRING = '',
         noFailures = 'definitions cannot fail due to errors',
         LENGTH = 'length',
@@ -302,8 +317,8 @@ global.Odette = module.exports = global.Odette || (function () {
                     };
                 },
                 /**
-                 * Pass a function to this method to have it run each time the app encounters a new global. When this happens all functions passed to the undefine method are run to set up the global properly.
-                 * @param {Function} this function will run everytime a new global is encountered after this point.
+                 * Pass a function to this method to have it run each time the app encounters a new window. When this happens all functions passed to the undefine method are run to set up the window properly.
+                 * @param {Function} this function will run everytime a new window is encountered after this point.
                  * @memberOf Odette
                  */
                 undefine: function (handler) {
@@ -343,7 +358,7 @@ global.Odette = module.exports = global.Odette || (function () {
                 /**
                  Define an app definition
                  * @memberof Odette
-                 * @param {Window} globl pass a global object to root the definition against
+                 * @param {Window} globl pass a window object to root the definition against
                  * @param {Object=} options options that the method, and queued methods can be passed
                  */
                 definition: function (globl, options) {
@@ -664,4 +679,4 @@ global.Odette = module.exports = global.Odette || (function () {
             });
         }
     });
-}());
+}));

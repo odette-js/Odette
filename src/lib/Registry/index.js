@@ -1,9 +1,10 @@
 var REGISTRY = 'Registry',
-    Directive = require('./lib/directive'),
-    isUndefined = require('./lib/utils/is/undefined'),
-    map = require('./lib/utils/array/map'),
-    toArray = require('./lib/utils/to/array'),
-    bindTo = require('./lib/utils/function/bind-to'),
+    Directive = require('../directive'),
+    _ = require('debit'),
+    isUndefined = _.isUndefined,
+    map = _.map,
+    toArray = _.toArray,
+    bindTo = _.bindTo,
     Registry = module.exports = Directive.extend(REGISTRY, {
         constructor: function (target) {
             this.target = target;
@@ -56,4 +57,4 @@ var REGISTRY = 'Registry',
             return cached;
         }
     });
-Registry.autoCreate = require('./lib/Registry/auto-create');
+Registry.autoCreate = require('../Registry/auto-create');

@@ -1,2 +1,2 @@
-var directiveScopeGenerator = require('./lib/directives');
+var directiveScopeGenerator = require('../directives');
 module.exports = directiveScopeGenerator();

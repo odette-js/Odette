@@ -18,8 +18,9 @@ var PROMISE = 'Promise',
     FULFILLED = 'fulfilled',
     BOOLEAN_TRUE = true,
     BOOLEAN_FALSE = false,
-    isStrictlyEqual = require('./lib/utils/is/strictly-equal'),
-    Directive = require('./lib/directive'),
+    _ = require('debit'),
+    isStrictlyEqual = _.isStrictlyEqual,
+    Directive = require('../directive'),
     /**
      * Implementation just like the native one. Use this object in order to ensure that your promises will work across all browsers, including those that do not support Promises natively. Pass true as the second argument to make the class execute the function synchronously. This prevents the stack jump that regular promises enforce.
      * @class Promise

@@ -26,19 +26,19 @@ ensure_build_js: ensure_folder
 build_all: ensure_build_js build_library build_odette build_startup build_spec
 
 build_library:
-	browserify $(library_input) -o $(library_output)
+	browserify $(library_input) > $(library_output)
 	uglifyjs $(library_output) > $(library_output_min)
 
 build_spec:
-	browserify $(spec_input) -o $(spec_output)
+	browserify $(spec_input) > $(spec_output)
 	uglifyjs $(spec_output) > $(spec_output_min)
 
 build_odette:
-	browserify $(odette_input) -o $(odette_output)
+	browserify $(odette_input) > $(odette_output)
 	uglifyjs $(odette_output) > $(odette_output_min)
 
 build_startup:
-	browserify $(startup_input) -o $(startup_output)
+	browserify $(startup_input) > $(startup_output)
 	uglifyjs $(startup_output) > $(startup_output_min)
 
 clean:

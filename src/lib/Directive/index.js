@@ -1,11 +1,12 @@
 var DIRECTIVE = 'Directive',
     STATUS = 'status',
-    Extendable = require('./lib/Extendable'),
-    toFunction = require('./lib/utils/to/function'),
-    merge = require('./lib/utils/object/merge'),
-    exception = require('./lib/utils/console').exception,
-    returnsObject = require('./lib/utils/returns/object'),
-    scope = require('./lib/directives/generated');
+    _ = require('debit'),
+    Extendable = require('../Extendable'),
+    toFunction = _.toFunction,
+    merge = _.merge,
+    exception = _.console.exception,
+    returnsObject = _.returns.object,
+    scope = require('../directives/generated');
 /**
  * Directives are a powerful way to organize your code, logic, and state of the objects you create during an app's lifespan. Directives allow for the ability to replace large chunks of internal code of classes and completely change an object's behavior. Directives are the most basic
  * @class Directive
