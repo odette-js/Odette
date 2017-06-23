@@ -4,11 +4,10 @@
   "description": "a comprehensive library for completing mundane tasks with ease and grace.",
   "main": "src/node/index.js",
   "dependencies": {
-    "batterie": "^1.0.7",
-    "debit": "^1.0.5"
+    "debit": "^1.0.18"
   },
   "devDependencies": {
-    "batterie": "^1.0.8",
+    "batterie": "^1.0.50",
     "body-parser": "^1.15.0",
     "browserstack": "^1.5.0",
     "browserstack-webdriver": "^2.41.1",
