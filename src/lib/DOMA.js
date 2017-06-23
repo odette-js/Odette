@@ -2869,7 +2869,7 @@ app.scope(function (app) {
                 //     var data, id;
                 //     return (element && ((isWindow(element) || isDocument(element)) ? BOOLEAN_FALSE : id = element[__ELID__]) && (data = manager.data.get(element, id)) && data[DOM_MANAGER_STRING]);
                 // },
-                expandEvent: function (passedEvent, actualEvent) {
+                expandEventChain: function (passedEvent, actualEvent) {
                     var expanders = manager.events.expanders;
                     forEach(toArray(actualEvent, SPACE), function (actualEvent) {
                         forEach(toArray(passedEvent, SPACE), function (passedEvent) {
