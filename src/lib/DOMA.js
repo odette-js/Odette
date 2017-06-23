@@ -1858,7 +1858,7 @@ app.scope(function (app) {
                             fn(manager, _a, _b, _c);
                         });
                     } else {
-                        fn(manager, _a, _b, _c);
+                        fn(replaced, _a, _b, _c);
                     }
                 });
                 return managers;
