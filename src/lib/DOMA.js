@@ -643,13 +643,12 @@ function createDiffer(context) {
 
     function resolveLater(key) {
         return isString(key) ? function () {
-            return hash[key]
-        } : returns(key)
+            return hash[key];
+        } : returns(key);
     }
 
     function swapNodes(h) {
-        var $remove, add, remove,
-            add = h.add(),
+        var $remove, add = h.add(),
             remove = h.remove();
         if (add && remove) {
             $remove = context.returnsManager(remove);
@@ -750,7 +749,7 @@ function WeakMapRemap(instance, list) {
 }
 
 function nodeComparison(_a, _b, _hash, _stopper, context) {
-    var returns, mutate, removing, updating, inserting, keysHash, resultant, current, inserting, identifyingKey, identified,
+    var returns, mutate, removing, updating, inserting, resultant, current, identifyingKey, identified,
         a = _a,
         b = cloneJSON(_b),
         layer_level = 0,
@@ -803,7 +802,7 @@ function nodeComparison(_a, _b, _hash, _stopper, context) {
     }
 
     function diffNodeProperties(a, bAttrs, props, style_) {
-        var style, bKeys, aStyle, styl, stylKeys, styleIterator, aAttributes = a.attributes,
+        var style, aStyle, styl, stylKeys, styleIterator, aAttributes = a.attributes,
             aLength = aAttributes[LENGTH],
             bKeys = keys(bAttrs),
             bLength = bKeys[LENGTH],
@@ -3270,7 +3269,7 @@ app.scope(function (app) {
                     }
                     evnt.fullscreenDocument = doc;
                     if (isDocument(doc)) {
-                        evnt.remark(FULLSCREEN, (doc.fullScreen || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.fullscreenElement) ? BOOLEAN_TRUE : BOOLEAN_FALSE);
+                        evnt.remark(FULLSCREEN, !!(doc.fullScreen || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.fullscreenElement));
                     }
                 }
                 evnt.target = origin.owner.returnsManager(evnt.target);
@@ -3280,6 +3279,7 @@ app.scope(function (app) {
                 if (evnt.view) {
                     evnt.view = origin.owner.returnsManager(evnt.view);
                 }
+                // evnt[CURRENT_TARGET] = evnt[CURRENT_TARGET] || origin;
                 evnt.remark('trusted', has(originalEvent, IS_TRUSTED) ? originalEvent[IS_TRUSTED] : !DO_NOT_TRUST);
                 (fixHook.reaction || noop)(evnt, originalEvent);
             }
@@ -3444,11 +3444,11 @@ app.scope(function (app) {
                 });
             },
             queue: function (stack, handler, evnt) {
-                if (evnt[PROPAGATION_STOPPED] && evnt[CURRENT_TARGET] !== handler.temporaryTarget) {
+                if (evnt[PROPAGATION_STOPPED] && evnt[CURRENT_TARGET] !== handler[CURRENT_TARGET]) {
                     evnt[PROPAGATION_HALTED] = BOOLEAN_TRUE;
                     return BOOLEAN_FALSE;
                 }
-                evnt[CURRENT_TARGET] = handler.temporaryTarget;
+                evnt[CURRENT_TARGET] = handler[CURRENT_TARGET];
                 handler.mainHandler.currentEvent = evnt;
                 stack.push(handler);
                 return BOOLEAN_TRUE;
@@ -3472,7 +3472,7 @@ app.scope(function (app) {
                 }
                 while (last <= delegateCount) {
                     first = list_[last];
-                    first.temporaryTarget = NULL;
+                    first[CURRENT_TARGET] = NULL;
                     ++last;
                 }
                 return events;
@@ -3533,7 +3533,7 @@ app.scope(function (app) {
                         if (selector && selector.filter(parent, manager.owner)) {
                             found = parent;
                             // hold on to the temporary target
-                            first.temporaryTarget = found;
+                            first[CURRENT_TARGET] = found;
                             // how far up did you have to go
                             // before you got to the top
                             first.parentNodeNumber = counter;
