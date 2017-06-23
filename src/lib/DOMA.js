@@ -1849,15 +1849,14 @@ app.scope(function (app) {
                     var replacedSelector = tuple[1];
                     var _a = a;
                     var _b = b;
-                    var _c = merge({}, (c ? b_ : c_) || {});
-                    if (replacedSelector === selector) {
-                        _c.selector = replacedSelector;
-                    }
+                    var _c = (c ? b_ : c_) || {};
                     if (replaced === first) {
                         managers.forEach(function (manager) {
                             fn(manager, _a, _b, _c);
                         });
                     } else {
+                        _c = merge({}, _c);
+                        _c.selector = replacedSelector;
                         fn(replaced, _a, _b, _c);
                     }
                 });
