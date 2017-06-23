@@ -1838,10 +1838,28 @@ app.scope(function (app) {
         eventObjectExpansion = function (fn) {
             return function (a, b_, c_) {
                 var managers = this;
+                var selector = c_ && c_.selector;
                 intendedObject(a, b_, function (a, b, c) {
-                    managers.forEach(function (manager) {
-                        fn(manager, a, b, (c ? b_ : c_) || {});
-                    });
+                    var first = managers.item(0);
+                    if (!first) {
+                        return;
+                    }
+                    var tuple = swapWithSelector(first, selector);
+                    var replaced = tuple[0];
+                    var replacedSelector = tuple[1];
+                    var _a = a;
+                    var _b = b;
+                    var _c = merge({}, (c ? b_ : c_) || {});
+                    if (replacedSelector === selector) {
+                        _c.selector = replacedSelector;
+                    }
+                    if (replaced === first) {
+                        managers.forEach(function (manager) {
+                            fn(manager, _a, _b, _c);
+                        });
+                    } else {
+                        fn(manager, _a, _b, _c);
+                    }
                 });
                 return managers;
             };
@@ -1906,11 +1924,17 @@ app.scope(function (app) {
             touchmove: true,
             touchstart: true
         },
-        _addEventListener = function (manager_, events, handler, options) {
-            var eventManager, selector_ = options.selector,
-                selector = selector_,
+        swapWithSelector = function (manager, selector_) {
+            var selector = selector_;
+            return [elementSwapper[selector_] ? ((selector = EMPTY_STRING) || elementSwapper[selector_](manager)) : manager, selector];
+        },
+        _addEventListener = function (manager, events, handler, options) {
+            var eventManager, selector = options.selector,
+                // selector = selector_,
                 // use as string if possible
-                manager = elementSwapper[selector_] ? ((selector = EMPTY_STRING) || elementSwapper[selector_](manager_)) : manager_,
+                // tuple = swapWithSelector(manager_, selector_),
+                // manager = tuple[0],
+                // manager = elementSwapper[selector_] ? ((selector = EMPTY_STRING) || elementSwapper[selector_](manager_)) : manager_,
                 // turns into an object
                 selector = resolveSelector(selector),
                 wasCustom = manager.is(CUSTOM),
