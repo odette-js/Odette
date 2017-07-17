@@ -12,15 +12,22 @@ module.exports = function (settings) {
     var app = express();
     var expressWs = require('express-ws')(app);
     var publicroot = path.join(__dirname, '../dist');
+    var engine6 = require('engine6');
+    var tension = require('express-tension');
     app.use(bodyParser.urlencoded({
         extended: true
     }));
+    app.engine('html', engine6.renders());
+    app.set('views', 'views');
+    app.set('view engine', 'html');
     app.use(bodyParser.json());
     app.use(function (req, res, next) {
         res.header('Access-Control-Allow-Origin', '*');
         res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
         next();
     });
+    app.use(tension(publicroot));
+    app.use(engine6.static(publicroot));
     // app.use(function (req, res, next) {
     //     console.log(req.url);
     //     next();
