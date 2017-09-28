@@ -1373,9 +1373,13 @@ app.scope(function (app) {
                 if (isWindow(el)) {
                     ret.height = el[INNER_HEIGHT];
                     ret.width = el[INNER_WIDTH];
+                    ret.scrollWidth = el.document.scrollingElement.scrollWidth;
+                    ret.scrollHeight = el.document.scrollingElement.scrollHeight;
                 } else if (isDocument(el)) {
                     ret.height = el.scrollHeight;
                     ret.width = el.scrollWidth;
+                    ret.scrollWidth = el.scrollingElement.scrollWidth;
+                    ret.scrollHeight = el.scrollingElement.scrollHeight;
                 }
                 return ret;
             } else {
@@ -1402,7 +1406,9 @@ app.scope(function (app) {
                     right: pf(computed[RIGHT], TEN) || ZERO,
                     bottom: pf(computed[BOTTOM], TEN) || ZERO,
                     width: pf(computed[WIDTH], TEN) || ZERO,
-                    height: pf(computed[HEIGHT], TEN) || ZERO
+                    height: pf(computed[HEIGHT], TEN) || ZERO,
+                    scrollWidth: el.scrollWidth,
+                    scrollHeight: el.scrollHeight
                 };
             }
         },
