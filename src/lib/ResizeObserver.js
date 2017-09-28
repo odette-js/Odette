@@ -9,7 +9,7 @@ var ResizeObserver = factories.ResizeObserver = app.block(function (app) {
                 parent: !!el.parentNode
             };
         },
-        list = toArray('height,width,paddingTop,paddingRight,paddingBottom,paddingLeft,borderTop,borderRight,borderBottom,borderLeft'),
+        list = toArray('height,width,paddingTop,paddingRight,paddingBottom,paddingLeft,borderTop,borderRight,borderBottom,borderLeft,scrollWidth,scrollHeight'),
         diff = function (previous, next, parent) {
             var client = previous.client;
             return parent !== previous.parent || find(list, function (item) {
