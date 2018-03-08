@@ -614,7 +614,8 @@
                     touch: touchable,
                     makeScript: function (src, onload, docu_, preventappend) {
                         var docu = docu_ || doc,
-                            script = docu.createElement('script');
+                            script = docu.createElement('script'),
+                            done = false;
                         script.type = 'text/javascript';
                         if (!preventappend) {
                             docu.head.appendChild(script);
@@ -622,6 +623,8 @@
                         if (src) {
                             if (onload) {
                                 script.onload = onload;
+                                script.onerror = onerror;
+                                // sciptt.onreadystatechange = onreadystatechange;
                             }
                             if (isString(src)) {
                                 // src applied last for ie
@@ -631,6 +634,15 @@
                             }
                         }
                         return script;
+
+                        // function onreadystatechange(e) {
+                        //     if (!done && this.readyState === 'loaded' || this.readyState === 'complete') {
+                        //         done = true;
+                        //     }
+                        // }
+                        function onerror(err) {
+                            console.log(err);
+                        }
                     }
                 };
             }());

@@ -2945,8 +2945,16 @@ app.scope(function (app) {
                     return compile(id, string, manager);
                 },
                 collectTemplates: function () {
-                    return $('script[id]').forEach(function (script) {
-                        compile(script.prop(ID), script.html(), manager);
+                    return $('script[type="text/template"]').forEach(function (script) {
+                        var id = script.prop(ID);
+                        if (!id) {
+                            return;
+                        }
+                        var content = script.html();
+                        if (!content) {
+                            return;
+                        }
+                        compile(id, content, manager);
                     }).remove();
                 },
                 unregisteredElement: function (manager) {
