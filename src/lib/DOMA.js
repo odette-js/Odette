@@ -2110,7 +2110,11 @@ app.scope(function (app) {
             }
             element = element_ || manager.element();
             src = element.src;
-            contentWindow = element.contentWindow;
+            contentWindow = wraptry(function () {
+                return element.contentWindow;
+            }, function (err) {
+                return null;
+            });
             manager.remark('windowReady', !!contentWindow);
             if (!contentWindow) {
                 return;
