@@ -1114,6 +1114,9 @@ app.scope(function (app) {
     var noMatch = /(.)^/,
         ensure = function (el, owner) {
             var data, id, manager, associator, attach_id = BOOLEAN_TRUE;
+            if (!el) {
+                return;
+            }
             if (owner === BOOLEAN_TRUE) {
                 id = el[__ELID__];
                 attach_id = !id;
@@ -2175,7 +2178,11 @@ app.scope(function (app) {
         },
         managerEventDispatcher = function (manager, name, opts) {
             var owner = manager.owner;
-            elementEventDispatcher(manager.element(), name, opts, owner.element(), owner.window().element());
+            var windo = owner.window();
+            if (!windo) {
+                return;
+            }
+            elementEventDispatcher(manager.element(), name, opts, owner.element(), windo.element());
         },
         /*
          * missing these
@@ -3384,7 +3391,7 @@ app.scope(function (app) {
                 }
             },
             add: function (list, evnt) {
-                var foundDuplicate, delegateCount, obj, eventHandler, hadMainHandler, domTarget, selector, events = this,
+                var isDoc, foundDuplicate, delegateCount, obj, eventHandler, hadMainHandler, domTarget, selector, events = this,
                     el = evnt.element,
                     i = 0,
                     // needs an extra hash to care for the actual event hanlders that get attached to dom
@@ -3417,6 +3424,7 @@ app.scope(function (app) {
                     // i don't have that handler attached to the dom yet
                     domTarget = evnt.domTarget;
                     eventHandler = mainHandler[capture] = function (e) {
+                        console.log(e.type)
                         return eventDispatcher(domTarget, e.type, e, capture);
                     };
                 }
@@ -4204,7 +4212,27 @@ app.scope(function (app) {
                             delete manager[REGISTERED_AS];
                         }
                     }
+                    if (manager.is(WINDOW)) {
+                        manager.on({
+                            destroy: unloader,
+                            'unload pagehide': unload
+                        });
+                    }
                     return manager;
+
+                    function unload(evt) {
+                        if (evt && !evt.persisted) {
+                            manager.destroy();
+                        }
+                    }
+
+                    function unloader() {
+                        manager.off('destroy', unloader);
+                        manager.off('unload pagehide', unload);
+                        wraptry(function () {
+                            manager.$('document').item(0).destroy();
+                        });
+                    }
                 },
                 clone: function () {
                     var manager = this;
@@ -4415,7 +4443,8 @@ app.scope(function (app) {
                     }
                     if (manager.is(DOCUMENT)) {
                         // it's a document, so return the manager relative to the inside
-                        return manager.owner.returnsManager(manager.element().defaultView);
+                        var view = manager.element().defaultView;
+                        return manager.owner.returnsManager(view);
                     }
                     if (manager.is(IFRAME)) {
                         // it's an iframe, so return the manager relative to the outside
