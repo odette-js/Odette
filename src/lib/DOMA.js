@@ -4514,8 +4514,11 @@ app.scope(function (app) {
                 sameOrigin: function () {
                     var parsedReference, manager = this,
                         element = manager.element(),
-                        windo = manager.owner.window(),
-                        windoElement = windo.element();
+                        windo = manager.owner.window();
+                    if (!windo) {
+                        return BOOLEAN_FALSE;
+                    }
+                    var windoElement = windo.element();
                     if (windo === manager) {
                         return BOOLEAN_TRUE;
                     }
