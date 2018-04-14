@@ -3424,7 +3424,6 @@ app.scope(function (app) {
                     // i don't have that handler attached to the dom yet
                     domTarget = evnt.domTarget;
                     eventHandler = mainHandler[capture] = function (e) {
-                        console.log(e.type)
                         return eventDispatcher(domTarget, e.type, e, capture);
                     };
                 }
