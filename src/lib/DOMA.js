@@ -3360,13 +3360,17 @@ app.scope(function (app) {
             }
         }),
         removeEvent = function (evnt, name, mainHandler, capturing) {
-            var el = evnt.origin.element();
+            var origin = evnt.origin;
+            var el = origin.element();
+            delete mainHandler[capturing];
+            if (origin.is(WINDOW) && !origin.is(ACCESSABLE)) {
+                return;
+            }
             if (el.removeEventListener) {
                 el.removeEventListener(name, mainHandler[capturing], capturing);
             } else {
                 el.detachEvent(name, mainHandler[capturing]);
             }
-            delete mainHandler[capturing];
         },
         DomEventsManager = factories.EventsManager.extend('DomEventsManager', {
             remove: function (list, evnt) {
@@ -3400,7 +3404,8 @@ app.scope(function (app) {
                     mainHandler = elementHandlers[name],
                     capture = evnt.capturing,
                     items = list.toArray(),
-                    customEvents = evnt.origin.owner.events.custom;
+                    origin = evnt.origin,
+                    customEvents = origin.owner.events.custom;
                 for (; i < items[LENGTH] && !foundDuplicate; i++) {
                     obj = items[i];
                     foundDuplicate = evnt.capturing === evnt.capturing && evnt.handler === obj.handler && obj.group === evnt.group && evnt.selector === obj.selector && evnt.passedName === obj.passedName;
@@ -3446,8 +3451,11 @@ app.scope(function (app) {
                 forEach(evnt.nameStack, function (name) {
                     evnt.fn = (customEvents[name] || returns.first)(evnt.fn, name, evnt) || evnt.fn;
                 });
+                if (origin.is(WINDOW) && !origin.is(ACCESSABLE)) {
+                    return;
+                }
                 if (eventHandler) {
-                    el = evnt.origin.element();
+                    el = origin.element();
                     if (el.addEventListener) {
                         el.addEventListener(evnt.domName, eventHandler, allowsPassiveEventsAfterTest ? {
                             capture: capture,
